@@ -532,7 +532,6 @@ class ASRComponent(Component, ASRPlugin, WebAPIPlugin):
             
             # Save uploaded file to configured temp directory
             import uuid
-            from pathlib import Path
             from ..config.models import CoreConfig
             
             # Get temp audio directory from configuration

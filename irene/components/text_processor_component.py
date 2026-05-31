@@ -320,7 +320,7 @@ class TextProcessorComponent(Component, WebAPIPlugin):
             return None
             
         try:
-            from fastapi import APIRouter  # type: ignore
+            from fastapi import APIRouter, HTTPException  # type: ignore
             from ..api.schemas import (
                 TextProcessingRequest, TextProcessingResponse,
                 NumberConversionRequest, NumberConversionResponse,

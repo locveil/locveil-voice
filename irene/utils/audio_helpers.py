@@ -12,9 +12,12 @@ These utilities provide shared functionality for audio plugins:
 import asyncio
 import logging
 from pathlib import Path
-from typing import Optional, Union, Dict, Any, List, Tuple
+from typing import Optional, Union, Dict, Any, List, Tuple, TYPE_CHECKING
 from enum import Enum
 from dataclasses import dataclass
+
+if TYPE_CHECKING:
+    from ..intents.models import AudioData
 
 logger = logging.getLogger(__name__)
 

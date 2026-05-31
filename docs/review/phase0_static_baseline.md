@@ -12,6 +12,10 @@ interpretive (LLM-driven) review, so the semantic pass (Phase 1) can verify rath
 multiple independent tools. Notably, the type-checker configuration was **deliberately relaxed**,
 which hid ~1,100 genuine type errors.
 
+> **Status update (2026-05-31): categories A (phantom references) and C (method shadowing) have been
+> REMEDIATED.** See [Remediation round 1](#remediation-round-1--phantom-references--method-shadowing) at
+> the end of this document.
+
 ## Tooling
 
 Installed into `.venv` for analysis only (not added to `pyproject.toml`):
@@ -151,3 +155,58 @@ Per-layer reviewer agents seeded with these confirmed facts, hunting what static
 (config keys never read, donation JSON referencing nonexistent handlers/methods, registered-but-unwired
 providers, half-built/fake features, real vs. artifact cycles), with an adversarial verification pass
 (the reviewer LLM can hallucinate too) and a synthesized, prioritized report.
+
+---
+
+## Remediation round 1 — phantom references + method shadowing
+
+**Date:** 2026-05-31. Fixes for categories **A** (phantom references) and **C** (method shadowing).
+Footprint: **16 files, +24 / −206 lines** (almost entirely deletion of provably-dead duplicate code).
+
+### A — phantom references fixed (undefined names)
+
+| File | Fix |
+|---|---|
+| `irene/intents/handlers/timer.py` | added `import time` (used by `time.time()` at two sites) |
+| `irene/components/intent_component.py` | added `import asyncio` (used by the merged `shutdown`) |
+| `irene/components/text_processor_component.py` | added `HTTPException` to the local `from fastapi import …` (matches the convention in every other component) |
+| `irene/components/nlu_component.py` | `asset_loader` → `self.asset_loader` (a typo; the attribute is set earlier in the same branch) — was a guaranteed `NameError` |
+| `irene/core/assets.py` | added `if TYPE_CHECKING: from ..config.models import AssetConfig` and dropped the now-unneeded `# type: ignore` (the `"AssetConfig"` annotation was a forward-ref to a type kept out of runtime to avoid a circular import) |
+| `irene/utils/audio_helpers.py` | added `if TYPE_CHECKING: from ..intents.models import AudioData` (the 14 `'AudioData'` references were string annotations — static-only, not runtime crashes) |
+
+`asyncio`/`time`/`HTTPException`/`asset_loader` were genuine runtime `NameError` bombs on never-executed
+paths; `AssetConfig`/`AudioData` were annotation-only. The `TYPE_CHECKING` imports add **no** runtime
+coupling (so they don't worsen the import graph in §F).
+
+### C — method shadowing fixed (one definition silently overrode another)
+
+- **22 identical duplicate `get_python_dependencies` / `get_platform_dependencies` / `get_platform_support`**
+  across 8 handlers (`audio_playback`, `greetings`, `provider_control`, `speech_recognition`,
+  `system_service`, `text_enhancement`, `translation`, `voice_synthesis`) — removed the later copy with an
+  AST tool that only deletes definitions it can prove are byte-for-byte identical (keep-first). Behavior
+  provably unchanged.
+- **3 non-identical shadows**, resolved by keeping the correct one:
+  - `intent_component.shutdown` — the two versions did *different* things (timeout-task cleanup + `super().shutdown()` vs. clearing handler state); the cleanup one was dead. **Merged** into one method that does cleanup *then* resets state (restoring the previously-dead `super().shutdown()` + timeout cleanup).
+  - `nlu_component.get_service_dependencies` — kept the winning `{'context_manager': ContextManager}` version, dropped the obsolete `{}` stub.
+  - `audio_playback._handle_stop_audio` — kept the winning "Phase 2 TODO16 standardized" version, dropped the obsolete earlier one.
+
+### Verification (no new problems introduced)
+
+- **ruff:** runtime `F821` (undefined) **36→0**, runtime `F811` (redefinition) **30→0**. Per-file `F401`
+  counts unchanged vs. HEAD → **zero new unused imports**.
+- **pyright (standard):** total errors **1107 → 1063**; `reportRedeclaration` **26 → 0**;
+  `reportUndefinedVariable` **35 → 16** (the 16 remaining are all in the broken tests, untouched).
+  Line-shift-immune per-(file,rule) diff shows **exactly one** increase — `nlu_component`
+  `reportOptionalMemberAccess` 1→2 — which is the `asset_loader` fix trading a guaranteed `NameError`
+  for a guarded access on the *correct* (nullable) attribute. A strict improvement; no genuine new errors.
+- All 16 modified modules **compile and import** cleanly.
+
+### Intentionally NOT changed (out of scope for this round)
+
+- Broken **tests** referencing removed symbols (`ConversationContext`, `TTLCache`, …) — the 16 remaining
+  `reportUndefinedVariable`. Tracked under **Tests** above.
+- Category **D** wiring issues that are *not* shadowing: `MonitoringComponent` /
+  `ConfigurationComponent` define `get_python_dependencies` as an instance method called unbound, and the
+  four runners are missing the metadata methods. Different bug class (instance-vs-classmethod / missing
+  method) — recommended as a separate fix.
+- Pre-existing cosmetic cruft (§G): 360 unused imports, star-imports, etc.

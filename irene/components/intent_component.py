@@ -6,6 +6,7 @@ This component wraps the IntentHandlerManager and provides the intent system
 integrated into workflows and the component lifecycle.
 """
 
+import asyncio
 import logging
 from typing import Dict, Any, List, Optional, Type
 
@@ -103,6 +104,17 @@ class IntentComponent(Component, WebAPIPlugin):
             if cleanup_tasks:
                 await asyncio.gather(*cleanup_tasks, return_exceptions=True)
                 logger.info("Cleaned up timeout tasks from all intent handlers")
+
+        # Clear handlers and reset the intent system
+        if self.handler_manager:
+            self.handler_manager._handler_instances.clear()
+            self.handler_manager._handler_classes.clear()
+
+        self.intent_orchestrator = None
+        self.intent_registry = None
+        self.handler_manager = None
+
+        logger.info("Intent component shutdown completed")
     
     def set_context_manager(self, context_manager: Any) -> None:
         """Set the context manager on all intent handlers for fire-and-forget action tracking."""
@@ -191,19 +203,6 @@ class IntentComponent(Component, WebAPIPlugin):
         except Exception as e:
             logger.error(f"❌ Intent component initialization validation failed: {e}")
             raise RuntimeError(f"Intent component failed validation: {e}")
-        
-    async def shutdown(self) -> None:
-        """Shutdown the intent system"""
-        if self.handler_manager:
-            # Clear handlers and reset system
-            self.handler_manager._handler_instances.clear()
-            self.handler_manager._handler_classes.clear()
-            
-        self.intent_orchestrator = None
-        self.intent_registry = None
-        self.handler_manager = None
-        
-        logger.info("Intent component shutdown completed")
         
     # NOTE: This method has been replaced by post_initialize_handler_dependencies()
     # which is called during post-initialization coordination to ensure proper timing

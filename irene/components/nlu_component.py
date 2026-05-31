@@ -491,10 +491,6 @@ class NLUComponent(Component, WebAPIPlugin):
         """Get list of required component dependencies."""
         return ["intent_system"]  # NLU needs intent_system for donation coordination
     
-    def get_service_dependencies(self) -> Dict[str, type]:
-        """Get list of required service dependencies."""
-        return {}  # No service dependencies
-    
     async def initialize_providers_from_json_donations(self, enabled_handler_names: Optional[List[str]] = None) -> None:
         """
         Initialize NLU providers with JSON donation patterns for enabled intent handlers only.
@@ -570,7 +566,7 @@ class NLUComponent(Component, WebAPIPlugin):
                     keyword_donations = self._convert_json_to_keyword_donations(donations)
             else:
                 # Independent loading path
-                keyword_donations = asset_loader.convert_to_keyword_donations()
+                keyword_donations = self.asset_loader.convert_to_keyword_donations()
             
             # Initialize each provider with donations
             failed_providers = []

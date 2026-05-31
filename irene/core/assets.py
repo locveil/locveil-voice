@@ -13,19 +13,21 @@ import hashlib
 import logging
 import pickle
 from pathlib import Path
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, TYPE_CHECKING
 import json
 
 logger = logging.getLogger(__name__)
 
 
-# AssetConfig moved to config.models to avoid circular imports
+# AssetConfig lives in config.models; imported under TYPE_CHECKING to avoid a circular import
+if TYPE_CHECKING:
+    from ..config.models import AssetConfig
 
 
 class AssetManager:
     """Centralized asset manager for models, cache, and credentials"""
     
-    def __init__(self, config: "AssetConfig"):  # type: ignore
+    def __init__(self, config: "AssetConfig"):
         self.config = config
         self._download_locks: Dict[str, asyncio.Lock] = {}
         self._provider_asset_cache: Dict[str, Dict[str, Any]] = {}

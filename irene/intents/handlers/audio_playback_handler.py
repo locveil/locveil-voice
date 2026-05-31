@@ -116,32 +116,6 @@ class AudioPlaybackIntentHandler(IntentHandler):
         )
         
     async def _handle_stop_audio(self, intent: Intent, context: UnifiedConversationContext) -> IntentResult:
-        """Handle audio stop request with fire-and-forget action execution"""
-        # Use language from context (detected by NLU)
-        language = context.language or "ru"
-        
-        # Use fire-and-forget action execution for stopping audio
-        stop_id = f"audio_stop_{int(time.time() * 1000)}"
-        action_metadata = await self.execute_fire_and_forget_with_context(
-            self._stop_audio_playback_action,
-            action_name=stop_id,
-            domain="audio",
-            context=context,
-            language=language
-        )
-        
-        # Immediate response
-        response_text = self._get_template("stop_playback", language)
-        
-        return self.create_action_result(
-            response_text=response_text,
-            action_name=stop_id,
-            domain="audio",
-            should_speak=True,
-            action_metadata=action_metadata
-        )
-    
-    async def _handle_stop_audio(self, intent: Intent, context: UnifiedConversationContext) -> IntentResult:
         """
         Handle domain-specific audio stop intent (audio.stop).
         
@@ -445,26 +419,6 @@ class AudioPlaybackIntentHandler(IntentHandler):
             return False
     
     # Build dependency methods (TODO #5 Phase 2)
-    @classmethod
-    def get_python_dependencies(cls) -> List[str]:
-        """Audio playback handler has no external dependencies - uses Audio component"""
-        return []
-        
-    @classmethod
-    def get_platform_dependencies(cls) -> Dict[str, List[str]]:
-        """Audio playback handler has no system dependencies"""
-        return {
-            "linux.ubuntu": [],
-            "linux.alpine": [],
-            "macos": [],
-            "windows": []
-        }
-    
-    @classmethod
-    def get_platform_support(cls) -> List[str]:
-        """Audio playback handler supports all platforms"""
-        return ["linux.ubuntu", "linux.alpine", "macos", "windows"]
-    
     # Configuration metadata: No configuration needed
     # This handler delegates to Audio component for all functionality
     # No get_config_schema() method = no configuration required

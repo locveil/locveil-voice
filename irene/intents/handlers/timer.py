@@ -7,6 +7,7 @@ Adapted from timer_plugin.py for the new intent architecture.
 
 import asyncio
 import re
+import time
 import logging
 from typing import Dict, List, Optional, Any, Type, TYPE_CHECKING
 from datetime import datetime, timedelta

@@ -545,26 +545,6 @@ class VoiceSynthesisIntentHandler(IntentHandler):
             return False
     
     # Build dependency methods (TODO #5 Phase 2)
-    @classmethod
-    def get_python_dependencies(cls) -> List[str]:
-        """Voice synthesis handler has no external dependencies - uses TTS component"""
-        return []
-        
-    @classmethod
-    def get_platform_dependencies(cls) -> Dict[str, List[str]]:
-        """Voice synthesis handler has no system dependencies"""
-        return {
-            "linux.ubuntu": [],
-            "linux.alpine": [],
-            "macos": [],
-            "windows": []
-        }
-    
-    @classmethod
-    def get_platform_support(cls) -> List[str]:
-        """Voice synthesis handler supports all platforms"""
-        return ["linux.ubuntu", "linux.alpine", "macos", "windows"]
-    
     # Configuration metadata: No configuration needed
     # This handler delegates to TTS component and uses asset loader for voice mappings
     # No get_config_schema() method = no configuration required
