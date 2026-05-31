@@ -46,7 +46,7 @@ class ElevenLabsTTSProvider(TTSProvider):
         self.api_key = credentials.get("elevenlabs_api_key") or os.getenv("ELEVENLABS_API_KEY")
             
         self.voice_id = config.get("voice_id", "default")
-        self.model = config.get("model", "eleven_monolingual_v1")
+        self.model = config.get("model", "eleven_multilingual_v2")
         self.stability = config.get("stability", 0.5)
         self.similarity_boost = config.get("similarity_boost", 0.5)
         self.base_url = "https://api.elevenlabs.io/v1"

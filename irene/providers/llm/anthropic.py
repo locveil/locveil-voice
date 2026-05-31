@@ -41,7 +41,7 @@ class AnthropicLLMProvider(LLMProvider):
         if not self.api_key and config.get("api_key_env"):
             logger.warning("Using legacy api_key_env config. Consider using ANTHROPIC_API_KEY environment variable.")
             
-        self.default_model = config.get("default_model", "claude-3-haiku-20240307")
+        self.default_model = config.get("default_model", "claude-haiku-4-5-20251001")
         self.max_tokens = config.get("max_tokens", 150)
         self.temperature = config.get("temperature", 0.3)
         
@@ -156,9 +156,8 @@ class AnthropicLLMProvider(LLMProvider):
     def get_available_models(self) -> List[str]:
         """Return list of available Anthropic models"""
         return [
-            "claude-3-5-sonnet-20241022", "claude-3-5-haiku-20241022",
-            "claude-3-opus-20240229", "claude-3-sonnet-20240229", 
-            "claude-3-haiku-20240307"
+            "claude-opus-4-8", "claude-sonnet-4-6", "claude-haiku-4-5-20251001",
+            "claude-3-5-sonnet-20241022", "claude-3-5-haiku-20241022"
         ]
     
     def get_supported_tasks(self) -> List[str]:

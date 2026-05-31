@@ -29,7 +29,7 @@ class WhisperASRProvider(ASRProvider):
         
         Args:
             config: Provider configuration containing:
-                - model_size: Whisper model size ('tiny', 'base', 'small', 'medium', 'large')
+                - model_size: Whisper model size ('tiny', 'base', 'small', 'medium', 'large'/'large-v3')
                 - device: Device to run on ('cpu', 'cuda')
                 - download_root: Directory for cached models (deprecated - uses asset manager)
                 - default_language: Default language code (None for auto-detect)
@@ -86,7 +86,10 @@ class WhisperASRProvider(ASRProvider):
             "base": "https://openaipublic.azureedge.net/main/whisper/models/ed3a0b6b1c0edf879ad9b11b1af5a0e6ab5db9205f891f668f8b0e6c6326e34e/base.pt",
             "small": "https://openaipublic.azureedge.net/main/whisper/models/9ecf779972d90ba49c06d968637d720dd632c55bbf19d441fb42bf17a411e794/small.pt",
             "medium": "https://openaipublic.azureedge.net/main/whisper/models/345ae4da62f9b3d59415adc60127b97c714f32e89e936602e85993674d08dcb1/medium.pt",
-            "large": "https://openaipublic.azureedge.net/main/whisper/models/81f7c96c852ee8fc832187b0132e569d6c3065a3252ed18e56effd0b6a73e524/large-v2.pt"
+            # "large" aliases to the latest large model (large-v3), matching the openai-whisper library
+            "large": "https://openaipublic.azureedge.net/main/whisper/models/e5b1a55b89c1367dacf97e3e19bfd829a01529dbfdeefa8caeb59b3f1b81dadb/large-v3.pt",
+            "large-v2": "https://openaipublic.azureedge.net/main/whisper/models/81f7c96c852ee8fc832187b0132e569d6c3065a3252ed18e56effd0b6a73e524/large-v2.pt",
+            "large-v3": "https://openaipublic.azureedge.net/main/whisper/models/e5b1a55b89c1367dacf97e3e19bfd829a01529dbfdeefa8caeb59b3f1b81dadb/large-v3.pt"
         }
     
     async def is_available(self) -> bool:
