@@ -76,3 +76,11 @@ Wiring is real and on-by-default — `MonitoringComponent` builds `MetricsCollec
 - **QUAL-9** [FAF] — execute the P0/P1 remediation. **TEST-3** — once it works, add lifecycle coverage (launch→complete→error→timeout→cleanup→context).
 - **DOC-4** — retire `docs/fire_forget_issues.md` (materially false); a banner has been added pending QUAL-9.
 - **Systemic pattern** — fourth instance of "plumbed-but-dead / configured-name-doesn't-resolve" (with QUAL-10 cascade names, QUAL-12 dead stages, QUAL-14 phantom console). Worth a cross-cutting "wire-up integration test" + startup assertions.
+
+## Verification & later findings (TEST-0, 2026-06-01)
+- **Timers are doubly broken.** TEST-0 found that `поставь таймер на 5 минут` is **not even recognized** (falls to
+  `conversation.general`) — a recognition gap *before* the F&F launch is reached (logged under QUAL-11 in
+  `parameter_extraction_review.md`). So the QUAL-9 launch crash documented here is the *second* failure on the timer
+  path; fixing F&F alone will not make timers work until recognition is fixed too.
+- **Guarded by TEST-0** (`irene/tests/test_smoke_e2e.py::test_set_timer_end_to_end`, `xfail` referencing QUAL-9 +
+  QUAL-11) — auto-flips green when both land. QUAL-9 is not *done* until this xfail passes.

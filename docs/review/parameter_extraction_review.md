@@ -124,3 +124,14 @@ The doc's **architecture** (single-consumer providers, single-pass `recognize_wi
 - **UI-1/2/3** [DEDITOR] — the editor cannot honestly expose `slot_patterns`/`extraction_patterns` as functional until P0 #2 lands; the silent-unknown-field footgun (L1) is exactly the human-usability problem the editor targets.
 - **TEST-4** [PEX] / **TEST-7** — the `test_cascading_nlu` failures parked in TEST-2 are the `_recognition_provider`-vs-`provider` metadata-namespace issue (L4 P2); the rewrite should test the unified extraction contract from #3.
 - **ASSET-3** — number/duration parsing overlaps the hardcoded temporal/quantity maps; coordinate.
+
+## Verification & later findings (TEST-0, 2026-06-01)
+- **End-to-end recognition gap found via TEST-0:** `поставь таймер на 5 минут` is **not recognized** — both
+  providers miss and it falls to `conversation.general`, even though the `timer` handler/donation is loaded and the
+  fallback context correctly infers `likely_domain: timer, ambiguous_entities: [number:5, time:5 минут]`. So the
+  donation matching/confidence path (Layer 2: brittle NER+regex, hardcoded thresholds, `_sm`-model similarity)
+  fails on a *core* command. **[P1→P0 candidate]** for QUAL-11 — timers are unusable from recognition onward
+  (compounding the QUAL-9 F&F launch crash). Repro: `POST /nlu/recognize {"text":"поставь таймер на 5 минут"}`.
+- **Guarded by TEST-0** (`irene/tests/test_smoke_e2e.py`): `test_set_timer_end_to_end` is `xfail` on this +
+  QUAL-9; it flips green when recognition + F&F land. `/nlu/recognize` responding structurally is a green smoke
+  assertion, so regressions in the recognition surface are caught.

@@ -106,3 +106,11 @@ Reasoning, grounded in the code:
 - **QUAL-16 [PROMPTS]** — owns the prompt rewrite/externalization/hardening (this review is the inventory).
 - **QUAL-11** — the missing-console-provider and assert-providers-exist fix is the same family as the cascade-order P0.
 - **ARCH-9/10 [INFER]** — a local-model runtime is the clean way to make "offline LLM" and an optional local LLM-NLU assist real without cloud.
+
+## Verification (TEST-0, 2026-06-01)
+- **Guarded by TEST-0** (`irene/tests/test_smoke_e2e.py::test_conversation_offline_degrades_gracefully`): with the
+  LLM unavailable offline (no key / phantom `console` provider), an open-ended request returns HTTP 200 + a
+  non-empty response (the conversation handler's `is_available()` template/canned fallback) rather than crashing.
+  This pins the *graceful-degradation* invariant — QUAL-15 must keep this green while implementing the real
+  fallback. (Note: the response today is a canned "Sorry, I couldn't process that request." — degradation works,
+  quality is the QUAL-15/16 story.)
