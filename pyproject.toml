@@ -139,6 +139,7 @@ dev = [
     "isort>=5.0.0",
     "flake8>=4.0.0",
     "mypy==1.15.0",  # Pinned to match wb-mqtt-bridge version
+    "import-linter>=2.0",  # ARCH-5: enforce the hexagon import contracts
 ]
 
 # Convenience groups - Fixed: Re-enabled with proper dependencies
@@ -321,6 +322,87 @@ filterwarnings = [
     # Pydantic V1-style @validator / class Config across the config + donation models is known
     # tech debt (separate migration); silence the deprecation flood so real signal is visible.
     "ignore::pydantic.warnings.PydanticDeprecatedSince20",
+]
+
+# ARCH-5: Hexagonal import contracts (enforced via `lint-imports` and irene/tests/test_import_contracts.py).
+# Encodes the rules ARCH-1..4 established so the architecture can't silently regress.
+[tool.importlinter]
+root_package = "irene"
+
+[[tool.importlinter.contracts]]
+name = "Domain (intents) depends on nothing outward (ARCH-1)"
+type = "forbidden"
+source_modules = ["irene.intents"]
+forbidden_modules = [
+    "irene.components",
+    "irene.workflows",
+    "irene.providers",
+    "irene.web_api",
+    "irene.runners",
+    "irene.inputs",
+]
+ignore_imports = [
+    # KNOWN DEBT (QUAL-24): 8 handlers fetch components via `from ...core.engine import get_core`
+    # (service-locator) instead of DI, which transitively pulls the domain into core.engine's
+    # composition root. Ignored here so the contract still enforces the DIRECT domain-clean rule;
+    # the get_core()->DI refactor is tracked as QUAL-24.
+    "irene.intents.handlers.* -> irene.core.engine",
+]
+
+[[tool.importlinter.contracts]]
+name = "Config has no upward imports (ARCH-2)"
+type = "forbidden"
+source_modules = ["irene.config"]
+forbidden_modules = [
+    "irene.core",
+    "irene.components",
+    "irene.providers",
+    "irene.workflows",
+    "irene.web_api",
+    "irene.runners",
+    "irene.inputs",
+    "irene.intents",
+]
+
+[[tool.importlinter.contracts]]
+name = "Components (application) don't import delivery (ARCH-3)"
+type = "forbidden"
+source_modules = ["irene.components"]
+forbidden_modules = [
+    "irene.web_api",
+    "irene.runners",
+    "irene.inputs",
+]
+
+[[tool.importlinter.contracts]]
+name = "Only nlu_analysis may import the analysis tooling (ARCH-3)"
+type = "forbidden"
+source_modules = ["irene.components"]
+forbidden_modules = ["irene.analysis"]
+ignore_imports = [
+    "irene.components.nlu_analysis_component -> irene.analysis.*",
+]
+
+[[tool.importlinter.contracts]]
+name = "Adapters (providers) don't import application (ARCH-4)"
+type = "forbidden"
+source_modules = ["irene.providers"]
+forbidden_modules = [
+    "irene.components",
+    "irene.workflows",
+]
+
+[[tool.importlinter.contracts]]
+name = "Provider categories are independent of each other (ARCH-4)"
+type = "independence"
+modules = [
+    "irene.providers.asr",
+    "irene.providers.tts",
+    "irene.providers.audio",
+    "irene.providers.llm",
+    "irene.providers.nlu",
+    "irene.providers.voice_trigger",
+    "irene.providers.text_processing",
 ]
 
 [tool.mypy]

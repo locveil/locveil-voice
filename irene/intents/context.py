@@ -9,13 +9,10 @@ and intelligent context management.
 import time
 import logging
 import asyncio
-from typing import Dict, Any, Optional, List, TYPE_CHECKING
+from typing import Dict, Any, Optional, List
 from .models import Intent, IntentResult
-from .context_models import UnifiedConversationContext
+from .context_models import UnifiedConversationContext, RequestContext
 from ..core.metrics import get_metrics_collector
-
-if TYPE_CHECKING:
-    from ..workflows.base import RequestContext
 
 logger = logging.getLogger(__name__)
 
