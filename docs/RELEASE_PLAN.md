@@ -155,7 +155,16 @@ See `docs/review/phase1_architecture_map.md` §5.
       The bigger "unify the two hierarchies" move was considered and deferred as over-engineering for P2.) Verified:
       all 3 components instantiate + `isinstance` their port, no cycle, functional suite unchanged. **Gate 1: ARCH-5
       (import-linter) is the capstone next.**
-- [ ] **ARCH-5** (P1) — Add an **import-linter** contract (layered + independence) wired into CI so the hexagon is enforced and can't regress. _Makes "follows the architecture" verifiable._ Folds in **QUAL-23** (startup name-resolution assertion) + **TEST-0** (smoke harness) as CI gates.
+- [x] **ARCH-5** (P1) — Add an **import-linter** contract so the hexagon is enforced and can't regress.
+      **DONE 2026-06-02** (`27a85c3`). Added `import-linter` (dev dep) + `[tool.importlinter]` contracts in
+      pyproject + `irene/tests/test_import_contracts.py` (runs them in the suite — enforced now; ready for CI when
+      BUILD-2 lands). **6 contracts, 0 broken:** domain depends on nothing outward (ARCH-1); config no upward
+      (ARCH-2); components no delivery + only `nlu_analysis→analysis` (ARCH-3); adapters no application + provider
+      categories independent (ARCH-4). Residual fix (no TYPE_CHECKING): moved `RequestContext` (last
+      domain→workflows edge) into `intents/context_models.py`. The linter **caught a real anti-pattern → QUAL-24**
+      (8 handlers use `get_core()` service-locator; ignored in the domain contract with a comment, tracked
+      separately). _The deliverable that makes "follows the architecture" verifiable._ **Gate 1 COMPLETE
+      (ARCH-1..5 ✓).**
 - [ ] **ARCH-6** (P2) — Resolve the dead `InputManager._input_queue` seam (wire as driving port, or delete). Fix the contained `inputs.base ⇄ subclasses` cycle (SCC-2).
 - [ ] **ARCH-7** [MQTT] (P-TBD) — **Design session** (needs live collaboration): place MQTT publication as a driven
       **output adapter** in the hexagon (intent result/action → output port → MQTT adapter). Defines the general
@@ -323,6 +332,14 @@ See `docs/review/phase1_architecture_map.md` §5.
       enabled block — the QUAL-15 bug), zero false positives (TTS/audio `console` are real → pass; NLU cascade
       clean). Folds into ARCH-5 (CI). Note: text-processor **stage-routing** completeness (dead `command_input`
       stage) is provider-name-orthogonal → stays under QUAL-13.
+- [ ] **QUAL-24** (P2) — **Service-locator → DI in handlers (found by ARCH-5).** 8 intent handlers
+      (`speech_recognition`, `audio_playback`, `voice_synthesis`, `system`, `conversation`, `provider_control`,
+      `text_enhancement`, `translation`) fetch components via `from ...core.engine import get_core` →
+      `core.component_manager.get_component(...)` — a service-locator that makes the **domain reach into the
+      composition root** (transitively pulling components/inputs/workflows). Convert to **dependency injection**
+      (inject the needed components via the existing handler-DI path, like the monitoring component injection),
+      then **remove the `ignore_imports` exception** from the ARCH-5 domain contract so it enforces with no
+      escape hatch. Domain-cleanliness; relates to ARCH-1.
 
 ### Tests (TEST)
 > **Strategy (decided 2026-06-01): do NOT keep repairing the existing suite.** Most tests were written against
@@ -594,6 +611,15 @@ Governed by Invariant #4 (config-ui must stay functional).
   **Gate 1: ARCH-1 ✓, ARCH-2 ✓, ARCH-3 ✓ — ARCH-4 (formalize ports) → ARCH-5 (import-linter) next.**
 
 ### 2026-06-02
+- **ARCH-5 DONE** (`27a85c3`) — the capstone. import-linter (dev dep) + 6 `[tool.importlinter]` contracts encoding
+  ARCH-1..4 + a pytest test (`test_import_contracts.py`) enforcing them in the suite. **6 kept / 0 broken.** Fixed
+  the last residual domain→workflows edge by moving `RequestContext` into `intents/context_models.py` (no
+  TYPE_CHECKING; per the user-affirmed clean approach). The linter caught a real service-locator anti-pattern (8
+  handlers `get_core()`) → logged **QUAL-24** (ignored-with-comment in the contract for now). Per the standing "ask
+  before deciding" rule, got sign-off on: residual-edge handling (fix vs ignore), enforcement (pytest vs file-only),
+  and the service-locator decision (ignore+follow-up) via AskUserQuestion before each. Fixed a self-inflicted
+  regression mid-task (the moved RequestContext needed its `SessionManager` import). Per Invariant #5, synced
+  `phase1_architecture_map.md` §5. **GATE 1 COMPLETE: ARCH-1..5 ✓ — the code provably obeys the hexagon.**
 - **ARCH-4 DONE** (`df93a15`) — formalized the port layer. Found a healthy two-layer structure (component-capability
   `*Plugin` ports + adapter `*Provider` ports); audit confirmed adapters depend only on their abstraction. Filled the
   3 missing capability ports (`core/interfaces/{nlu,text_processing,voice_trigger}.py`) with real-domain-typed

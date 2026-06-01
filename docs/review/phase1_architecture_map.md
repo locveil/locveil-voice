@@ -271,6 +271,13 @@ infra** — read by the composition root, not depended-upon-by-being-imported-up
    (clean as-is; unifying the two hierarchies was deferred as over-engineering for P2).
 5. **ARCH-5** — add an **import-linter** contract (layered + independence rules) wired into CI so the hexagon is
    enforced and can't regress. *This is the deliverable that makes "follows the architecture" verifiable.*
+   **✅ DONE (2026-06-02, `27a85c3`).** 6 contracts in `pyproject [tool.importlinter]` (domain-no-outward,
+   config-no-upward, components-no-delivery, only-`nlu_analysis`→`analysis`, adapters-no-application, provider-
+   category-independence) + `irene/tests/test_import_contracts.py` runs them in the suite. **6 kept / 0 broken.**
+   Last residual edge fixed without TYPE_CHECKING: `RequestContext` moved into `intents/context_models.py`.
+   The linter caught a service-locator anti-pattern (8 handlers use `get_core()`) → **QUAL-24** (ignored in the
+   domain contract with a comment, tracked separately). **Gate 1 (ARCH-1..5) complete — the code now provably
+   obeys the hexagon.**
 6. **ARCH-6** — resolve the dead `InputManager` queue (wire it as the driving port, or delete it).
 
 This sequencing fixes the real defects, dissolves the backwards edges, and lets `architecture.md` be rewritten
