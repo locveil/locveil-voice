@@ -439,6 +439,18 @@ See `docs/review/phase1_architecture_map.md` §5.
       handler consumption of `intent.entities`. → `docs/guides/PARAMETER_EXTRACTION_GUIDE.md`. Derived from QUAL-10.
 - [x] **DOC-6** (P2) — Archived stale historical-plan docs (`config_schemas`, `language_support`,
       `configuration_guide`, `PIPELINE_IMPLEMENTATION`, `irene_current`) → `docs/archive/`.
+- [ ] **DOC-8** (P1) — **Data & context-models map** → `docs/guides/DATA_MODELS.md`. A concise reference for how
+      the pipeline's models play together — **when each is needed and why** (the request-scoped vs session-scoped
+      distinction is the key confusion to resolve). Cover the cast + responsibilities: **`RequestContext`**
+      (per-*request* input metadata — source, session_id, wants_audio, skip flags, client/room/device, language;
+      created at the entry by the runner/web/cli) · **`UnifiedConversationContext`** (persistent per-*session* state
+      — history, active/recent/failed actions, devices, `ConversationState`, `ContextLayer`; keyed by `session_id`,
+      fetched via `ContextManager`) · **`Intent`** (NLU output) · **`IntentResult`** (handler output) ·
+      **`AudioData`/`WakeWordResult`** (IO primitives). Document the **lifecycle**: `RequestContext` →
+      `ContextManager.get_context(session_id)` → `UnifiedConversationContext` → `NLU → Intent` →
+      `orchestrator.execute → IntentResult` → `context.add_to_history(...)`. State where each now lives post-ARCH-1/5
+      (`intents/context_models.py`, `intents/models.py`, `utils/audio_data.py`). DOC-4 links to it. Refs:
+      `phase1_architecture_map.md` §4.
 
 ### UI / config-ui (UI)
 React/Vite donation+config editor. Front-end feature/UX work (the BUILD-4 build gate stays under Build & CI).
@@ -611,6 +623,11 @@ Governed by Invariant #4 (config-ui must stay functional).
   **Gate 1: ARCH-1 ✓, ARCH-2 ✓, ARCH-3 ✓ — ARCH-4 (formalize ports) → ARCH-5 (import-linter) next.**
 
 ### 2026-06-02
+- **DOC-8 captured** (user request) — need a reference for how the pipeline's models play together (when/why each):
+  `RequestContext` (request-scoped) vs `UnifiedConversationContext` (session-scoped), `Intent`/`IntentResult`,
+  `AudioData`/`WakeWordResult`. → `docs/guides/DATA_MODELS.md` + a model-interplay note added to
+  `phase1_architecture_map.md` §4. The request-vs-session distinction (sharpened by ARCH-1/5) is the key thing to
+  clarify.
 - **ARCH-5 DONE** (`27a85c3`) — the capstone. import-linter (dev dep) + 6 `[tool.importlinter]` contracts encoding
   ARCH-1..4 + a pytest test (`test_import_contracts.py`) enforcing them in the suite. **6 kept / 0 broken.** Fixed
   the last residual domain→workflows edge by moving `RequestContext` into `intents/context_models.py` (no

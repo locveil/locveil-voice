@@ -218,6 +218,16 @@ text-path-only/flag-gated; add the undocumented first-class stages — **context
 fire-and-forget actions, tracing (`TraceContext`), metrics, ASR normalization**. (Full call-site map retained
 in the ARCH-0 working notes.)
 
+> **Model-interplay gap → DOC-8.** The data models that thread through this flow are not documented as a set, and
+> the **request-scoped vs session-scoped** distinction is a real source of confusion (sharpened after ARCH-1/5
+> split/moved them): `RequestContext` (per-request input metadata, created at the entry) vs
+> `UnifiedConversationContext` (persistent per-session state via `ContextManager`), plus `Intent` (NLU out),
+> `IntentResult` (handler out), and the `AudioData`/`WakeWordResult` IO primitives. Lifecycle:
+> `RequestContext → ContextManager.get_context(session_id) → UnifiedConversationContext → NLU→Intent →
+> orchestrator.execute→IntentResult → context.add_to_history`. **DOC-8** produces `docs/guides/DATA_MODELS.md`
+> capturing when/why each is used and where each now lives (`intents/context_models.py`, `intents/models.py`,
+> `utils/audio_data.py`).
+
 ---
 
 ## 5. Goal 2 — recommended architecture pattern: **Hexagonal (Ports & Adapters)**
