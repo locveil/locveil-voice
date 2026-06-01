@@ -89,3 +89,10 @@ Net: from 4 providers + 3 normalizers + 2 routing systems + a broken API → **o
 - **ASSET-3** — lingua-franca migration (NumberNormalizer); coordinate.
 - **QUAL-14/15 [LLM]** — the LLM-text-processing stage depends on a working LLM provider (the phantom `console` / local-LLM story).
 - **QUAL-11** — same systemic bug class as the cascade-order and console-provider phantoms: **config names (stages/providers) that don't resolve at runtime**. Worth a shared "validate every configured name resolves" startup check.
+
+## Verification (QUAL-23, 2026-06-01)
+- **Provider-name half now guarded** by the QUAL-23 startup assertion (`irene/core/startup_validation.py`): any
+  enabled `[text_processor.providers.<name>]` that isn't a registered `irene.providers.text_processing` entry-point
+  is flagged at startup. The **stage-routing** dead-config (the never-read `[text_processor.normalizers.*].stages`
+  tree and the unmapped `command_input` stage) is orthogonal to provider-name resolution and remains **QUAL-13**'s
+  responsibility (collapse + wire).

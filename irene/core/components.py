@@ -155,7 +155,13 @@ class ComponentManager:
         
         # Post-initialization coordination (Phase 2: Donation coordination)
         await self._post_initialize_coordination()
-        
+
+        # QUAL-23: validate every configured provider name resolves to a registered entry-point
+        # (catches phantom providers like the `console` LLM / bad cascade names). Non-fatal by
+        # default; set IRENE_STARTUP_STRICT=1 to fail fast (CI / smoke harness).
+        from .startup_validation import run_startup_validation
+        run_startup_validation(core.config)
+
         self._initialized = True
         
         # Log deployment profile and status

@@ -135,3 +135,7 @@ The doc's **architecture** (single-consumer providers, single-pass `recognize_wi
 - **Guarded by TEST-0** (`irene/tests/test_smoke_e2e.py`): `test_set_timer_end_to_end` is `xfail` on this +
   QUAL-9; it flips green when recognition + F&F land. `/nlu/recognize` responding structurally is a green smoke
   assertion, so regressions in the recognition surface are caught.
+- **Now guarded by QUAL-23** (`irene/core/startup_validation.py`): the default `provider_cascade_order` naming
+  non-existent providers (P0 above) is caught at startup — any configured cascade name that isn't a registered
+  `irene.providers.nlu` entry-point is logged as an ERROR (and fails boot under `IRENE_STARTUP_STRICT=1`). This
+  closes the "config omits cascade → phantom default names → total recognition failure" trap.

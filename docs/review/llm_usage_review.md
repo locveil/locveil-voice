@@ -114,3 +114,7 @@ Reasoning, grounded in the code:
   This pins the *graceful-degradation* invariant — QUAL-15 must keep this green while implementing the real
   fallback. (Note: the response today is a canned "Sorry, I couldn't process that request." — degradation works,
   quality is the QUAL-15/16 story.)
+- **Now guarded by QUAL-23** (`irene/core/startup_validation.py`): the phantom `console` LLM provider is flagged at
+  startup with a clear ERROR (`llm.fallback_providers` + `llm.providers (enabled)`), and `IRENE_STARTUP_STRICT=1`
+  turns it into a boot failure. QUAL-15 is *not done* until that startup ERROR clears (implement the provider or
+  remove it from configs).

@@ -280,13 +280,16 @@ See `docs/review/phase1_architecture_map.md` §5.
       unimplemented. Either finish the enhancement (apply enhanced_entities / wire capability + location context)
       or remove the dead logic. Relates to QUAL-10 [PEX]. xfail tests: `test_client_capability_context`,
       `test_room_context_inference`.
-- [ ] **QUAL-23** (P1, Gate 0) — **Startup name-resolution assertion** — the cross-cutting fix for the systemic
-      bug class the review wave exposed FOUR times: configured provider/stage/action names that **don't resolve to
-      anything real**. Concretely: every `default_provider`/`fallback_providers` (LLM `console` phantom — QUAL-14),
-      every `provider_cascade_order` entry (NLU phantom names — QUAL-10), and every text-processor stage/provider
-      (dead stages — QUAL-12) must resolve to a discovered entry-point/class at startup, else fail fast (or log a
-      single clear ERROR). Cheap, catches 3 of 4 review P0 classes, and prevents regression. Standalone now (Gate 0);
-      folds into ARCH-5 (CI enforcement) later.
+- [x] **QUAL-23** (P1, Gate 0) — **Startup name-resolution assertion.** **DONE 2026-06-01** →
+      `irene/core/startup_validation.py` (+ wired in `core/components.py` after coordination; unit tests in
+      `irene/tests/test_startup_validation.py`, 4✓). Checks every configured `default_provider`/`fallback_providers`/
+      `provider_cascade_order` and every enabled `[<component>.providers.<name>]` resolves to a **registered
+      entry-point** (names enumerated, not loaded — optional-dep import failures don't false-positive). Non-fatal by
+      default (logs a clear ERROR per unresolved name so a shipped config still boots); `IRENE_STARTUP_STRICT=1`
+      raises (CI / TEST-0). Verified on config-master: flags exactly the phantom **`console` LLM** (fallback +
+      enabled block — the QUAL-15 bug), zero false positives (TTS/audio `console` are real → pass; NLU cascade
+      clean). Folds into ARCH-5 (CI). Note: text-processor **stage-routing** completeness (dead `command_input`
+      stage) is provider-name-orthogonal → stays under QUAL-13.
 
 ### Tests (TEST)
 > **Strategy (decided 2026-06-01): do NOT keep repairing the existing suite.** Most tests were written against
@@ -527,6 +530,14 @@ Governed by Invariant #4 (config-ui must stay functional).
   "configured-name-doesn't-resolve" class). Rationale: no test net exists today + ARCH-1/2 move code, so a thin
   smoke harness gates the structural work; the name-resolution assertion is the cheap guard that catches most P0
   classes at once.
+
+- **QUAL-23 DONE** (Gate 0 complete) → `irene/core/startup_validation.py` + wired in `core/components.py` +
+  `irene/tests/test_startup_validation.py` (4✓). Startup assertion: every configured provider name
+  (default/fallback/cascade + enabled provider blocks) must resolve to a registered entry-point. Non-fatal ERROR by
+  default; `IRENE_STARTUP_STRICT=1` raises. On config-master it flags exactly the phantom `console` LLM (QUAL-15),
+  zero false positives. TEST-0 still green. **Gate 0 (TEST-0 + QUAL-23) is now complete → Gate 1 (ARCH-1/2/4/5)
+  unblocked.** Per Invariant #5, synced llm_usage/parameter_extraction/text_processing review docs (each now notes
+  the startup guard; QUAL-15 not *done* until the startup ERROR clears).
 
 ### 2026-05-31
 - **Revival analysis** — full doc + code + build + asset audit; established real version is 15.0.0, single
