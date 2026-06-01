@@ -220,14 +220,17 @@ See `docs/review/phase1_architecture_map.md` §5.
       `ConversationContext`→`UnifiedConversationContext` (rename); `TTLCache`/`ContextualCommandPerformanceManager`/
       `initialize_performance_manager` were **deleted** (v13→v15 contextual-command unification) → those tests
       skipped-with-reason; `Intent.text`→`raw_text`, `ComponentConfig.audio_output`→`audio` renamed in tests.
-- [ ] **TEST-2** (P1) — DOING — Get the suite running green; assess coverage/trustworthiness. Baseline 2026-06-01
-      after TEST-1 + pytest config (`asyncio_mode=auto`): **156 passed / 68 failed / 13 skipped** (was 136/100/0).
-      Structural buckets cleared (async config, symbol renames, obsolete skips, hardcoded-path bug). Remaining 68
-      are drift needing per-cluster judgment: fixture wiring (`component.core` unset → `NoneType.config`/`Mock has
-      no 'core'`, ~10), `test_cascading_nlu` provider-metadata semantics (`entities["provider"]` vs injected
-      `_recognition_provider`, ~7), VAD/ASR metrics dict-vs-object (~8), `DeviceEntityResolver` asset-loader fixture
-      (3), attr renames (`IntentResult.error_type`, `SpaCyNLUProvider.model_name`, `IntentRegistry._handlers`,
-      `IntentComponent.get_system_status`), mock-vs-MagicMock (2), assertions. Surfaced prod bug → **QUAL-21**.
+- [ ] **TEST-2** (P1) — DOING — Get the suite running green; assess coverage/trustworthiness. Progression
+      2026-06-01: 136/100/0 → **166 passed / 56 failed / 13 skipped / 2 xfailed**. Cleared: async config, symbol
+      renames, obsolete skips, hardcoded-path bug, and the **fixture-wiring cluster** (`component.core` unset +
+      `process()` signature drift in `test_component_trace_integration`; `core`+real-localization asset-loader in
+      `test_context_aware_nlu`; `component.core` in phase7 ASR tests). Prod findings: text_processor trace missing
+      `component_name` (fixed); **QUAL-21** (settings_runner field drift); **QUAL-22** (context enhancement stubbed
+      — 2 xfail). Remaining 56 drift, needing per-cluster judgment: `test_cascading_nlu` provider-metadata
+      semantics (`entities["provider"]` vs injected `_recognition_provider`, ~7 — **needs design-intent call**),
+      VAD/ASR metrics dict-vs-object (~8), `spacy_asset_integration` mock-vs-MagicMock (2), attr renames
+      (`IntentResult.error_type`, `SpaCyNLUProvider.model_name`, `IntentRegistry._handlers`,
+      `IntentComponent.get_system_status`), phase4 contextual-command + assertions.
 - [ ] **TEST-6** (P2) — Rewrite the 7 phase7 ASR-fallback-chain tests skipped in TEST-1 (they called the
       removed private `ASRComponent._handle_sample_rate_mismatch`); the provider-fallback + resampling feature
       still exists via `AudioProcessor.resample_audio_data` — restore coverage against the current path.
