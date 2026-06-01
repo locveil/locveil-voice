@@ -129,6 +129,23 @@ See `docs/review/phase1_architecture_map.md` §5.
       conversation handlers) — and rewrite for clarity, guardrails, output-format constraints, persona
       consistency, and prompt-injection resistance. Establish a prompt-authoring convention. Gated by Invariant #4
       (config-ui `PromptEditor`). Done when: prompts hardened + `docs/guides/PROMPTING_GUIDE.md` exists.
+- [ ] **QUAL-17** [STREAMAPI] (P2, must-before-release) — Critically review the streaming-API exposure: the
+      hand-rolled **AsyncAPI 2.6.0** generator (`irene/web_api/asyncapi.py`: `@websocket_api` decorators,
+      `WebSocketRegistry`, custom Pydantic→AsyncAPI conversion) + the `@asyncapi/web-component@2.6.4` renderer at
+      `/asyncapi`, documenting the WebSocket endpoints (`/asr/stream`, `/asr/binary`, `/ws`). Evaluate modern
+      alternatives (AsyncAPI 3.0, maintained generator libraries, current renderers/Studio) — simpler/more
+      maintainable today? Done when: `docs/review/streaming_api_review.md` exists with a keep/upgrade/replace recommendation.
+- [ ] **QUAL-18** [STREAMAPI] (P-TBD) — Act on QUAL-17 (upgrade/replace the AsyncAPI generator + renderer).
+- [ ] **QUAL-19** [ESP32] (P2, last pre-release) — Full review & questioning of the ESP32 + wakeword story:
+      ESP32 firmware subsystem (ESP-IDF nodes/common/tools, embedded microWakeWord model **not committed**,
+      binary-WS audio streaming) — functional vs aspirational; the backend **microWakeWord provider is largely a
+      placeholder** (stub feature extraction; depends on trained models but training was removed at `886d4d1`;
+      HF model download = **TODO11, still Open**); openWakeWord (works) vs microWakeWord (broken/redundant?);
+      residual training dead-code; armv7/embedded build viability (`Dockerfile.armv7`, `embedded-armv7`); ESP32
+      docs accuracy. Intersects ASSET-2 (wakeword model URLs). Done when: `docs/review/esp32_wakeword_review.md`
+      exists with a **keep/fix/cut** recommendation per piece {ESP32 firmware, microWakeWord, armv7, training refs}.
+- [ ] **QUAL-20** [ESP32] (P-TBD) — Act on QUAL-19 (complete TODO11 + real feature extraction, OR cut/archive
+      microWakeWord + ESP32 + residual training refs; reconcile armv7; close TODO11 accordingly).
 
 ### Tests (TEST)
 - [ ] **TEST-1** (P1) — Fix broken tests referencing removed/renamed symbols (`ConversationContext`→
@@ -214,7 +231,7 @@ Governed by Invariant #4 (config-ui must stay functional).
 - **DOC-5** — harmonized the contradicts-code docs (donation paths/schema, asset TOML nesting, train env
   prefix, voice_trigger YAML→TOML) + correction banners on the donation spec and universal_tts. Found a
   config-master train-schedule nesting bug → QUAL-7. Donation-spec full rewrite deferred → DOC-5b.
-- **Macro-task intake (7 threads)** — analyzed and split into workstreams:
+- **Macro-task intake (9 threads)** — analyzed and split into workstreams:
   1. [FAF] fire-and-forget review → QUAL-8/9, TEST-3, DOC-4 note.
   2. [PEX] parameter extraction → QUAL-10/11, TEST-4, DOC-7.
   3. config-ui-stays-functional → **Invariant #4** + DoR checkbox + BUILD-4→P1 ongoing gate.
@@ -222,6 +239,8 @@ Governed by Invariant #4 (config-ui must stay functional).
   5. [TXTPROC] text-processor review → QUAL-12/13, TEST-5.
   6. [LLM]/[PROMPTS] LLM usage + offline-first + prompt hardening → QUAL-14/15/16.
   7. [MQTT] smart-home output → ARCH-7 (design session) / ARCH-8; surfaces the missing output-port seam.
+  8. [STREAMAPI] streaming-API exposure (hand-rolled AsyncAPI 2.6.0) → QUAL-17/18 (P2, must-before-release).
+  9. [ESP32] ESP32 + wakeword (microWakeWord placeholder, training removed, TODO11 open) → QUAL-19/20 (keep/fix/cut).
   Cross-cutting sequencing: **QUAL-10 [PEX]** gates DOC-7 + UI-1/2/3; the reviews (QUAL-8/10/12/14) precede their
   refactors and **ARCH-1** (context split); Invariant #4 gates the contract-touching tasks; QUAL-12↔ASSET-3.
 
