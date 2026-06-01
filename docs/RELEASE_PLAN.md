@@ -71,6 +71,33 @@ Living findings behind the tasks (Invariant #5). `[x]` = exists; others are prod
 
 ---
 
+## Sequencing (phased roadmap — decided 2026-06-01)
+
+The review wave (QUAL-8/10/12/14) is done. Its P0s are **not one species**: some are *surgical bug fixes*
+(architecture-independent), some are *refactor-flavored* (they ARE subsystem architecture work). They sequence
+differently. Key constraint: **there is no test safety net right now** (TEST-2 paused; full rewrite = TEST-7 later),
+and the structural refactors **move code** — so blind refactoring/fixing is the main risk. Phases:
+
+- **Gate 0 — verification net + cheap guard (do FIRST, before touching structure):**
+  - **TEST-0** — a minimal end-to-end smoke harness (boot + a few real flows: command→intent, set a timer, extract
+    a parameter). Small refactor safety net, **distinct from the TEST-7 rewrite**. It's the "wire-up integration
+    test" all four reviews said is missing — would have caught every review P0.
+  - **QUAL-23** — the startup-assertion ("every configured provider/stage/action name resolves to something real").
+    Cheap; catches 3 of 4 review P0 *classes* (cascade names, console provider, dead stages) and stops regressions.
+- **Gate 1 — structural foundation:** **ARCH-1** (split god-module) → **ARCH-2** (config↔core cycle) →
+  **ARCH-4** (formalize ports) → **ARCH-5** (import-linter; folds in QUAL-23). **DOC-4** in parallel (pin the target).
+- **Gate 2 — the review P0s, split by type:**
+  - **Surgical bug P0s** — can land any time **after Gate 0** (verifiable + restore basic function): QUAL-9 #1
+    (timer crash), QUAL-9 #3 (`get_or_create_context`), QUAL-11 #1 (cascade names), QUAL-15 #1 (console provider).
+    *(QUAL-23/Gate 0 already covers the name-resolution ones.)*
+  - **Refactor-flavored P0s** — land **after Gate 1**, as adapters behind the new ports: QUAL-11 #3 (shared
+    extraction base), QUAL-13 (collapse text-processors + wire stages), QUAL-9 #2 (F&F key-model rework — touches
+    the god-module ARCH-1 splits), QUAL-15 local-LLM provider (ties to ARCH-9/10).
+
+**One-line rule:** *bug P0s ride the smoke net; refactor P0s ride the ports.*
+
+---
+
 ## Workstreams
 
 ### Architecture & Refactor (ARCH)
@@ -90,7 +117,7 @@ See `docs/review/phase1_architecture_map.md` §5.
       (`components.{asr,tts}→web_api.asyncapi`) behind a port; treat `analysis` as a driven adapter
       (`components.nlu_analysis→analysis.*`).
 - [ ] **ARCH-4** (P2) — Formalize ports: every provider category has an interface in `core/interfaces`; adapters depend only on it.
-- [ ] **ARCH-5** (P1) — Add an **import-linter** contract (layered + independence) wired into CI so the hexagon is enforced and can't regress. _Makes "follows the architecture" verifiable._
+- [ ] **ARCH-5** (P1) — Add an **import-linter** contract (layered + independence) wired into CI so the hexagon is enforced and can't regress. _Makes "follows the architecture" verifiable._ Folds in **QUAL-23** (startup name-resolution assertion) + **TEST-0** (smoke harness) as CI gates.
 - [ ] **ARCH-6** (P2) — Resolve the dead `InputManager._input_queue` seam (wire as driving port, or delete). Fix the contained `inputs.base ⇄ subclasses` cycle (SCC-2).
 - [ ] **ARCH-7** [MQTT] (P-TBD) — **Design session** (needs live collaboration): place MQTT publication as a driven
       **output adapter** in the hexagon (intent result/action → output port → MQTT adapter). Defines the general
@@ -246,6 +273,13 @@ See `docs/review/phase1_architecture_map.md` §5.
       unimplemented. Either finish the enhancement (apply enhanced_entities / wire capability + location context)
       or remove the dead logic. Relates to QUAL-10 [PEX]. xfail tests: `test_client_capability_context`,
       `test_room_context_inference`.
+- [ ] **QUAL-23** (P1, Gate 0) — **Startup name-resolution assertion** — the cross-cutting fix for the systemic
+      bug class the review wave exposed FOUR times: configured provider/stage/action names that **don't resolve to
+      anything real**. Concretely: every `default_provider`/`fallback_providers` (LLM `console` phantom — QUAL-14),
+      every `provider_cascade_order` entry (NLU phantom names — QUAL-10), and every text-processor stage/provider
+      (dead stages — QUAL-12) must resolve to a discovered entry-point/class at startup, else fail fast (or log a
+      single clear ERROR). Cheap, catches 3 of 4 review P0 classes, and prevents regression. Standalone now (Gate 0);
+      folds into ARCH-5 (CI enforcement) later.
 
 ### Tests (TEST)
 > **Strategy (decided 2026-06-01): do NOT keep repairing the existing suite.** Most tests were written against
@@ -255,6 +289,13 @@ See `docs/review/phase1_architecture_map.md` §5.
 > (166 pass / 56 fail / 13 skip / 2 xfail, all committed) stands as a **partial safety net**; the remaining 56
 > failures are left **intentionally unfixed**. The real test effort is **TEST-7: rewrite the suite after the
 > architecture + code reviews land** (gated). TEST-3/4/5/6 are coverage goals folded into that rewrite.
+- [ ] **TEST-0** (P0) — **Minimal end-to-end smoke/integration harness — the refactor safety net (Gate 0).**
+      NOT the TEST-7 rewrite: a small, fast, always-green set of real-flow assertions to catch gross breakage while
+      ARCH-1/2 move code and the P0s are fixed. Scope: boot (CLI headless + WebAPI, like BUILD-1) + a handful of
+      end-to-end checks — a command→intent (`привет`→`greeting.hello`, as run in BUILD-1), **set a timer** (catches
+      the QUAL-9 timer-crash P0), **extract a parameter** (catches QUAL-10/11 regressions), and an LLM-unavailable
+      degradation path. This is the "wire-up integration test" all four reviews flagged as missing. Done when: a
+      `pytest` smoke file (or script) runs green and is wired into CI (BUILD-2). **Gates the structural work.**
 - [x] **TEST-1** (P1) — Fix broken tests referencing removed/renamed symbols. **DONE 2026-06-01**:
       `ConversationContext`→`UnifiedConversationContext` (rename); `TTLCache`/`ContextualCommandPerformanceManager`/
       `initialize_performance_manager` were **deleted** (v13→v15 contextual-command unification) → those tests
@@ -469,6 +510,15 @@ Governed by Invariant #4 (config-ui must stay functional).
   "COMPLETED" is false (banner added). Remediation → **QUAL-9** (P0s first), then TEST-3. **This is the 4th
   "plumbed-but-dead" subsystem** (with QUAL-10/12/14) — a cross-cutting wire-up integration test + startup
   assertions would catch the whole class. **Review wave (QUAL-8/10/12/14) COMPLETE** — ARCH refactors unblocked.
+
+- **Sequencing decided + encoded** (new "Sequencing" section). Review-wave P0s split into *surgical bug fixes*
+  (architecture-independent) vs *refactor-flavored* (subsystem architecture work). Phasing: **Gate 0** = TEST-0
+  (smoke net) + QUAL-23 (startup name-resolution assertion) → **Gate 1** = ARCH-1→2→4→5 (+DOC-4) → **Gate 2** = P0s
+  by type (bug P0s ride the smoke net; refactor P0s ride the ports). Added **TEST-0** (P0, refactor safety net,
+  distinct from the TEST-7 rewrite) and **QUAL-23** (P1, the cross-cutting fix for the 4×-observed
+  "configured-name-doesn't-resolve" class). Rationale: no test net exists today + ARCH-1/2 move code, so a thin
+  smoke harness gates the structural work; the name-resolution assertion is the cheap guard that catches most P0
+  classes at once.
 
 ### 2026-05-31
 - **Revival analysis** — full doc + code + build + asset audit; established real version is 15.0.0, single
