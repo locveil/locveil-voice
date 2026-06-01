@@ -116,8 +116,8 @@ class VoskTTSProvider(TTSProvider):
         """VOSK TTS model URLs and configuration"""
         return {
             "ru_multi": {
-                "url": "https://alphacephei.com/vosk/models/vosk-model-tts-ru-0.8-multi.zip",
-                "size": "500MB",
+                "url": "https://alphacephei.com/vosk/models/vosk-model-tts-ru-0.9-multi.zip",
+                "size": "780MB",
                 "extract": True,
                 "description": "Russian multi-speaker TTS model"
             }
@@ -192,7 +192,7 @@ class VoskTTSProvider(TTSProvider):
             # Fallback: Provide helpful instructions for manual installation
             logger.error(f"VOSK TTS model not found at {self.model_path}")
             logger.error(f"Please download the VOSK TTS model manually from: https://alphacephei.com/vosk/models")
-            logger.error(f"Extract vosk-model-tts-ru-0.8-multi.zip to: {self.model_path}")
+            logger.error(f"Extract vosk-model-tts-ru-0.9-multi.zip to: {self.model_path}")
             raise RuntimeError(f"VOSK TTS model not found: {self.model_path}")
     
     async def _load_model(self) -> None:
