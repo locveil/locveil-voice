@@ -196,11 +196,33 @@ See `docs/review/phase1_architecture_map.md` §5.
       exists with a **keep/fix/cut** recommendation per piece {ESP32 firmware, microWakeWord, armv7, training refs}.
 - [ ] **QUAL-20** [ESP32] (P-TBD) — Act on QUAL-19 (complete TODO11 + real feature extraction, OR cut/archive
       microWakeWord + ESP32 + residual training refs; reconcile armv7; close TODO11 accordingly).
+- [ ] **QUAL-21** (P1) — **Prod bug found via TEST-2**: `ComponentConfig` field drift not propagated to all callers.
+      The component fields are now `{asr, audio, tts, nlu, text_processor, llm, voice_trigger, intent_system,
+      monitoring, nlu_analysis, configuration}` — there is **no** `audio_output`, `microphone`, or `web_api`
+      (mic/web moved to `config.inputs.*` / `config.system.web_api_enabled`; `audio_output`→`audio`). But
+      `irene/runners/settings_runner.py` (the `irene-settings` Gradio runner) still does
+      `config.components.audio_output` (L279) and `ComponentConfig(audio_output=…, microphone=…, web_api=…)` (L305)
+      → **would crash on launch**. `irene/examples/{dependency_demo,component_demo,config_demo}.py` have the same
+      stale kwargs. Fix the runner against the real model (and inputs/system split); update/retire the examples.
+      Not done in the TEST pass because the mic/web migration is non-trivial (needs the inputs/system split, not a
+      rename). Verify `irene-settings` boots after.
 
 ### Tests (TEST)
-- [ ] **TEST-1** (P1) — Fix broken tests referencing removed/renamed symbols (`ConversationContext`→
-      `UnifiedConversationContext`, `TTLCache`, `ContextualCommandPerformanceManager`). 16 undefined-name refs.
-- [ ] **TEST-2** (P1) — Get the suite running green; assess coverage and trustworthiness.
+- [x] **TEST-1** (P1) — Fix broken tests referencing removed/renamed symbols. **DONE 2026-06-01**:
+      `ConversationContext`→`UnifiedConversationContext` (rename); `TTLCache`/`ContextualCommandPerformanceManager`/
+      `initialize_performance_manager` were **deleted** (v13→v15 contextual-command unification) → those tests
+      skipped-with-reason; `Intent.text`→`raw_text`, `ComponentConfig.audio_output`→`audio` renamed in tests.
+- [ ] **TEST-2** (P1) — DOING — Get the suite running green; assess coverage/trustworthiness. Baseline 2026-06-01
+      after TEST-1 + pytest config (`asyncio_mode=auto`): **156 passed / 68 failed / 13 skipped** (was 136/100/0).
+      Structural buckets cleared (async config, symbol renames, obsolete skips, hardcoded-path bug). Remaining 68
+      are drift needing per-cluster judgment: fixture wiring (`component.core` unset → `NoneType.config`/`Mock has
+      no 'core'`, ~10), `test_cascading_nlu` provider-metadata semantics (`entities["provider"]` vs injected
+      `_recognition_provider`, ~7), VAD/ASR metrics dict-vs-object (~8), `DeviceEntityResolver` asset-loader fixture
+      (3), attr renames (`IntentResult.error_type`, `SpaCyNLUProvider.model_name`, `IntentRegistry._handlers`,
+      `IntentComponent.get_system_status`), mock-vs-MagicMock (2), assertions. Surfaced prod bug → **QUAL-21**.
+- [ ] **TEST-6** (P2) — Rewrite the 7 phase7 ASR-fallback-chain tests skipped in TEST-1 (they called the
+      removed private `ASRComponent._handle_sample_rate_mismatch`); the provider-fallback + resampling feature
+      still exists via `AudioProcessor.resample_audio_data` — restore coverage against the current path.
 - [ ] **TEST-3** [FAF] (P2) — Fire-and-forget lifecycle test coverage (launch → completion → error → cleanup →
       context propagation). Scope after QUAL-8 maps current coverage.
 - [ ] **TEST-4** [PEX] (P1) — Parameter-extraction test coverage (user-flagged as key): assess existing tests
@@ -329,6 +351,16 @@ Governed by Invariant #4 (config-ui must stay functional).
   command; now enables nlu+text_processor (llm optional) and `--headless --command "привет"` returns a greeting.
   Cosmetics noted: QUAL-6 schema warning prints on every boot; CLI `--help` banner still says "v14" → folded into
   DOC-3. Not yet covered: Docker boot (BUILD-3), interactive REPL, audio/voice path (needs devices + models).
+
+- **TEST-1 DONE / TEST-2 DOING** — first test-suite run post-revival. Added `[tool.pytest.ini_options]`
+  (`asyncio_mode=auto` — unblocked ~23 async tests that errored as "not natively supported"; testpaths; silenced
+  Pydantic V1 deprecation flood). Fixed broken refs: `ConversationContext`→`UnifiedConversationContext`,
+  `Intent.text`→`raw_text`, `ComponentConfig.audio_output`→`audio`; skipped deleted-subsystem tests (TTLCache /
+  perf-manager / removed `_handle_sample_rate_mismatch` seam, 13 skipped) with reasons; fixed a hardcoded
+  `cwd='/home/.../Irene-Voice-Assistant'` test bug. Suite **100 failed→68 failed, 136→156 passed**. Commits
+  `…`(asyncio+rename), `…`(skips+cwd), `…`(audio_output/Intent). **Prod bug surfaced → QUAL-21** (settings_runner
+  + examples use removed ComponentConfig fields audio_output/microphone/web_api → would crash). Remaining 68 drift
+  failures tracked in TEST-2; **TEST-6** added (rewrite ASR-fallback tests).
 
 ### 2026-05-31
 - **Revival analysis** — full doc + code + build + asset audit; established real version is 15.0.0, single
