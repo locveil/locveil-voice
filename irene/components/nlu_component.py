@@ -12,6 +12,7 @@ from typing import Dict, Any, List, Optional, Type
 from pydantic import BaseModel
 from .base import Component
 from ..core.interfaces.webapi import WebAPIPlugin
+from ..core.interfaces.nlu import NLUPlugin
 from ..core.trace_context import TraceContext
 from ..intents.models import Intent
 from ..intents.context_models import UnifiedConversationContext
@@ -311,7 +312,7 @@ class ContextAwareNLUProcessor:
         return confidence
 
 
-class NLUComponent(Component, WebAPIPlugin):
+class NLUComponent(Component, NLUPlugin, WebAPIPlugin):
     """
     Natural Language Understanding component.
     

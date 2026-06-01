@@ -13,6 +13,7 @@ from typing import Dict, Any, List, Optional, Type
 from pydantic import BaseModel
 from .base import Component
 from ..core.interfaces.webapi import WebAPIPlugin
+from ..core.interfaces.voice_trigger import VoiceTriggerPlugin
 from ..core.trace_context import TraceContext
 from ..intents.models import AudioData, WakeWordResult
 from ..utils.audio_helpers import calculate_audio_buffer_size, validate_audio_file
@@ -25,7 +26,7 @@ from ..utils.loader import DependencyChecker, safe_import, dynamic_loader
 logger = logging.getLogger(__name__)
 
 
-class VoiceTriggerComponent(Component, WebAPIPlugin):
+class VoiceTriggerComponent(Component, VoiceTriggerPlugin, WebAPIPlugin):
     """Voice trigger detection component - uses audio_helpers.py for audio management"""
     
     def __init__(self):

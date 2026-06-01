@@ -14,6 +14,7 @@ from typing import Dict, Any, List, Optional, Type
 from pydantic import BaseModel
 from .base import Component
 from ..core.interfaces.webapi import WebAPIPlugin
+from ..core.interfaces.text_processing import TextProcessorPlugin
 from ..core.trace_context import TraceContext
 from ..intents.context_models import UnifiedConversationContext
 from ..utils.loader import dynamic_loader
@@ -23,7 +24,7 @@ from ..providers.text_processing.base import TextProcessingProvider
 logger = logging.getLogger(__name__)
 
 
-class TextProcessorComponent(Component, WebAPIPlugin):
+class TextProcessorComponent(Component, TextProcessorPlugin, WebAPIPlugin):
     """Text processing component using stage-specific providers"""
     
     def __init__(self):

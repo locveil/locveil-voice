@@ -13,15 +13,21 @@ from .input import InputPlugin
 from .webapi import WebAPIPlugin
 from .asr import ASRPlugin
 from .llm import LLMPlugin
+from .nlu import NLUPlugin
+from .text_processing import TextProcessorPlugin
+from .voice_trigger import VoiceTriggerPlugin
 
 __all__ = [
     "PluginInterface",
-    "PluginManager", 
+    "PluginManager",
 
     "TTSPlugin",
-    "AudioPlugin", 
+    "AudioPlugin",
     "InputPlugin",
     "WebAPIPlugin",
     "ASRPlugin",
-    "LLMPlugin"
-] 
+    "LLMPlugin",
+    "NLUPlugin",
+    "TextProcessorPlugin",
+    "VoiceTriggerPlugin",
+]
