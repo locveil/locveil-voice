@@ -146,6 +146,7 @@ class TextProcessorComponent(Component, WebAPIPlugin):
             input_data=text,
             output_data=processed_text,
             metadata={
+                "component_name": self.__class__.__name__,
                 "normalizers_applied": normalizers_applied,
                 "provider_count": len(self.providers),
                 "session_id": context.session_id,

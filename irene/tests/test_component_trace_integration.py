@@ -37,7 +37,7 @@ class TestComponentTraceIntegration(unittest.IsolatedAsyncioTestCase):
         component.providers = {}  # No providers for test
         
         # Test with trace context
-        result = await component.process("test text", self.trace_context)
+        result = await component.process("test text", self.conversation_context, self.trace_context)
         
         # Verify the result is correct
         self.assertEqual(result, "test text")
@@ -85,10 +85,13 @@ class TestComponentTraceIntegration(unittest.IsolatedAsyncioTestCase):
     async def test_asr_component_trace(self):
         """Test ASRComponent with trace context"""
         component = ASRComponent()
-        
+        # Wire a minimal core: process_audio reads self.core.config.asr for resampling
+        component.core = MagicMock()
+        component.core.config.asr.model_dump.return_value = {}
+
         # Mock provider
         mock_provider = AsyncMock()
-        mock_provider.transcribe = AsyncMock(return_value="transcribed text")
+        mock_provider.transcribe_audio = AsyncMock(return_value="transcribed text")
         component.providers = {"test_provider": mock_provider}
         component.default_provider = "test_provider"
         
@@ -316,14 +319,14 @@ class TestComponentTraceIntegration(unittest.IsolatedAsyncioTestCase):
         # Measure with disabled trace
         start_time = time.perf_counter()
         for _ in range(50):
-            await text_component.process("test", disabled_trace)
+            await text_component.process("test", self.conversation_context, disabled_trace)
             await llm_component.enhance_text("test", trace_context=disabled_trace)
         disabled_time = time.perf_counter() - start_time
         
         # Measure without trace
         start_time = time.perf_counter()
         for _ in range(50):
-            await text_component.process("test")
+            await text_component.process("test", self.conversation_context)
             await llm_component.enhance_text("test")
         no_trace_time = time.perf_counter() - start_time
         

@@ -23,6 +23,11 @@ class TestContextAwareNLU:
         """Create a mock NLU component for testing"""
         nlu_component = MagicMock(spec=NLUComponent)
         nlu_component.recognize = AsyncMock()
+        # spec=NLUComponent doesn't expose the instance attr `core`; the context-aware
+        # path reads core.config.nlu (_should_redetect_language). Wire a minimal config
+        # so language re-detection is disabled and the device-resolution logic runs.
+        nlu_component.core = MagicMock()
+        nlu_component.core.config.nlu.auto_detect_language = False
         return nlu_component
     
     @pytest.fixture
