@@ -51,7 +51,7 @@ Living findings behind the tasks (Invariant #5). `[x]` = exists; others are prod
 | `fire_and_forget_review.md` | F&F lifecycle + gap analysis | QUAL-8/9, TEST-3 |
 | `parameter_extraction_review.md` `[x]` | text→parameters review + gaps | QUAL-10 ✓, QUAL-11, TEST-4, DOC-7, UI-1/2/3, QUAL-22 |
 | `text_processing_review.md` | text-processor subsystem review | QUAL-12/13, TEST-5 |
-| `llm_usage_review.md` | LLM usage + offline-first | QUAL-14/15 |
+| `llm_usage_review.md` `[x]` | LLM usage + offline-first + NLU-LLM decision | QUAL-14 ✓, QUAL-15, QUAL-16 |
 | `streaming_api_review.md` | AsyncAPI streaming-API tooling | QUAL-17/18 |
 | `esp32_wakeword_review.md` | ESP32 + wakeword keep/fix/cut | QUAL-19/20 |
 | `docs/design/mqtt_integration.md` | MQTT output-port design | ARCH-7/8 |
@@ -175,13 +175,22 @@ See `docs/review/phase1_architecture_map.md` §5.
       keep/merge/collapse recommendation + ranked remediation.
 - [ ] **QUAL-13** [TXTPROC] (P-TBD) — Refine per QUAL-12 (likely collapse the 4 providers into one config-driven
       `TextProcessor` and unify stage routing).
-- [ ] **QUAL-14** [LLM] (P1) — LLM usage review: map every LLM invocation in the flow (`conversation`,
-      `translation_handler`, `text_enhancement_handler` + `LLMComponent` + 3 providers), what each uses it for,
-      and the **offline-first posture** — confirm NLU is LLM-free (spaCy + keyword) per the original offline plan;
-      document where internet is required vs optional and graceful degradation when offline (fallback to console).
-      Analyze: **should NLU use an LLM?** (usefulness vs offline-first; e.g. optional online LLM-NLU with spaCy
-      offline fallback). Done when: `docs/review/llm_usage_review.md` exists with recommendations.
-- [ ] **QUAL-15** [LLM] (P-TBD) — Act on QUAL-14 (NLU-LLM decision; offline graceful-degradation hardening).
+- [x] **QUAL-14** [LLM] (P1) — LLM usage + offline-first review. **DONE 2026-06-01** →
+      `docs/review/llm_usage_review.md` (3×P0, 9×P1, 12×P2). **NLU confirmed LLM-free**; offline-first is real for
+      recognized intents but the **LLM stage's offline fallback is a phantom** — the configured `console` LLM
+      provider **does not exist** (no class/entry-point), `fallback_providers` is never used at runtime, and
+      `generate_response` hard-fails offline. The pipeline survives offline only because the conversation handler
+      independently `is_available()`-gates to templates. **NLU-LLM recommendation: keep NLU deterministic +
+      offline-first; any LLM assist must be opt-in and LOCAL (not cloud) — gated on a real local LLM, which ties to
+      ARCH-9/10 [INFER]. Fix the offline foundation + QUAL-11 extraction first.** Prompt inventory captured for QUAL-16.
+- [ ] **QUAL-15** [LLM] (P1) — Act on QUAL-14. **P0s:** (1) implement a real local LLM fallback (console/echo at
+      minimum, ideally a local-model provider) + register its entry-point, OR drop `console` from configs and
+      document LLM as online-only; add a startup assertion that every `default_provider`/`fallback_providers`
+      resolves to a discovered provider; (2) make `fallback_providers` actually iterate at runtime (mirror
+      TTS/audio, not `keys()[0]`); (3) give `generate_response` a graceful offline outcome (don't raise). **P1s:**
+      `openai.is_available()` local check; per-call timeouts + client reuse; fix the dead ASR `universal_llm`
+      lookup; stop `enhance_text` masking failures as success; `silero_v3.is_available()` local check. NLU-LLM
+      assist (local, opt-in) deferred behind ARCH-9/10 + QUAL-11.
 - [ ] **QUAL-16** [PROMPTS] (P1) — Prompt hardening for ALL LLM use cases: audit every prompt — asset YAML
       (`assets/prompts/<handler>/<lang>.yaml`) **and inline-in-code prompts** (translation/text_enhancement/
       conversation handlers) — and rewrite for clarity, guardrails, output-format constraints, persona
@@ -415,6 +424,16 @@ Governed by Invariant #4 (config-ui must stay functional).
   `provider_cascade_order` names providers that don't exist** (only shipped configs setting it explicitly avoid total
   failure). Remediation ranked into **QUAL-11** (P0s first); confirms+absorbs **QUAL-22**; informs DOC-7, UI-1/2/3,
   TEST-4. Also explains the parked `test_cascading_nlu` failures (`_recognition_provider` vs bare `provider`).
+
+- **QUAL-14 [LLM] DONE** → `docs/review/llm_usage_review.md` (3-layer parallel deep-read; 3×P0/9×P1/12×P2).
+  **NLU confirmed LLM-free.** Headline: offline-first works for recognized intents, but the LLM stage's offline
+  fallback is **fictional** — the `console` LLM provider doesn't exist (verified: no `console.py`, no entry-point),
+  `fallback_providers` is never used at runtime (uses arbitrary `keys()[0]`), and `generate_response` re-raises
+  offline; only the conversation handler's independent `is_available()` template-gate saves the pipeline. Also: ASR
+  LLM-enhancement is dead code (`universal_llm` plugin lookup that returns None), `enhance_text` masks failures as
+  success (failed translation returns untranslated input), prompts are triplicated inline + provider-language-locked
+  (→ QUAL-16). **NLU-LLM decision: keep NLU deterministic/offline; LLM assist only opt-in + LOCAL, gated on
+  ARCH-9/10 [INFER] + QUAL-11.** Remediation → QUAL-15.
 
 ### 2026-05-31
 - **Revival analysis** — full doc + code + build + asset audit; established real version is 15.0.0, single
