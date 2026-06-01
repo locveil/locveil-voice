@@ -263,7 +263,12 @@ infra** — read by the composition root, not depended-upon-by-being-imported-up
 3. **ARCH-3** — components must not import `web_api`/`analysis` directly: put web-schema generation behind a
    port; treat `analysis` as a driven adapter.
 4. **ARCH-4** — formalize ports: ensure every provider category has an interface in `core/interfaces` and
-   adapters depend only on it.
+   adapters depend only on it. **✅ DONE (2026-06-02, `df93a15`).** The port layer is **two-layer**: component
+   capability ports (`core/interfaces/*Plugin`, implemented by components) + adapter ports (`providers/*/base.py
+   *Provider`, inherited by adapters). Audit confirmed adapters depend only on their abstraction (no
+   adapter→sibling-adapter import). Filled the 3 missing capability ports — `core/interfaces/{nlu,text_processing,
+   voice_trigger}.py` — and wired the components; the `*Provider` adapter ports stay co-located in `providers/`
+   (clean as-is; unifying the two hierarchies was deferred as over-engineering for P2).
 5. **ARCH-5** — add an **import-linter** contract (layered + independence rules) wired into CI so the hexagon is
    enforced and can't regress. *This is the deliverable that makes "follows the architecture" verifiable.*
 6. **ARCH-6** — resolve the dead `InputManager` queue (wire it as the driving port, or delete it).

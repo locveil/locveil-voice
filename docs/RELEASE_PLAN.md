@@ -144,7 +144,17 @@ See `docs/review/phase1_architecture_map.md` §5.
       application→driven-adapter relationship; a port for one-consumer tooling would be over-engineering. **ARCH-5
       import-linter rule:** forbid `components → web_api`/`analysis` generally, but **allow `nlu_analysis → analysis`**
       as the adapter boundary. Verified: full suite unchanged (176/55, zero regression), TEST-0 green.
-- [ ] **ARCH-4** (P2) — Formalize ports: every provider category has an interface in `core/interfaces`; adapters depend only on it.
+- [x] **ARCH-4** (P2) — Formalize ports. **DONE 2026-06-02** (`df93a15`). Found a healthy **two-layer** port
+      structure: component-capability ports (`core/interfaces/*Plugin`, implemented by components) + adapter ports
+      (`providers/*/base.py *Provider`, inherited by adapters). **Audit:** adapter ports exist for all 7 categories
+      and **no adapter imports a sibling concrete adapter** (adapters depend only on their abstraction ✓).
+      **Gap-filled** (the 3 categories with no capability port): added `core/interfaces/{nlu,text_processing,
+      voice_trigger}.py` (`NLUPlugin`/`TextProcessorPlugin`/`VoiceTriggerPlugin`, one `@abstractmethod` each typed
+      with real domain types — **no TYPE_CHECKING**, cycle-verified) and made the 3 components inherit their port.
+      (Chosen scope: capability-port gap-fill; the `*Provider` adapter ports stay in `providers/` — already clean.
+      The bigger "unify the two hierarchies" move was considered and deferred as over-engineering for P2.) Verified:
+      all 3 components instantiate + `isinstance` their port, no cycle, functional suite unchanged. **Gate 1: ARCH-5
+      (import-linter) is the capstone next.**
 - [ ] **ARCH-5** (P1) — Add an **import-linter** contract (layered + independence) wired into CI so the hexagon is enforced and can't regress. _Makes "follows the architecture" verifiable._ Folds in **QUAL-23** (startup name-resolution assertion) + **TEST-0** (smoke harness) as CI gates.
 - [ ] **ARCH-6** (P2) — Resolve the dead `InputManager._input_queue` seam (wire as driving port, or delete). Fix the contained `inputs.base ⇄ subclasses` cycle (SCC-2).
 - [ ] **ARCH-7** [MQTT] (P-TBD) — **Design session** (needs live collaboration): place MQTT publication as a driven
@@ -582,6 +592,16 @@ Governed by Invariant #4 (config-ui must stay functional).
   driven adapter wrapped by `nlu_analysis_component` (classification for the ARCH-5 linter, no code change).
   Verified: full suite unchanged (176/55), TEST-0 green. Per Invariant #5, synced `phase1_architecture_map.md` §2.3.
   **Gate 1: ARCH-1 ✓, ARCH-2 ✓, ARCH-3 ✓ — ARCH-4 (formalize ports) → ARCH-5 (import-linter) next.**
+
+### 2026-06-02
+- **ARCH-4 DONE** (`df93a15`) — formalized the port layer. Found a healthy two-layer structure (component-capability
+  `*Plugin` ports + adapter `*Provider` ports); audit confirmed adapters depend only on their abstraction. Filled the
+  3 missing capability ports (`core/interfaces/{nlu,text_processing,voice_trigger}.py`) with real-domain-typed
+  abstract methods (no TYPE_CHECKING) and wired the components. **User instruction mid-task: "ask me before making
+  decisions"** — paused and got explicit sign-off on scope (gap-fill vs unify vs audit-only) and on port typing
+  (real domain types) via AskUserQuestion before implementing. Verified: components instantiate + isinstance their
+  port, no cycle, functional suite unchanged (perf-test flakiness only). Per Invariant #5, synced
+  `phase1_architecture_map.md` §5. **Gate 1: ARCH-1✓ ARCH-2✓ ARCH-3✓ ARCH-4✓ — ARCH-5 (import-linter) is the capstone.**
 
 ### 2026-05-31
 - **Revival analysis** — full doc + code + build + asset audit; established real version is 15.0.0, single
