@@ -49,7 +49,7 @@ Living findings behind the tasks (Invariant #5). `[x]` = exists; others are prod
 | `phase0_static_baseline.md` `[x]` | static baseline: phantom refs, hidden type debt, dead code, layering | QUAL-1/2 ✓, QUAL-3/4/5/6, TEST-1 |
 | `phase1_architecture_map.md` `[x]` | architecture map, doc-harmonization audit, hexagon target | ARCH-0 ✓, ARCH-1..8, DOC-4/5✓/5b/6✓ |
 | `fire_and_forget_review.md` | F&F lifecycle + gap analysis | QUAL-8/9, TEST-3 |
-| `parameter_extraction_review.md` | text→parameters review + gaps | QUAL-10/11, TEST-4, DOC-7 |
+| `parameter_extraction_review.md` `[x]` | text→parameters review + gaps | QUAL-10 ✓, QUAL-11, TEST-4, DOC-7, UI-1/2/3, QUAL-22 |
 | `text_processing_review.md` | text-processor subsystem review | QUAL-12/13, TEST-5 |
 | `llm_usage_review.md` | LLM usage + offline-first | QUAL-14/15 |
 | `streaming_api_review.md` | AsyncAPI streaming-API tooling | QUAL-17/18 |
@@ -149,15 +149,23 @@ See `docs/review/phase1_architecture_map.md` §5.
       confirmation: action-metadata key mismatch (`active_actions` plural vs `active_action` singular, issue #1),
       completion write-back + context-manager/callback integration (#2, #6), error propagation (#5), cleanup/
       memory leak (#3), error-handling consistency (#4).
-- [ ] **QUAL-10** [PEX] (P1) — Text→parameters (parameter extraction) full review: conceptual + code +
-      architecture. Map end-to-end: donation `ParameterSpec`/`ParameterType` (8 types) + `token_patterns`/
-      `slot_patterns`/`extraction_patterns` → spaCy Matcher extraction (`providers/nlu/hybrid_keyword_matcher.py`,
-      `spacy_provider.py`) → `ContextualEntityResolver` + Device/Location/Temporal/Quantity resolvers
-      (`core/entity_resolver.py`) → `Intent.entities` → handler consumption; incl. the `irene/analysis/*` tooling
-      and the web-API parameter-schema surface (`get_parameter_schema`). Reality-check
-      `docs/archive/parameter_extraction.md`. Done when: `docs/review/parameter_extraction_review.md` exists with
-      gaps + severity + ranked remediation.
-- [ ] **QUAL-11** [PEX] (P-TBD) — Remediate confirmed parameter-extraction gaps (populated by QUAL-10).
+- [x] **QUAL-10** [PEX] (P1) — Text→parameters (parameter extraction) full review. **DONE 2026-06-01** →
+      `docs/review/parameter_extraction_review.md` (6×P0, 11×P1, 12×P2). Verdict: donation-driven extraction is
+      largely **aspirational** — in practice it's spaCy NER + per-param regex + heuristics with **no contract
+      enforcement**; the richest author-facing mechanisms (`slot_patterns`/`token_patterns`/`ParameterSpec.
+      extraction_patterns`) are validated-then-discarded **dead code**; the two NLU providers extract with divergent
+      contracts; failures are swallowed silently; resolvers *fatally crash* on asset-loader timing while the rest
+      *silently no-ops*.
+- [ ] **QUAL-11** [PEX] (P1) — Remediate parameter-extraction gaps (ranked in the review). **P0s:** (1) fix the
+      default `provider_cascade_order` — it names non-existent providers (`keyword_matcher`/`spacy_rules_sm`/
+      `spacy_semantic_md` vs real `hybrid_keyword_matcher`/`spacy_nlu`, `nlu_component.py:380`) + add a startup
+      assertion; (2) decide the slot/extraction-pattern story (implement, or remove the dead author-visible fields);
+      (3) make required-param a real contract on a **shared** extraction base (raise on missing-required, stop
+      swallowing, always apply `default_value`, unify spaCy+hybrid → deterministic param surface); (4) de-fatalize
+      the entity resolvers (degrade, don't crash the request, when the asset loader isn't wired); (5) **QUAL-22**
+      (finish/delete the context-enhancement stub). **P1s:** typed `ParameterSpec`-driven entity accessor on
+      `IntentHandler`; fix first-match span→value; default `_md` spaCy models for similarity; unify duplicate device
+      resolution. Gated by Invariant #4 (config-ui).
 - [ ] **QUAL-12** [TXTPROC] (P2) — Text-processor subsystem review: role/functionality of the 4 providers
       (`asr`/`general`/`tts`/`number_text_processor`), the 3 normalizers (`NumberNormalizer`/`PrepareNormalizer`/
       `RunormNormalizer` in `utils/text_normalizers.py`), and the **double stage-routing** (provider-per-stage
@@ -207,8 +215,9 @@ See `docs/review/phase1_architecture_map.md` §5.
       Not done in the TEST pass because the mic/web migration is non-trivial (needs the inputs/system split, not a
       rename). Verify `irene-settings` boots after.
 
-- [ ] **QUAL-22** [PEX] (P2) — **Stubbed feature found via TEST-2**: context-aware NLU enhancement is a no-op.
-      `NLUComponent._enhance_intent` (`nlu_component.py` ~170-187) computes `enhanced_entities`
+- [ ] **QUAL-22** [PEX] (P2) — **Stubbed feature found via TEST-2, confirmed by QUAL-10**: context-aware NLU
+      enhancement is a no-op. `ContextAwareNLUProcessor._disambiguate_with_device_context` (`nlu_component.py`
+      157-187 — the method QUAL-22 first called `_enhance_intent`) computes `enhanced_entities`
       (`output_capabilities`, `context_suggestion`, `preferred_output_device`) but then **returns the original
       intent unchanged** (comment: "for now, return original"); location inference (`location_resolved`) is
       unimplemented. Either finish the enhancement (apply enhanced_entities / wire capability + location context)
@@ -397,6 +406,15 @@ Governed by Invariant #4 (config-ui must stay functional).
   folded in as coverage goals). **BUILD-3 (Docker) DEFERRED to the release phase** — image/extras/armv7 depend on
   the post-refactor shape (incl. ARCH-9/10 [INFER], QUAL-19/20 [ESP32]). Net active path now: **reviews +
   architecture**, then test rewrite, then Docker + release.
+
+- **QUAL-10 [PEX] DONE** → `docs/review/parameter_extraction_review.md` (4-layer parallel deep-read + synthesis;
+  6×P0/11×P1/12×P2). Headline: donation-driven extraction is largely aspirational — `slot_patterns`/`token_patterns`/
+  `ParameterSpec.extraction_patterns` are validated-then-discarded **dead code**; spaCy param-extraction self-labels a
+  "Phase-2 stub"; required-param errors never raise; the two providers extract with **divergent contracts**; entity
+  resolvers **fatally crash** on asset-loader timing while the rest silently no-ops; and the **default
+  `provider_cascade_order` names providers that don't exist** (only shipped configs setting it explicitly avoid total
+  failure). Remediation ranked into **QUAL-11** (P0s first); confirms+absorbs **QUAL-22**; informs DOC-7, UI-1/2/3,
+  TEST-4. Also explains the parked `test_cascading_nlu` failures (`_recognition_provider` vs bare `provider`).
 
 ### 2026-05-31
 - **Revival analysis** — full doc + code + build + asset audit; established real version is 15.0.0, single
