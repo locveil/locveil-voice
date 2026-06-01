@@ -14,6 +14,23 @@ The single active tracker for the road to release. Supersedes the legacy `docs/T
 - [ ] Test suite runs and passes; coverage understood.
 - [ ] Models point to current versions with live download URLs.
 - [ ] Docs accurate at the release version; quickstart works end-to-end.
+- [ ] **`config-ui` builds (`tsc && vite build`), type-checks clean, and is functional against the release backend.**
+
+---
+
+## Invariants (apply to EVERY task)
+
+1. **Work on `main`; branch only when explicitly asked.**
+2. **`configs/config-master.toml` is the canonical config reference** (a release-time `config-example.toml` is a later story).
+3. **Architecture target = Hexagonal**; dependencies point inward (domain → application → ports → adapters). Don't add backwards/cross-layer imports (enforced by ARCH-5 import-linter once in place).
+4. **`config-ui` must stay functional.** It is a first-class consumer of backend contracts. Any task that changes
+   one of these **must update config-ui in the same change and leave it building/type-checking clean**:
+   - **Donation schema/format** (`assets/donations/v1.0.json`, `ParameterSpec`/`MethodDonation` shape) → config-ui
+     editors (`ParameterSpecEditor`, `Token/SlotPatternsEditor`, `Examples/LemmasEditor`), its **AJV** validation, and `src/types/*`.
+   - **Config schema** (`CoreConfig` / `config-master.toml`) → `ConfigSection` editors, `/configuration/config*` calls, `src/types/*`.
+   - **REST API endpoints / parameter schemas / analysis endpoints** → `src/utils/apiClient.ts`, the analysis components.
+   - Definition-of-done addendum for such tasks: `cd config-ui && npm run type-check && npm run build` passes.
+   - Directly-gated tasks: **DOC-5b, DOC-4, DOC-7, QUAL-7, QUAL-10/11, ARCH-1/2/3, BUILD-4.**
 
 ---
 
@@ -49,6 +66,15 @@ See `docs/review/phase1_architecture_map.md` §5.
 - [ ] **ARCH-4** (P2) — Formalize ports: every provider category has an interface in `core/interfaces`; adapters depend only on it.
 - [ ] **ARCH-5** (P1) — Add an **import-linter** contract (layered + independence) wired into CI so the hexagon is enforced and can't regress. _Makes "follows the architecture" verifiable._
 - [ ] **ARCH-6** (P2) — Resolve the dead `InputManager._input_queue` seam (wire as driving port, or delete). Fix the contained `inputs.base ⇄ subclasses` cycle (SCC-2).
+- [ ] **ARCH-7** [MQTT] (P-TBD) — **Design session** (needs live collaboration): place MQTT publication as a driven
+      **output adapter** in the hexagon (intent result/action → output port → MQTT adapter). Defines the general
+      output-port seam — MQTT is the **first non-audio output** (today output is TTS/audio-only via
+      `_handle_tts_output`; there is no `irene/outputs/` package). Evaluate placement (output adapter vs
+      fire-and-forget action type [FAF] vs MQTT intent handlers per `docs/intent_mqtt.md`); integrate
+      `ClientRegistry`/`DeviceEntityResolver` for room/device topics; define topic schema (HA convention?) + config
+      model; reconcile/supersede `docs/intent_mqtt.md`. → `docs/design/mqtt_integration.md`.
+- [ ] **ARCH-8** [MQTT] (P-TBD) — Implement per ARCH-7 (output-port seam + MQTT adapter + config + handler/action
+      integration + tests). Split into PR-sized tasks from the design.
 
 ### Code Quality & Review (QUAL)
 - [x] **QUAL-1** — Phase-0 static baseline (ruff/pyright/vulture/validators/import-graph). → `docs/review/phase0_static_baseline.md` (6e39886)
@@ -62,11 +88,59 @@ See `docs/review/phase1_architecture_map.md` §5.
 - [ ] **QUAL-7** (P2) — `configs/config-master.toml` puts train-schedule under `[intent_system.handlers.train_schedule]`,
       but the model field is `IntentSystemConfig.train_schedule` (→ `[intent_system.train_schedule]`). The
       config-master section is orphaned/ignored. Reconcile config-master with the model. (Found during DOC-5.)
+- [ ] **QUAL-8** [FAF] (P1) — Fire-and-forget full review & gap analysis. Map the lifecycle end-to-end: launch
+      (`intents/handlers/base.py execute_fire_and_forget_with_context`, ~83 call sites), action metadata, context
+      state (`active_actions`/`recent_actions`/`failed_actions`/`action_error_count` + `add/remove_active_action`
+      in `UnifiedConversationContext`), completion/timeout/cleanup (`cleanup_timeout_tasks`), and monitoring/
+      metrics/notifications integration. **Re-validate the 6 issues in `docs/fire_forget_issues.md`** (Sep 2025,
+      pre-context-unification) against current code. Done when: `docs/review/fire_and_forget_review.md` exists with
+      each prior issue marked confirmed/fixed/changed, new gaps captured, and a ranked remediation list.
+- [ ] **QUAL-9** [FAF] (P-TBD) — Remediate confirmed F&F gaps (populated by QUAL-8). Candidates pending
+      confirmation: action-metadata key mismatch (`active_actions` plural vs `active_action` singular, issue #1),
+      completion write-back + context-manager/callback integration (#2, #6), error propagation (#5), cleanup/
+      memory leak (#3), error-handling consistency (#4).
+- [ ] **QUAL-10** [PEX] (P1) — Text→parameters (parameter extraction) full review: conceptual + code +
+      architecture. Map end-to-end: donation `ParameterSpec`/`ParameterType` (8 types) + `token_patterns`/
+      `slot_patterns`/`extraction_patterns` → spaCy Matcher extraction (`providers/nlu/hybrid_keyword_matcher.py`,
+      `spacy_provider.py`) → `ContextualEntityResolver` + Device/Location/Temporal/Quantity resolvers
+      (`core/entity_resolver.py`) → `Intent.entities` → handler consumption; incl. the `irene/analysis/*` tooling
+      and the web-API parameter-schema surface (`get_parameter_schema`). Reality-check
+      `docs/archive/parameter_extraction.md`. Done when: `docs/review/parameter_extraction_review.md` exists with
+      gaps + severity + ranked remediation.
+- [ ] **QUAL-11** [PEX] (P-TBD) — Remediate confirmed parameter-extraction gaps (populated by QUAL-10).
+- [ ] **QUAL-12** [TXTPROC] (P2) — Text-processor subsystem review: role/functionality of the 4 providers
+      (`asr`/`general`/`tts`/`number_text_processor`), the 3 normalizers (`NumberNormalizer`/`PrepareNormalizer`/
+      `RunormNormalizer` in `utils/text_normalizers.py`), and the **double stage-routing** (provider-per-stage
+      classes vs config `[text_processor.normalizers.*].stages`). Decide what's justified vs legacy-from-old-Irene
+      (ASR & Number processors both compose only `NumberNormalizer` = likely redundant). Intersects ASSET-3
+      (`NumberNormalizer` uses lingua-franca). Done when: `docs/review/text_processing_review.md` exists with a
+      keep/merge/collapse recommendation + ranked remediation.
+- [ ] **QUAL-13** [TXTPROC] (P-TBD) — Refine per QUAL-12 (likely collapse the 4 providers into one config-driven
+      `TextProcessor` and unify stage routing).
+- [ ] **QUAL-14** [LLM] (P1) — LLM usage review: map every LLM invocation in the flow (`conversation`,
+      `translation_handler`, `text_enhancement_handler` + `LLMComponent` + 3 providers), what each uses it for,
+      and the **offline-first posture** — confirm NLU is LLM-free (spaCy + keyword) per the original offline plan;
+      document where internet is required vs optional and graceful degradation when offline (fallback to console).
+      Analyze: **should NLU use an LLM?** (usefulness vs offline-first; e.g. optional online LLM-NLU with spaCy
+      offline fallback). Done when: `docs/review/llm_usage_review.md` exists with recommendations.
+- [ ] **QUAL-15** [LLM] (P-TBD) — Act on QUAL-14 (NLU-LLM decision; offline graceful-degradation hardening).
+- [ ] **QUAL-16** [PROMPTS] (P1) — Prompt hardening for ALL LLM use cases: audit every prompt — asset YAML
+      (`assets/prompts/<handler>/<lang>.yaml`) **and inline-in-code prompts** (translation/text_enhancement/
+      conversation handlers) — and rewrite for clarity, guardrails, output-format constraints, persona
+      consistency, and prompt-injection resistance. Establish a prompt-authoring convention. Gated by Invariant #4
+      (config-ui `PromptEditor`). Done when: prompts hardened + `docs/guides/PROMPTING_GUIDE.md` exists.
 
 ### Tests (TEST)
 - [ ] **TEST-1** (P1) — Fix broken tests referencing removed/renamed symbols (`ConversationContext`→
       `UnifiedConversationContext`, `TTLCache`, `ContextualCommandPerformanceManager`). 16 undefined-name refs.
 - [ ] **TEST-2** (P1) — Get the suite running green; assess coverage and trustworthiness.
+- [ ] **TEST-3** [FAF] (P2) — Fire-and-forget lifecycle test coverage (launch → completion → error → cleanup →
+      context propagation). Scope after QUAL-8 maps current coverage.
+- [ ] **TEST-4** [PEX] (P1) — Parameter-extraction test coverage (user-flagged as key): assess existing tests
+      (`test_parameter_schema_unification`, `test_context_aware_nlu`, `test_cascading_nlu`,
+      `test_web_api_parameter_schemas`), fix broken ones, fill gaps across the 8 ParameterTypes, the 4 entity
+      resolvers, and pattern matching. Coupled to TEST-1 (some of these may be in the broken-test set).
+- [ ] **TEST-5** [TXTPROC] (P2) — Text-processor / normalizer test coverage, after QUAL-12/13 settle the model.
 
 ### Build & CI (BUILD)
 - [ ] **BUILD-1** (P0) — Verify clean `uv sync` + CLI and WebAPI boot at v15.
@@ -74,7 +148,9 @@ See `docs/review/phase1_architecture_map.md` §5.
       `upload-artifact@v3` / `setup-python@v4`).
 - [ ] **BUILD-3** (P1) — Verify the minimal Docker build (x86_64 builder feeds analyzer package names to
       `uv sync --extra`, which expects extra *names* — confirm/fix). Refs: README-DOCKER, build audit.
-- [ ] **BUILD-4** (P2) — config-ui build (`npm ci && npm run build`; `dist` is git-ignored).
+- [ ] **BUILD-4** (P1) — config-ui builds & type-checks clean (`npm ci && npm run type-check && npm run build`;
+      `dist` is git-ignored). Per Invariant #4 this is an **ongoing gate** — add it to CI (BUILD-2) so backend
+      contract changes that break config-ui are caught.
 
 ### Models & Assets (ASSET)
 - [x] **ASSET-1** — Refresh stale model IDs (Anthropic→Claude 4.x, Whisper large-v3, ElevenLabs multilingual_v2, spaCy 3.8, gpt-4→gpt-4o-mini). → fc85306
@@ -88,6 +164,8 @@ See `docs/review/phase1_architecture_map.md` §5.
 - [ ] **DOC-3** (P2) — Fix cosmetic "v13" strings in `irene/core/engine.py` docstrings/logs.
 - [ ] **DOC-4** (P1) — Rewrite `architecture.md` to the harmonized current state **+ chosen target pattern**
       (do after pattern sign-off, so it's written once). Refs: phase1_architecture_map §3, §4, §5.
+      Must also **document the fire-and-forget action flow** [FAF] (currently undocumented) and **retire
+      `docs/fire_forget_issues.md`** once QUAL-8/9 land.
 - [x] **DOC-5** (P1) — Fixed docs that CONTRADICT code: `donations_flow.md` + `intent_donation.md` (donation
       paths → `assets/donations/<handler>_handler/<lang>.json`, schema → `assets/donations/v1.0.json`),
       `ASSET_MANAGEMENT.md` (12 TOML-nesting fixes `[providers.X]`→`[X.providers]`), `train_schedule_handler.md`
@@ -95,8 +173,25 @@ See `docs/review/phase1_architecture_map.md` §5.
       correction banners on `guides/DONATION_FILE_SPECIFICATION.md` + `plugins/universal_tts.md`.
 - [ ] **DOC-5b** (P2) — Full regeneration of `guides/DONATION_FILE_SPECIFICATION.md` from the Pydantic
       `HandlerDonation`/`MethodDonation` models (currently fixed via banner only; body still uses old field names).
+- [ ] **DOC-7** [PEX] (P1) — Canonical parameter-extraction reference (the design doc was archived; nothing
+      current): authoring `ParameterSpec`, ParameterType semantics, token/slot pattern format, entity resolution,
+      handler consumption of `intent.entities`. → `docs/guides/PARAMETER_EXTRACTION_GUIDE.md`. Derived from QUAL-10.
 - [x] **DOC-6** (P2) — Archived stale historical-plan docs (`config_schemas`, `language_support`,
       `configuration_guide`, `PIPELINE_IMPLEMENTATION`, `irene_current`) → `docs/archive/`.
+
+### UI / config-ui (UI)
+React/Vite donation+config editor. Front-end feature/UX work (the BUILD-4 build gate stays under Build & CI).
+Governed by Invariant #4 (config-ui must stay functional).
+- [ ] **UI-1** [DEDITOR] (P2) — Design a human-friendly donation/pattern authoring model: an abstraction over raw
+      spaCy `token_patterns`/`slot_patterns` usable by a non-spaCy intent developer (literals, parameter slots
+      mapped to the 8 ParameterTypes + entity resolvers, optionality/repetition, synonyms/lemmas) + an
+      **"advanced (raw spaCy)" escape hatch**. → `config-ui/docs/donation_editor_ux.md`. **Depends on QUAL-10 [PEX].**
+      (Today `TokenPatternsEditor`/`SlotPatternsEditor` expose raw spaCy directly; `ParameterSpecEditor` is already fine.)
+- [ ] **UI-2** [DEDITOR] (P2) — Bidirectional translation layer (human model ↔ spaCy token/slot patterns) with
+      round-trip fidelity + validation (must emit schema-valid spaCy). Decide frontend-only vs. a backend
+      `compile/decompile` endpoint reusing the real spaCy logic.
+- [ ] **UI-3** [DEDITOR] (P2) — Reimplement `TokenPatternsEditor`/`SlotPatternsEditor` on the new model (retain
+      raw-spaCy advanced mode); add "test pattern against sample text" via the NLU recognize endpoint.
 
 ### Release Readiness (REL)
 - [ ] **REL-1** (P0) — Sign off the Definition-of-release checklist above (fill target + criteria).
@@ -119,6 +214,16 @@ See `docs/review/phase1_architecture_map.md` §5.
 - **DOC-5** — harmonized the contradicts-code docs (donation paths/schema, asset TOML nesting, train env
   prefix, voice_trigger YAML→TOML) + correction banners on the donation spec and universal_tts. Found a
   config-master train-schedule nesting bug → QUAL-7. Donation-spec full rewrite deferred → DOC-5b.
+- **Macro-task intake (7 threads)** — analyzed and split into workstreams:
+  1. [FAF] fire-and-forget review → QUAL-8/9, TEST-3, DOC-4 note.
+  2. [PEX] parameter extraction → QUAL-10/11, TEST-4, DOC-7.
+  3. config-ui-stays-functional → **Invariant #4** + DoR checkbox + BUILD-4→P1 ongoing gate.
+  4. [DEDITOR] human-friendly donations editor → **new UI workstream** UI-1/2/3.
+  5. [TXTPROC] text-processor review → QUAL-12/13, TEST-5.
+  6. [LLM]/[PROMPTS] LLM usage + offline-first + prompt hardening → QUAL-14/15/16.
+  7. [MQTT] smart-home output → ARCH-7 (design session) / ARCH-8; surfaces the missing output-port seam.
+  Cross-cutting sequencing: **QUAL-10 [PEX]** gates DOC-7 + UI-1/2/3; the reviews (QUAL-8/10/12/14) precede their
+  refactors and **ARCH-1** (context split); Invariant #4 gates the contract-touching tasks; QUAL-12↔ASSET-3.
 
 ### 2026-05-31
 - **Revival analysis** — full doc + code + build + asset audit; established real version is 15.0.0, single
