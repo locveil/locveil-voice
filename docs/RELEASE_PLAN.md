@@ -31,6 +31,31 @@ The single active tracker for the road to release. Supersedes the legacy `docs/T
    - **REST API endpoints / parameter schemas / analysis endpoints** → `src/utils/apiClient.ts`, the analysis components.
    - Definition-of-done addendum for such tasks: `cd config-ui && npm run type-check && npm run build` passes.
    - Directly-gated tasks: **DOC-5b, DOC-4, DOC-7, QUAL-7, QUAL-10/11, ARCH-1/2/3, BUILD-4.**
+5. **Review docs stay in sync (living, not write-once).** Detailed findings live in `docs/review/*` (and design
+   docs in `docs/design/*`); the plan links to them via the index below. When a task derived from a review doc is
+   completed or its finding changes, **update the corresponding review doc in the same change** — mark findings
+   resolved/obsolete and update status (as we did with "Remediation round 1" in `phase0_static_baseline.md`). A
+   contract-/finding-touching task is not *done* until its review doc reflects reality. Each new review adds a row
+   to the index below.
+
+---
+
+## Review documents (findings index)
+
+Living findings behind the tasks (Invariant #5). `[x]` = exists; others are produced by their review task.
+
+| Doc (`docs/review/` unless noted) | Covers | Backs |
+|---|---|---|
+| `phase0_static_baseline.md` `[x]` | static baseline: phantom refs, hidden type debt, dead code, layering | QUAL-1/2 ✓, QUAL-3/4/5/6, TEST-1 |
+| `phase1_architecture_map.md` `[x]` | architecture map, doc-harmonization audit, hexagon target | ARCH-0 ✓, ARCH-1..8, DOC-4/5✓/5b/6✓ |
+| `fire_and_forget_review.md` | F&F lifecycle + gap analysis | QUAL-8/9, TEST-3 |
+| `parameter_extraction_review.md` | text→parameters review + gaps | QUAL-10/11, TEST-4, DOC-7 |
+| `text_processing_review.md` | text-processor subsystem review | QUAL-12/13, TEST-5 |
+| `llm_usage_review.md` | LLM usage + offline-first | QUAL-14/15 |
+| `streaming_api_review.md` | AsyncAPI streaming-API tooling | QUAL-17/18 |
+| `esp32_wakeword_review.md` | ESP32 + wakeword keep/fix/cut | QUAL-19/20 |
+| `docs/design/mqtt_integration.md` | MQTT output-port design | ARCH-7/8 |
+| `config-ui/docs/donation_editor_ux.md` | human-friendly donations editor design | UI-1/2/3 |
 
 ---
 
@@ -243,6 +268,8 @@ Governed by Invariant #4 (config-ui must stay functional).
   9. [ESP32] ESP32 + wakeword (microWakeWord placeholder, training removed, TODO11 open) → QUAL-19/20 (keep/fix/cut).
   Cross-cutting sequencing: **QUAL-10 [PEX]** gates DOC-7 + UI-1/2/3; the reviews (QUAL-8/10/12/14) precede their
   refactors and **ARCH-1** (context split); Invariant #4 gates the contract-touching tasks; QUAL-12↔ASSET-3.
+- **Invariant #5** added (review docs stay in sync) + a **Review-documents index** linking the plan to
+  `docs/review/*` + `docs/design/*`. Completing a finding-derived task includes updating its review doc.
 
 ### 2026-05-31
 - **Revival analysis** — full doc + code + build + asset audit; established real version is 15.0.0, single
