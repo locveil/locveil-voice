@@ -62,6 +62,14 @@ irene.config.manager → migration → schemas → auto_registry → (manager vi
 `components/configuration_component.py`. The schema auto-registry and a component are mutually dependent.
 **This is a real inversion** and the cause of the config-side cycle.
 
+> **✅ SCC-1 RESOLVED by ARCH-2 (2026-06-01, `59f4ae8`+`044ff62`).** The 5 pure schema-extraction methods moved
+> from `ConfigurationComponent` into `AutoSchemaRegistry` (so `auto_registry` imports no component); `validator`
+> uses `utils.loader.dynamic_loader` (not `core.components`); the import-time schema-validation side effect was
+> removed from `config/__init__.py` (now explicit in `ConfigManager.load_config`); and the `core/assets.py`
+> `AssetConfig` TYPE_CHECKING band-aid is gone. `config` now has **no** upward (core/components) imports; the only
+> remaining `config↔config` link (`auto_registry ↔ schemas`) is intra-layer and benign. The `core→config.models`
+> edge (e.g. `assets.py`) is a clean **downward** import.
+
 **SCC-2 (inputs base ⇄ its subclasses) — contained, low severity:**
 ```
 irene.inputs.base  ⇄  {cli, microphone, web}

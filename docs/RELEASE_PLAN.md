@@ -121,10 +121,17 @@ See `docs/review/phase1_architecture_map.md` §5.
       (`context_models→models`), no cycle, no band-aid. The remaining `core.{entity_resolver,trace_context,
       workflow_manager}→intents.context_models` edges are legitimate **application→domain** (inward) under the
       hexagon, not violations. Verified: no cycle, full suite unchanged (176/55, zero regression), TEST-0 green.
-- [ ] **ARCH-2** (P0) — Break config↔core / config↔components: schema auto-registry must not import
-      `configuration_component`; `config/validator.py:222` must not import `core.components` (inject/move
-      `discover_providers`); remove import-time schema-validation side-effects; drop the `core/assets.py`
-      `TYPE_CHECKING` band-aid. Resolves SCC-1 and the `core→config` cycle.
+- [x] **ARCH-2** (P0) — Break config↔core / config↔components (SCC-1). **DONE 2026-06-01** (`59f4ae8` + `044ff62`).
+      (A) `config/validator.py` discovers providers via `utils.loader.dynamic_loader` (config→utils, downward) —
+      no more `from ..core.components import discover_providers` (which `core.components` didn't even export). (B)
+      moved the 5 pure schema-extraction methods from `ConfigurationComponent` into `AutoSchemaRegistry` (their
+      natural home) — `auto_registry` no longer imports the component; the component delegates downward. (C)
+      removed the import-time `validate_schema_integrity()`/`validate_master_config_completeness()` calls from
+      `config/__init__.py` (the side effect that amplified SCC-1 and spammed "Schema warning" on every `import
+      config`) — now runs once, explicitly, from `ConfigManager.load_config`. (D) **dropped the `core/assets.py`
+      `AssetConfig` TYPE_CHECKING band-aid** — `from ..config.models import AssetConfig` is a clean downward
+      import now. Verified: no cycle, bare `import config` silent, validation still runs once on load, full suite
+      unchanged (176/55, zero regression). **Gate 1: ARCH-3/4/5 next.**
 - [ ] **ARCH-3** (P1) — Stop components importing delivery/tooling: put web-schema generation
       (`components.{asr,tts}→web_api.asyncapi`) behind a port; treat `analysis` as a driven adapter
       (`components.nlu_analysis→analysis.*`).
@@ -553,6 +560,13 @@ Governed by Invariant #4 (config-ui must stay functional).
   and no band-aid (deviates from the review's `core/` sketch, which would have inverted the dep). Verified: no
   cycle, full suite unchanged (176/55, zero regression), TEST-0 green. Per Invariant #5, synced
   `phase1_architecture_map.md` with the placement rationale. **Gate 1 underway: ARCH-2 next.**
+
+- **ARCH-2 DONE** (`59f4ae8` + `044ff62`) — broke SCC-1 (config↔core / config↔components). validator→dynamic_loader
+  (config→utils), schema-extraction cluster moved into AutoSchemaRegistry (auto_registry imports no component),
+  import-time schema-validation side effect removed (no more "Schema warning" spam; runs once in load_config), and
+  the `core/assets.py` AssetConfig TYPE_CHECKING band-aid dropped (clean downward import). config now has no upward
+  imports. Verified: no cycle, full suite unchanged (176/55, zero regression). Per Invariant #5, synced
+  `phase1_architecture_map.md` §2.1 (SCC-1 resolved). **Gate 1: ARCH-1 ✓, ARCH-2 ✓ — ARCH-3 next.**
 
 ### 2026-05-31
 - **Revival analysis** — full doc + code + build + asset audit; established real version is 15.0.0, single
