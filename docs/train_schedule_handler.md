@@ -32,16 +32,16 @@ Station IDs can be found in the URL when searching for schedules on Yandex:
 ### Environment Variables
 ```bash
 # Train Schedule Configuration
-export IRENE_INTENTS__TRAIN_SCHEDULE__ENABLED=true
-export IRENE_INTENTS__TRAIN_SCHEDULE__API_KEY="your-api-key-here"
-export IRENE_INTENTS__TRAIN_SCHEDULE__FROM_STATION="s9600681"
-export IRENE_INTENTS__TRAIN_SCHEDULE__TO_STATION="s2000002"
-export IRENE_INTENTS__TRAIN_SCHEDULE__MAX_RESULTS=3
+export IRENE_INTENT_SYSTEM__TRAIN_SCHEDULE__ENABLED=true
+export IRENE_INTENT_SYSTEM__TRAIN_SCHEDULE__API_KEY="your-api-key-here"
+export IRENE_INTENT_SYSTEM__TRAIN_SCHEDULE__FROM_STATION="s9600681"
+export IRENE_INTENT_SYSTEM__TRAIN_SCHEDULE__TO_STATION="s2000002"
+export IRENE_INTENT_SYSTEM__TRAIN_SCHEDULE__MAX_RESULTS=3
 ```
 
 ### Configuration File (TOML)
 ```toml
-[intents.train_schedule]
+[intent_system.train_schedule]
 enabled = true
 api_key = "your-api-key-here"
 from_station = "s9600681"    # Moscow Leningradsky

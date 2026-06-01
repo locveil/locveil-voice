@@ -1,5 +1,23 @@
 # Donation File Specification - Contextual Commands
 
+> **⚠️ Schema drift (2026-06-01): the example field names below are OUTDATED.** The authoritative schema is
+> the Pydantic `HandlerDonation` model in `irene/core/donations.py`, validated against
+> `assets/donations/v1.0.json`. Use a real donation file as the canonical example:
+> `assets/donations/timer_handler/en.json`. The real shape is:
+>
+> **Top-level (`HandlerDonation`):** `schema_version` (e.g. `"1.0"`), `donation_version`, `handler_domain`
+> (bare domain, e.g. `"timer"` — **not** `handler_name`/`display_name`/`version`), `description`,
+> `global_parameters[]`, `intent_name_patterns[]`, `action_patterns[]`, `domain_patterns[]`,
+> `fallback_conditions[]`, `additional_recognition_patterns[]`, `negative_patterns[]`, `train_keywords[]`,
+> and **`method_donations[]`** (replaces the old `intents{}` map).
+>
+> **Each `method_donations[]` entry (`MethodDonation`):** `method_name` (Python method on the handler),
+> `intent_suffix`, `description`, `phrases[]`, `lemmas[]`, `parameters[]` (`ParameterSpec`),
+> `token_patterns[]`, `slot_patterns{}`, `examples[]`, `boost`.
+>
+> Files live at `assets/donations/<domain>_handler/<lang>.json` (one dir per handler, one file per language).
+> _A full regeneration of this guide from the Pydantic models is tracked as DOC-5b in RELEASE_PLAN._
+
 ## Overview
 
 This document specifies the donation file format for intent handlers that support contextual command disambiguation (Phase 4 TODO16). Donation files define handler capabilities, domain priorities, and contextual command patterns.

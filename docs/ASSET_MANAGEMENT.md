@@ -51,25 +51,25 @@ Override provider defaults in configuration files:
 
 ```toml
 # Override Silero v3 asset configuration
-[providers.tts.silero_v3.assets]
+[tts.providers.silero_v3.assets]
 directory_name = "silero_custom"          # Custom directory name
 cache_types = ["models"]                  # Only models cache
 
-[providers.tts.silero_v3.assets.model_urls]
+[tts.providers.silero_v3.assets.model_urls]
 v3_ru = "https://custom-mirror.com/silero_ru.pt"  # Custom URL
 
 # Configure ElevenLabs credentials
-[providers.tts.elevenlabs.assets]
+[tts.providers.elevenlabs.assets]
 credential_patterns = ["ELEVENLABS_API_KEY"]
 file_extension = ".mp3"
 cache_types = ["runtime"]
 
 # Configure Whisper with custom directory
-[providers.asr.whisper.assets]
+[asr.providers.whisper.assets]
 directory_name = "whisper_models"
 cache_types = ["models", "runtime"]
 
-[providers.asr.whisper.assets.model_urls]
+[asr.providers.whisper.assets.model_urls]
 tiny = "auto"     # Let whisper library handle download
 base = "auto"
 small = "auto"
@@ -85,10 +85,10 @@ Third-party providers integrate seamlessly:
 # my_custom_tts = "my_package.providers:MyCustomTTSProvider"
 
 # Configuration with asset customization:
-[providers.tts.my_custom_tts]
+[tts.providers.my_custom_tts]
 enabled = true
 
-[providers.tts.my_custom_tts.assets]
+[tts.providers.my_custom_tts.assets]
 file_extension = ".custom"
 directory_name = "my_provider_models"
 credential_patterns = ["MY_CUSTOM_API_KEY"]
@@ -223,27 +223,27 @@ VOLUME ["/data/models", "/data/cache", "/data/credentials"]
 **Current (Provider-Driven):**
 ```toml
 # Providers automatically determine their asset needs
-[providers.asr.whisper]
+[asr.providers.whisper]
 enabled = true
 model_size = "base"
 # Asset configuration provided by WhisperASRProvider class
 
-[providers.asr.vosk]
+[asr.providers.vosk]
 enabled = true
 sample_rate = 16000
 # Asset configuration provided by VoskASRProvider class
 
-[providers.llm.openai]
+[llm.providers.openai]
 enabled = true
 default_model = "gpt-4"
 # Asset configuration provided by OpenAILLMProvider class
 
 # Optional: Override provider asset defaults
-[providers.asr.whisper.assets]
+[asr.providers.whisper.assets]
 directory_name = "whisper_custom"     # Override default "whisper"
 cache_types = ["models"]              # Override default ["models", "runtime"]
 
-[providers.llm.openai.assets]
+[llm.providers.openai.assets]
 credential_patterns = ["OPENAI_API_KEY", "OPENAI_ORG_ID"]  # Add extra credentials
 ```
 

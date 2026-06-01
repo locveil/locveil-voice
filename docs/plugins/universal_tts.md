@@ -1,5 +1,12 @@
 # Universal TTS Plugin Documentation
 
+> **⚠️ Outdated (plugin-era naming).** In v15 TTS is a **component**, not a plugin: `TTSComponent`
+> (`irene/components/tts_component.py`) coordinates TTS providers selected via config. Configuration is under
+> **`[tts]`** / **`[tts.providers.<name>]`** (see `configs/config-master.toml`), **not** `[plugins.universal_tts]`.
+> Provider names: `console`, `elevenlabs`, `silero_v4`, `silero_v3`, `pyttsx`, `vosk`. The provider list and
+> REST API surface below are broadly accurate; mentally substitute `TTSComponent` for `UniversalTTSPlugin` and
+> `[tts.*]` for `[plugins.universal_tts.*]`. Canonical config reference: `configs/config-master.toml`.
+
 ## Overview
 
 The UniversalTTSPlugin is a coordinator plugin that manages multiple Text-to-Speech (TTS) providers through a unified interface. It replaces the previous individual TTS plugins with a single, configurable plugin that can use different TTS backends based on configuration.

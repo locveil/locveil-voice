@@ -31,9 +31,9 @@ The single active tracker for the road to release. Supersedes the legacy `docs/T
 ## Workstreams
 
 ### Architecture & Refactor (ARCH)
-Target pattern: **Hexagonal (Ports & Adapters)** — code is already ~80% there (interfaces=ports,
-providers=adapters, components=app services, entry-points=registry). See `docs/review/phase1_architecture_map.md`.
-_Pending: pattern sign-off before DOC-4 rewrites architecture.md to the target._
+Target pattern: **Hexagonal (Ports & Adapters)** — SIGNED OFF 2026-06-01. Code is already ~80% there
+(interfaces=ports, providers=adapters, components=app services, entry-points=registry).
+See `docs/review/phase1_architecture_map.md` §5.
 - [x] **ARCH-0** (P1) — Architecture MAP & document (Goal 1 doc-sync findings + Goal 2 pattern). → `docs/review/phase1_architecture_map.md`
 - [ ] **ARCH-1** (P0) — Split the `intents/models.py` god-module (in-degree 67): move `AudioData`/`WakeWordResult`
       to a foundational module and conversation-context types to their own; re-point importers downward; drop the
@@ -59,6 +59,9 @@ _Pending: pattern sign-off before DOC-4 rewrites architecture.md to the target._
       standard-mode pyright errors (subdivide after ARCH lands). Refs: §E.
 - [ ] **QUAL-5** (P2) — Cruft: 360 unused imports, 62 star-imports, vulture dead-code pool. Refs: §G.
 - [ ] **QUAL-6** (P2) — Config schema gap: 9 `CoreConfig` fields without section models (import-time warning). Refs: §H.
+- [ ] **QUAL-7** (P2) — `configs/config-master.toml` puts train-schedule under `[intent_system.handlers.train_schedule]`,
+      but the model field is `IntentSystemConfig.train_schedule` (→ `[intent_system.train_schedule]`). The
+      config-master section is orphaned/ignored. Reconcile config-master with the model. (Found during DOC-5.)
 
 ### Tests (TEST)
 - [ ] **TEST-1** (P1) — Fix broken tests referencing removed/renamed symbols (`ConversationContext`→
@@ -85,10 +88,14 @@ _Pending: pattern sign-off before DOC-4 rewrites architecture.md to the target._
 - [ ] **DOC-3** (P2) — Fix cosmetic "v13" strings in `irene/core/engine.py` docstrings/logs.
 - [ ] **DOC-4** (P1) — Rewrite `architecture.md` to the harmonized current state **+ chosen target pattern**
       (do after pattern sign-off, so it's written once). Refs: phase1_architecture_map §3, §4, §5.
-- [ ] **DOC-5** (P1) — Fix the docs that CONTRADICT code: `guides/DONATION_FILE_SPECIFICATION.md` (fictional
-      JSON schema), `donations_flow.md` + `intent_donation.md` (donation paths), `ASSET_MANAGEMENT.md` (TOML
-      nesting), `train_schedule_handler.md` (env prefix), `plugins/universal_tts.md`, `voice_trigger.md` (YAML→TOML). Refs: phase1_architecture_map §3bis.
-- [ ] **DOC-6** (P2) — Archive stale historical-plan docs (`config_schemas`, `language_support`,
+- [x] **DOC-5** (P1) — Fixed docs that CONTRADICT code: `donations_flow.md` + `intent_donation.md` (donation
+      paths → `assets/donations/<handler>_handler/<lang>.json`, schema → `assets/donations/v1.0.json`),
+      `ASSET_MANAGEMENT.md` (12 TOML-nesting fixes `[providers.X]`→`[X.providers]`), `train_schedule_handler.md`
+      (env → `IRENE_INTENT_SYSTEM__TRAIN_SCHEDULE__*`), `voice_trigger.md` (YAML→TOML), and authoritative
+      correction banners on `guides/DONATION_FILE_SPECIFICATION.md` + `plugins/universal_tts.md`.
+- [ ] **DOC-5b** (P2) — Full regeneration of `guides/DONATION_FILE_SPECIFICATION.md` from the Pydantic
+      `HandlerDonation`/`MethodDonation` models (currently fixed via banner only; body still uses old field names).
+- [x] **DOC-6** (P2) — Archived stale historical-plan docs (`config_schemas`, `language_support`,
       `configuration_guide`, `PIPELINE_IMPLEMENTATION`, `irene_current`) → `docs/archive/`.
 
 ### Release Readiness (REL)
@@ -106,8 +113,12 @@ _Pending: pattern sign-off before DOC-4 rewrites architecture.md to the target._
   artifact); the #1 defect is the `intents/models.py` god-module (in-degree 67) forcing most backwards edges;
   `architecture.md` body is stale below its banner (fictional managers/endpoints/runners, TODO-vs-DONE);
   real data flow differs from docs (VAD is a segment-gate, NLU==Intent-Recognition, TTS text-path-only).
-- **Goal 2 decision (pending sign-off):** adopt **Hexagonal (Ports & Adapters)** — the code is already ~80%
-  there; formalize + enforce via import-linter (ARCH-5). Refined ARCH-1..6 and added DOC-4/5/6.
+- **Goal 2 decision:** **Hexagonal (Ports & Adapters)** SIGNED OFF. Refined ARCH-1..6 + DOC-4/5/6.
+- **DOC-6** — archived 5 stale plan docs (config_schemas, language_support, configuration_guide,
+  PIPELINE_IMPLEMENTATION, irene_current) → `docs/archive/`.
+- **DOC-5** — harmonized the contradicts-code docs (donation paths/schema, asset TOML nesting, train env
+  prefix, voice_trigger YAML→TOML) + correction banners on the donation spec and universal_tts. Found a
+  config-master train-schedule nesting bug → QUAL-7. Donation-spec full rewrite deferred → DOC-5b.
 
 ### 2026-05-31
 - **Revival analysis** — full doc + code + build + asset audit; established real version is 15.0.0, single

@@ -20,5 +20,6 @@ For current, maintained documentation see:
 | Refactor / design plans | `refactoring.md`, `plugin_refactor.md`, `architecture_intents.md`, `intent_implementation.md`, `config_cleanup.md`, `configuration_cleanup.md`, `component_loading.md`, `metrics_unification.md`, `parameter_extraction.md`, `language_detection.md`, `tts_audio_separation.md`, `irene_startup.md`, `vad_improvements.md`, `unify_context.md`, `unify_history.md`, `unify_sessions.md`, `dependency_harmonization.md`, `plugins_migration_guide.md` |
 | Bug-fix / issue writeups | `fix_vosk.md`, `VAD_SIBILANT_FIX.md`, `ESP32_LiteRT_Implementation.md` |
 | Completed migration guides | `VAD_MIGRATION_GUIDE.md`, `CONTEXTUAL_COMMANDS_MIGRATION_GUIDE.md` |
+| Superseded refs / completed plans (ARCH-0 / DOC-6) | `config_schemas.md`, `language_support.md`, `configuration_guide.md` (v13), `PIPELINE_IMPLEMENTATION.md` (plugin-era), `irene_current.md` (pre-refactor VACore/Jaa) |
 
 _Archived during the v15 documentation cleanup. Recover any file with `git mv docs/archive/<file> docs/<file>` if it turns out to still be needed._

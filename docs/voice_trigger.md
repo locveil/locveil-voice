@@ -17,17 +17,17 @@ Uses the OpenWakeWord library for general-purpose wake word detection with pre-t
 - Multiple wake words support
 
 **Configuration:**
-```yaml
-voice_trigger:
-  enabled: true
-  default_provider: "openwakeword"
-  providers:
-    openwakeword:
-      enabled: true
-      inference_framework: "tflite"
-      chunk_size: 1280
-      wake_words: ["irene", "jarvis"]
-      threshold: 0.8
+```toml
+[voice_trigger]
+enabled = true
+default_provider = "openwakeword"
+
+[voice_trigger.providers.openwakeword]
+enabled = true
+inference_framework = "tflite"
+chunk_size = 1280
+wake_words = ["irene", "jarvis"]
+threshold = 0.8
 ```
 
 ### microWakeWord Provider (NEW)
@@ -50,23 +50,24 @@ Uses the microWakeWord framework for custom wake word detection optimized for mi
 - Fallback to `tensorflow>=2.12.0` if tflite-runtime unavailable
 
 **Configuration:**
-```yaml
-voice_trigger:
-  enabled: true
-  default_provider: "microwakeword"
-  providers:
-    microwakeword:
-      enabled: true
-      model_path: "/path/to/your/model.tflite"
-      wake_words: ["irene"]
-      threshold: 0.8
-      feature_buffer_size: 49  # 49 * 10ms = 490ms
-      detection_window_size: 3  # Consecutive detections needed
-      num_mfcc_features: 40
-      available_models:
-        irene: "irene_model.tflite"
-        jarvis: "jarvis_model.tflite"
-        hey_irene: "hey_irene_model.tflite"
+```toml
+[voice_trigger]
+enabled = true
+default_provider = "microwakeword"
+
+[voice_trigger.providers.microwakeword]
+enabled = true
+model_path = "/path/to/your/model.tflite"
+wake_words = ["irene"]
+threshold = 0.8
+feature_buffer_size = 49           # 49 * 10ms = 490ms
+detection_window_size = 3          # Consecutive detections needed
+num_mfcc_features = 40
+
+[voice_trigger.providers.microwakeword.available_models]
+irene = "irene_model.tflite"
+jarvis = "jarvis_model.tflite"
+hey_irene = "hey_irene_model.tflite"
 ```
 
 ## Model Training for microWakeWord
@@ -197,13 +198,12 @@ pip install tensorflow numpy
 
 ### Debug Configuration
 
-```yaml
-logging:
-  loggers:
-    irene.components.voice_trigger_component:
-      level: DEBUG
-    irene.providers.voice_trigger:
-      level: DEBUG
+```toml
+[logging.loggers."irene.components.voice_trigger_component"]
+level = "DEBUG"
+
+[logging.loggers."irene.providers.voice_trigger"]
+level = "DEBUG"
 ```
 
 This will provide detailed logging for voice trigger operations and help diagnose issues. 

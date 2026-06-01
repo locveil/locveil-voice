@@ -9,8 +9,8 @@ This document provides a comprehensive analysis of the data flow of donations fr
 ```mermaid
 graph TD
     %% Data Sources
-    A["JSON Donation Files<br/>irene/intents/handlers/donations/*.json"] --> B[DonationLoader]
-    A1["JSON Schema<br/>schemas/donation/v1.0.json"] --> B
+    A["JSON Donation Files<br/>assets/donations/<handler>_handler/<lang>.json"] --> B[DonationLoader]
+    A1["JSON Schema<br/>assets/donations/v1.0.json"] --> B
     
     %% Loading and Validation
     B --> C["HandlerDonation Objects<br/>Pydantic Validation"]
@@ -85,16 +85,16 @@ The donation system is built on a hierarchical data structure defined in `irene/
 
 ### File Discovery Process
 
-1. **File Scanning**: System scans `irene/intents/handlers/donations/*.json` for JSON donation files
+1. **File Scanning**: System scans `assets/donations/<handler>_handler/<lang>.json` for JSON donation files
 2. **Handler Mapping**: Each handler file `{handler_name}.py` must have a corresponding `{handler_name}.json` donation file
-3. **Directory Structure**: Donations are organized in the `donations/` subdirectory within the handlers directory
+3. **Directory Structure**: Donations are organized under `assets/donations/<handler>_handler/` (one directory per handler, one file per language: `en.json`, `ru.json`)
 
 ### Multi-Layer Validation
 
 The system implements comprehensive validation:
 
 1. **JSON Schema Validation**: 
-   - Validates against `schemas/donation/v1.0.json`
+   - Validates against `assets/donations/v1.0.json`
    - Ensures structural correctness and required fields
    - Optional dependency on `jsonschema` library
 
@@ -324,7 +324,7 @@ The donation-driven architecture provides several key advantages:
 
 ```json
 {
-  "$schema": "../../schemas/donation/v1.0.json",
+  "$schema": "../v1.0.json",
   "schema_version": "1.0",
   "handler_domain": "service",
   "description": "System service status and monitoring",

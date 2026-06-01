@@ -44,27 +44,28 @@ This document describes the unified solution for TODO07 (Disconnected NLU and In
 #### A1. File Structure and Discovery
 
 ```
-irene/intents/handlers/
-├── timer.py                    # Python handler logic
-├── timer.json                  # Intent donations for timer
-├── greetings.py               # Python handler logic  
-├── greetings.json             # Intent donations for greetings
-└── weather/
-    ├── weather_handler.py
-    └── weather_handler.json
+irene/intents/handlers/timer.py          # Python handler logic
+assets/donations/
+├── v1.0.json                            # JSON schema (shared)
+├── timer_handler/                       # one directory per handler (<domain>_handler)
+│   ├── en.json                          # one file per language
+│   └── ru.json
+└── greetings_handler/
+    ├── en.json
+    └── ru.json
 ```
 
 **Discovery Rules:**
-- JSON donation file must have same name as Python handler file
-- JSON file must be in same directory as Python handler
-- Missing JSON file for existing handler = fatal error
-- JSON file without corresponding handler = ignored with warning
+- Donations live under `assets/donations/<domain>_handler/<lang>.json`, loaded by `irene/core/intent_asset_loader.py`
+- One directory per handler (named `<domain>_handler`), one JSON file per language (`en.json`, `ru.json`)
+- Missing donation for an enabled handler = fatal error
+- `handler_domain` inside the JSON is the bare domain (e.g. `timer`), without the `_handler` suffix
 
 #### A2. JSON Schema Structure
 
 ```json
 {
-  "$schema": "https://irene-voice-assistant.org/schemas/donation/v1.0.json",
+  "$schema": "../v1.0.json",
   "schema_version": "1.0",
   "handler_domain": "timer",
   "description": "Timer functionality with duration and message support",
@@ -1733,11 +1734,11 @@ This section provides a comprehensive, MECE-structured implementation guide for 
 **Tasks Completed:**
 1. **Schema Generation** ✅ **COMPLETED**
    - Created `tools/generate_schemas.py` using `HandlerDonation.model_json_schema()`
-   - Generated `schemas/donation/v1.0.json` with complete validation rules
+   - Generated `assets/donations/v1.0.json` with complete validation rules
    - Added automated schema metadata and versioning
 
 2. **Local Schema References** ✅ **COMPLETED**
-   - Updated all 6 JSON files to reference `../../schemas/donation/v1.0.json`
+   - Updated all 6 JSON files to reference `../../assets/donations/v1.0.json`
    - Eliminated dependency on non-existent remote schema URLs
    - Validated all existing JSON files against generated schema
 
@@ -1755,7 +1756,7 @@ This section provides a comprehensive, MECE-structured implementation guide for 
    - Confirmed integration with existing Phase 3.5 infrastructure
 
 **Infrastructure Created:**
-- `schemas/donation/v1.0.json` - Complete JSON Schema generated from Pydantic models
+- `assets/donations/v1.0.json` - Complete JSON Schema generated from Pydantic models
 - `tools/generate_schemas.py` - Automated schema generation tool
 - Enhanced `IntentAssetLoader` with schema validation
 - Added `jsonschema` dependency for validation
