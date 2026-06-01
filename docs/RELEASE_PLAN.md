@@ -64,7 +64,7 @@ Living findings behind the tasks (Invariant #5). `[x]` = exists; others are prod
 
 - **Workstreams** are stable buckets. **Tasks** are the unit of work — sized to one coherent commit/PR,
   with a stable ID (referenced in commit messages, e.g. `ARCH-1: …`).
-- Status: `- [ ]` open · `- [x]` done · annotate `BLOCKED`/`DEFERRED`/`DOING` + reason inline. Priority `P0–P2`.
+- Status: `- [ ]` open · `- [x]` done · `- [~]` paused/partial · annotate `BLOCKED`/`DEFERRED`/`DOING` + reason inline. Priority `P0–P2`.
 - Individual lint findings live in the review docs (e.g. `docs/review/phase0_static_baseline.md`) and
   **roll up** into a task here — keep this file a spine, not a dumping ground.
 - Record what actually happened (and decisions) in the **Action journal** at the bottom.
@@ -216,31 +216,43 @@ See `docs/review/phase1_architecture_map.md` §5.
       `test_room_context_inference`.
 
 ### Tests (TEST)
+> **Strategy (decided 2026-06-01): do NOT keep repairing the existing suite.** Most tests were written against
+> pre-refactor code and will be invalidated by the ARCH refactors (ARCH-1..5) and the code reviews (QUAL-8/10/12/14).
+> Fixing them now is throwaway work. The TEST-1/TEST-2 pass already extracted the real value — it **proved the suite
+> runs** and surfaced concrete prod findings (QUAL-21, QUAL-22, the text_processor trace fix). The current state
+> (166 pass / 56 fail / 13 skip / 2 xfail, all committed) stands as a **partial safety net**; the remaining 56
+> failures are left **intentionally unfixed**. The real test effort is **TEST-7: rewrite the suite after the
+> architecture + code reviews land** (gated). TEST-3/4/5/6 are coverage goals folded into that rewrite.
 - [x] **TEST-1** (P1) — Fix broken tests referencing removed/renamed symbols. **DONE 2026-06-01**:
       `ConversationContext`→`UnifiedConversationContext` (rename); `TTLCache`/`ContextualCommandPerformanceManager`/
       `initialize_performance_manager` were **deleted** (v13→v15 contextual-command unification) → those tests
       skipped-with-reason; `Intent.text`→`raw_text`, `ComponentConfig.audio_output`→`audio` renamed in tests.
-- [ ] **TEST-2** (P1) — DOING — Get the suite running green; assess coverage/trustworthiness. Progression
-      2026-06-01: 136/100/0 → **166 passed / 56 failed / 13 skipped / 2 xfailed**. Cleared: async config, symbol
-      renames, obsolete skips, hardcoded-path bug, and the **fixture-wiring cluster** (`component.core` unset +
-      `process()` signature drift in `test_component_trace_integration`; `core`+real-localization asset-loader in
-      `test_context_aware_nlu`; `component.core` in phase7 ASR tests). Prod findings: text_processor trace missing
-      `component_name` (fixed); **QUAL-21** (settings_runner field drift); **QUAL-22** (context enhancement stubbed
-      — 2 xfail). Remaining 56 drift, needing per-cluster judgment: `test_cascading_nlu` provider-metadata
-      semantics (`entities["provider"]` vs injected `_recognition_provider`, ~7 — **needs design-intent call**),
+- [~] **TEST-2** (P1) — **PAUSED 2026-06-01 (deliberate — see strategy note).** Suite now **runs** and is a
+      partial safety net: 136/100/0 → **166 passed / 56 failed / 13 skipped / 2 xfailed** (committed). Cleared:
+      async config, symbol renames, obsolete skips, hardcoded-path bug, and the fixture-wiring cluster. The
+      remaining 56 drift failures are **left unfixed on purpose** (will be obsoleted by ARCH/review then rewritten,
+      TEST-7). Diagnosed-but-not-fixed clusters (for whoever does the rewrite): `test_cascading_nlu`
+      provider-metadata (`entities["provider"]` vs `_recognition_provider`, ~7 — design-intent question),
       VAD/ASR metrics dict-vs-object (~8), `spacy_asset_integration` mock-vs-MagicMock (2), attr renames
       (`IntentResult.error_type`, `SpaCyNLUProvider.model_name`, `IntentRegistry._handlers`,
-      `IntentComponent.get_system_status`), phase4 contextual-command + assertions.
-- [ ] **TEST-6** (P2) — Rewrite the 7 phase7 ASR-fallback-chain tests skipped in TEST-1 (they called the
-      removed private `ASRComponent._handle_sample_rate_mismatch`); the provider-fallback + resampling feature
-      still exists via `AudioProcessor.resample_audio_data` — restore coverage against the current path.
-- [ ] **TEST-3** [FAF] (P2) — Fire-and-forget lifecycle test coverage (launch → completion → error → cleanup →
-      context propagation). Scope after QUAL-8 maps current coverage.
-- [ ] **TEST-4** [PEX] (P1) — Parameter-extraction test coverage (user-flagged as key): assess existing tests
-      (`test_parameter_schema_unification`, `test_context_aware_nlu`, `test_cascading_nlu`,
-      `test_web_api_parameter_schemas`), fix broken ones, fill gaps across the 8 ParameterTypes, the 4 entity
-      resolvers, and pattern matching. Coupled to TEST-1 (some of these may be in the broken-test set).
-- [ ] **TEST-5** [TXTPROC] (P2) — Text-processor / normalizer test coverage, after QUAL-12/13 settle the model.
+      `IntentComponent.get_system_status`), phase4 contextual-command + assertions. Value already banked:
+      **QUAL-21**, **QUAL-22**, text_processor trace fix.
+- [ ] **TEST-7** (P1) — **Rewrite the test suite against the stabilized architecture.** GATED by: ARCH-1..5
+      (structure settled + import-linter) **and** the code reviews (QUAL-8/10/12/14) landing. Replace the
+      pre-refactor suite (which the TEST-1/2 pass kept *running* but not green) with tests written to the hexagon:
+      ports/adapters seams, the unified workflow, and real fixtures (e.g. the localization-asset loader pattern
+      from `test_context_aware_nlu`). Absorbs the coverage goals below (TEST-3/4/5/6) and decides, per failing
+      cluster left by TEST-2, rewrite-vs-delete. Done when: suite is green (or green-modulo-documented-xfail) and
+      coverage is understood/trusted.
+- [ ] **TEST-6** (P2) — _(folded into TEST-7)_ Restore ASR provider-fallback + resampling coverage (the 7 phase7
+      tests skipped in TEST-1 called the removed `_handle_sample_rate_mismatch`; feature lives in
+      `AudioProcessor.resample_audio_data`).
+- [ ] **TEST-3** [FAF] (P2) — _(coverage goal for TEST-7)_ Fire-and-forget lifecycle coverage (launch → completion
+      → error → cleanup → context propagation). Scope after QUAL-8.
+- [ ] **TEST-4** [PEX] (P1) — _(coverage goal for TEST-7)_ Parameter-extraction coverage (user-flagged as key):
+      the 8 ParameterTypes, the 4 entity resolvers, pattern matching; rebuild around `test_parameter_schema_unification`/
+      `test_context_aware_nlu`/`test_cascading_nlu`/`test_web_api_parameter_schemas`.
+- [ ] **TEST-5** [TXTPROC] (P2) — _(coverage goal for TEST-7)_ Text-processor / normalizer coverage, after QUAL-12/13.
 
 ### Build & CI (BUILD)
 - [x] **BUILD-1** (P0) — Verify clean `uv sync` + CLI and WebAPI boot at v15. **DONE 2026-06-01** (`bab6f97`):
@@ -251,8 +263,12 @@ See `docs/review/phase1_architecture_map.md` §5.
       QUAL-6 schema warning on boot; CLI banner still says "v14" (DOC-3 sibling).
 - [ ] **BUILD-2** (P1) — Re-enable CI (`config-validation.yml` is manual-only; update deprecated
       `upload-artifact@v3` / `setup-python@v4`).
-- [ ] **BUILD-3** (P1) — Verify the minimal Docker build (x86_64 builder feeds analyzer package names to
-      `uv sync --extra`, which expects extra *names* — confirm/fix). Refs: README-DOCKER, build audit.
+- [ ] **BUILD-3** (P2) — **DEFERRED to the release phase (decided 2026-06-01): Docker builds are an end-stage
+      task**, after the architecture/code work settles (image contents, extras, and armv7 viability all depend on
+      the post-refactor shape — incl. QUAL-19/20 [ESP32] and ARCH-9/10 [INFER] for the sherpa-onnx/runtime
+      footprint). Then verify the minimal x86_64 Docker build (builder feeds analyzer package names to
+      `uv sync --extra`, which expects extra *names* — confirm/fix) + container boots CLI/WebAPI. Gates
+      Definition-of-release item #1. Refs: README-DOCKER, build audit.
 - [ ] **BUILD-4** (P1) — config-ui builds & type-checks clean (`npm ci && npm run type-check && npm run build`;
       `dist` is git-ignored). Per Invariant #4 this is an **ongoing gate** — add it to CI (BUILD-2) so backend
       contract changes that break config-ui are caught.
@@ -372,6 +388,15 @@ Governed by Invariant #4 (config-ui must stay functional).
   `…`(asyncio+rename), `…`(skips+cwd), `…`(audio_output/Intent). **Prod bug surfaced → QUAL-21** (settings_runner
   + examples use removed ComponentConfig fields audio_output/microphone/web_api → would crash). Remaining 68 drift
   failures tracked in TEST-2; **TEST-6** added (rewrite ASR-fallback tests).
+
+- **Strategy decision — stop repairing tests; rewrite post-ARCH/review; Docker last.** The TEST-1/2 pass took the
+  suite from 136/100 to 166/56/13/2xf and banked the real value (it runs; found QUAL-21, QUAL-22, a trace-metadata
+  fix). Continuing to fix the remaining 56 is throwaway work — those tests target pre-refactor code that ARCH-1..5
+  + the QUAL reviews will invalidate. So **TEST-2 PAUSED** (partial safety net, remaining failures intentionally
+  unfixed), and the real effort is **TEST-7: rewrite the suite once architecture + reviews land** (TEST-3/4/5/6
+  folded in as coverage goals). **BUILD-3 (Docker) DEFERRED to the release phase** — image/extras/armv7 depend on
+  the post-refactor shape (incl. ARCH-9/10 [INFER], QUAL-19/20 [ESP32]). Net active path now: **reviews +
+  architecture**, then test rewrite, then Docker + release.
 
 ### 2026-05-31
 - **Revival analysis** — full doc + code + build + asset audit; established real version is 15.0.0, single
