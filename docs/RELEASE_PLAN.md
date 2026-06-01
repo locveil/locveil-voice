@@ -31,17 +31,24 @@ The single active tracker for the road to release. Supersedes the legacy `docs/T
 ## Workstreams
 
 ### Architecture & Refactor (ARCH)
-- [ ] **ARCH-0** (P1) — _NEXT_ — Architecture MAP & document. Enumerate every cross-layer/backwards import,
-      misplaced foundational type, and real-vs-artifact cycle in the §F import SCC; propose a layering target.
-      Done when: `docs/review/phase1_architecture_map.md` exists with the full map + target + ranked fix list.
-      Refs: `docs/review/phase0_static_baseline.md` §F.
-- [ ] **ARCH-1** (P0) — Relocate `AudioData` / `WakeWordResult` from `intents/models.py` to a foundational
-      module; re-point ~25 importers downward; drop the `audio_helpers.py` `TYPE_CHECKING` band-aid.
-      Done when: type lives in a low layer, all importers point downward, ruff/pyright clean, imports OK.
-- [ ] **ARCH-2** (P0) — Break the `config → core` cycle: remove `config/validator.py:222`
-      `from ..core.components import discover_providers` (invert/inject) and the import-time schema-validation
-      side-effect; drop the `core/assets.py` `TYPE_CHECKING` band-aid for `AssetConfig`.
-- [ ] **ARCH-3** (P2) — Further layering fixes surfaced by ARCH-0 (placeholder; split into tasks after the map).
+Target pattern: **Hexagonal (Ports & Adapters)** — code is already ~80% there (interfaces=ports,
+providers=adapters, components=app services, entry-points=registry). See `docs/review/phase1_architecture_map.md`.
+_Pending: pattern sign-off before DOC-4 rewrites architecture.md to the target._
+- [x] **ARCH-0** (P1) — Architecture MAP & document (Goal 1 doc-sync findings + Goal 2 pattern). → `docs/review/phase1_architecture_map.md`
+- [ ] **ARCH-1** (P0) — Split the `intents/models.py` god-module (in-degree 67): move `AudioData`/`WakeWordResult`
+      to a foundational module and conversation-context types to their own; re-point importers downward; drop the
+      `audio_helpers.py` `TYPE_CHECKING` band-aid. Dissolves most backwards edges. Done when: domain has no
+      outward deps for these types; ruff/pyright clean; imports OK.
+- [ ] **ARCH-2** (P0) — Break config↔core / config↔components: schema auto-registry must not import
+      `configuration_component`; `config/validator.py:222` must not import `core.components` (inject/move
+      `discover_providers`); remove import-time schema-validation side-effects; drop the `core/assets.py`
+      `TYPE_CHECKING` band-aid. Resolves SCC-1 and the `core→config` cycle.
+- [ ] **ARCH-3** (P1) — Stop components importing delivery/tooling: put web-schema generation
+      (`components.{asr,tts}→web_api.asyncapi`) behind a port; treat `analysis` as a driven adapter
+      (`components.nlu_analysis→analysis.*`).
+- [ ] **ARCH-4** (P2) — Formalize ports: every provider category has an interface in `core/interfaces`; adapters depend only on it.
+- [ ] **ARCH-5** (P1) — Add an **import-linter** contract (layered + independence) wired into CI so the hexagon is enforced and can't regress. _Makes "follows the architecture" verifiable._
+- [ ] **ARCH-6** (P2) — Resolve the dead `InputManager._input_queue` seam (wire as driving port, or delete). Fix the contained `inputs.base ⇄ subclasses` cycle (SCC-2).
 
 ### Code Quality & Review (QUAL)
 - [x] **QUAL-1** — Phase-0 static baseline (ruff/pyright/vulture/validators/import-graph). → `docs/review/phase0_static_baseline.md` (6e39886)
@@ -76,6 +83,13 @@ The single active tracker for the road to release. Supersedes the legacy `docs/T
 - [x] **DOC-1** — Sync README/architecture to v15; archive ~28 historical docs to `docs/archive/`. → 4a55519
 - [ ] **DOC-2** (P2) — Archive completed `docs/TODO/TODO0x`; mark `docs/TODO.md` superseded by this file; keep open TODO11 + partials.
 - [ ] **DOC-3** (P2) — Fix cosmetic "v13" strings in `irene/core/engine.py` docstrings/logs.
+- [ ] **DOC-4** (P1) — Rewrite `architecture.md` to the harmonized current state **+ chosen target pattern**
+      (do after pattern sign-off, so it's written once). Refs: phase1_architecture_map §3, §4, §5.
+- [ ] **DOC-5** (P1) — Fix the docs that CONTRADICT code: `guides/DONATION_FILE_SPECIFICATION.md` (fictional
+      JSON schema), `donations_flow.md` + `intent_donation.md` (donation paths), `ASSET_MANAGEMENT.md` (TOML
+      nesting), `train_schedule_handler.md` (env prefix), `plugins/universal_tts.md`, `voice_trigger.md` (YAML→TOML). Refs: phase1_architecture_map §3bis.
+- [ ] **DOC-6** (P2) — Archive stale historical-plan docs (`config_schemas`, `language_support`,
+      `configuration_guide`, `PIPELINE_IMPLEMENTATION`, `irene_current`) → `docs/archive/`.
 
 ### Release Readiness (REL)
 - [ ] **REL-1** (P0) — Sign off the Definition-of-release checklist above (fill target + criteria).
@@ -85,6 +99,15 @@ The single active tracker for the road to release. Supersedes the legacy `docs/T
 ---
 
 ## Action journal
+
+### 2026-06-01
+- **ARCH-0** — Architecture map + doc-harmonization audit + pattern review. → `docs/review/phase1_architecture_map.md`.
+  Key results: module-level graph shows only **2 real cycles** (Phase-0's "giant SCC" was a package-grouping
+  artifact); the #1 defect is the `intents/models.py` god-module (in-degree 67) forcing most backwards edges;
+  `architecture.md` body is stale below its banner (fictional managers/endpoints/runners, TODO-vs-DONE);
+  real data flow differs from docs (VAD is a segment-gate, NLU==Intent-Recognition, TTS text-path-only).
+- **Goal 2 decision (pending sign-off):** adopt **Hexagonal (Ports & Adapters)** — the code is already ~80%
+  there; formalize + enforce via import-linter (ARCH-5). Refined ARCH-1..6 and added DOC-4/5/6.
 
 ### 2026-05-31
 - **Revival analysis** — full doc + code + build + asset audit; established real version is 15.0.0, single
