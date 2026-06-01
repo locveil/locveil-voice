@@ -15,7 +15,6 @@ from ..__version__ import __version__
 from functools import wraps
 from dataclasses import dataclass
 from pydantic import BaseModel
-from fastapi import WebSocket
 
 logger = logging.getLogger(__name__)
 
@@ -391,7 +390,7 @@ def extract_websocket_specs_from_router(router, component_name: str, api_prefix:
                 # But let's use a simpler approach for better AsyncAPI 2.6.0 compatibility
                 if component_name == "asr":
                     # Add error message schema
-                    from ..api.schemas import TranscriptionErrorMessage
+                    from .schemas import TranscriptionErrorMessage
                     error_schema = pydantic_to_asyncapi_schema(TranscriptionErrorMessage)
                     error_message_name = f"{component_name}_TranscriptionErrorMessage"
                     messages[error_message_name] = error_schema

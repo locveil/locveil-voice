@@ -5,7 +5,7 @@ Provides AsyncAPI documentation generation, WebSocket schema decorators,
 and other web API related functionality.
 """
 
-from .asyncapi import (
+from ..api.asyncapi import (
     websocket_api,
     WebSocketEndpointMeta,
     WebSocketRegistry,

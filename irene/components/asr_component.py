@@ -21,7 +21,7 @@ from ..core.interfaces.webapi import WebAPIPlugin
 from ..core.trace_context import TraceContext
 from ..intents.models import AudioData
 from ..core.metrics import get_metrics_collector
-from ..web_api.asyncapi import websocket_api, extract_websocket_specs_from_router
+from ..api.asyncapi import websocket_api, extract_websocket_specs_from_router
 from ..api.schemas import AudioChunkMessage, TranscriptionResultMessage, TranscriptionErrorMessage, BinaryAudioSessionMessage, BinaryAudioStreamMessage, BinaryWebSocketProtocol
 
 

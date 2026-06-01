@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 
 async def _generate_asyncapi_spec(core: AsyncVACore) -> Dict[str, Any]:
     """Generate combined AsyncAPI specification from all components"""
-    from ..web_api.asyncapi import generate_base_asyncapi_spec, merge_asyncapi_specs
+    from ..api.asyncapi import generate_base_asyncapi_spec, merge_asyncapi_specs
     
     try:
         # Start with base AsyncAPI spec

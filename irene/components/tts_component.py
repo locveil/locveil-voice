@@ -522,7 +522,7 @@ class TTSComponent(Component, TTSPlugin, WebAPIPlugin):
                 ChunkMetadata, SynthesisMetadata, SynthesisStats,
                 TTSConfigureResponse
             )
-            from ..web_api.asyncapi import websocket_api, extract_websocket_specs_from_router
+            from ..api.asyncapi import websocket_api, extract_websocket_specs_from_router
             import json
             import time
             import uuid
@@ -1309,7 +1309,7 @@ class TTSComponent(Component, TTSPlugin, WebAPIPlugin):
     def get_websocket_spec(self) -> Optional[dict]:
         """Get AsyncAPI specification for TTS WebSocket endpoints"""
         try:
-            from ..web_api.asyncapi import extract_websocket_specs_from_router
+            from ..api.asyncapi import extract_websocket_specs_from_router
             router = self.get_router()
             if router:
                 return extract_websocket_specs_from_router(
