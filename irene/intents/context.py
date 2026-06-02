@@ -13,6 +13,7 @@ from typing import Dict, Any, Optional, List
 from .models import Intent, IntentResult
 from .context_models import UnifiedConversationContext, RequestContext
 from ..core.metrics import get_metrics_collector
+from ..core.client_registry import get_client_registry  # QUAL-28: resolver reads the action store
 
 logger = logging.getLogger(__name__)
 
@@ -522,8 +523,8 @@ class ContextManager:
     
     # Action ambiguity resolution methods for TODO16
     def resolve_contextual_command_ambiguity(
-        self, 
-        session_id: str,
+        self,
+        physical_id: str,
         command_type: str,
         target_domains: List[str] = None,
         domain_priorities: Dict[str, int] = None,
@@ -559,7 +560,7 @@ class ContextManager:
         
         # Perform disambiguation
         resolution = self._resolve_contextual_command_internal(
-            session_id, command_type, target_domains, domain_priorities, require_confirmation
+            physical_id, command_type, target_domains, domain_priorities, require_confirmation
         )
         
         # Record metrics in unified system
@@ -580,20 +581,24 @@ class ContextManager:
     
     def _resolve_contextual_command_internal(
         self,
-        session_id: str,
+        physical_id: str,
         command_type: str,
         target_domains: List[str] = None,
         domain_priorities: Dict[str, int] = None,
         require_confirmation: bool = False
     ) -> Dict[str, Any]:
-        """Internal disambiguation logic"""
-        
-        if session_id not in self.sessions:
-            return {"resolution": "no_session", "actions": [], "command_type": command_type}
-        
-        context = self.sessions[session_id]
-        active_actions = getattr(context, 'active_actions', {})
-        
+        """Internal disambiguation logic.
+
+        QUAL-28: reads live actions straight from the action store by ``physical_id`` — NOT via a
+        session context — so a contextual command ("stop") still resolves after the conversation
+        session has been evicted (the action outlives the session).
+        """
+        active_actions = {}
+        for r in get_client_registry().get_live_actions(physical_id):
+            active_actions[r.action_name] = {**r.metadata, "action": r.action_name, "domain": r.domain,
+                                             "started_at": r.started_at, "status": r.status,
+                                             "session_id": r.session_id, "room_id": r.room_id}
+
         if not active_actions:
             return {"resolution": "no_active_actions", "actions": [], "command_type": command_type}
         

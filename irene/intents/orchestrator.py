@@ -8,6 +8,7 @@ from .models import Intent, IntentResult
 from .context_models import UnifiedConversationContext
 from .registry import IntentRegistry
 from ..core.metrics import get_metrics_collector, MetricsCollector
+from ..core.client_registry import resolve_physical_id  # QUAL-28: physical scope for contextual resolution
 from ..core.trace_context import TraceContext
 
 logger = logging.getLogger(__name__)
@@ -179,7 +180,7 @@ class IntentOrchestrator:
                 )
                 
                 resolution = self.context_manager.resolve_contextual_command_ambiguity(
-                    session_id=context.session_id,
+                    physical_id=resolve_physical_id(context.client_id, context.room_name, context.session_id),
                     command_type=processed_intent.action,  # "stop", "pause", "resume", etc.
                     target_domains=None,  # No explicit domain targeting for pure contextual commands
                     domain_priorities=self.domain_priorities,

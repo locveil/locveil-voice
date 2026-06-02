@@ -159,6 +159,13 @@ newest entries near the top of each dated section.
   **Gate 1: ARCH-1 ✓, ARCH-2 ✓, ARCH-3 ✓ — ARCH-4 (formalize ports) → ARCH-5 (import-linter) next.**
 
 ### 2026-06-02
+- **QUAL-28 Stage 3.3 (start) — contextual resolver reads the store by `physical_id`.** `resolve_contextual_command_
+  ambiguity`/`_resolve_contextual_command_internal` now take `physical_id` (not `session_id`) and read live actions
+  straight from the action store — no `self.sessions[session_id]` lookup — so a "стоп"/"pause" still resolves **after
+  the conversation session has been evicted** (the action outlives the session). Orchestrator passes
+  `resolve_physical_id(client_id, room_name, session_id)`. This closes F&F eviction-survival on the read side (the
+  write side was already store-backed). Import contracts + smoke + store tests green (15 passed). (The old
+  `test_phase4_*` callers pass `session_id` — they're in the intentionally-unfixed pre-refactor suite, TEST-7.)
 - **QUAL-28 Stage 3.2 — dead-code cleanup + timer simplification.** Removed the orphaned
   `workflow_manager._process_action_metadata_integration` + base.py `_handle_action_completion`/
   `_update_context_on_completion`/`_validate_action_metadata`. **Timer rewritten store-centric:** the old
