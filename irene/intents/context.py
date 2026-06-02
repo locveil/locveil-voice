@@ -99,7 +99,17 @@ class ContextManager:
         if is_new_session:
             self.metrics_collector.record_session_start(session_id)
         return context
-    
+
+    async def get_or_create_context(self, session_id: str) -> UnifiedConversationContext:
+        """Fetch the session's context, creating it if absent — the explicit creator.
+
+        QUAL-28: previously-phantom callers (`handlers/base.py`, `notifications.py`, `debug_tools.py`)
+        referenced this name but it didn't exist → `AttributeError` swallowed, killing the F&F
+        completion write-back. It's now real. (Stage 3 will make `get_context` itself non-creating and
+        migrate read-only callers to it; until then both names share the fetch-or-create body above.)
+        """
+        return await self.get_context(session_id)
+
     async def get_context_with_request_info(self, session_id: str, request_context: 'RequestContext' = None) -> UnifiedConversationContext:
         """Enhanced context creation with proper room context injection
         

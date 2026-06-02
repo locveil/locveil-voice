@@ -159,6 +159,13 @@ newest entries near the top of each dated section.
   **Gate 1: ARCH-1 ✓, ARCH-2 ✓, ARCH-3 ✓ — ARCH-4 (formalize ports) → ARCH-5 (import-linter) next.**
 
 ### 2026-06-02
+- **QUAL-28 Stage 2 — session-id hygiene.** Forbid the literal `"default"` at the `RequestContext` chokepoint
+  (`"default"`/empty → derive a real id; P0-6 collapse fixed); the 3 `workflow_manager` entries default to `None` and
+  **re-read `context.session_id`** so the local var reflects the derived id (it's reused by the action-metadata
+  write-back). Added a real `ContextManager.get_or_create_context` → the 5 phantom callers (base.py/notifications/
+  debug_tools) that were `AttributeError`-ing now resolve. Smoke green. **Scope (Invariant #8):** eviction-unify, the
+  non-creating-`get` split, and `kill extract_room_from_session` moved to Stage 3 (they need the timestamp-touch audit /
+  caller migration / room-as-field from the restructure). **NEXT: checkpoint, then Stage 3 (the structural cut).**
 - **QUAL-28 STARTED (staged) — Stage 1: deleted dead `MemoryManager`.** Removed the module + all 7 `monitoring_component`
   wiring sites (init/shutdown/status/2 debug endpoints/accessor/providers-info) + the unused `MemoryStatusResponse`
   import. Confirmed dead first (only consumer was monitoring; called non-existent context methods). Smoke green.

@@ -411,9 +411,9 @@ class WorkflowManager:
 
     
     async def process_text_input(
-        self, 
-        text: str, 
-        session_id: str = "default", 
+        self,
+        text: str,
+        session_id: Optional[str] = None,
         wants_audio: bool = False,
         client_context: Optional[Dict[str, Any]] = None,
         trace_context: Optional[TraceContext] = None
@@ -458,7 +458,9 @@ class WorkflowManager:
             room_name=client_context.get("room_name") if client_context else None,
             device_context=client_context.get("device_context") if client_context else None
         )
-        
+        # Reflect the derived session id (RequestContext forbids "default"/empty → mints a real one)
+        session_id = context.session_id
+
         result = await unified_workflow.process_text_input(text, context, trace_context)
         
         # Process action metadata if present
@@ -468,9 +470,9 @@ class WorkflowManager:
         return result
     
     async def process_audio_input(
-        self, 
+        self,
         audio_data: Union[bytes, 'AudioData'],
-        session_id: str = "default",
+        session_id: Optional[str] = None,
         wants_audio: bool = True,
         client_context: Optional[Dict[str, Any]] = None,
         trace_context: Optional[TraceContext] = None
@@ -525,7 +527,9 @@ class WorkflowManager:
                 room_name=client_context.get("room_name") if client_context else None,
                 device_context=client_context.get("device_context") if client_context else None
             )
-            
+            # Reflect the derived session id (RequestContext forbids "default"/empty → mints a real one)
+            session_id = context.session_id
+
             # Process audio through unified workflow with trace support
             result = await unified_workflow.process_audio_input(audio_data, context, trace_context)
             
@@ -568,7 +572,7 @@ class WorkflowManager:
     async def process_audio_stream(
         self,
         audio_stream: AsyncIterator[AudioData],
-        session_id: str = "default", 
+        session_id: Optional[str] = None,
         skip_wake_word: bool = False,
         wants_audio: bool = True,
         client_context: Optional[Dict[str, Any]] = None
@@ -612,7 +616,9 @@ class WorkflowManager:
             room_name=client_context.get("room_name") if client_context else None,
             device_context=client_context.get("device_context") if client_context else None
         )
-        
+        # Reflect the derived session id (RequestContext forbids "default"/empty → mints a real one)
+        session_id = context.session_id
+
         async for result in unified_workflow.process_audio_stream(audio_stream, context):
             # Process action metadata if present
             if result.action_metadata:

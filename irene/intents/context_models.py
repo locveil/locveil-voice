@@ -919,7 +919,12 @@ class RequestContext:
             language: Primary language for this request (defaults to Russian)
         """
         self.source = source
-        self.session_id = session_id or SessionManager.generate_session_id(source)
+        # QUAL-28 (P0-6): the literal "default" must NOT bypass session derivation — it would
+        # collapse every request into one shared context (cross-request/room/user leak). Treat
+        # "default"/empty as "derive a real id".
+        if not session_id or session_id == "default":
+            session_id = SessionManager.generate_session_id(source)
+        self.session_id = session_id
         self.wants_audio = wants_audio
         self.skip_wake_word = skip_wake_word
         self.skip_asr = skip_asr
