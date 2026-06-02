@@ -23,8 +23,8 @@ committed after every decision, so an interrupted session continues from the fir
 | Q4 | **Wired-or-delete** — MemoryManager · ContextLayer/progressive-context · InputManager queue + WebSocket input · `Intent.session_id` · `_disambiguate_with_device_context` · dead text-proc stages | P0-7, P0-8, P1-g; scopes how much code is deleted vs fixed | ✅ DECIDED |
 | Q5 | **Conversation history** — pick the canonical representation (3 today) and a single writer | P1-q | ✅ DECIDED (by consequence) |
 | Q6 | **Device-context pipeline** — who populates `device_context`/`available_devices` at the entry | P1-j (blocks the PEX device-resolution P0) | ✅ DECIDED |
-| Q7 | **Fail-loud philosophy + typed accessor** (theme #1) — raise vs result-signal; where the typed entity/result accessor lives | P0-9, P1-a/s; the whole handler boundary | 🔵 OPEN |
-| Q8 | **Shared-bases consolidations** (theme #2) — extraction base · prompt source · F&F write-back · collapse text processors · `_create_error_result` signature | P1-f/k/r/t | ⚪ pending |
+| Q7 | **Fail-loud philosophy + typed accessor** (theme #1) — raise vs result-signal; where the typed entity/result accessor lives | P0-9, P1-a/s; the whole handler boundary | ✅ DECIDED |
+| Q8 | **Shared-bases consolidations** (theme #2) — extraction base · prompt source · F&F write-back · collapse text processors · `_create_error_result` signature | P1-f/k/r/t | 🔵 OPEN |
 | Q9 | **Config-truth scope** (theme #3) — cascade phantoms · `language` plumbing · dead config trees · schema↔model drift | P1-e/h/i, P2 tail | ⚪ pending |
 | Q10 | **Gate 2 framing + numbering** (meta) — principles block vs discrete tasks (QUAL-27/28/…); number the new P0s | finalizes Gate 2 | ⚪ pending |
 
@@ -173,6 +173,35 @@ structured rows: original user_text, response, intent, timestamp); the LLM `mess
   all donation files, `cross_language_validator`, DOC-5b, DOC-7, and the config-ui editor (UI-1/2/3). **Precedes** the
   declarative device-resolution fix (entity_type/room_context born in the new contract). Fail-loud behavior → Q7.
 
-<!-- next: Q7 -->
+### Q7 — Fail-loud philosophy + typed accessor · ✅ DECIDED
+- **7a — one failure convention:** **raise structured domain exceptions** at the point of failure → **catch at ONE
+  boundary** (handler-execute / orchestrator wrapper) → map to a typed `IntentResult`. No silent swallowing, no
+  return-original-on-failure, no uncaught fatal crashes (the device resolver's `RuntimeError` becomes a structured,
+  caught error). *(Chosen over a threaded `Result`/`Outcome` type — fits the existing try/except boundary, least churn.)*
+- **7b — donation-driven typed accessor** on the handler base: reads `intent.entities` against the `ParameterSpec`
+  (type/required/choices/min-max/default + Q6 `entity_type`/`room_context`); coerces, validates, **raises**
+  `MissingRequiredParameter`/`InvalidParameter`/`UnresolvedDevice`. Replaces the ~11 hand-rolled `.get` sites + the
+  dead `validate_entities` (P1-s); drives device/room resolution per the Q6 declarations.
+- **7c — result contract:** `success=False` ⟹ **non-empty `error`** (base `_create_*_result` helpers enforce; the
+  boundary auto-fills from the exception). Fixes P1-a + the forked `_create_error_result` signatures (P1-t).
+- **7d — fail-loud manifests as conversational CLARIFICATION, not a terminal error or a silent guess.** The boundary
+  converts structured failures (missing-required, unresolved device/room, **no-intent-identified**) into an
+  **explain-and-ask** response: "fall back to conversation, explain the problem, ask for clarification." Also fix the
+  fake `confidence=1.0` on the NLU fallback (P2).
+- **Responder = CONFIGURABLE (user):** **if an LLM is present → use it** (natural clarification from the failure
+  context); **else deterministic + localized** (templated from `ParameterSpec.description` + per-language prompt). The
+  deterministic path always exists (offline guarantee); LLM is the enhancement — same offline-first/LLM-opt-in shape as
+  QUAL-14/15.
+- **Phasing (user):** **Grade 1 (single-turn explain-and-ask) → Gate 2** with the typed-accessor work (into QUAL-9/11).
+  **Grade 2 (multi-turn slot-filling) → follow-up FEATURE TASK:** `pending_clarification` on the **conversation
+  session** + `ConversationState = awaiting-clarification` + next-turn slot-fill + a pipeline pre-check (symmetric to
+  the F&F `contextual` check — but on the transient conversation store, since a half-finished command should expire
+  with the Q2 idle window). **`ConversationState` is KEPT** (gets a real job here) — only `ContextLayer` was deleted
+  (Q4).
+- **Symmetry:** F&F follow-up → `active_actions` on the **physical identity** (stable, Q3); clarification follow-up →
+  `pending_clarification` on the **conversation session** (transient). **Spawns (→ Q10):** clarification responder
+  (Gate 2, configurable LLM/deterministic) + multi-turn slot-filling feature task.
+
+<!-- next: Q8 -->
 
 
