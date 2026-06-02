@@ -384,9 +384,12 @@ class UnifiedVoiceAssistantWorkflow(Workflow):
             processed_text = await self.text_processor.process(processed_text, conversation_context, trace_context)
         
         # Stage 2: NLU (Natural Language Understanding)
+        # NLU matches on the (possibly normalized) processed_text, but Intent.raw_text must carry the
+        # literal original utterance (QUAL-26 Q1) — pass input_data as original_text.
         self.logger.debug("Stage: NLU")
         recognition_start_time = time.time()
-        intent = await self.nlu.process(processed_text, conversation_context, trace_context)
+        intent = await self.nlu.process(processed_text, conversation_context, trace_context,
+                                        original_text=input_data)
         
         # Phase 2: Record intent recognition metrics
         recognition_time = time.time() - recognition_start_time

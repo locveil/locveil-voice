@@ -922,29 +922,39 @@ class NLUComponent(Component, NLUPlugin, WebAPIPlugin):
         
         return "\n".join(info_lines)
     
-    async def process(self, text: str, context: UnifiedConversationContext, 
-                     trace_context: Optional[TraceContext] = None) -> Intent:
+    async def process(self, text: str, context: UnifiedConversationContext,
+                     trace_context: Optional[TraceContext] = None,
+                     original_text: Optional[str] = None) -> Intent:
         """
         Process text using NLU recognition with optional detailed cascade tracing.
-        
+
         This method provides the full NLU pipeline including:
-        - Intent recognition with cascading providers 
+        - Intent recognition with cascading providers
         - Parameter extraction using recognize_with_parameters()
         - Context-aware entity resolution and disambiguation
         - Enhanced entity processing
-        
+
         Args:
-            text: Input text to analyze
+            text: Input text to analyze (may be normalized/processed for matching)
             context: Conversation context for better understanding
             trace_context: Optional trace context for detailed execution tracking
-            
+            original_text: The literal user utterance. NLU matches on ``text`` but the
+                returned ``Intent.raw_text`` carries this original (QUAL-26 Q1). Defaults
+                to ``text`` when the caller did no pre-normalization (e.g. the /nlu API).
+
         Returns:
-            Intent with extracted parameters, entities and confidence
+            Intent with extracted parameters, entities and confidence (``raw_text`` = original)
         """
+        # raw_text must be the original utterance, not the normalized matching text (QUAL-26 Q1).
+        # Safe to set on the returned Intent: the enhancement/fallback paths return a fresh object.
+        effective_original = original_text if original_text is not None else text
+
         # Fast path - existing logic when no tracing
         if not trace_context or not trace_context.enabled:
             # Original implementation - calls recognize_with_context()
-            return await self.recognize_with_context(text, context)
+            result = await self.recognize_with_context(text, context)
+            result.raw_text = effective_original
+            return result
         
         # Trace path - detailed provider cascade tracking
         stage_start = time.time()
@@ -994,7 +1004,8 @@ class NLUComponent(Component, NLUPlugin, WebAPIPlugin):
             },
             processing_time_ms=(time.time() - stage_start) * 1000
         )
-        
+
+        result.raw_text = effective_original
         return result
     
     async def recognize_with_context(self, text: str, context: UnifiedConversationContext) -> Intent:
