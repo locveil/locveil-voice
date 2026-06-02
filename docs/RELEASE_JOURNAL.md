@@ -159,6 +159,16 @@ newest entries near the top of each dated section.
   **Gate 1: ARCH-1 ✓, ARCH-2 ✓, ARCH-3 ✓ — ARCH-4 (formalize ports) → ARCH-5 (import-linter) next.**
 
 ### 2026-06-02
+- **QUAL-28 Stage 3.3 — context field split assessed as SUBSUMED (Invariant #8).** The Q2 goal (long-lived
+  physical-identity store vs short-lived conversation session) is achieved by the store-relocation: `active_actions`
+  (the state that must outlive the conversation) now lives in the `ClientRegistry` store and survives session
+  eviction. The residual identity fields on the context (`client_id`/`room_name`/`available_devices`/`language`) are
+  request-hydrated each turn — not long-lived state needing a separate store (ARCH-6 populates them into
+  `ClientRegistry`). The conversation session (history/state) stays on the now-transient, idle-evicted context. A
+  formal dataclass split would be cosmetic field-grouping with no behavior change and real risk (35-importer surface),
+  so it's **not done** as a separate refactor. **3.3 substantively complete** (resolver physical_id · kill
+  extract_room · eviction-unify · non-creating-get · field-split subsumed). Remaining QUAL-28: 3b (conversation
+  context-assembly + retire ContextLayer) + 4 (history windowing).
 - **QUAL-28 Stage 3.3 — non-creating `get` split.** `get_context` is now non-creating (returns the existing,
   non-expired context or `None`, no side effects) so a blank/typo'd session id can't silently spawn a shared session;
   `get_or_create_context` is the canonical (and only) creator. Migrated all 11 callers that need a context to
