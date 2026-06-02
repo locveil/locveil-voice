@@ -170,7 +170,28 @@
               "label": "TIME_FORMAT"
             }
           ],
-          "default_value": "12hour"
+          "default_value": "12hour",
+          "choice_surfaces": {
+            "12hour": [
+              "12 hour",
+              "12-hour",
+              "twelve hour",
+              "am pm",
+              "am/pm"
+            ],
+            "24hour": [
+              "24 hour",
+              "24-hour",
+              "military",
+              "twenty four hour"
+            ],
+            "verbose": [
+              "verbose",
+              "in words",
+              "spoken",
+              "natural"
+            ]
+          }
         }
       ]
     },
@@ -272,7 +293,29 @@
               "label": "DATE_FORMAT"
             }
           ],
-          "default_value": "full"
+          "default_value": "full",
+          "choice_surfaces": {
+            "short": [
+              "short",
+              "brief",
+              "numeric",
+              "digits"
+            ],
+            "full": [
+              "full",
+              "long"
+            ],
+            "iso": [
+              "iso",
+              "iso 8601"
+            ],
+            "verbose": [
+              "verbose",
+              "in words",
+              "spoken",
+              "natural"
+            ]
+          }
         },
         {
           "name": "relative",
@@ -376,7 +419,29 @@
         {
           "name": "format",
           "description": "Datetime format preference",
-          "default_value": "readable"
+          "default_value": "readable",
+          "choice_surfaces": {
+            "iso": [
+              "iso",
+              "iso 8601"
+            ],
+            "readable": [
+              "readable",
+              "human readable"
+            ],
+            "unix": [
+              "unix",
+              "timestamp",
+              "epoch",
+              "unix time"
+            ],
+            "verbose": [
+              "verbose",
+              "in words",
+              "spoken",
+              "natural"
+            ]
+          }
         }
       ]
     }

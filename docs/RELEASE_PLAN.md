@@ -556,7 +556,8 @@ _Apply to every remediation task below (from the 4 review docs + QUAL-25/26). So
       `grep -rn TYPE_CHECKING irene/ --include=*.py` returns nothing (outside prose/docstrings) and imports/smoke stay
       green. _Two files already cleared opportunistically (2026-06-02): `intents/handlers/conversation.py` + `timer.py`
       (the QUAL-28 touch surface)._
-- [ ] **QUAL-33** `[release]` [DFLOW] (P2) — **Handlers ignore declared CHOICE params (surfaced by QUAL-29).** Two
+- [~] **QUAL-33** `[release]` [DFLOW] (P2) — **Handlers ignore declared CHOICE params (surfaced by QUAL-29). DOING.**
+      _Scope (user 2026-06-03): system.info_type = **full feature** (real per-category content), not a light template map._ Two
       handlers DECLARE a CHOICE parameter their code never reads — a genuine bug the format split exposed: **(a)**
       `datetime` handler (`intents/handlers/datetime.py`) reads **zero** `intent.entities` and formats date/time purely
       from locale templates, so the `format` param (canonical per method: `current_time` `[12hour,24hour,verbose]` ·

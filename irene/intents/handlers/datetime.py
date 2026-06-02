@@ -108,12 +108,22 @@ class DateTimeIntentHandler(IntentHandler):
         language = context.language or "ru"
         
         now = datetime.now()
+
+        # QUAL-33: honour the requested `format`. short = numeric (locale-ordered), iso = YYYY-MM-DD;
+        # full/verbose (default) fall through to the natural-language template.
+        fmt = (intent.entities.get("format") or "").strip().lower()
+        if fmt in ("short", "iso"):
+            date_str = now.strftime("%Y-%m-%d") if fmt == "iso" else (
+                now.strftime("%m/%d/%Y") if language == "en" else now.strftime("%d.%m.%Y"))
+            return IntentResult(text=date_str, should_speak=True, metadata={
+                "date": now.strftime("%Y-%m-%d"), "format": fmt, "language": language})
+
         locale_data = self._get_localization_data(language)
-        
+
         weekdays = locale_data.get("weekdays", [])
         months = locale_data.get("months", [])
         templates = locale_data.get("templates", {})
-        
+
         if language == "en":
             weekday = weekdays[now.weekday()] if now.weekday() < len(weekdays) else "Unknown"
             month = months[now.month - 1] if now.month - 1 < len(months) else "Unknown"
@@ -143,8 +153,17 @@ class DateTimeIntentHandler(IntentHandler):
         language = context.language or "ru"
         
         now = datetime.now()
+
+        # QUAL-33: honour the requested `format` (canonical, normalised by the NLU). Non-verbose formats are
+        # language-neutral numeric renderings; "verbose" (default) falls through to the natural-language template.
+        fmt = (intent.entities.get("format") or "").strip().lower()
+        if fmt in ("12hour", "24hour"):
+            time_str = now.strftime("%H:%M") if fmt == "24hour" else now.strftime("%I:%M %p").lstrip("0")
+            return IntentResult(text=time_str, should_speak=True, metadata={
+                "time": now.strftime("%H:%M:%S"), "format": fmt, "language": language})
+
         locale_data = self._get_localization_data(language)
-        
+
         if language == "en":
             time_str = f"It's {now.strftime('%I:%M %p')}"
         else:
@@ -205,13 +224,26 @@ class DateTimeIntentHandler(IntentHandler):
         language = context.language or "ru"
         
         now = datetime.now()
-        
+
+        # QUAL-33: honour the requested `format`. iso = ISO-8601, unix = epoch seconds, readable = compact
+        # numeric; verbose (default) falls through to the natural-language template.
+        fmt = (intent.entities.get("format") or "").strip().lower()
+        if fmt in ("iso", "unix", "readable"):
+            if fmt == "iso":
+                combined = now.isoformat()
+            elif fmt == "unix":
+                combined = str(int(now.timestamp()))
+            else:  # readable
+                combined = now.strftime("%Y-%m-%d %H:%M")
+            return IntentResult(text=combined, should_speak=True, metadata={
+                "datetime": now.isoformat(), "format": fmt, "language": language})
+
         locale_data = self._get_localization_data(language)
-        
+
         weekdays = locale_data.get("weekdays", [])
         months = locale_data.get("months", [])
         templates = locale_data.get("templates", {})
-        
+
         if language == "en":
             weekday = weekdays[now.weekday()] if now.weekday() < len(weekdays) else "Unknown"
             month = months[now.month - 1] if now.month - 1 < len(months) else "Unknown"

@@ -212,7 +212,25 @@
               "label": "TIME_FORMAT"
             }
           ],
-          "default_value": "12hour"
+          "default_value": "12hour",
+          "choice_surfaces": {
+            "12hour": [
+              "12 часов",
+              "12-часовой",
+              "двенадцатичасовой"
+            ],
+            "24hour": [
+              "24 часа",
+              "24-часовой",
+              "двадцатичетырёхчасовой"
+            ],
+            "verbose": [
+              "словами",
+              "прописью",
+              "подробно",
+              "развёрнуто"
+            ]
+          }
         }
       ]
     },
@@ -339,7 +357,30 @@
               "label": "DATE_FORMAT"
             }
           ],
-          "default_value": "full"
+          "default_value": "full",
+          "choice_surfaces": {
+            "short": [
+              "кратко",
+              "коротко",
+              "цифрами",
+              "сокращённо"
+            ],
+            "full": [
+              "полная",
+              "полностью",
+              "полный"
+            ],
+            "iso": [
+              "исо",
+              "iso"
+            ],
+            "verbose": [
+              "словами",
+              "прописью",
+              "подробно",
+              "развёрнуто"
+            ]
+          }
         },
         {
           "name": "relative",
@@ -477,7 +518,30 @@
         {
           "name": "format",
           "description": "Datetime format preference",
-          "default_value": "readable"
+          "default_value": "readable",
+          "choice_surfaces": {
+            "iso": [
+              "исо",
+              "iso"
+            ],
+            "readable": [
+              "читаемый",
+              "удобный",
+              "человекочитаемый"
+            ],
+            "unix": [
+              "юникс",
+              "unix",
+              "метка времени",
+              "временная метка"
+            ],
+            "verbose": [
+              "словами",
+              "прописью",
+              "подробно",
+              "развёрнуто"
+            ]
+          }
         }
       ]
     }

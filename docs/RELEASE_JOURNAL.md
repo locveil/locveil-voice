@@ -159,6 +159,17 @@ newest entries near the top of each dated section.
   **Gate 1: ARCH-1 ✓, ARCH-2 ✓, ARCH-3 ✓ — ARCH-4 (formalize ports) → ARCH-5 (import-linter) next.**
 
 ### 2026-06-02
+- **QUAL-33 (datetime half) — wired `datetime.format`; the handler now honours its declared CHOICE param.**
+  All three datetime handlers (`current_time`/`current_date`/`current_datetime`) read `intent.entities["format"]`
+  (canonical, normalised by the NLU) and branch: time → 12hour (`12:40 AM`) / 24hour (`00:40`) / verbose (the natural
+  template, default); date → short (locale numeric) / iso (`2026-06-03`) / full=verbose (template, default); datetime →
+  iso (ISO-8601) / unix (epoch) / readable (compact) / verbose (default). Non-verbose paths return before the locale
+  template (no asset-loader dependency). **Authored bilingual `choice_surfaces`** for all format params in `datetime_
+  handler/{en,ru}.json` (e.g. `24hour` ← "24 hour"/"24-hour"/"military" · "24 часа"/"24-часовой"; `verbose` ←
+  "in words" · "словами"/"прописью") — this is what makes the format reachable (QUAL-29's matcher extracts CHOICE via
+  surfaces, not the placeholder `.*` patterns). Verified: "24 часа"→24hour, "словами"→verbose; handler renders each
+  format. Lang files still schema-valid; smoke + store + contracts green. _Russian surfaces are my proposal — flag for
+  review._ Remaining: the system.info_type **full feature** (real per-category content — user-approved scope).
 - **QUAL-29 Stage G (backend) — REST API + loader fully retire the v1.0 per-language-with-params concept. QUAL-29
   backend DONE; config-ui editor rebuild carved to UI-5 (user-approved Invariant #4 deferral).** User chose to retire
   the old concept properly rather than ship a compatibility shim, accepting the config-ui donations-editing page breaks
