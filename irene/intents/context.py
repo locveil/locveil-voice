@@ -57,59 +57,40 @@ class ContextManager:
             self._cleanup_task = None
         logger.debug("Context manager stopped")
     
-    async def get_context(self, session_id: str) -> UnifiedConversationContext:
+    async def get_context(self, session_id: str) -> Optional[UnifiedConversationContext]:
+        """Return the EXISTING (non-expired) context for a session, or ``None`` — no side effects.
+
+        QUAL-28: non-creating, so a blank/typo'd session id can't silently spawn a shared session.
+        Callers that must operate on a context use :meth:`get_or_create_context`.
         """
-        Retrieve or create conversation context for a session.
-        
-        Args:
-            session_id: Unique session identifier
-            
-        Returns:
-            UnifiedConversationContext for the session
-        """
-        # Clean up expired sessions periodically
         await self._cleanup_expired_sessions()
-        
-        # Check if this is a new session
-        is_new_session = session_id not in self.sessions
-        
-        if session_id in self.sessions:
-            context = self.sessions[session_id]
-            # Check if session has expired
-            if time.time() - self._effective_last_active(context) > self.session_timeout:
-                logger.info(f"Session {session_id} expired, creating new context")
-                
-                # Phase 2: Record session end for expired session
-                self.metrics_collector.record_session_end(session_id)
-                
-                del self.sessions[session_id]
-                is_new_session = True  # Treat as new session
-            else:
-                return context
-        
-        # Create new context with Russian default
-        context = UnifiedConversationContext(
-            session_id=session_id,
-            language="ru",  # Russian-first default
-            max_history_turns=self.max_history_turns
-        )
-        self.sessions[session_id] = context
-        logger.info(f"Created new conversation context for session: {session_id}")
-        
-        # Phase 2: Record session start for new sessions
-        if is_new_session:
-            self.metrics_collector.record_session_start(session_id)
+        context = self.sessions.get(session_id)
+        if context is None:
+            return None
+        if time.time() - self._effective_last_active(context) > self.session_timeout:
+            self.metrics_collector.record_session_end(session_id)
+            del self.sessions[session_id]
+            return None
         return context
 
     async def get_or_create_context(self, session_id: str) -> UnifiedConversationContext:
-        """Fetch the session's context, creating it if absent — the explicit creator.
+        """Fetch the session's context, creating it if absent — the canonical creator.
 
-        QUAL-28: previously-phantom callers (`handlers/base.py`, `notifications.py`, `debug_tools.py`)
-        referenced this name but it didn't exist → `AttributeError` swallowed, killing the F&F
-        completion write-back. It's now real. (Stage 3 will make `get_context` itself non-creating and
-        migrate read-only callers to it; until then both names share the fetch-or-create body above.)
+        The previously-phantom F&F completion callers (`handlers/base.py`, `notifications.py`,
+        `debug_tools.py`) referenced this name; it is now the only path that mints a session.
         """
-        return await self.get_context(session_id)
+        existing = await self.get_context(session_id)
+        if existing is not None:
+            return existing
+        context = UnifiedConversationContext(
+            session_id=session_id,
+            language="ru",  # Russian-first default
+            max_history_turns=self.max_history_turns,
+        )
+        self.sessions[session_id] = context
+        logger.info(f"Created new conversation context for session: {session_id}")
+        self.metrics_collector.record_session_start(session_id)
+        return context
 
     async def get_context_with_request_info(self, session_id: str, request_context: 'RequestContext' = None) -> UnifiedConversationContext:
         """Enhanced context creation with proper room context injection
@@ -132,7 +113,7 @@ class ContextManager:
                 room_name = request_context.device_context.get('room_name')
         
         # Get existing context or create new
-        context = await self.get_context(session_id)
+        context = await self.get_or_create_context(session_id)
         
         # Update room information if extracted
         if room_id and not context.client_id:
@@ -167,7 +148,7 @@ class ContextManager:
             session_id: Session identifier
             metadata: Metadata to update
         """
-        context = await self.get_context(session_id)
+        context = await self.get_or_create_context(session_id)
         context.metadata.update(metadata)
         context.last_updated = time.time()
         logger.debug(f"Updated context metadata for session {session_id}")
@@ -180,7 +161,7 @@ class ContextManager:
             session_id: Session identifier
             intent: User intent to add
         """
-        context = await self.get_context(session_id)
+        context = await self.get_or_create_context(session_id)
         context.add_user_turn(intent)
         logger.debug(f"Added user turn to session {session_id}: {intent.name}")
     
@@ -192,7 +173,7 @@ class ContextManager:
             session_id: Session identifier
             result: Assistant response to add
         """
-        context = await self.get_context(session_id)
+        context = await self.get_or_create_context(session_id)
         context.add_assistant_turn(result)
         logger.debug(f"Added assistant turn to session {session_id}")
     
@@ -207,7 +188,7 @@ class ContextManager:
         Returns:
             List of recent conversation turns
         """
-        context = await self.get_context(session_id)
+        context = await self.get_or_create_context(session_id)
         return context.get_recent_context(turns)
     
     async def clear_session(self, session_id: str):
@@ -325,7 +306,7 @@ class ContextManager:
         Returns:
             Updated conversation context
         """
-        context = await self.get_context(session_id)
+        context = await self.get_or_create_context(session_id)
         context.add_user_turn(intent)
         
         # Update context metadata based on intent
@@ -360,7 +341,7 @@ class ContextManager:
         Returns:
             Conversation context with enhanced metadata
         """
-        context = await self.get_context(session_id)
+        context = await self.get_or_create_context(session_id)
         
         # Add intent processing metadata
         if 'intent_processing' not in context.metadata:
@@ -387,7 +368,7 @@ class ContextManager:
             result: Intent execution result
             session_id: Session identifier
         """
-        context = await self.get_context(session_id)
+        context = await self.get_or_create_context(session_id)
         context.add_assistant_turn(result)
         
         # Phase 2: Update session activity with intent execution result
@@ -873,7 +854,7 @@ class ContextManager:
             session_id: Session identifier
             language: Target language code (e.g., 'ru', 'en')
         """
-        context = await self.get_context(session_id)
+        context = await self.get_or_create_context(session_id)
         context.user_preferences['language'] = language
         context.language = language
         context.last_updated = time.time()

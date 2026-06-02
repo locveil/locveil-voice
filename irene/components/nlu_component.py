@@ -1141,9 +1141,10 @@ class NLUComponent(Component, NLUPlugin, WebAPIPlugin):
             async def recognize_intent(request: NLURequest):
                 """Recognize intent from text input"""
                 try:
-                    # GET CONTEXT FROM CONTEXT MANAGER - NO CREATION
+                    # The endpoint needs a context to recognize against (QUAL-28: get_context is now
+                    # non-creating, so use the explicit creator).
                     session_id = request.context.get("session_id", "nlu_api_session") if request.context else "nlu_api_session"
-                    context = await self.context_manager.get_context(session_id)
+                    context = await self.context_manager.get_or_create_context(session_id)
                     
                     # Inject API request context if available
                     if request.context:

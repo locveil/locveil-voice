@@ -337,8 +337,9 @@ class TextProcessorComponent(Component, TextProcessorPlugin, WebAPIPlugin):
             async def process_text(request: TextProcessingRequest):
                 """Process text through text processing pipeline with context"""
                 try:
-                    # GET CONTEXT FROM CONTEXT MANAGER - NO CREATION
-                    context = await self.context_manager.get_context(
+                    # The endpoint needs a context to run the pipeline (QUAL-28: get_context is now
+                    # non-creating, so use the explicit creator).
+                    context = await self.context_manager.get_or_create_context(
                         request.context.get("session_id", "api_session") if request.context else "api_session"
                     )
                     

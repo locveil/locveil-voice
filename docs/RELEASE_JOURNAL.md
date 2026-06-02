@@ -159,6 +159,12 @@ newest entries near the top of each dated section.
   **Gate 1: ARCH-1 ✓, ARCH-2 ✓, ARCH-3 ✓ — ARCH-4 (formalize ports) → ARCH-5 (import-linter) next.**
 
 ### 2026-06-02
+- **QUAL-28 Stage 3.3 — non-creating `get` split.** `get_context` is now non-creating (returns the existing,
+  non-expired context or `None`, no side effects) so a blank/typo'd session id can't silently spawn a shared session;
+  `get_or_create_context` is the canonical (and only) creator. Migrated all 11 callers that need a context to
+  `get_or_create_context` (the 9 internal context.py mutators + the text-processor and /nlu API endpoints, whose
+  "NO CREATION" comments were aspirational — the old `get_context` always created). Imports + contracts + smoke +
+  store tests green (15 passed).
 - **QUAL-28 Stage 3.3 — kill `extract_room_from_session` + eviction-unify.** Removed the lossy
   `extract_room_from_session` heuristic (P1-o) and its only consumer `get_session_type` (both unused externally); room
   identity now comes only from the explicit `RequestContext` fields (Q2; ARCH-6 populates them) — the Priority-2
