@@ -63,7 +63,7 @@ Living findings behind the tasks (Invariant #5). `[x]` = exists; others are prod
 | Doc (`docs/review/` unless noted) | Covers | Backs |
 |---|---|---|
 | `phase0_static_baseline.md` `[x]` | static baseline: phantom refs, hidden type debt, dead code, layering | QUAL-1/2 ✓, QUAL-3/4/5/6, TEST-1 |
-| `phase1_architecture_map.md` `[x]` | architecture map, doc-harmonization audit, hexagon target | ARCH-0 ✓, ARCH-1..8, DOC-4/5✓/5b/6✓ |
+| `phase1_architecture_map.md` `[x]` | architecture map, doc-harmonization audit, hexagon target | ARCH-0 ✓, ARCH-1..8, ARCH-11/12, DOC-4/5✓/5b/6✓ |
 | `fire_and_forget_review.md` `[x]` | F&F lifecycle + gap analysis (6 legacy issues re-validated) | QUAL-8 ✓, QUAL-9, TEST-3, DOC-4 |
 | `parameter_extraction_review.md` `[x]` | text→parameters review + gaps | QUAL-10 ✓, QUAL-11, TEST-4, DOC-7, UI-1/2/3, QUAL-22 |
 | `text_processing_review.md` `[x]` | text-processor subsystem review + LLM-text-proc question | QUAL-12 ✓, QUAL-13, TEST-5 |
@@ -186,7 +186,8 @@ See `docs/review/phase1_architecture_map.md` §5.
       domain→workflows edge) into `intents/context_models.py`. The linter **caught a real anti-pattern → QUAL-24**
       (8 handlers use `get_core()` service-locator; ignored in the domain contract with a comment, tracked
       separately). _The deliverable that makes "follows the architecture" verifiable._ **Gate 1 COMPLETE
-      (ARCH-1..5 ✓).**
+      (ARCH-1..5 ✓).** _Note (2026-06-02): the `core→inputs/workflows/components.base` edges were left unenforced here
+      as "composition-root behavior" — that reclassification is **REVOKED → ARCH-11** (fix via DI + add the contract)._
 - [ ] **ARCH-6** [WS] (P1) — **REFRAMED by QUAL-26 (Q4): WebSocket streaming-input driving adapter — the primary
       ESP32 transport.** The dead `InputManager._input_queue` + base64 `AUDIO_DATA:` path (P0-8) is a broken
       placeholder to be **replaced by a proper WS streaming adapter**, not patched. Design (needs a **design session**):
@@ -229,6 +230,23 @@ See `docs/review/phase1_architecture_map.md` §5.
       int8) on a shared runtime+asset helper, alongside vosk/whisper; then expand per the design (TTS family,
       wake-word) keeping whisper/silero as first-class options. Gated by Invariant #4 (provider config →
       config-ui). Split into PR-sized tasks from the design.
+- [ ] **ARCH-11** `[release]` (P1) — **Fix the `core → inputs/workflows/components.base` composition-root edges
+      properly — REVOKES the ARCH-5 reclassification** (which deemed them "legitimate composition-root behavior" and
+      left them unenforced; user reverses that 2026-06-02). Edges: `core.{engine,workflow_manager}→inputs.base`,
+      `core.workflow_manager→workflows.base`, `core.components→components.base`. **Fix = invert via DI/ports:** the
+      composition root (runners) injects concrete inputs/workflows/components into the core managers through
+      `core/interfaces` ports, so `core` depends on abstractions, not concrete delivery/application modules. Then add
+      **import-linter contract(s)** forbidding `core → inputs`/`workflows`/`components.base` (remove any exemption),
+      satisfying the Definition-of-release "no backwards cross-layer imports" criterion. **Slot/sequencing: lands
+      AFTER ARCH-6** (inputs become a proper WS driving adapter — the input-side DI seam) **and QUAL-28** (the
+      `workflow_manager`/context refactor reshapes the `core→workflows` edge); ARCH-11 is the final hexagon-tightening
+      that makes those two coherent and enforced. Refs: `phase1_architecture_map.md` §2.3 (core-orchestrating-outward
+      row, "legitimize via DI"), §5 step 6.
+- [ ] **ARCH-12** `[deferred]` (P2) — **Residual upward edges** (benign, no functional impact; not import-linter
+      violations today). `utils.vad → core.metrics` (metrics should be a port injected into utils, or vad shouldn't
+      emit metrics directly) and `utils.logging → config.models` (a `LogLevel` enum reach-up). Captured to close the
+      single-ledger gap (Invariant #6) — these were the only findings living solely in a review doc
+      (`phase1_architecture_map.md` §2.3). Deferred: do post-Gate-2 (or alongside ARCH-11) if cheap.
 
 ### Code Quality & Review (QUAL)
 - [x] **QUAL-1** — Phase-0 static baseline (ruff/pyright/vulture/validators/import-graph). → `docs/review/phase0_static_baseline.md` (6e39886)
