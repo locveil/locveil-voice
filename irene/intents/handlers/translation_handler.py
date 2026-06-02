@@ -87,7 +87,7 @@ class TranslationIntentHandler(IntentHandler):
             return self._create_error_result(intent, context, "LLM component not available")
         
         # Extract text and target language from command using LLM component helper methods
-        text_and_lang = llm_component.extract_translation_request(intent.text)
+        text_and_lang = llm_component.extract_translation_request(intent.raw_text)
         
         # Use language from context (detected by NLU) for response
         language = context.language or "ru"
@@ -133,7 +133,7 @@ class TranslationIntentHandler(IntentHandler):
         
         if not text_to_translate:
             # Try to extract from original command using LLM component
-            extraction_result = llm_component.extract_translation_request(intent.text)
+            extraction_result = llm_component.extract_translation_request(intent.raw_text)
             if extraction_result:
                 text_to_translate, target_language = extraction_result
             else:

@@ -214,7 +214,6 @@ class IntentOrchestrator:
                     name=f"{target_domain}.{processed_intent.action}",
                     action=processed_intent.action,
                     domain=target_domain,
-                    text=processed_intent.text,
                     entities=processed_intent.entities.copy(),
                     confidence=processed_intent.confidence,
                     raw_text=processed_intent.raw_text

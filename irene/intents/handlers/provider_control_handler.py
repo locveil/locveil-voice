@@ -88,7 +88,7 @@ class ProviderControlIntentHandler(IntentHandler):
         
         # If not in entities, try to extract from text
         if not component_type or not provider_name:
-            component_type, provider_name = self._parse_provider_switch_command(intent.text)
+            component_type, provider_name = self._parse_provider_switch_command(intent.raw_text)
         
         if not component_type or not provider_name:
             return self._create_error_result(intent, context, "Component type or provider name not specified")
@@ -126,7 +126,7 @@ class ProviderControlIntentHandler(IntentHandler):
         
         # If not in entities, try to extract from text
         if not component_type:
-            component_type = self._parse_list_providers_command(intent.text)
+            component_type = self._parse_list_providers_command(intent.raw_text)
         
         if not component_type:
             # List all providers from all components

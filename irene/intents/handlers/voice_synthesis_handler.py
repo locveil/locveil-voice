@@ -91,7 +91,7 @@ class VoiceSynthesisIntentHandler(IntentHandler):
         language = context.language or "ru"
         
         # Extract text and voice parameters from command
-        text_to_speak, voice_name = self._extract_speech_parameters(intent.text)
+        text_to_speak, voice_name = self._extract_speech_parameters(intent.raw_text)
         
         if not text_to_speak:
             return self._create_error_result(intent, context, "No text to speak found")
@@ -156,7 +156,7 @@ class VoiceSynthesisIntentHandler(IntentHandler):
             return self._create_error_result(intent, context, "TTS component not available")
         
         # Extract text to speak from intent entities
-        text_to_speak = intent.entities.get("text", intent.text)
+        text_to_speak = intent.entities.get("text", intent.raw_text)
         if not text_to_speak.strip():
             return self._create_error_result(intent, context, "No text to speak")
         
@@ -197,7 +197,7 @@ class VoiceSynthesisIntentHandler(IntentHandler):
         language = context.language or "ru"
         
         # Parse provider name from text and switch
-        provider_name = self._parse_tts_provider_name(intent.text)
+        provider_name = self._parse_tts_provider_name(intent.raw_text)
         success = tts_component.set_default_provider(provider_name) if provider_name else False
         
         if success:
@@ -214,7 +214,7 @@ class VoiceSynthesisIntentHandler(IntentHandler):
                 "action": "switch_provider",
                 "success": success,
                 "language": language,
-                "original_text": intent.text
+                "original_text": intent.raw_text
             },
             success=success
         )

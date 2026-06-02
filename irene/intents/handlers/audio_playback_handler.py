@@ -204,7 +204,7 @@ class AudioPlaybackIntentHandler(IntentHandler):
         # Extract provider name from intent entities or text
         provider_name = intent.entities.get("provider")
         if not provider_name:
-            provider_name = audio_component.parse_provider_name_from_text(intent.text)
+            provider_name = audio_component.parse_provider_name_from_text(intent.raw_text)
         
         if not provider_name:
             return self._create_error_result(intent, context, "Provider name not specified")

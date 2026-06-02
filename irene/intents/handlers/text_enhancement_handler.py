@@ -84,7 +84,7 @@ class TextEnhancementIntentHandler(IntentHandler):
             return self._create_error_result(intent, context, "LLM component not available")
         
         # Extract text to enhance from command using LLM component helper method
-        text_to_enhance = llm_component.extract_text_from_command(intent.text)
+        text_to_enhance = llm_component.extract_text_from_command(intent.raw_text)
         
         # Use language from context (detected by NLU)
         language = context.language or "ru"
@@ -124,7 +124,7 @@ class TextEnhancementIntentHandler(IntentHandler):
         
         if not text_to_improve:
             # Try to extract from original command using LLM component
-            text_to_improve = llm_component.extract_text_from_command(intent.text)
+            text_to_improve = llm_component.extract_text_from_command(intent.raw_text)
             
         if not text_to_improve:
             return self._create_error_result(intent, context, "Text to improve not found")
@@ -166,7 +166,7 @@ class TextEnhancementIntentHandler(IntentHandler):
         
         if not text_to_correct:
             # Try to extract from original command using LLM component
-            text_to_correct = llm_component.extract_text_from_command(intent.text)
+            text_to_correct = llm_component.extract_text_from_command(intent.raw_text)
             
         if not text_to_correct:
             return self._create_error_result(intent, context, "Text to correct not found")

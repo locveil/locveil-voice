@@ -157,9 +157,7 @@ class TimerIntentHandler(IntentHandler):
         # Check if text contains Russian characters
         if hasattr(intent, 'raw_text') and any(char in intent.raw_text for char in "абвгдеёжзийклмнопрстуфхцчшщъыьэюя"):
             return "ru"
-        elif hasattr(intent, 'text') and any(char in intent.text for char in "абвгдеёжзийклмнопрстуфхцчшщъыьэюя"):
-            return "ru"
-        
+
         # Default to Russian
         return "ru"
         
