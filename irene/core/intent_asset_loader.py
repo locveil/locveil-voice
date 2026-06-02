@@ -691,56 +691,102 @@ class IntentAssetLoader:
     # LANGUAGE-SEPARATED FILE ACCESS FOR EDITOR (Phase 3C)
     # ============================================================
     
-    def get_donation_for_language_editing(self, handler_name: str, language: str) -> Optional[HandlerDonation]:
-        """Get language-specific donation for editing purposes"""
-        asset_handler_name = self._get_asset_handler_name(handler_name)
-        lang_file = self.assets_root / "donations" / asset_handler_name / f"{language}.json"
-        
-        if lang_file.exists():
-            try:
-                with open(lang_file, 'r', encoding='utf-8') as f:
-                    data = json.load(f)
-                    return HandlerDonation(**data)
-            except Exception as e:
-                logger.error(f"Failed to load {language} donation for {handler_name}: {e}")
-                return None
-        
-        return None
-    
-    def save_donation_for_language(self, handler_name: str, language: str, donation: HandlerDonation, create_backup: bool = True) -> tuple[bool, bool]:
-        """Save language-specific donation for editing with backup support
-        
-        Returns:
-            tuple: (save_success, backup_created)
-        """
+    # ------------------------------------------------------------------
+    # Donation editing API — v1.1 (language-neutral contract + per-language phrasing).
+    # QUAL-29 retired the v1.0 per-language-with-params editing: a language file no longer holds
+    # ParameterSpec cores (type/required/choices) — those live once in contract.json. Editing is split:
+    # the CONTRACT (params/canonical-choices/entity_type/room_context/method list) vs each language's PHRASING.
+    # ------------------------------------------------------------------
+    def get_contract_for_editing(self, handler_name: str) -> Optional[Dict[str, Any]]:
+        """Return the raw language-neutral contract.json for a handler, or None if absent."""
+        asset = self._get_asset_handler_name(handler_name)
+        contract_file = self.assets_root / "donations" / asset / "contract.json"
+        if not contract_file.exists():
+            return None
+        try:
+            return json.loads(contract_file.read_text(encoding="utf-8"))
+        except Exception as e:
+            logger.error(f"Failed to load contract.json for {handler_name}: {e}")
+            return None
+
+    def save_contract(self, handler_name: str, contract: Dict[str, Any], create_backup: bool = True) -> tuple[bool, bool]:
+        """Persist the language-neutral contract.json. Returns (save_success, backup_created)."""
         backup_created = False
         try:
-            asset_handler_name = self._get_asset_handler_name(handler_name)
-            lang_dir = self.assets_root / "donations" / asset_handler_name
+            asset = self._get_asset_handler_name(handler_name)
+            cdir = self.assets_root / "donations" / asset
+            cdir.mkdir(parents=True, exist_ok=True)
+            contract_file = cdir / "contract.json"
+            if create_backup and contract_file.exists():
+                backup_created = self._create_backup(contract_file, "donations", handler_name, "contract")
+            contract_file.write_text(json.dumps(contract, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+            logger.info(f"Saved contract.json for handler '{handler_name}'")
+            return True, backup_created
+        except Exception as e:
+            logger.error(f"Failed to save contract.json for {handler_name}: {e}")
+            return False, backup_created
+
+    def get_language_phrasing_for_editing(self, handler_name: str, language: str) -> Optional[Dict[str, Any]]:
+        """Return the raw per-language phrasing file (phrases/lemmas/patterns/examples + per-param
+        description/extraction_patterns/aliases/default_value/choice_surfaces), or None if absent."""
+        asset = self._get_asset_handler_name(handler_name)
+        lang_file = self.assets_root / "donations" / asset / f"{language}.json"
+        if not lang_file.exists():
+            return None
+        try:
+            return json.loads(lang_file.read_text(encoding="utf-8"))
+        except Exception as e:
+            logger.error(f"Failed to load {language} phrasing for {handler_name}: {e}")
+            return None
+
+    def save_language_phrasing(self, handler_name: str, language: str, phrasing: Dict[str, Any], create_backup: bool = True) -> tuple[bool, bool]:
+        """Persist a per-language phrasing file. Returns (save_success, backup_created)."""
+        backup_created = False
+        try:
+            asset = self._get_asset_handler_name(handler_name)
+            lang_dir = self.assets_root / "donations" / asset
             lang_dir.mkdir(parents=True, exist_ok=True)
-            
             lang_file = lang_dir / f"{language}.json"
-            
-            # Create backup if requested and file exists
             if create_backup and lang_file.exists():
                 backup_created = self._create_backup(lang_file, "donations", handler_name, language)
-                if not backup_created:
-                    logger.warning(f"Backup creation failed for {lang_file}, proceeding with save")
-            
-            # Convert to dict and add explicit language field
-            donation_dict = donation.dict()
-            donation_dict["language"] = language
-            
-            # Write new content
-            with open(lang_file, 'w', encoding='utf-8') as f:
-                json.dump(donation_dict, f, indent=2, ensure_ascii=False)
-            
-            logger.info(f"Saved {language} donation for handler '{handler_name}' to {lang_file}")
+            phrasing = dict(phrasing)
+            phrasing["language"] = language
+            lang_file.write_text(json.dumps(phrasing, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+            logger.info(f"Saved {language} phrasing for handler '{handler_name}'")
             return True, backup_created
-            
         except Exception as e:
-            logger.error(f"Failed to save {language} donation for {handler_name}: {e}")
+            logger.error(f"Failed to save {language} phrasing for {handler_name}: {e}")
             return False, backup_created
+
+    def _validate_v11_data(self, data: Dict[str, Any], schema_filename: str) -> tuple[bool, list, list]:
+        """Dry-run validate a v1.1 contract/phrasing dict against its JSON Schema. Returns (is_valid, errors, warnings)
+        with error dicts shaped for the API ``ValidationError`` model ({type, message, path})."""
+        errors: list = []
+        warnings: list = []
+        try:
+            import jsonschema
+        except ImportError:
+            warnings.append({"type": "schema", "message": "jsonschema not available; validation skipped", "path": None})
+            return True, errors, warnings
+        schema_path = self.assets_root / schema_filename
+        if not schema_path.exists():
+            warnings.append({"type": "schema", "message": f"schema {schema_filename} not found; skipped", "path": None})
+            return True, errors, warnings
+        try:
+            schema = json.loads(schema_path.read_text(encoding="utf-8"))
+            for e in sorted(jsonschema.Draft7Validator(schema).iter_errors(data), key=lambda er: list(er.path)):
+                errors.append({"type": "schema", "message": e.message, "path": "/".join(str(p) for p in e.path)})
+        except Exception as e:
+            errors.append({"type": "schema", "message": f"validation error: {e}", "path": None})
+        return (len(errors) == 0), errors, warnings
+
+    async def validate_contract_data(self, handler_name: str, contract_data: Dict[str, Any]) -> tuple[bool, list, list]:
+        """Validate a language-neutral contract dict against the v1.1 contract schema (dry-run)."""
+        return self._validate_v11_data(contract_data, "donation_contract_v1.1.json")
+
+    async def validate_phrasing_data(self, handler_name: str, phrasing_data: Dict[str, Any]) -> tuple[bool, list, list]:
+        """Validate a per-language phrasing dict against the v1.1 language schema (dry-run)."""
+        return self._validate_v11_data(phrasing_data, "donation_language_v1.1.json")
     
     async def reload_unified_donation(self, handler_name: str) -> bool:
         """Reload unified donation after language file changes"""
@@ -772,8 +818,9 @@ class IntentAssetLoader:
         
         if not lang_dir.exists():
             return []
-        
-        return [lang_file.stem for lang_file in lang_dir.glob("*.json")]
+
+        # QUAL-29: contract.json is the language-neutral core, NOT a language.
+        return [lang_file.stem for lang_file in lang_dir.glob("*.json") if lang_file.name != "contract.json"]
     
     def get_all_handlers_with_languages(self) -> Dict[str, List[str]]:
         """Get all handlers with their available languages"""
@@ -790,7 +837,8 @@ class IntentAssetLoader:
                 if handler_name.endswith("_handler"):
                     handler_name = handler_name[:-8]  # Remove "_handler" suffix
                 
-                languages = [lang_file.stem for lang_file in handler_dir.glob("*.json")]
+                languages = [lang_file.stem for lang_file in handler_dir.glob("*.json")
+                             if lang_file.name != "contract.json"]
                 if languages:
                     handlers_languages[handler_name] = sorted(languages)
         
@@ -930,60 +978,26 @@ class IntentAssetLoader:
             return False, errors, warnings
 
     def validate_cross_language_consistency(self, handler_name: str) -> Dict[str, Any]:
-        """Validate consistency across language files for a handler"""
-        languages = self.get_available_languages_for_handler(handler_name)
-        
-        if len(languages) < 2:
-            return {
-                "parameter_consistency": True,
-                "missing_methods": [],
-                "extra_methods": []
-            }
-        
-        # Load all language donations for comparison
-        language_donations = {}
-        for language in languages:
-            donation = self.get_donation_for_language_editing(handler_name, language)
-            if donation:
-                language_donations[language] = donation
-        
-        if not language_donations:
-            return {
-                "parameter_consistency": False,
-                "missing_methods": [],
-                "extra_methods": []
-            }
-        
-        # Check method consistency
-        all_methods = set()
-        methods_by_lang = {}
-        
-        for language, donation in language_donations.items():
-            methods = {f"{m.method_name}#{m.intent_suffix}" for m in donation.method_donations}
-            all_methods.update(methods)
-            methods_by_lang[language] = methods
-        
-        # Find missing and extra methods per language
-        missing_methods = []
-        extra_methods = []
-        
-        base_methods = next(iter(methods_by_lang.values()))
-        for language, methods in methods_by_lang.items():
-            missing = base_methods - methods
-            extra = methods - base_methods
-            
-            if missing:
-                missing_methods.extend([f"{language}: {method}" for method in missing])
-            if extra:
-                extra_methods.extend([f"{language}: {method}" for method in extra])
-        
-        # Check parameter consistency (simplified check)
-        parameter_consistency = len(set(len(methods) for methods in methods_by_lang.values())) == 1
-        
+        """QUAL-29 (v1.1): parameter parity is structural (single-source contract), so it is always
+        consistent; cross-language checking is now method-phrasing completeness — every contract method
+        must have phrases in each language file."""
+        contract = self.get_contract_for_editing(handler_name)
+        if not contract:
+            return {"parameter_consistency": True, "missing_methods": [], "extra_methods": []}
+
+        contract_methods = {f"{m['method_name']}#{m['intent_suffix']}" for m in contract.get("method_donations", [])}
+        missing_methods, extra_methods = [], []
+        for language in self.get_available_languages_for_handler(handler_name):
+            phrasing = self.get_language_phrasing_for_editing(handler_name, language) or {}
+            phrased = {f"{m['method_name']}#{m['intent_suffix']}"
+                       for m in phrasing.get("method_donations", []) if m.get("phrases")}
+            missing_methods.extend(f"{language}: {mk}" for mk in sorted(contract_methods - phrased))
+            extra_methods.extend(f"{language}: {mk}" for mk in sorted(phrased - contract_methods))
+
         return {
-            "parameter_consistency": parameter_consistency,
+            "parameter_consistency": True,  # structural under v1.1
             "missing_methods": missing_methods,
-            "extra_methods": extra_methods
+            "extra_methods": extra_methods,
         }
     
     # ============================================================

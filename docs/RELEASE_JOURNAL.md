@@ -159,6 +159,22 @@ newest entries near the top of each dated section.
   **Gate 1: ARCH-1 ✓, ARCH-2 ✓, ARCH-3 ✓ — ARCH-4 (formalize ports) → ARCH-5 (import-linter) next.**
 
 ### 2026-06-02
+- **QUAL-29 Stage G (backend) — REST API + loader fully retire the v1.0 per-language-with-params concept. QUAL-29
+  backend DONE; config-ui editor rebuild carved to UI-5 (user-approved Invariant #4 deferral).** User chose to retire
+  the old concept properly rather than ship a compatibility shim, accepting the config-ui donations-editing page breaks
+  at runtime now (it still BUILDS — the frontend compiles against its own `api.ts`). **Loader:** added the v1.1 editing
+  API — `get/save_contract` (neutral core) + `get/save_language_phrasing` + `validate_contract_data`/
+  `validate_phrasing_data` (against the v1.1 schemas); **retired** `get/save_donation_for_language` (which did
+  `HandlerDonation(**lang_file)` → crashed under v1.1); fixed `get_available_languages_for_handler` +
+  `get_all_handlers_with_languages` to exclude `contract.json` (was surfacing "contract" as a language);
+  `validate_cross_language_consistency` reworked to method-phrasing completeness (parameter parity is structural now).
+  **REST (`intent_component.py`):** added `GET/PUT /donations/{handler}/contract`; the per-`{language}` GET/PUT/validate/
+  create endpoints now serve/accept **phrasing-only**; `GET /donations/schema` returns **both** v1.1 schemas
+  (`{contract, language}`); **removed** the dead `POST /donations/{handler}/sync-parameters`. Verified: editing
+  round-trip works (contract 7 methods, ru phrasing has no params-with-type, both validate clean); smoke + store +
+  contracts green. **Remaining Invariant #4 obligation = UI-5** (rebuild the config-ui donations editor on the v1.1
+  split: contract editor + phrasing editor + choice_surfaces/entity_type/room_context editors; coordinate with
+  UI-1/2/3 — one redesign, not two). QUAL-33 (datetime/system handler-wiring) still pending.
 - **QUAL-29 scope clarification (user) — REST API = unfinished Stage G; datetime gap filed as QUAL-33.** User flagged
   that the donation **REST API still serves v1.0 concepts** and the datetime gap is unclosed. Grounded both: the REST
   surface (`get_donation_schema` → `assets/v1.0.json`; the per-`{language}` GET/PUT/validate/create/delete treating a

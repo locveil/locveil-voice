@@ -7,7 +7,9 @@ integrated into workflows and the component lifecycle.
 """
 
 import asyncio
+import json
 import logging
+from pathlib import Path
 from typing import Dict, Any, List, Optional, Type
 
 from pydantic import BaseModel
@@ -295,7 +297,7 @@ class IntentComponent(Component, WebAPIPlugin):
     def get_router(self) -> Optional[Any]:
         """Get FastAPI router for Web API integration using centralized schemas"""
         try:
-            from fastapi import APIRouter, HTTPException
+            from fastapi import APIRouter, HTTPException, Body
             from ..api.schemas import (
                 IntentSystemStatusResponse, IntentHandlersResponse, IntentHandlerInfo,
                 IntentActionCancelRequest, IntentActionResponse, IntentActiveActionsResponse,
@@ -446,46 +448,22 @@ class IntentComponent(Component, WebAPIPlugin):
             
             @router.get("/schema", response_model=DonationSchemaResponse)
             async def get_donation_schema():
-                """Get JSON schema for donation structure"""
+                """QUAL-29 (v1.1): return BOTH donation schemas — the language-neutral `contract` and the
+                per-language `language` (phrasing) — under `json_schema = {contract, language}`."""
                 try:
-                    # Load schema from assets/v1.0.json
-                    from pathlib import Path
-                    import json as json_module
-                    
-                    schema_path = Path("assets/v1.0.json")
-                    if not schema_path.exists():
-                        # Fallback to a basic schema structure
-                        basic_schema = {
-                            "$schema": "http://json-schema.org/draft-07/schema#",
-                            "type": "object",
-                            "title": "Handler Donation Schema",
-                            "description": "Schema for intent handler donation files",
-                            "properties": {
-                                "schema_version": {"type": "string"},
-                                "donation_version": {"type": "string"},
-                                "handler_domain": {"type": "string"},
-                                "description": {"type": "string"},
-                                "global_parameters": {"type": "array"},
-                                "method_donations": {"type": "array"}
-                            },
-                            "required": ["handler_domain", "method_donations"]
-                        }
-                        
-                        return DonationSchemaResponse(
-                            success=True,
-                            json_schema=basic_schema,
-                            schema_version="1.0",
-                            supported_versions=["1.0"]
-                        )
-                    
-                    with open(schema_path, 'r', encoding='utf-8') as f:
-                        schema_data = json_module.load(f)
-                    
+                    asset_loader = self.handler_manager._asset_loader if self.handler_manager else None
+                    assets_root = asset_loader.assets_root if asset_loader else Path("assets")
+                    schemas = {}
+                    for key, fname in (("contract", "donation_contract_v1.1.json"),
+                                       ("language", "donation_language_v1.1.json")):
+                        path = assets_root / fname
+                        if path.exists():
+                            schemas[key] = json.loads(path.read_text(encoding="utf-8"))
                     return DonationSchemaResponse(
                         success=True,
-                        json_schema=schema_data,
-                        schema_version="1.0",
-                        supported_versions=["1.0"]
+                        json_schema=schemas,
+                        schema_version="1.1",
+                        supported_versions=["1.1"]
                     )
                 except Exception as e:
                     raise HTTPException(500, f"Failed to load donation schema: {str(e)}")
@@ -617,54 +595,6 @@ class IntentComponent(Component, WebAPIPlugin):
                 except Exception as e:
                     raise HTTPException(500, f"Failed to validate cross-language consistency: {str(e)}")
             
-            @router.post("/donations/{handler_name}/sync-parameters", response_model=SyncParametersResponse)
-            async def sync_parameters(handler_name: str, request: SyncParametersRequest):
-                """Sync parameter structures across languages"""
-                if not self.handler_manager:
-                    raise HTTPException(503, "Intent system not initialized")
-                
-                try:
-                    asset_loader = self.handler_manager._asset_loader
-                    
-                    # Import the validator
-                    from ..core.cross_language_validator import CrossLanguageValidator
-                    validator = CrossLanguageValidator(asset_loader.assets_root, asset_loader)
-                    
-                    # Check source language exists
-                    available_languages = asset_loader.get_available_languages_for_handler(handler_name)
-                    if request.source_language not in available_languages:
-                        raise HTTPException(404, f"Source language '{request.source_language}' not found for handler '{handler_name}'")
-                    
-                    # Validate target languages
-                    invalid_targets = [lang for lang in request.target_languages if lang not in available_languages]
-                    if invalid_targets:
-                        raise HTTPException(404, f"Target languages not found: {invalid_targets}")
-                    
-                    # Perform synchronization
-                    sync_results = validator.sync_parameters_across_languages(
-                        handler_name, 
-                        request.source_language, 
-                        request.target_languages
-                    )
-                    
-                    # Determine which languages were updated vs skipped
-                    updated_languages = [lang for lang, success in sync_results.items() if success]
-                    skipped_languages = [lang for lang, success in sync_results.items() if not success]
-                    
-                    return SyncParametersResponse(
-                        success=True,
-                        handler_name=handler_name,
-                        source_language=request.source_language,
-                        sync_results=sync_results,
-                        updated_languages=updated_languages,
-                        skipped_languages=skipped_languages
-                    )
-                    
-                except HTTPException:
-                    raise
-                except Exception as e:
-                    raise HTTPException(500, f"Failed to sync parameters: {str(e)}")
-            
             @router.post("/donations/{handler_name}/suggest-translations", response_model=SuggestTranslationsResponse)
             async def suggest_translations(handler_name: str, request: SuggestTranslationsRequest):
                 """Get translation suggestions for missing phrases"""
@@ -743,6 +673,54 @@ class IntentComponent(Component, WebAPIPlugin):
                 except Exception as e:
                     raise HTTPException(500, f"Failed to get handler languages: {str(e)}")
             
+            @router.get("/donations/{handler_name}/contract")
+            async def get_donation_contract(handler_name: str):
+                """QUAL-29 (v1.1): the language-neutral contract for a handler — param core (name/type/required/
+                canonical choices/min-max/entity_type), per-method room_context, and the method list."""
+                if not self.handler_manager:
+                    raise HTTPException(503, "Intent system not initialized")
+                asset_loader = self.handler_manager._asset_loader
+                contract = asset_loader.get_contract_for_editing(handler_name)
+                if contract is None:
+                    raise HTTPException(404, f"No contract.json for handler '{handler_name}'")
+                return {"success": True, "handler_name": handler_name, "contract": contract,
+                        "available_languages": asset_loader.get_available_languages_for_handler(handler_name)}
+
+            @router.put("/donations/{handler_name}/contract")
+            async def update_donation_contract(handler_name: str, request: Dict[str, Any] = Body(...)):
+                """Validate + save the language-neutral contract, then reload the unified donation. Body:
+                {contract: {...}, validate_before_save?: bool, trigger_reload?: bool}."""
+                if not self.handler_manager:
+                    raise HTTPException(503, "Intent system not initialized")
+                asset_loader = self.handler_manager._asset_loader
+                contract = request.get("contract")
+                if not isinstance(contract, dict):
+                    raise HTTPException(400, "Body must contain a 'contract' object")
+
+                errors, warnings = [], []
+                if request.get("validate_before_save", True):
+                    is_valid, error_list, warning_list = await asset_loader.validate_contract_data(handler_name, contract)
+                    errors = [ValidationError(**e) for e in error_list]
+                    warnings = [ValidationWarning(**w) for w in warning_list]
+                    if not is_valid:
+                        return {"success": False, "handler_name": handler_name, "validation_passed": False,
+                                "reload_triggered": False, "errors": [e.dict() for e in errors],
+                                "warnings": [w.dict() for w in warnings]}
+
+                saved, backup_created = asset_loader.save_contract(handler_name, contract)
+                if not saved:
+                    raise HTTPException(500, "Failed to save contract.json")
+
+                reload_triggered = False
+                if request.get("trigger_reload", True):
+                    try:
+                        reload_triggered = await asset_loader.reload_unified_donation(handler_name)
+                    except Exception as e:
+                        logger.warning(f"Contract saved but reload failed: {e}")
+                return {"success": True, "handler_name": handler_name, "validation_passed": True,
+                        "reload_triggered": reload_triggered, "backup_created": backup_created,
+                        "errors": [], "warnings": [w.dict() for w in warnings]}
+
             @router.get("/donations/{handler_name}/{language}", response_model=LanguageDonationContentResponse)
             async def get_language_donation(handler_name: str, language: str):
                 """Get language-specific donation content for editing"""
@@ -752,9 +730,10 @@ class IntentComponent(Component, WebAPIPlugin):
                 try:
                     asset_loader = self.handler_manager._asset_loader
                     
-                    # Get language-specific donation
-                    donation = asset_loader.get_donation_for_language_editing(handler_name, language)
-                    if not donation:
+                    # QUAL-29 (v1.1): a language file is phrasing-only; the param core lives in contract.json
+                    # (see GET /donations/{handler}/contract).
+                    phrasing = asset_loader.get_language_phrasing_for_editing(handler_name, language)
+                    if phrasing is None:
                         raise HTTPException(404, f"Language '{language}' not found for handler '{handler_name}'")
                     
                     # Get metadata
@@ -782,7 +761,7 @@ class IntentComponent(Component, WebAPIPlugin):
                         success=True,
                         handler_name=handler_name,
                         language=language,
-                        donation_data=donation.dict(),
+                        donation_data=phrasing,
                         metadata=metadata,
                         available_languages=available_languages,
                         cross_language_validation=CrossLanguageValidation(**cross_validation)
@@ -804,15 +783,15 @@ class IntentComponent(Component, WebAPIPlugin):
                     errors = []
                     warnings = []
                     
-                    # Validate before saving if requested
+                    # QUAL-29 (v1.1): validate + save PHRASING (no param core — that lives in contract.json).
                     if request.validate_before_save:
-                        is_valid, error_list, warning_list = await asset_loader.validate_donation_data(
+                        is_valid, error_list, warning_list = await asset_loader.validate_phrasing_data(
                             handler_name, request.donation_data
                         )
                         validation_passed = is_valid
                         errors = [ValidationError(**err) for err in error_list]
                         warnings = [ValidationWarning(**warn) for warn in warning_list]
-                        
+
                         if not is_valid:
                             return LanguageDonationUpdateResponse(
                                 success=False,
@@ -824,15 +803,12 @@ class IntentComponent(Component, WebAPIPlugin):
                                 errors=errors,
                                 warnings=warnings
                             )
-                    
-                    # Create HandlerDonation object and save
-                    try:
-                        donation = HandlerDonation(**request.donation_data)
-                        saved, backup_created = asset_loader.save_donation_for_language(handler_name, language, donation)
-                        if not saved:
-                            raise HTTPException(500, "Failed to save language donation file")
-                    except Exception as e:
-                        raise HTTPException(400, f"Invalid donation data: {str(e)}")
+
+                    saved, backup_created = asset_loader.save_language_phrasing(
+                        handler_name, language, request.donation_data
+                    )
+                    if not saved:
+                        raise HTTPException(500, "Failed to save language phrasing file")
                     
                     # Trigger unified donation reload if requested
                     reload_triggered = False
@@ -880,18 +856,14 @@ class IntentComponent(Component, WebAPIPlugin):
                 try:
                     asset_loader = self.handler_manager._asset_loader
                     
-                    is_valid, error_list, warning_list = await asset_loader.validate_donation_data(
+                    is_valid, error_list, warning_list = await asset_loader.validate_phrasing_data(
                         handler_name, request.donation_data
                     )
-                    
+
                     errors = [ValidationError(**err) for err in error_list]
                     warnings = [ValidationWarning(**warn) for warn in warning_list]
-                    
-                    validation_types = ["pydantic"]
-                    if asset_loader.config.validate_json_schema:
-                        validation_types.append("schema")
-                    if asset_loader.config.validate_method_existence:
-                        validation_types.append("method_existence")
+
+                    validation_types = ["v1.1-language-schema"]
                     
                     return LanguageDonationValidationResponse(
                         success=True,
@@ -951,34 +923,29 @@ class IntentComponent(Component, WebAPIPlugin):
                     if lang_file.exists():
                         raise HTTPException(409, f"Language '{language}' already exists for handler '{handler_name}'")
                     
+                    # QUAL-29 (v1.1): a new language file is PHRASING only; the method/param skeleton comes from
+                    # the contract (joined by method_name#intent_suffix), so a blank template just lists the methods.
                     copied_from = None
                     if request.copy_from and not request.use_template:
-                        # Copy from existing language
-                        source_donation = asset_loader.get_donation_for_language_editing(handler_name, request.copy_from)
-                        if not source_donation:
+                        source = asset_loader.get_language_phrasing_for_editing(handler_name, request.copy_from)
+                        if source is None:
                             raise HTTPException(404, f"Source language '{request.copy_from}' not found")
-                        
-                        saved, _ = asset_loader.save_donation_for_language(handler_name, language, source_donation)
+                        saved, _ = asset_loader.save_language_phrasing(handler_name, language, source)
                         copied_from = request.copy_from
                     else:
-                        # Create empty template
-                        # Get any existing language as template structure
-                        available_languages = asset_loader.get_available_languages_for_handler(handler_name)
-                        if available_languages:
-                            template_donation = asset_loader.get_donation_for_language_editing(handler_name, available_languages[0])
-                            if template_donation:
-                                # Clear phrases but keep structure
-                                for method_donation in template_donation.method_donations:
-                                    method_donation.phrases = []
-                                    method_donation.examples = []
-                                    if hasattr(method_donation, 'lemmas'):
-                                        method_donation.lemmas = []
-                                
-                                saved, _ = asset_loader.save_donation_for_language(handler_name, language, template_donation)
-                            else:
-                                raise HTTPException(500, "Failed to create template donation")
-                        else:
-                            raise HTTPException(400, "Cannot create language file: no existing languages to use as template")
+                        contract = asset_loader.get_contract_for_editing(handler_name)
+                        if not contract:
+                            raise HTTPException(400, "Cannot create language file: handler has no contract.json")
+                        template = {
+                            "schema_version": "1.1",
+                            "handler_domain": contract.get("handler_domain"),
+                            "language": language,
+                            "method_donations": [
+                                {"method_name": m["method_name"], "intent_suffix": m["intent_suffix"], "phrases": []}
+                                for m in contract.get("method_donations", [])
+                            ],
+                        }
+                        saved, _ = asset_loader.save_language_phrasing(handler_name, language, template)
                     
                     if not saved:
                         raise HTTPException(500, "Failed to save new language file")

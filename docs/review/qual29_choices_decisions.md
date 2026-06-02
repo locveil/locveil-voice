@@ -12,8 +12,9 @@
   — today Russian CHOICE recognition leans on per-handler hacks; the canonical model centralizes it declaratively.
 - **Build stages:** (A) model `choice_surfaces` ✅ → (B) migration encodes all choice decisions + re-run ✅ →
   (C) loader assembles contract+lang ✅ → (D) extraction ×2 providers (surface→canonical) ✅ → (E) validator shrink ✅ →
-  (F) schemas (contract + language) + loader enforcement ✅ → (G) **config-ui surface (Invariant #4) — NOT yet done**
-  → (H) file follow-ups ✅ (QUAL-33).
+  (F) schemas (contract + language) + loader enforcement ✅ → (G) **backend REST + loader ✅** (config-ui FRONTEND
+  rebuild carved to UI-5, user-approved Invariant #4 deferral) → (H) file follow-ups ✅ (QUAL-33).
+  **QUAL-29 backend is COMPLETE.** The only remaining piece is UI-5 (the config-ui donations-editor rebuild).
 
 ### Stage G — config-ui surface (the Invariant #4 obligation; REQUIRED to close QUAL-29)
 The runtime is v1.1 but the **donation editing REST API still serves v1.0 concepts** — QUAL-29 stays `[~]` until this lands:

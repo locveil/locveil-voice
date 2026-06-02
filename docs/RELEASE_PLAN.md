@@ -519,7 +519,8 @@ _Apply to every remediation task below (from the 4 review docs + QUAL-25/26). So
       re-refactor). (c) **Decoupled from ARCH-6** (incremental): the store + reaper + eviction-survival land now keyed
       by the best-available stable id; room/device keying upgrades when ARCH-6 populates identity. See the **Q1 timing
       decision** recorded in `RELEASE_JOURNAL.md` + ARCH-6.
-- [~] **QUAL-29** [DFLOW] (P1) — **Donation format split (Q6; precedes declarative device-resolution). DOING.** Split
+- [x] **QUAL-29** [DFLOW] (P1) — **Donation format split (Q6; precedes declarative device-resolution). DONE (backend) —
+      config-ui editor rebuild carved to UI-5 (user-approved Invariant #4 deferral 2026-06-03).** Split
       donations into a **language-neutral contract** (method list + invariant `ParameterSpec` core: name/type/required/
       choices/min-max + **`entity_type`** {device/location/room/person/generic} + per-method **`room_context`**
       {required/none/conditional}) + **per-language files** (phrases/lemmas/token/slot patterns + language-specific
@@ -702,6 +703,23 @@ Governed by Invariant #4 (config-ui must stay functional).
       `MonitoringPage` placeholder and the **ARCH-7 [MQTT]** output-seam work (both touch live pipeline observability).
       Re-scope against the *fixed* pipeline + real endpoints when it's actually picked up. Captured from a config-ui
       doc reviewed during QUAL-25 (2026-06-02).
+- [ ] **UI-5** `[release]` [DEDITOR] (P1) — **Rebuild the donations editor on the v1.1 split model (config-ui;
+      Invariant #4 debt from QUAL-29).** QUAL-29 retired the v1.0 per-language-with-params concept on the **backend**
+      (contract.json = neutral core; `<lang>.json` = phrasing) and the REST API now reflects it (`GET/PUT
+      /donations/{handler}/contract`; the per-`{language}` endpoints serve phrasing; `/donations/schema` → both v1.1
+      schemas; `sync-parameters` removed). **The config-ui frontend still targets the old endpoints/shape and its
+      donations-editing page is therefore non-functional at runtime** (it still *builds* — TS compiles against its own
+      `api.ts`). Rebuild it: **(1)** `apiClient.ts` → the v1.1 endpoints (contract get/put; phrasing get/put/validate/
+      create/delete; drop `syncParameters`); **(2)** `src/types/*` → split `DonationData` into a **contract** type
+      (params: name/type/required/**canonical** choices/min-max/**entity_type**, per-method **room_context**) + a
+      **phrasing** type (phrases/lemmas/patterns/examples + per-param description/extraction_patterns/aliases/
+      default_value/**choice_surfaces**); **(3)** a **contract editor** (one per handler) + a per-language **phrasing
+      editor**; `ParameterSpecEditor` → canonical choices + `entity_type`/`room_context`, and a **`choice_surfaces`
+      editor** (canonical → per-language spoken forms); **(4)** rework the cross-language panel (param parity is
+      structural now — surface-completeness + method-phrasing only; drop the sync button). **Coordinate with UI-1/2/3**
+      (same files: `DonationsPage`, the editors, `LanguageTabs`) — do it as ONE donations-editor redesign, not twice.
+      DoD: `cd config-ui && npm run type-check && npm run build` passes + the editing page round-trips contract +
+      phrasing. **This is the remaining Invariant #4 obligation deferred from QUAL-29 (user-approved 2026-06-03).**
 
 ### Release Readiness (REL)
 - [ ] **REL-1** (P0) — Sign off the Definition-of-release checklist above (fill target + criteria).
