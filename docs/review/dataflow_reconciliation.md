@@ -22,8 +22,8 @@ committed after every decision, so an interrupted session continues from the fir
 | Q3 | **Fire-and-forget keying** — one key end-to-end (`action_name`) + a `domain` index; fix dup-`session_id` + `get_or_create_context` together | P0-2/3/4, P1-k/l/m/n | ✅ DECIDED |
 | Q4 | **Wired-or-delete** — MemoryManager · ContextLayer/progressive-context · InputManager queue + WebSocket input · `Intent.session_id` · `_disambiguate_with_device_context` · dead text-proc stages | P0-7, P0-8, P1-g; scopes how much code is deleted vs fixed | ✅ DECIDED |
 | Q5 | **Conversation history** — pick the canonical representation (3 today) and a single writer | P1-q | ✅ DECIDED (by consequence) |
-| Q6 | **Device-context pipeline** — who populates `device_context`/`available_devices` at the entry | P1-j (blocks the PEX device-resolution P0) | 🔵 OPEN |
-| Q7 | **Fail-loud philosophy + typed accessor** (theme #1) — raise vs result-signal; where the typed entity/result accessor lives | P0-9, P1-a/s; the whole handler boundary | ⚪ pending |
+| Q6 | **Device-context pipeline** — who populates `device_context`/`available_devices` at the entry | P1-j (blocks the PEX device-resolution P0) | ✅ DECIDED |
+| Q7 | **Fail-loud philosophy + typed accessor** (theme #1) — raise vs result-signal; where the typed entity/result accessor lives | P0-9, P1-a/s; the whole handler boundary | 🔵 OPEN |
 | Q8 | **Shared-bases consolidations** (theme #2) — extraction base · prompt source · F&F write-back · collapse text processors · `_create_error_result` signature | P1-f/k/r/t | ⚪ pending |
 | Q9 | **Config-truth scope** (theme #3) — cascade phantoms · `language` plumbing · dead config trees · schema↔model drift | P1-e/h/i, P2 tail | ⚪ pending |
 | Q10 | **Gate 2 framing + numbering** (meta) — principles block vs discrete tasks (QUAL-27/28/…); number the new P0s | finalizes Gate 2 | ⚪ pending |
@@ -147,6 +147,32 @@ structured rows: original user_text, response, intent, timestamp); the LLM `mess
 **Action (→ Q10, into QUAL-9/11):** collapse the 3 writers into one `record_turn(...)` on the conversation context
 (which applies the Q2 window); history-write moves out of the domain orchestrator into the application/workflow layer.
 
-<!-- next: Q6 -->
+### Q6 — Device-context pipeline · ✅ DECIDED
+- **`ClientRegistry` = single source of device truth.** No registration → no device inventory → device resolution
+  returns a clean "no devices known for this room" (fail-loud, never crash/guess; de-fatalizes the PEX device P0).
+  Populated by the entry adapter — primarily the **ESP32/WS registration handshake** (Q4), or REST `room_alias`.
+- **"Requires room context" is DECLARED, not guessed.** Today it's a brittle heuristic
+  (`entity_resolver._is_device_entity`: `intent.domain ∈ {device,smart_home,iot,home_automation}` OR entity-name
+  substring patterns) — **delete that** + the hardcoded device-domain set.
+- **Declaration lives in the donation, made first-class via the format split (Option B):**
+  - **Per-parameter `entity_type`** on `ParameterSpec` (`device | location | room | person | generic`; required when
+    `type=ENTITY`) → selects the resolver.
+  - **Per-method `room_context` tri-state** (`required | none | conditional`) → enforcement policy.
+    `required` = always resolve or fail-loud; `none` = skip; **`conditional`** = resolve **iff the request carries room
+    context** (ESP32/WS registration *or* explicit REST `room_alias`), else skip with no failure — only hard-fails when
+    room context IS present but the device can't be matched. *(Working definition; user to confirm vs strictly
+    transport-keyed.)*
+- **DONATION FORMAT SPLIT FIRST (Option B, user).** Verified: `ParameterSpec` (incl. `type`) is **duplicated across
+  per-language files today**, policed by `cross_language_validator` (a band-aid). Split into: **language-neutral
+  contract** (method list + invariant `ParameterSpec` core: name/type/entity_type/required/choices/min-max + the
+  `room_context` flag) + **per-language files** (phrases/lemmas/token_patterns/slot_patterns + language-specific
+  `extraction_patterns`/`aliases`). Gives `entity_type`/`room_context` **one home — inconsistency impossible by
+  construction**; shrinks the validator to "every method has phrasings per language"; simplifies the [DEDITOR] UI.
+- **Spawns (→ Q10): new task — "Donation format split (language-neutral contract + per-language phrasing)"** — touches
+  the donation loader (`core/donations.py`, `core/intent_asset_loader.py`), schema (`assets/donations/v1.0.json`→v1.1),
+  all donation files, `cross_language_validator`, DOC-5b, DOC-7, and the config-ui editor (UI-1/2/3). **Precedes** the
+  declarative device-resolution fix (entity_type/room_context born in the new contract). Fail-loud behavior → Q7.
+
+<!-- next: Q7 -->
 
 
