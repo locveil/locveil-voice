@@ -18,8 +18,8 @@ committed after every decision, so an interrupted session continues from the fir
 | # | Issue | What it blocks / why | Status |
 |---|---|---|---|
 | Q1 | **Text contract** — what does `Intent.raw_text` carry (original vs processed), and how is normalized text threaded? | P0-1 (biggest defect), P1-c, QUAL-13, the LLM/chat path | ✅ DECIDED |
-| Q2 | **Session identity** — forbid `"default"`; `get` vs `get_or_create`; always derive a real session_id; unify eviction clocks | P0-6 (cross-request leak), P1-p | 🔵 OPEN |
-| Q3 | **Fire-and-forget keying** — one key end-to-end (`action_name`) + a `domain` index; fix dup-`session_id` + `get_or_create_context` together | P0-2/3/4, P1-k/l/m/n | ⚪ pending |
+| Q2 | **Session identity** — forbid `"default"`; `get` vs `get_or_create`; always derive a real session_id; unify eviction clocks | P0-6 (cross-request leak), P1-p | ✅ DECIDED |
+| Q3 | **Fire-and-forget keying** — one key end-to-end (`action_name`) + a `domain` index; fix dup-`session_id` + `get_or_create_context` together | P0-2/3/4, P1-k/l/m/n | 🔵 OPEN |
 | Q4 | **Wired-or-delete** — MemoryManager · ContextLayer/progressive-context · InputManager queue + WebSocket input · `Intent.session_id` · `_disambiguate_with_device_context` · dead text-proc stages | P0-7, P0-8, P1-g; scopes how much code is deleted vs fixed | ⚪ pending |
 | Q5 | **Conversation history** — pick the canonical representation (3 today) and a single writer | P1-q | ⚪ pending |
 | Q6 | **Device-context pipeline** — who populates `device_context`/`available_devices` at the entry | P1-j (blocks the PEX device-resolution P0) | ⚪ pending |
@@ -81,6 +81,28 @@ user:** Model 1 vs Model 2 (the physical-scope fork). Note: full room→device�
 deferred, registry orphaned) — but the *scoping* decision is needed for F&F to work at all. Relates to Q3 (F&F keying),
 Q6 (device-pipeline ownership), ARCH-7 (MQTT consumer).
 
-<!-- next: Q2 decision -->
+**✅ DECIDED — Model 2 (split identity from session).**
+- **Two stores, two lifetimes:** (1) **physical-identity store** (room/device/client — the `ClientRegistry` record is
+  the device/room source-of-truth) holds `active_actions` + device capabilities, **long-lived** (survives across
+  conversations; drains as actions complete). (2) **conversation session** holds history + state + disambiguation,
+  **short-lived**.
+- **`active_actions` live on the physical identity, NOT the session** (load-bearing decision) — so session expiry never
+  kills a running timer/music; a later "стоп" still finds it via the room/device identity.
+- **Session lifecycle:** default **idle-window** — a session persists while turns arrive; after **T min** silence it
+  closes and the next utterance opens a fresh one. Plus a **sliding history window** of **N turns** (wire the
+  ignored `max_history_turns`, P1-q). **Values: T = 10 min global / ~5 min voice (configurable); N = 15 turns.**
+  Per-modality boundaries: **voice** = wake-word-delimited burst; **web/WS** = the connection (reconnect/"new chat" =
+  new session); **REST** = caller-supplied conversation id else single-turn ephemeral.
+- **Room/device = explicit first-class identity** on `RequestContext` (populated by the entry adapter from
+  `ClientRegistry`). **Kill `extract_room_from_session`** (P1-o) — room travels as a field, never parsed from the id.
+- **`session_id` = conversation token**, never the literal `"default"` (P0-6). **Split `get` vs `get_or_create`**
+  (2b ✓ — `get` returns existing-or-None, only `get_or_create` mints). **Unify eviction on `last_activity`**, delete
+  the second cleanup loop (2c ✓).
+**Actions (→ Q10):** split `UnifiedConversationContext` into a long-lived physical-identity/action store + a
+short-lived conversation session; relocate `active_actions`; wire entry adapter → `ClientRegistry` (ties Q6); forbid
+`"default"`; get/get_or_create split; window history; drop `extract_room_from_session`. Big-ticket — spans QUAL-9/11 +
+context refactor. Full room→device→**MQTT** chain completes later (ARCH-7/8).
+
+<!-- next: Q3 -->
 
 
