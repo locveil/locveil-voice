@@ -1,35 +1,40 @@
 {
-  "$schema": "../v1.0.json",
-  "schema_version": "1.0",
-  "donation_version": "1.0",
+  "$schema": "../../donation_language_v1.1.json",
+  "schema_version": "1.1",
   "handler_domain": "service",
+  "language": "en",
   "description": "System service status, statistics, and health monitoring",
-  "intent_name_patterns": [
-    "service.status",
-    "service.stats",
-    "service.health"
-  ],
   "action_patterns": [
     "status",
     "stats",
     "health",
     "check"
   ],
-  "domain_patterns": [
-    "service"
-  ],
-  "global_parameters": [
-    {
-      "name": "language",
-      "type": "choice",
-      "required": false,
-      "default_value": "ru",
-      "choices": [
-        "ru",
-        "en"
-      ],
-      "description": "Response language preference"
-    }
+  "negative_patterns": [
+    [
+      {
+        "LEMMA": {
+          "IN": []
+        }
+      },
+      {
+        "LEMMA": {
+          "IN": []
+        }
+      }
+    ],
+    [
+      {
+        "TEXT": {
+          "REGEX": "no|not"
+        }
+      },
+      {
+        "TEXT": {
+          "REGEX": "service|status|health"
+        }
+      }
+    ]
   ],
   "method_donations": [
     {
@@ -42,36 +47,6 @@
         "check status"
       ],
       "lemmas": [],
-      "parameters": [
-        {
-          "name": "component",
-          "type": "string",
-          "required": false,
-          "description": "Specific service component to check",
-          "extraction_patterns": [
-            {
-              "pattern": [
-                {
-                  "IS_ALPHA": true
-                }
-              ],
-              "label": "COMPONENT"
-            },
-            {
-              "pattern": [
-                {
-                  "TEXT": "status"
-                },
-                {
-                  "IS_ALPHA": true
-                }
-              ],
-              "label": "COMPONENT"
-            }
-          ],
-          "aliases": []
-        }
-      ],
       "token_patterns": [
         [
           {
@@ -116,7 +91,34 @@
           "parameters": {}
         }
       ],
-      "boost": 1.4
+      "parameters": [
+        {
+          "name": "component",
+          "description": "Specific service component to check",
+          "extraction_patterns": [
+            {
+              "pattern": [
+                {
+                  "IS_ALPHA": true
+                }
+              ],
+              "label": "COMPONENT"
+            },
+            {
+              "pattern": [
+                {
+                  "TEXT": "status"
+                },
+                {
+                  "IS_ALPHA": true
+                }
+              ],
+              "label": "COMPONENT"
+            }
+          ],
+          "aliases": []
+        }
+      ]
     },
     {
       "method_name": "_handle_service_stats",
@@ -128,43 +130,6 @@
         "information about service"
       ],
       "lemmas": [],
-      "parameters": [
-        {
-          "name": "metric_type",
-          "type": "choice",
-          "required": false,
-          "choices": [
-            "performance",
-            "memory",
-            "cpu",
-            "network",
-            "all"
-          ],
-          "description": "Type of statistics to show",
-          "extraction_patterns": [
-            {
-              "pattern": [],
-              "label": "METRIC_TYPE"
-            },
-            {
-              "pattern": [
-                {
-                  "LOWER": {
-                    "IN": [
-                      "performance",
-                      "memory",
-                      "cpu",
-                      "network"
-                    ]
-                  }
-                }
-              ],
-              "label": "METRIC_TYPE"
-            }
-          ],
-          "aliases": []
-        }
-      ],
       "token_patterns": [
         [
           {
@@ -221,7 +186,34 @@
           "parameters": {}
         }
       ],
-      "boost": 1.3
+      "parameters": [
+        {
+          "name": "metric_type",
+          "description": "Type of statistics to show",
+          "extraction_patterns": [
+            {
+              "pattern": [],
+              "label": "METRIC_TYPE"
+            },
+            {
+              "pattern": [
+                {
+                  "LOWER": {
+                    "IN": [
+                      "performance",
+                      "memory",
+                      "cpu",
+                      "network"
+                    ]
+                  }
+                }
+              ],
+              "label": "METRIC_TYPE"
+            }
+          ],
+          "aliases": []
+        }
+      ]
     },
     {
       "method_name": "_handle_service_health",
@@ -234,36 +226,6 @@
         "is everything working"
       ],
       "lemmas": [],
-      "parameters": [
-        {
-          "name": "detailed",
-          "type": "boolean",
-          "required": false,
-          "default_value": false,
-          "description": "Show detailed health information",
-          "extraction_patterns": [
-            {
-              "pattern": [],
-              "label": "DETAILED"
-            },
-            {
-              "pattern": [
-                {
-                  "LOWER": {
-                    "IN": [
-                      "detailed",
-                      "full",
-                      "complete"
-                    ]
-                  }
-                }
-              ],
-              "label": "DETAILED"
-            }
-          ],
-          "aliases": []
-        }
-      ],
       "token_patterns": [
         [
           {
@@ -339,34 +301,41 @@
           "parameters": {}
         }
       ],
-      "boost": 1.2
+      "parameters": [
+        {
+          "name": "detailed",
+          "description": "Show detailed health information",
+          "extraction_patterns": [
+            {
+              "pattern": [],
+              "label": "DETAILED"
+            },
+            {
+              "pattern": [
+                {
+                  "LOWER": {
+                    "IN": [
+                      "detailed",
+                      "full",
+                      "complete"
+                    ]
+                  }
+                }
+              ],
+              "label": "DETAILED"
+            }
+          ],
+          "aliases": [],
+          "default_value": false
+        }
+      ]
     }
   ],
-  "negative_patterns": [
-    [
-      {
-        "LEMMA": {
-          "IN": []
-        }
-      },
-      {
-        "LEMMA": {
-          "IN": []
-        }
-      }
-    ],
-    [
-      {
-        "TEXT": {
-          "REGEX": "no|not"
-        }
-      },
-      {
-        "TEXT": {
-          "REGEX": "service|status|health"
-        }
-      }
-    ]
-  ],
-  "language": "en"
+  "global_parameters": [
+    {
+      "name": "language",
+      "description": "Response language preference",
+      "default_value": "ru"
+    }
+  ]
 }

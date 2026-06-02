@@ -1,39 +1,34 @@
 {
-  "$schema": "../v1.0.json",
-  "schema_version": "1.0",
-  "donation_version": "1.0",
+  "$schema": "../../donation_language_v1.1.json",
+  "schema_version": "1.1",
   "handler_domain": "train_schedule",
+  "language": "en",
   "description": "Train schedule information and route planning",
-  "global_parameters": [
-    {
-      "name": "language",
-      "type": "choice",
-      "required": false,
-      "default_value": "ru",
-      "choices": [
-        "ru",
-        "en"
-      ],
-      "description": "Response language preference"
-    }
-  ],
-  "intent_name_patterns": [
-    "transport.train_schedule",
-    "transport.get_trains"
-  ],
   "action_patterns": [
     "train_schedule",
     "get_trains"
   ],
-  "domain_action_patterns": [
-    {
-      "domain": "transport",
-      "action": "train_schedule"
-    },
-    {
-      "domain": "transport",
-      "action": "get_trains"
-    }
+  "negative_patterns": [
+    [
+      {
+        "LEMMA": {
+          "IN": []
+        }
+      },
+      {
+        "LEMMA": "train"
+      }
+    ],
+    [
+      {
+        "TEXT": {
+          "REGEX": "no|not"
+        }
+      },
+      {
+        "TEXT": "train"
+      }
+    ]
   ],
   "train_keywords": [],
   "method_donations": [
@@ -48,93 +43,6 @@
         "railway timetable"
       ],
       "lemmas": [],
-      "parameters": [
-        {
-          "name": "from_station",
-          "type": "string",
-          "required": false,
-          "description": "Departure station",
-          "extraction_patterns": [
-            {
-              "pattern": [
-                {
-                  "LOWER": {
-                    "IN": [
-                      "from"
-                    ]
-                  }
-                },
-                {
-                  "IS_ALPHA": true
-                }
-              ],
-              "label": "FROM_STATION"
-            }
-          ],
-          "aliases": [
-            "departure"
-          ]
-        },
-        {
-          "name": "to_station",
-          "type": "string",
-          "required": false,
-          "description": "Destination station",
-          "extraction_patterns": [
-            {
-              "pattern": [
-                {
-                  "LOWER": {
-                    "IN": [
-                      "to"
-                    ]
-                  }
-                },
-                {
-                  "IS_ALPHA": true
-                }
-              ],
-              "label": "TO_STATION"
-            }
-          ],
-          "aliases": [
-            "destination"
-          ]
-        },
-        {
-          "name": "time",
-          "type": "string",
-          "required": false,
-          "description": "Departure time or date",
-          "extraction_patterns": [
-            {
-              "pattern": [
-                {
-                  "TEXT": {
-                    "REGEX": "\\d{1,2}:\\d{2}"
-                  }
-                }
-              ],
-              "label": "TIME"
-            },
-            {
-              "pattern": [
-                {
-                  "LOWER": {
-                    "IN": [
-                      "morning",
-                      "afternoon",
-                      "evening"
-                    ]
-                  }
-                }
-              ],
-              "label": "TIME_PERIOD"
-            }
-          ],
-          "aliases": []
-        }
-      ],
       "token_patterns": [
         [
           {
@@ -230,30 +138,94 @@
           }
         }
       ],
-      "boost": 1.2
+      "parameters": [
+        {
+          "name": "from_station",
+          "description": "Departure station",
+          "extraction_patterns": [
+            {
+              "pattern": [
+                {
+                  "LOWER": {
+                    "IN": [
+                      "from"
+                    ]
+                  }
+                },
+                {
+                  "IS_ALPHA": true
+                }
+              ],
+              "label": "FROM_STATION"
+            }
+          ],
+          "aliases": [
+            "departure"
+          ]
+        },
+        {
+          "name": "to_station",
+          "description": "Destination station",
+          "extraction_patterns": [
+            {
+              "pattern": [
+                {
+                  "LOWER": {
+                    "IN": [
+                      "to"
+                    ]
+                  }
+                },
+                {
+                  "IS_ALPHA": true
+                }
+              ],
+              "label": "TO_STATION"
+            }
+          ],
+          "aliases": [
+            "destination"
+          ]
+        },
+        {
+          "name": "time",
+          "description": "Departure time or date",
+          "extraction_patterns": [
+            {
+              "pattern": [
+                {
+                  "TEXT": {
+                    "REGEX": "\\d{1,2}:\\d{2}"
+                  }
+                }
+              ],
+              "label": "TIME"
+            },
+            {
+              "pattern": [
+                {
+                  "LOWER": {
+                    "IN": [
+                      "morning",
+                      "afternoon",
+                      "evening"
+                    ]
+                  }
+                }
+              ],
+              "label": "TIME_PERIOD"
+            }
+          ],
+          "aliases": []
+        }
+      ]
     }
   ],
-  "negative_patterns": [
-    [
-      {
-        "LEMMA": {
-          "IN": []
-        }
-      },
-      {
-        "LEMMA": "train"
-      }
-    ],
-    [
-      {
-        "TEXT": {
-          "REGEX": "no|not"
-        }
-      },
-      {
-        "TEXT": "train"
-      }
-    ]
-  ],
-  "language": "en"
+  "global_parameters": [
+    {
+      "name": "language",
+      "description": "Response language preference",
+      "default_value": "ru"
+    }
+  ]
 }

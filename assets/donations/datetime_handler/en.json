@@ -1,39 +1,45 @@
 {
-  "$schema": "../v1.0.json",
-  "schema_version": "1.0",
-  "donation_version": "1.0",
+  "$schema": "../../donation_language_v1.1.json",
+  "schema_version": "1.1",
   "handler_domain": "datetime",
+  "language": "en",
   "description": "Date and time information requests with timezone support",
-  "global_parameters": [
-    {
-      "name": "timezone",
-      "type": "string",
-      "required": false,
-      "default_value": "UTC",
-      "description": "Timezone for date/time responses"
-    },
-    {
-      "name": "language",
-      "type": "choice",
-      "required": false,
-      "default_value": "ru",
-      "choices": [
-        "ru",
-        "en"
-      ],
-      "description": "Response language preference"
-    }
-  ],
-  "intent_name_patterns": [
-    "datetime.current_time",
-    "datetime.current_date",
-    "datetime.current_datetime"
-  ],
   "action_patterns": [
     "current_time",
     "current_date",
     "get_time",
     "get_date"
+  ],
+  "additional_recognition_patterns": [
+    "date|what date|today",
+    "time|what time|current time",
+    "date and time|time and date"
+  ],
+  "negative_patterns": [
+    [
+      {
+        "LEMMA": {
+          "IN": []
+        }
+      },
+      {
+        "LEMMA": {
+          "IN": []
+        }
+      }
+    ],
+    [
+      {
+        "TEXT": {
+          "REGEX": "no|not"
+        }
+      },
+      {
+        "TEXT": {
+          "REGEX": "time|date"
+        }
+      }
+    ]
   ],
   "language_detection": {
     "english_indicators": [
@@ -58,56 +64,6 @@
         "time now"
       ],
       "lemmas": [],
-      "parameters": [
-        {
-          "name": "location",
-          "type": "string",
-          "required": false,
-          "description": "Specific location or timezone",
-          "extraction_patterns": [
-            {
-              "pattern": [
-                {
-                  "LOWER": {
-                    "IN": [
-                      "in"
-                    ]
-                  }
-                },
-                {
-                  "IS_ALPHA": true
-                }
-              ],
-              "label": "LOCATION"
-            }
-          ],
-          "aliases": []
-        },
-        {
-          "name": "format",
-          "type": "choice",
-          "required": false,
-          "default_value": "12hour",
-          "choices": [
-            "12hour",
-            "24hour",
-            "verbose"
-          ],
-          "description": "Time format preference",
-          "extraction_patterns": [
-            {
-              "pattern": [
-                {
-                  "TEXT": {
-                    "REGEX": "\\d{1,2}[-:]\\d{2}"
-                  }
-                }
-              ],
-              "label": "TIME_FORMAT"
-            }
-          ]
-        }
-      ],
       "token_patterns": [
         [
           {
@@ -176,7 +132,47 @@
           }
         }
       ],
-      "boost": 1.3
+      "parameters": [
+        {
+          "name": "location",
+          "description": "Specific location or timezone",
+          "extraction_patterns": [
+            {
+              "pattern": [
+                {
+                  "LOWER": {
+                    "IN": [
+                      "in"
+                    ]
+                  }
+                },
+                {
+                  "IS_ALPHA": true
+                }
+              ],
+              "label": "LOCATION"
+            }
+          ],
+          "aliases": []
+        },
+        {
+          "name": "format",
+          "description": "Time format preference",
+          "extraction_patterns": [
+            {
+              "pattern": [
+                {
+                  "TEXT": {
+                    "REGEX": "\\d{1,2}[-:]\\d{2}"
+                  }
+                }
+              ],
+              "label": "TIME_FORMAT"
+            }
+          ],
+          "default_value": "12hour"
+        }
+      ]
     },
     {
       "method_name": "_handle_date_request",
@@ -189,60 +185,6 @@
         "what day is it"
       ],
       "lemmas": [],
-      "parameters": [
-        {
-          "name": "format",
-          "type": "choice",
-          "required": false,
-          "default_value": "full",
-          "choices": [
-            "short",
-            "full",
-            "iso",
-            "verbose"
-          ],
-          "description": "Date format preference",
-          "extraction_patterns": [
-            {
-              "pattern": [
-                {
-                  "TEXT": {
-                    "REGEX": "\\d{1,2}[./]\\d{1,2}[./]\\d{2,4}"
-                  }
-                }
-              ],
-              "label": "DATE_FORMAT"
-            }
-          ]
-        },
-        {
-          "name": "relative",
-          "type": "choice",
-          "required": false,
-          "choices": [
-            "today",
-            "tomorrow",
-            "yesterday"
-          ],
-          "description": "Relative date reference",
-          "extraction_patterns": [
-            {
-              "pattern": [
-                {
-                  "LOWER": {
-                    "IN": [
-                      "today",
-                      "tomorrow",
-                      "yesterday"
-                    ]
-                  }
-                }
-              ],
-              "label": "RELATIVE_DATE"
-            }
-          ]
-        }
-      ],
       "token_patterns": [
         [
           {
@@ -314,7 +256,45 @@
           }
         }
       ],
-      "boost": 1.2
+      "parameters": [
+        {
+          "name": "format",
+          "description": "Date format preference",
+          "extraction_patterns": [
+            {
+              "pattern": [
+                {
+                  "TEXT": {
+                    "REGEX": "\\d{1,2}[./]\\d{1,2}[./]\\d{2,4}"
+                  }
+                }
+              ],
+              "label": "DATE_FORMAT"
+            }
+          ],
+          "default_value": "full"
+        },
+        {
+          "name": "relative",
+          "description": "Relative date reference",
+          "extraction_patterns": [
+            {
+              "pattern": [
+                {
+                  "LOWER": {
+                    "IN": [
+                      "today",
+                      "tomorrow",
+                      "yesterday"
+                    ]
+                  }
+                }
+              ],
+              "label": "RELATIVE_DATE"
+            }
+          ]
+        }
+      ]
     },
     {
       "method_name": "_handle_datetime_request",
@@ -328,42 +308,6 @@
       ],
       "lemmas": [
         "timestamp"
-      ],
-      "parameters": [
-        {
-          "name": "timezone",
-          "type": "string",
-          "required": false,
-          "description": "Specific timezone for datetime",
-          "extraction_patterns": [
-            {
-              "pattern": [
-                {
-                  "TEXT": {
-                    "REGEX": "UTC|GMT|[A-Z]{3,4}"
-                  }
-                }
-              ],
-              "label": "TIMEZONE"
-            }
-          ],
-          "aliases": [
-            "zone"
-          ]
-        },
-        {
-          "name": "format",
-          "type": "choice",
-          "required": false,
-          "default_value": "readable",
-          "choices": [
-            "iso",
-            "readable",
-            "unix",
-            "verbose"
-          ],
-          "description": "Datetime format preference"
-        }
       ],
       "token_patterns": [
         [
@@ -409,39 +353,44 @@
           }
         }
       ],
-      "boost": 1.1
+      "parameters": [
+        {
+          "name": "timezone",
+          "description": "Specific timezone for datetime",
+          "extraction_patterns": [
+            {
+              "pattern": [
+                {
+                  "TEXT": {
+                    "REGEX": "UTC|GMT|[A-Z]{3,4}"
+                  }
+                }
+              ],
+              "label": "TIMEZONE"
+            }
+          ],
+          "aliases": [
+            "zone"
+          ]
+        },
+        {
+          "name": "format",
+          "description": "Datetime format preference",
+          "default_value": "readable"
+        }
+      ]
     }
   ],
-  "negative_patterns": [
-    [
-      {
-        "LEMMA": {
-          "IN": []
-        }
-      },
-      {
-        "LEMMA": {
-          "IN": []
-        }
-      }
-    ],
-    [
-      {
-        "TEXT": {
-          "REGEX": "no|not"
-        }
-      },
-      {
-        "TEXT": {
-          "REGEX": "time|date"
-        }
-      }
-    ]
-  ],
-  "additional_recognition_patterns": [
-    "date|what date|today",
-    "time|what time|current time",
-    "date and time|time and date"
-  ],
-  "language": "en"
+  "global_parameters": [
+    {
+      "name": "timezone",
+      "description": "Timezone for date/time responses",
+      "default_value": "UTC"
+    },
+    {
+      "name": "language",
+      "description": "Response language preference",
+      "default_value": "ru"
+    }
+  ]
 }

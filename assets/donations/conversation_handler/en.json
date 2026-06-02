@@ -1,37 +1,40 @@
 {
-  "$schema": "../v1.0.json",
-  "schema_version": "1.0",
-  "donation_version": "1.0",
+  "$schema": "../../donation_language_v1.1.json",
+  "schema_version": "1.1",
   "handler_domain": "conversation",
+  "language": "en",
   "description": "General conversation and reference queries with context management",
-  "intent_name_patterns": [
-    "chat.start",
-    "chat.continue",
-    "chat.reference",
-    "chat.end"
-  ],
   "action_patterns": [
     "start",
     "end",
     "clear",
     "reference"
   ],
-  "domain_patterns": [
-    "conversation"
-  ],
-  "fallback_conditions": [
-    {
-      "domain": "general",
-      "confidence_threshold": 0.8
-    }
-  ],
-  "global_parameters": [
-    {
-      "name": "session_id",
-      "type": "string",
-      "required": true,
-      "description": "Conversation session identifier"
-    }
+  "negative_patterns": [
+    [
+      {
+        "LEMMA": {
+          "IN": []
+        }
+      },
+      {
+        "LEMMA": {
+          "IN": []
+        }
+      }
+    ],
+    [
+      {
+        "TEXT": {
+          "REGEX": "no|not|stop"
+        }
+      },
+      {
+        "TEXT": {
+          "REGEX": "talking|conversation"
+        }
+      }
+    ]
   ],
   "method_donations": [
     {
@@ -45,34 +48,6 @@
         "I want to chat with you"
       ],
       "lemmas": [],
-      "parameters": [
-        {
-          "name": "topic",
-          "type": "string",
-          "required": false,
-          "description": "Conversation topic",
-          "extraction_patterns": [
-            {
-              "pattern": [
-                {
-                  "LOWER": {
-                    "IN": [
-                      "about"
-                    ]
-                  }
-                },
-                {
-                  "IS_ALPHA": true
-                }
-              ],
-              "label": "TOPIC"
-            }
-          ],
-          "aliases": [
-            "subject"
-          ]
-        }
-      ],
       "token_patterns": [
         [
           {
@@ -137,7 +112,32 @@
           }
         }
       ],
-      "boost": 1.1
+      "parameters": [
+        {
+          "name": "topic",
+          "description": "Conversation topic",
+          "extraction_patterns": [
+            {
+              "pattern": [
+                {
+                  "LOWER": {
+                    "IN": [
+                      "about"
+                    ]
+                  }
+                },
+                {
+                  "IS_ALPHA": true
+                }
+              ],
+              "label": "TOPIC"
+            }
+          ],
+          "aliases": [
+            "subject"
+          ]
+        }
+      ]
     },
     {
       "method_name": "_handle_end_conversation",
@@ -149,7 +149,6 @@
         "that's enough"
       ],
       "lemmas": [],
-      "parameters": [],
       "token_patterns": [
         [
           {
@@ -169,8 +168,7 @@
           "text": "stop talking",
           "parameters": {}
         }
-      ],
-      "boost": 1.0
+      ]
     },
     {
       "method_name": "_handle_clear_conversation",
@@ -182,7 +180,6 @@
         "forget everything"
       ],
       "lemmas": [],
-      "parameters": [],
       "token_patterns": [
         [
           {
@@ -202,8 +199,7 @@
           "text": "clear history",
           "parameters": {}
         }
-      ],
-      "boost": 1.0
+      ]
     },
     {
       "method_name": "_handle_reference_query",
@@ -216,43 +212,6 @@
         "explain this to me"
       ],
       "lemmas": [],
-      "parameters": [
-        {
-          "name": "query_topic",
-          "type": "string",
-          "required": true,
-          "description": "Topic or subject to explain",
-          "extraction_patterns": [
-            {
-              "pattern": [
-                {
-                  "IS_ALPHA": true
-                }
-              ],
-              "label": "QUERY_TOPIC"
-            },
-            {
-              "pattern": [
-                {
-                  "TEXT": {
-                    "REGEX": "what|who"
-                  }
-                },
-                {
-                  "TEXT": "is"
-                },
-                {
-                  "IS_ALPHA": true
-                }
-              ],
-              "label": "QUERY_TOPIC"
-            }
-          ],
-          "aliases": [
-            "subject"
-          ]
-        }
-      ],
       "token_patterns": [
         [
           {
@@ -328,7 +287,41 @@
           }
         }
       ],
-      "boost": 1.2
+      "parameters": [
+        {
+          "name": "query_topic",
+          "description": "Topic or subject to explain",
+          "extraction_patterns": [
+            {
+              "pattern": [
+                {
+                  "IS_ALPHA": true
+                }
+              ],
+              "label": "QUERY_TOPIC"
+            },
+            {
+              "pattern": [
+                {
+                  "TEXT": {
+                    "REGEX": "what|who"
+                  }
+                },
+                {
+                  "TEXT": "is"
+                },
+                {
+                  "IS_ALPHA": true
+                }
+              ],
+              "label": "QUERY_TOPIC"
+            }
+          ],
+          "aliases": [
+            "subject"
+          ]
+        }
+      ]
     },
     {
       "method_name": "_handle_continue_conversation",
@@ -341,30 +334,6 @@
         "go on"
       ],
       "lemmas": [],
-      "parameters": [
-        {
-          "name": "context_reference",
-          "type": "string",
-          "required": false,
-          "description": "Reference to previous conversation context",
-          "extraction_patterns": [
-            {
-              "pattern": [
-                {
-                  "LOWER": {
-                    "IN": [
-                      "that",
-                      "this"
-                    ]
-                  }
-                }
-              ],
-              "label": "CONTEXT_REF"
-            }
-          ],
-          "aliases": []
-        }
-      ],
       "token_patterns": [
         [
           {
@@ -393,34 +362,34 @@
           "parameters": {}
         }
       ],
-      "boost": 0.8
+      "parameters": [
+        {
+          "name": "context_reference",
+          "description": "Reference to previous conversation context",
+          "extraction_patterns": [
+            {
+              "pattern": [
+                {
+                  "LOWER": {
+                    "IN": [
+                      "that",
+                      "this"
+                    ]
+                  }
+                }
+              ],
+              "label": "CONTEXT_REF"
+            }
+          ],
+          "aliases": []
+        }
+      ]
     }
   ],
-  "negative_patterns": [
-    [
-      {
-        "LEMMA": {
-          "IN": []
-        }
-      },
-      {
-        "LEMMA": {
-          "IN": []
-        }
-      }
-    ],
-    [
-      {
-        "TEXT": {
-          "REGEX": "no|not|stop"
-        }
-      },
-      {
-        "TEXT": {
-          "REGEX": "talking|conversation"
-        }
-      }
-    ]
-  ],
-  "language": "en"
+  "global_parameters": [
+    {
+      "name": "session_id",
+      "description": "Conversation session identifier"
+    }
+  ]
 }

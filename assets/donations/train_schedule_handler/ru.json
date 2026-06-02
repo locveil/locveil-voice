@@ -1,33 +1,34 @@
 {
-  "$schema": "../v1.0.json",
-  "schema_version": "1.0",
-  "donation_version": "1.0",
+  "$schema": "../../donation_language_v1.1.json",
+  "schema_version": "1.1",
   "handler_domain": "train_schedule",
+  "language": "ru",
   "description": "Информация о расписании поездов и планирование маршрутов",
-  "global_parameters": [
-    {
-      "name": "language",
-      "type": "choice",
-      "required": false,
-      "default_value": "ru",
-      "choices": [
-        "русский",
-        "английский"
-      ],
-      "description": "Предпочтение языка ответа"
-    }
-  ],
-  "intent_name_patterns": [],
   "action_patterns": [],
-  "domain_action_patterns": [
-    {
-      "domain": "transport",
-      "action": "train_schedule"
-    },
-    {
-      "domain": "transport",
-      "action": "get_trains"
-    }
+  "negative_patterns": [
+    [
+      {
+        "LEMMA": {
+          "IN": [
+            "нет",
+            "не"
+          ]
+        }
+      },
+      {
+        "LEMMA": "поезд"
+      }
+    ],
+    [
+      {
+        "TEXT": {
+          "REGEX": ".*"
+        }
+      },
+      {
+        "TEXT": "поезд"
+      }
+    ]
   ],
   "train_keywords": [
     "электричка",
@@ -59,98 +60,6 @@
         "электричка",
         "когда",
         "до"
-      ],
-      "parameters": [
-        {
-          "name": "from_station",
-          "type": "string",
-          "required": false,
-          "description": "Станция отправления",
-          "extraction_patterns": [
-            {
-              "pattern": [
-                {
-                  "LOWER": {
-                    "IN": [
-                      "от",
-                      "из"
-                    ]
-                  }
-                },
-                {
-                  "IS_ALPHA": true
-                }
-              ],
-              "label": "FROM_STATION"
-            }
-          ],
-          "aliases": [
-            "откуда"
-          ]
-        },
-        {
-          "name": "to_station",
-          "type": "string",
-          "required": false,
-          "description": "Станция назначения",
-          "extraction_patterns": [
-            {
-              "pattern": [
-                {
-                  "LOWER": {
-                    "IN": [
-                      "до",
-                      "в"
-                    ]
-                  }
-                },
-                {
-                  "IS_ALPHA": true
-                }
-              ],
-              "label": "TO_STATION"
-            }
-          ],
-          "aliases": [
-            "куда"
-          ]
-        },
-        {
-          "name": "time",
-          "type": "string",
-          "required": false,
-          "description": "Время или дата отправления",
-          "extraction_patterns": [
-            {
-              "pattern": [
-                {
-                  "TEXT": {
-                    "REGEX": ".*"
-                  }
-                }
-              ],
-              "label": "время"
-            },
-            {
-              "pattern": [
-                {
-                  "LOWER": {
-                    "IN": [
-                      "утром",
-                      "днем",
-                      "вечером"
-                    ]
-                  }
-                }
-              ],
-              "label": "TIME_PERIOD"
-            }
-          ],
-          "aliases": [
-            "время",
-            "когда"
-          ]
-        }
       ],
       "token_patterns": [
         [
@@ -286,33 +195,107 @@
           }
         }
       ],
-      "boost": 1.2
-    }
-  ],
-  "negative_patterns": [
-    [
-      {
-        "LEMMA": {
-          "IN": [
-            "нет",
-            "не"
+      "parameters": [
+        {
+          "name": "from_station",
+          "description": "Станция отправления",
+          "extraction_patterns": [
+            {
+              "pattern": [
+                {
+                  "LOWER": {
+                    "IN": [
+                      "от",
+                      "из"
+                    ]
+                  }
+                },
+                {
+                  "IS_ALPHA": true
+                }
+              ],
+              "label": "FROM_STATION"
+            }
+          ],
+          "aliases": [
+            "откуда"
+          ]
+        },
+        {
+          "name": "to_station",
+          "description": "Станция назначения",
+          "extraction_patterns": [
+            {
+              "pattern": [
+                {
+                  "LOWER": {
+                    "IN": [
+                      "до",
+                      "в"
+                    ]
+                  }
+                },
+                {
+                  "IS_ALPHA": true
+                }
+              ],
+              "label": "TO_STATION"
+            }
+          ],
+          "aliases": [
+            "куда"
+          ]
+        },
+        {
+          "name": "time",
+          "description": "Время или дата отправления",
+          "extraction_patterns": [
+            {
+              "pattern": [
+                {
+                  "TEXT": {
+                    "REGEX": ".*"
+                  }
+                }
+              ],
+              "label": "время"
+            },
+            {
+              "pattern": [
+                {
+                  "LOWER": {
+                    "IN": [
+                      "утром",
+                      "днем",
+                      "вечером"
+                    ]
+                  }
+                }
+              ],
+              "label": "TIME_PERIOD"
+            }
+          ],
+          "aliases": [
+            "время",
+            "когда"
           ]
         }
-      },
-      {
-        "LEMMA": "поезд"
-      }
-    ],
-    [
-      {
-        "TEXT": {
-          "REGEX": ".*"
-        }
-      },
-      {
-        "TEXT": "поезд"
-      }
-    ]
+      ]
+    }
   ],
-  "language": "ru"
+  "global_parameters": [
+    {
+      "name": "language",
+      "description": "Предпочтение языка ответа",
+      "default_value": "ru",
+      "choice_surfaces": {
+        "ru": [
+          "русский"
+        ],
+        "en": [
+          "английский"
+        ]
+      }
+    }
+  ]
 }

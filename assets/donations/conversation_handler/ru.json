@@ -1,25 +1,42 @@
 {
-  "$schema": "../v1.0.json",
-  "schema_version": "1.0",
-  "donation_version": "1.0",
+  "$schema": "../../donation_language_v1.1.json",
+  "schema_version": "1.1",
   "handler_domain": "conversation",
+  "language": "ru",
   "description": "Общие разговоры и справочные запросы с управлением контекста",
-  "intent_name_patterns": [],
   "action_patterns": [],
-  "domain_patterns": [],
-  "fallback_conditions": [
-    {
-      "domain": "general",
-      "confidence_threshold": 0.8
-    }
-  ],
-  "global_parameters": [
-    {
-      "name": "session_id",
-      "type": "string",
-      "required": true,
-      "description": "Идентификатор сессии разговора"
-    }
+  "negative_patterns": [
+    [
+      {
+        "LEMMA": {
+          "IN": [
+            "нет",
+            "не",
+            "стоп"
+          ]
+        }
+      },
+      {
+        "LEMMA": {
+          "IN": [
+            "разговор",
+            "диалог"
+          ]
+        }
+      }
+    ],
+    [
+      {
+        "TEXT": {
+          "REGEX": ".*"
+        }
+      },
+      {
+        "TEXT": {
+          "REGEX": ".*"
+        }
+      }
+    ]
   ],
   "method_donations": [
     {
@@ -39,35 +56,6 @@
         "общаться",
         "диалог",
         "разговор"
-      ],
-      "parameters": [
-        {
-          "name": "topic",
-          "type": "string",
-          "required": false,
-          "description": "Тема разговора",
-          "extraction_patterns": [
-            {
-              "pattern": [
-                {
-                  "LOWER": {
-                    "IN": [
-                      "о",
-                      "про"
-                    ]
-                  }
-                },
-                {
-                  "IS_ALPHA": true
-                }
-              ],
-              "label": "TOPIC"
-            }
-          ],
-          "aliases": [
-            "тема"
-          ]
-        }
       ],
       "token_patterns": [
         [
@@ -155,7 +143,33 @@
           }
         }
       ],
-      "boost": 1.1
+      "parameters": [
+        {
+          "name": "topic",
+          "description": "Тема разговора",
+          "extraction_patterns": [
+            {
+              "pattern": [
+                {
+                  "LOWER": {
+                    "IN": [
+                      "о",
+                      "про"
+                    ]
+                  }
+                },
+                {
+                  "IS_ALPHA": true
+                }
+              ],
+              "label": "TOPIC"
+            }
+          ],
+          "aliases": [
+            "тема"
+          ]
+        }
+      ]
     },
     {
       "method_name": "_handle_end_conversation",
@@ -173,7 +187,6 @@
         "разговор",
         "диалог"
       ],
-      "parameters": [],
       "token_patterns": [
         [
           {
@@ -219,8 +232,7 @@
           "text": "закончим разговор",
           "parameters": {}
         }
-      ],
-      "boost": 1.0
+      ]
     },
     {
       "method_name": "_handle_clear_conversation",
@@ -238,7 +250,6 @@
         "история",
         "контекст"
       ],
-      "parameters": [],
       "token_patterns": [
         [
           {
@@ -284,8 +295,7 @@
           "text": "очисти историю",
           "parameters": {}
         }
-      ],
-      "boost": 1.0
+      ]
     },
     {
       "method_name": "_handle_reference_query",
@@ -304,55 +314,6 @@
         "рассказать",
         "объяснить",
         "справка"
-      ],
-      "parameters": [
-        {
-          "name": "query_topic",
-          "type": "string",
-          "required": true,
-          "description": "Тема или предмет для объяснения",
-          "extraction_patterns": [
-            {
-              "pattern": [
-                {
-                  "LEMMA": {
-                    "IN": [
-                      "что",
-                      "кто"
-                    ]
-                  }
-                },
-                {
-                  "LEMMA": "такой"
-                },
-                {
-                  "IS_ALPHA": true
-                }
-              ],
-              "label": "QUERY_TOPIC"
-            },
-            {
-              "pattern": [
-                {
-                  "TEXT": {
-                    "REGEX": ".*"
-                  }
-                },
-                {
-                  "TEXT": "is"
-                },
-                {
-                  "IS_ALPHA": true
-                }
-              ],
-              "label": "QUERY_TOPIC"
-            }
-          ],
-          "aliases": [
-            "тема",
-            "предмет"
-          ]
-        }
       ],
       "token_patterns": [
         [
@@ -460,7 +421,53 @@
           }
         }
       ],
-      "boost": 1.2
+      "parameters": [
+        {
+          "name": "query_topic",
+          "description": "Тема или предмет для объяснения",
+          "extraction_patterns": [
+            {
+              "pattern": [
+                {
+                  "LEMMA": {
+                    "IN": [
+                      "что",
+                      "кто"
+                    ]
+                  }
+                },
+                {
+                  "LEMMA": "такой"
+                },
+                {
+                  "IS_ALPHA": true
+                }
+              ],
+              "label": "QUERY_TOPIC"
+            },
+            {
+              "pattern": [
+                {
+                  "TEXT": {
+                    "REGEX": ".*"
+                  }
+                },
+                {
+                  "TEXT": "is"
+                },
+                {
+                  "IS_ALPHA": true
+                }
+              ],
+              "label": "QUERY_TOPIC"
+            }
+          ],
+          "aliases": [
+            "тема",
+            "предмет"
+          ]
+        }
+      ]
     },
     {
       "method_name": "_handle_continue_conversation",
@@ -477,33 +484,6 @@
         "еще",
         "дальше",
         "что"
-      ],
-      "parameters": [
-        {
-          "name": "context_reference",
-          "type": "string",
-          "required": false,
-          "description": "Ссылка на предыдущий контекст разговора",
-          "extraction_patterns": [
-            {
-              "pattern": [
-                {
-                  "LOWER": {
-                    "IN": [
-                      "это",
-                      "то"
-                    ]
-                  }
-                }
-              ],
-              "label": "CONTEXT_REF"
-            }
-          ],
-          "aliases": [
-            "контекст",
-            "ссылка"
-          ]
-        }
       ],
       "token_patterns": [
         [
@@ -555,41 +535,37 @@
           "parameters": {}
         }
       ],
-      "boost": 0.8
+      "parameters": [
+        {
+          "name": "context_reference",
+          "description": "Ссылка на предыдущий контекст разговора",
+          "extraction_patterns": [
+            {
+              "pattern": [
+                {
+                  "LOWER": {
+                    "IN": [
+                      "это",
+                      "то"
+                    ]
+                  }
+                }
+              ],
+              "label": "CONTEXT_REF"
+            }
+          ],
+          "aliases": [
+            "контекст",
+            "ссылка"
+          ]
+        }
+      ]
     }
   ],
-  "negative_patterns": [
-    [
-      {
-        "LEMMA": {
-          "IN": [
-            "нет",
-            "не",
-            "стоп"
-          ]
-        }
-      },
-      {
-        "LEMMA": {
-          "IN": [
-            "разговор",
-            "диалог"
-          ]
-        }
-      }
-    ],
-    [
-      {
-        "TEXT": {
-          "REGEX": ".*"
-        }
-      },
-      {
-        "TEXT": {
-          "REGEX": ".*"
-        }
-      }
-    ]
-  ],
-  "language": "ru"
+  "global_parameters": [
+    {
+      "name": "session_id",
+      "description": "Идентификатор сессии разговора"
+    }
+  ]
 }

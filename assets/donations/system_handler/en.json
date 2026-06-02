@@ -1,15 +1,9 @@
 {
-  "$schema": "../v1.0.json",
-  "schema_version": "1.0",
-  "donation_version": "1.0",
+  "$schema": "../../donation_language_v1.1.json",
+  "schema_version": "1.1",
   "handler_domain": "system",
+  "language": "en",
   "description": "System information, help, and status operations",
-  "intent_name_patterns": [
-    "system.status",
-    "system.help",
-    "system.version",
-    "system.info"
-  ],
   "action_patterns": [
     "status",
     "help",
@@ -17,21 +11,31 @@
     "info",
     "statistics"
   ],
-  "domain_patterns": [
-    "system"
-  ],
-  "global_parameters": [
-    {
-      "name": "language",
-      "type": "choice",
-      "required": false,
-      "default_value": "ru",
-      "choices": [
-        "ru",
-        "en"
-      ],
-      "description": "Response language preference"
-    }
+  "negative_patterns": [
+    [
+      {
+        "LEMMA": {
+          "IN": []
+        }
+      },
+      {
+        "LEMMA": {
+          "IN": []
+        }
+      }
+    ],
+    [
+      {
+        "TEXT": {
+          "REGEX": "no|not"
+        }
+      },
+      {
+        "TEXT": {
+          "REGEX": "help|status"
+        }
+      }
+    ]
   ],
   "method_donations": [
     {
@@ -47,35 +51,6 @@
         "instructions"
       ],
       "lemmas": [],
-      "parameters": [
-        {
-          "name": "topic",
-          "type": "string",
-          "required": false,
-          "description": "Specific help topic",
-          "extraction_patterns": [
-            {
-              "pattern": [
-                {
-                  "LOWER": {
-                    "IN": [
-                      "about",
-                      "with"
-                    ]
-                  }
-                },
-                {
-                  "IS_ALPHA": true
-                }
-              ],
-              "label": "HELP_TOPIC"
-            }
-          ],
-          "aliases": [
-            "subject"
-          ]
-        }
-      ],
       "token_patterns": [
         [
           {
@@ -133,7 +108,33 @@
           }
         }
       ],
-      "boost": 1.3
+      "parameters": [
+        {
+          "name": "topic",
+          "description": "Specific help topic",
+          "extraction_patterns": [
+            {
+              "pattern": [
+                {
+                  "LOWER": {
+                    "IN": [
+                      "about",
+                      "with"
+                    ]
+                  }
+                },
+                {
+                  "IS_ALPHA": true
+                }
+              ],
+              "label": "HELP_TOPIC"
+            }
+          ],
+          "aliases": [
+            "subject"
+          ]
+        }
+      ]
     },
     {
       "method_name": "_handle_status_request",
@@ -148,25 +149,6 @@
         "everything ok"
       ],
       "lemmas": [],
-      "parameters": [
-        {
-          "name": "component",
-          "type": "string",
-          "required": false,
-          "description": "Specific component to check",
-          "extraction_patterns": [
-            {
-              "pattern": [
-                {
-                  "IS_ALPHA": true
-                }
-              ],
-              "label": "COMPONENT"
-            }
-          ],
-          "aliases": []
-        }
-      ],
       "token_patterns": [
         [
           {
@@ -193,7 +175,23 @@
           "parameters": {}
         }
       ],
-      "boost": 1.2
+      "parameters": [
+        {
+          "name": "component",
+          "description": "Specific component to check",
+          "extraction_patterns": [
+            {
+              "pattern": [
+                {
+                  "IS_ALPHA": true
+                }
+              ],
+              "label": "COMPONENT"
+            }
+          ],
+          "aliases": []
+        }
+      ]
     },
     {
       "method_name": "_handle_version_request",
@@ -206,7 +204,6 @@
         "release info"
       ],
       "lemmas": [],
-      "parameters": [],
       "token_patterns": [
         [
           {
@@ -227,8 +224,7 @@
           "text": "what version",
           "parameters": {}
         }
-      ],
-      "boost": 1.1
+      ]
     },
     {
       "method_name": "_handle_info_request",
@@ -241,26 +237,6 @@
         "about system"
       ],
       "lemmas": [],
-      "parameters": [
-        {
-          "name": "info_type",
-          "type": "choice",
-          "required": false,
-          "choices": [
-            "system",
-            "performance",
-            "configuration",
-            "logs"
-          ],
-          "description": "Type of information to show",
-          "extraction_patterns": [
-            {
-              "pattern": [],
-              "label": "INFO_TYPE"
-            }
-          ]
-        }
-      ],
       "token_patterns": [
         [
           {
@@ -276,7 +252,18 @@
           "parameters": {}
         }
       ],
-      "boost": 1.0
+      "parameters": [
+        {
+          "name": "info_type",
+          "description": "Type of information to show",
+          "extraction_patterns": [
+            {
+              "pattern": [],
+              "label": "INFO_TYPE"
+            }
+          ]
+        }
+      ]
     },
     {
       "method_name": "_handle_general_info",
@@ -289,7 +276,6 @@
         "introduce yourself"
       ],
       "lemmas": [],
-      "parameters": [],
       "token_patterns": [
         [
           {
@@ -319,35 +305,14 @@
           "text": "who are you",
           "parameters": {}
         }
-      ],
-      "boost": 1.1
+      ]
     }
   ],
-  "negative_patterns": [
-    [
-      {
-        "LEMMA": {
-          "IN": []
-        }
-      },
-      {
-        "LEMMA": {
-          "IN": []
-        }
-      }
-    ],
-    [
-      {
-        "TEXT": {
-          "REGEX": "no|not"
-        }
-      },
-      {
-        "TEXT": {
-          "REGEX": "help|status"
-        }
-      }
-    ]
-  ],
-  "language": "en"
+  "global_parameters": [
+    {
+      "name": "language",
+      "description": "Response language preference",
+      "default_value": "ru"
+    }
+  ]
 }

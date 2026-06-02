@@ -1,36 +1,39 @@
 {
-  "$schema": "../v1.0.json",
-  "schema_version": "1.0",
-  "donation_version": "1.0",
+  "$schema": "../../donation_language_v1.1.json",
+  "schema_version": "1.1",
   "handler_domain": "translation",
+  "language": "en",
   "description": "Text translation commands via LLM",
-  "intent_name_patterns": [
-    "translation.translate",
-    "translation.specific",
-    "llm.translate"
-  ],
   "action_patterns": [
     "translate",
     "translation",
     "convert"
   ],
-  "domain_patterns": [
-    "translation",
-    "language",
-    "llm"
-  ],
-  "global_parameters": [
-    {
-      "name": "language",
-      "type": "choice",
-      "required": false,
-      "default_value": "ru",
-      "choices": [
-        "ru",
-        "en"
-      ],
-      "description": "Response language preference"
-    }
+  "negative_patterns": [
+    [
+      {
+        "LEMMA": {
+          "IN": []
+        }
+      },
+      {
+        "LEMMA": {
+          "IN": []
+        }
+      }
+    ],
+    [
+      {
+        "TEXT": {
+          "REGEX": "no|not"
+        }
+      },
+      {
+        "TEXT": {
+          "REGEX": "translate|translation"
+        }
+      }
+    ]
   ],
   "method_donations": [
     {
@@ -45,81 +48,6 @@
         "convert to"
       ],
       "lemmas": [],
-      "parameters": [
-        {
-          "name": "text",
-          "type": "string",
-          "required": false,
-          "description": "Text to translate (extracted from command)",
-          "extraction_patterns": [
-            {
-              "pattern": [
-                {
-                  "IS_ALPHA": true,
-                  "OP": "+"
-                }
-              ],
-              "label": "TEXT"
-            },
-            {
-              "pattern": [
-                {
-                  "TEXT": "translate"
-                },
-                {
-                  "IS_ALPHA": true,
-                  "OP": "+"
-                }
-              ],
-              "label": "TEXT"
-            }
-          ],
-          "aliases": []
-        },
-        {
-          "name": "target_language",
-          "type": "choice",
-          "required": false,
-          "choices": [
-            "spanish",
-            "french",
-            "german",
-            "chinese"
-          ],
-          "description": "Target language for translation",
-          "extraction_patterns": [
-            {
-              "pattern": [
-                {
-                  "TEXT": "on"
-                }
-              ],
-              "label": "TARGET_LANGUAGE"
-            },
-            {
-              "pattern": [
-                {
-                  "TEXT": "to"
-                },
-                {
-                  "LOWER": {
-                    "IN": [
-                      "russian",
-                      "english",
-                      "spanish",
-                      "french",
-                      "german",
-                      "chinese"
-                    ]
-                  }
-                }
-              ],
-              "label": "TARGET_LANGUAGE"
-            }
-          ],
-          "aliases": []
-        }
-      ],
       "token_patterns": [
         [
           {
@@ -206,38 +134,16 @@
           }
         }
       ],
-      "boost": 1.3
-    },
-    {
-      "method_name": "_handle_translate_specific",
-      "intent_suffix": "specific",
-      "description": "Translate specific text with extracted entities",
-      "phrases": [
-        "translate phrase",
-        "translate word",
-        "translate text to",
-        "translate 'text' to",
-        "make translation to"
-      ],
-      "lemmas": [],
       "parameters": [
         {
           "name": "text",
-          "type": "string",
-          "required": true,
-          "description": "Specific text to translate",
+          "description": "Text to translate (extracted from command)",
           "extraction_patterns": [
             {
               "pattern": [
                 {
-                  "TEXT": "'"
-                },
-                {
                   "IS_ALPHA": true,
                   "OP": "+"
-                },
-                {
-                  "TEXT": "'"
                 }
               ],
               "label": "TEXT"
@@ -245,20 +151,8 @@
             {
               "pattern": [
                 {
-                  "TEXT": "\""
+                  "TEXT": "translate"
                 },
-                {
-                  "IS_ALPHA": true,
-                  "OP": "+"
-                },
-                {
-                  "TEXT": "\""
-                }
-              ],
-              "label": "TEXT"
-            },
-            {
-              "pattern": [
                 {
                   "IS_ALPHA": true,
                   "OP": "+"
@@ -271,15 +165,7 @@
         },
         {
           "name": "target_language",
-          "type": "choice",
-          "required": true,
-          "choices": [
-            "spanish",
-            "french",
-            "german",
-            "chinese"
-          ],
-          "description": "Target language for specific translation",
+          "description": "Target language for translation",
           "extraction_patterns": [
             {
               "pattern": [
@@ -312,7 +198,20 @@
           ],
           "aliases": []
         }
+      ]
+    },
+    {
+      "method_name": "_handle_translate_specific",
+      "intent_suffix": "specific",
+      "description": "Translate specific text with extracted entities",
+      "phrases": [
+        "translate phrase",
+        "translate word",
+        "translate text to",
+        "translate 'text' to",
+        "make translation to"
       ],
+      "lemmas": [],
       "token_patterns": [
         [
           {
@@ -436,34 +335,96 @@
         ]
       },
       "examples": [],
-      "boost": 1.4
+      "parameters": [
+        {
+          "name": "text",
+          "description": "Specific text to translate",
+          "extraction_patterns": [
+            {
+              "pattern": [
+                {
+                  "TEXT": "'"
+                },
+                {
+                  "IS_ALPHA": true,
+                  "OP": "+"
+                },
+                {
+                  "TEXT": "'"
+                }
+              ],
+              "label": "TEXT"
+            },
+            {
+              "pattern": [
+                {
+                  "TEXT": "\""
+                },
+                {
+                  "IS_ALPHA": true,
+                  "OP": "+"
+                },
+                {
+                  "TEXT": "\""
+                }
+              ],
+              "label": "TEXT"
+            },
+            {
+              "pattern": [
+                {
+                  "IS_ALPHA": true,
+                  "OP": "+"
+                }
+              ],
+              "label": "TEXT"
+            }
+          ],
+          "aliases": []
+        },
+        {
+          "name": "target_language",
+          "description": "Target language for specific translation",
+          "extraction_patterns": [
+            {
+              "pattern": [
+                {
+                  "TEXT": "on"
+                }
+              ],
+              "label": "TARGET_LANGUAGE"
+            },
+            {
+              "pattern": [
+                {
+                  "TEXT": "to"
+                },
+                {
+                  "LOWER": {
+                    "IN": [
+                      "russian",
+                      "english",
+                      "spanish",
+                      "french",
+                      "german",
+                      "chinese"
+                    ]
+                  }
+                }
+              ],
+              "label": "TARGET_LANGUAGE"
+            }
+          ],
+          "aliases": []
+        }
+      ]
     }
   ],
-  "negative_patterns": [
-    [
-      {
-        "LEMMA": {
-          "IN": []
-        }
-      },
-      {
-        "LEMMA": {
-          "IN": []
-        }
-      }
-    ],
-    [
-      {
-        "TEXT": {
-          "REGEX": "no|not"
-        }
-      },
-      {
-        "TEXT": {
-          "REGEX": "translate|translation"
-        }
-      }
-    ]
-  ],
-  "language": "en"
+  "global_parameters": [
+    {
+      "name": "language",
+      "description": "Response language preference",
+      "default_value": "ru"
+    }
+  ]
 }

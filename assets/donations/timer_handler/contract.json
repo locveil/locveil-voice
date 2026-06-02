@@ -1,0 +1,108 @@
+{
+  "$schema": "../../donation_contract_v1.1.json",
+  "schema_version": "1.1",
+  "donation_version": "1.1.0",
+  "handler_domain": "timer",
+  "intent_name_patterns": [
+    "timer.set",
+    "timer.cancel",
+    "timer.stop",
+    "timer.pause",
+    "timer.resume",
+    "timer.list",
+    "timer.status"
+  ],
+  "action_domain_priority": 70,
+  "method_donations": [
+    {
+      "method_name": "_handle_set_timer",
+      "intent_suffix": "set",
+      "boost": 1.2,
+      "room_context": "none",
+      "parameters": [
+        {
+          "name": "duration",
+          "type": "integer",
+          "required": true,
+          "min_value": 1,
+          "max_value": 86400,
+          "entity_type": "generic"
+        },
+        {
+          "name": "unit",
+          "type": "choice",
+          "required": false,
+          "choices": [
+            "seconds",
+            "minutes",
+            "hours"
+          ],
+          "entity_type": "generic"
+        },
+        {
+          "name": "message",
+          "type": "string",
+          "required": false,
+          "entity_type": "generic"
+        }
+      ]
+    },
+    {
+      "method_name": "_handle_cancel_timer",
+      "intent_suffix": "cancel",
+      "boost": 1.1,
+      "room_context": "none",
+      "parameters": [
+        {
+          "name": "timer_id",
+          "type": "string",
+          "required": false,
+          "entity_type": "generic"
+        }
+      ]
+    },
+    {
+      "method_name": "_handle_stop_timer",
+      "intent_suffix": "stop",
+      "boost": 1.2,
+      "room_context": "none",
+      "parameters": []
+    },
+    {
+      "method_name": "_handle_pause_timer",
+      "intent_suffix": "pause",
+      "boost": 1.1,
+      "room_context": "none",
+      "parameters": []
+    },
+    {
+      "method_name": "_handle_resume_timer",
+      "intent_suffix": "resume",
+      "boost": 1.1,
+      "room_context": "none",
+      "parameters": []
+    },
+    {
+      "method_name": "_handle_list_timers",
+      "intent_suffix": "list",
+      "boost": 1.0,
+      "room_context": "none",
+      "parameters": []
+    },
+    {
+      "method_name": "_handle_timer_status",
+      "intent_suffix": "status",
+      "boost": 1.0,
+      "room_context": "none",
+      "parameters": []
+    }
+  ],
+  "global_parameters": [
+    {
+      "name": "retain",
+      "type": "boolean",
+      "required": false,
+      "entity_type": "generic"
+    }
+  ]
+}

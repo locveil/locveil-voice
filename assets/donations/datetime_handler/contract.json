@@ -1,0 +1,113 @@
+{
+  "$schema": "../../donation_contract_v1.1.json",
+  "schema_version": "1.1",
+  "donation_version": "1.1.0",
+  "handler_domain": "datetime",
+  "intent_name_patterns": [
+    "datetime.current_time",
+    "datetime.current_date",
+    "datetime.current_datetime"
+  ],
+  "method_donations": [
+    {
+      "method_name": "_handle_time_request",
+      "intent_suffix": "current_time",
+      "boost": 1.3,
+      "room_context": "none",
+      "parameters": [
+        {
+          "name": "location",
+          "type": "string",
+          "required": false,
+          "entity_type": "generic"
+        },
+        {
+          "name": "format",
+          "type": "choice",
+          "required": false,
+          "choices": [
+            "12hour",
+            "24hour",
+            "verbose"
+          ],
+          "entity_type": "generic"
+        }
+      ]
+    },
+    {
+      "method_name": "_handle_date_request",
+      "intent_suffix": "current_date",
+      "boost": 1.2,
+      "room_context": "none",
+      "parameters": [
+        {
+          "name": "format",
+          "type": "choice",
+          "required": false,
+          "choices": [
+            "short",
+            "full",
+            "iso",
+            "verbose"
+          ],
+          "entity_type": "generic"
+        },
+        {
+          "name": "relative",
+          "type": "choice",
+          "required": false,
+          "choices": [
+            "today",
+            "tomorrow",
+            "yesterday"
+          ],
+          "entity_type": "generic"
+        }
+      ]
+    },
+    {
+      "method_name": "_handle_datetime_request",
+      "intent_suffix": "current_datetime",
+      "boost": 1.1,
+      "room_context": "none",
+      "parameters": [
+        {
+          "name": "timezone",
+          "type": "string",
+          "required": false,
+          "entity_type": "generic"
+        },
+        {
+          "name": "format",
+          "type": "choice",
+          "required": false,
+          "choices": [
+            "iso",
+            "readable",
+            "unix",
+            "verbose"
+          ],
+          "entity_type": "generic"
+        }
+      ]
+    }
+  ],
+  "global_parameters": [
+    {
+      "name": "timezone",
+      "type": "string",
+      "required": false,
+      "entity_type": "generic"
+    },
+    {
+      "name": "language",
+      "type": "choice",
+      "required": false,
+      "choices": [
+        "ru",
+        "en"
+      ],
+      "entity_type": "generic"
+    }
+  ]
+}

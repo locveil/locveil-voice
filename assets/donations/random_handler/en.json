@@ -1,36 +1,40 @@
 {
-  "$schema": "../v1.0.json",
-  "schema_version": "1.0",
-  "donation_version": "1.0",
+  "$schema": "../../donation_language_v1.1.json",
+  "schema_version": "1.1",
   "handler_domain": "random",
+  "language": "en",
   "description": "Random number generation, coin flips, dice rolls, and random choices",
-  "intent_name_patterns": [
-    "random.coin_flip",
-    "random.dice_roll",
-    "random.number",
-    "random.choice"
-  ],
   "action_patterns": [
     "flip",
     "roll",
     "generate",
     "choose"
   ],
-  "domain_patterns": [
-    "random"
-  ],
-  "global_parameters": [
-    {
-      "name": "language",
-      "type": "choice",
-      "required": false,
-      "default_value": "ru",
-      "choices": [
-        "ru",
-        "en"
-      ],
-      "description": "Response language preference"
-    }
+  "negative_patterns": [
+    [
+      {
+        "LEMMA": {
+          "IN": []
+        }
+      },
+      {
+        "LEMMA": {
+          "IN": []
+        }
+      }
+    ],
+    [
+      {
+        "TEXT": {
+          "REGEX": "no|not"
+        }
+      },
+      {
+        "TEXT": {
+          "REGEX": "random|coin|dice"
+        }
+      }
+    ]
   ],
   "method_donations": [
     {
@@ -44,7 +48,6 @@
         "heads or tails"
       ],
       "lemmas": [],
-      "parameters": [],
       "token_patterns": [
         [
           {
@@ -81,8 +84,7 @@
           "text": "flip coin",
           "parameters": {}
         }
-      ],
-      "boost": 1.4
+      ]
     },
     {
       "method_name": "_handle_dice_roll",
@@ -94,59 +96,6 @@
         "throw dice"
       ],
       "lemmas": [],
-      "parameters": [
-        {
-          "name": "sides",
-          "type": "integer",
-          "required": false,
-          "default_value": 6,
-          "description": "Number of sides on the dice",
-          "extraction_patterns": [
-            {
-              "pattern": [
-                {
-                  "LIKE_NUM": true
-                },
-                {
-                  "LOWER": {
-                    "IN": [
-                      "sided",
-                      "sides"
-                    ]
-                  }
-                }
-              ],
-              "label": "DICE_SIDES"
-            }
-          ],
-          "aliases": []
-        },
-        {
-          "name": "count",
-          "type": "integer",
-          "required": false,
-          "default_value": 1,
-          "description": "Number of dice to roll",
-          "extraction_patterns": [
-            {
-              "pattern": [
-                {
-                  "LIKE_NUM": true
-                },
-                {
-                  "LEMMA": {
-                    "IN": [
-                      "dice"
-                    ]
-                  }
-                }
-              ],
-              "label": "DICE_COUNT"
-            }
-          ],
-          "aliases": []
-        }
-      ],
       "token_patterns": [
         [
           {
@@ -211,7 +160,55 @@
           }
         }
       ],
-      "boost": 1.3
+      "parameters": [
+        {
+          "name": "sides",
+          "description": "Number of sides on the dice",
+          "extraction_patterns": [
+            {
+              "pattern": [
+                {
+                  "LIKE_NUM": true
+                },
+                {
+                  "LOWER": {
+                    "IN": [
+                      "sided",
+                      "sides"
+                    ]
+                  }
+                }
+              ],
+              "label": "DICE_SIDES"
+            }
+          ],
+          "aliases": [],
+          "default_value": 6
+        },
+        {
+          "name": "count",
+          "description": "Number of dice to roll",
+          "extraction_patterns": [
+            {
+              "pattern": [
+                {
+                  "LIKE_NUM": true
+                },
+                {
+                  "LEMMA": {
+                    "IN": [
+                      "dice"
+                    ]
+                  }
+                }
+              ],
+              "label": "DICE_COUNT"
+            }
+          ],
+          "aliases": [],
+          "default_value": 1
+        }
+      ]
     },
     {
       "method_name": "_handle_random_number",
@@ -224,76 +221,6 @@
         "number from"
       ],
       "lemmas": [],
-      "parameters": [
-        {
-          "name": "min",
-          "type": "integer",
-          "required": false,
-          "default_value": 1,
-          "description": "Minimum value for random number",
-          "extraction_patterns": [
-            {
-              "pattern": [
-                {
-                  "LOWER": "from"
-                },
-                {
-                  "LIKE_NUM": true
-                }
-              ],
-              "label": "MIN_VALUE"
-            },
-            {
-              "pattern": [
-                {
-                  "LOWER": "from"
-                },
-                {
-                  "LIKE_NUM": true
-                }
-              ],
-              "label": "MIN_VALUE"
-            }
-          ],
-          "aliases": [
-            "from"
-          ]
-        },
-        {
-          "name": "max",
-          "type": "integer",
-          "required": false,
-          "default_value": 100,
-          "description": "Maximum value for random number",
-          "extraction_patterns": [
-            {
-              "pattern": [
-                {
-                  "LOWER": "until"
-                },
-                {
-                  "LIKE_NUM": true
-                }
-              ],
-              "label": "MAX_VALUE"
-            },
-            {
-              "pattern": [
-                {
-                  "LOWER": "to"
-                },
-                {
-                  "LIKE_NUM": true
-                }
-              ],
-              "label": "MAX_VALUE"
-            }
-          ],
-          "aliases": [
-            "to"
-          ]
-        }
-      ],
       "token_patterns": [
         [
           {
@@ -368,7 +295,72 @@
           }
         }
       ],
-      "boost": 1.2
+      "parameters": [
+        {
+          "name": "min",
+          "description": "Minimum value for random number",
+          "extraction_patterns": [
+            {
+              "pattern": [
+                {
+                  "LOWER": "from"
+                },
+                {
+                  "LIKE_NUM": true
+                }
+              ],
+              "label": "MIN_VALUE"
+            },
+            {
+              "pattern": [
+                {
+                  "LOWER": "from"
+                },
+                {
+                  "LIKE_NUM": true
+                }
+              ],
+              "label": "MIN_VALUE"
+            }
+          ],
+          "aliases": [
+            "from"
+          ],
+          "default_value": 1
+        },
+        {
+          "name": "max",
+          "description": "Maximum value for random number",
+          "extraction_patterns": [
+            {
+              "pattern": [
+                {
+                  "LOWER": "until"
+                },
+                {
+                  "LIKE_NUM": true
+                }
+              ],
+              "label": "MAX_VALUE"
+            },
+            {
+              "pattern": [
+                {
+                  "LOWER": "to"
+                },
+                {
+                  "LIKE_NUM": true
+                }
+              ],
+              "label": "MAX_VALUE"
+            }
+          ],
+          "aliases": [
+            "to"
+          ],
+          "default_value": 100
+        }
+      ]
     },
     {
       "method_name": "_handle_random_choice",
@@ -381,41 +373,6 @@
         "select from"
       ],
       "lemmas": [],
-      "parameters": [
-        {
-          "name": "options",
-          "type": "string",
-          "required": true,
-          "description": "List of options to choose from",
-          "extraction_patterns": [
-            {
-              "pattern": [
-                {
-                  "LOWER": "from"
-                },
-                {
-                  "IS_ALPHA": true,
-                  "OP": "+"
-                }
-              ],
-              "label": "OPTIONS"
-            },
-            {
-              "pattern": [
-                {
-                  "LOWER": "from"
-                },
-                {
-                  "IS_ALPHA": true,
-                  "OP": "+"
-                }
-              ],
-              "label": "OPTIONS"
-            }
-          ],
-          "aliases": []
-        }
-      ],
       "token_patterns": [
         [
           {
@@ -471,34 +428,46 @@
           }
         }
       ],
-      "boost": 1.1
+      "parameters": [
+        {
+          "name": "options",
+          "description": "List of options to choose from",
+          "extraction_patterns": [
+            {
+              "pattern": [
+                {
+                  "LOWER": "from"
+                },
+                {
+                  "IS_ALPHA": true,
+                  "OP": "+"
+                }
+              ],
+              "label": "OPTIONS"
+            },
+            {
+              "pattern": [
+                {
+                  "LOWER": "from"
+                },
+                {
+                  "IS_ALPHA": true,
+                  "OP": "+"
+                }
+              ],
+              "label": "OPTIONS"
+            }
+          ],
+          "aliases": []
+        }
+      ]
     }
   ],
-  "negative_patterns": [
-    [
-      {
-        "LEMMA": {
-          "IN": []
-        }
-      },
-      {
-        "LEMMA": {
-          "IN": []
-        }
-      }
-    ],
-    [
-      {
-        "TEXT": {
-          "REGEX": "no|not"
-        }
-      },
-      {
-        "TEXT": {
-          "REGEX": "random|coin|dice"
-        }
-      }
-    ]
-  ],
-  "language": "en"
+  "global_parameters": [
+    {
+      "name": "language",
+      "description": "Response language preference",
+      "default_value": "ru"
+    }
+  ]
 }

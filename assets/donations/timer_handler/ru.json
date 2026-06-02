@@ -1,26 +1,18 @@
 {
-  "$schema": "../v1.0.json",
-  "schema_version": "1.0",
-  "donation_version": "1.0",
+  "$schema": "../../donation_language_v1.1.json",
+  "schema_version": "1.1",
   "handler_domain": "таймер",
+  "language": "ru",
   "description": "Функциональность таймера с поддержкой длительности и сообщений",
-  "global_parameters": [
-    {
-      "name": "retain",
-      "type": "boolean",
-      "required": false,
-      "default_value": false,
-      "description": "Сохранять ли состояние между сессиями"
-    }
-  ],
-  "intent_name_patterns": [
-    "timer.set",
-    "timer.cancel",
-    "timer.stop",
-    "timer.pause",
-    "timer.resume",
-    "timer.list",
-    "timer.status"
+  "stop_command_patterns": [
+    "стоп таймер",
+    "останови таймер",
+    "прекрати таймер",
+    "выключи таймер",
+    "отмени таймер",
+    "убери таймер",
+    "стоп будильник",
+    "останови будильник"
   ],
   "action_patterns": [
     "set",
@@ -34,17 +26,42 @@
     "remove",
     "start"
   ],
-  "stop_command_patterns": [
-    "стоп таймер",
-    "останови таймер",
-    "прекрати таймер",
-    "выключи таймер",
-    "отмени таймер",
-    "убери таймер",
-    "стоп будильник",
-    "останови будильник"
+  "additional_recognition_patterns": [
+    "поставь таймер|установи таймер|таймер на",
+    "напомни через|разбуди через|сигнал через",
+    "засеки время|отсчитай время",
+    "отмени таймер|убери таймер|стоп таймер",
+    "покажи таймеры|список таймеров|мои таймеры",
+    "статус таймера|сколько осталось|время таймера",
+    "\\d+\\s*(секунд|сек|минут|мин|час|часа|часов)",
+    "на\\s+\\d+|через\\s+\\d+"
   ],
-  "action_domain_priority": 70,
+  "negative_patterns": [
+    [
+      {
+        "LEMMA": {
+          "IN": [
+            "нет",
+            "не",
+            "без"
+          ]
+        }
+      },
+      {
+        "LEMMA": "таймер"
+      }
+    ],
+    [
+      {
+        "TEXT": {
+          "REGEX": ".*"
+        }
+      },
+      {
+        "TEXT": "таймер"
+      }
+    ]
+  ],
   "method_donations": [
     {
       "method_name": "_handle_set_timer",
@@ -69,196 +86,6 @@
         "будильник",
         "время",
         "напоминание"
-      ],
-      "parameters": [
-        {
-          "name": "duration",
-          "type": "integer",
-          "required": true,
-          "description": "Продолжительность таймера в числах",
-          "min_value": 1,
-          "max_value": 86400,
-          "extraction_patterns": [
-            {
-              "pattern": [
-                {
-                  "LIKE_NUM": true
-                }
-              ],
-              "label": "DURATION_VALUE"
-            },
-            {
-              "pattern": [
-                {
-                  "TEXT": {
-                    "REGEX": ".*"
-                  }
-                }
-              ],
-              "label": "DURATION_VALUE"
-            },
-            {
-              "pattern": [
-                {
-                  "TEXT": {
-                    "REGEX": "(\\d+)\\s*(секунд|сек)"
-                  }
-                }
-              ],
-              "label": "DURATION_SECONDS"
-            },
-            {
-              "pattern": [
-                {
-                  "TEXT": {
-                    "REGEX": "(\\d+)\\s*(минут|мин)"
-                  }
-                }
-              ],
-              "label": "DURATION_MINUTES"
-            },
-            {
-              "pattern": [
-                {
-                  "TEXT": {
-                    "REGEX": "(\\d+)\\s*(час|часа|часов)"
-                  }
-                }
-              ],
-              "label": "DURATION_HOURS"
-            },
-            {
-              "pattern": [
-                {
-                  "TEXT": {
-                    "REGEX": "на\\s+(\\d+)\\s*(секунд|сек|минут|мин|час|часа|часов)"
-                  }
-                }
-              ],
-              "label": "DURATION_WITH_PREFIX"
-            },
-            {
-              "pattern": [
-                {
-                  "TEXT": {
-                    "REGEX": "через\\s+(\\d+)\\s*(секунд|сек|минут|мин|час|часа|часов)"
-                  }
-                }
-              ],
-              "label": "DURATION_WITH_THROUGH"
-            }
-          ],
-          "aliases": [
-            "время",
-            "длительность",
-            "на"
-          ]
-        },
-        {
-          "name": "unit",
-          "type": "choice",
-          "required": false,
-          "default_value": "minutes",
-          "choices": [
-            "seconds",
-            "minutes",
-            "hours"
-          ],
-          "description": "Единица времени для продолжительности",
-          "extraction_patterns": [
-            {
-              "pattern": [
-                {
-                  "LEMMA": {
-                    "IN": [
-                      "секунда",
-                      "минута",
-                      "час"
-                    ]
-                  }
-                }
-              ],
-              "label": "TIME_UNIT"
-            },
-            {
-              "pattern": [
-                {
-                  "LOWER": {
-                    "IN": [
-                      "сек",
-                      "мин"
-                    ]
-                  }
-                }
-              ],
-              "label": "TIME_UNIT"
-            }
-          ],
-          "aliases": [
-            "единица",
-            "время"
-          ]
-        },
-        {
-          "name": "message",
-          "type": "string",
-          "required": false,
-          "default_value": "Таймер завершён!",
-          "description": "Пользовательское сообщение при завершении таймера",
-          "extraction_patterns": [
-            {
-              "pattern": [
-                {
-                  "LOWER": {
-                    "IN": [
-                      "сообщение",
-                      "напомни",
-                      "скажи"
-                    ]
-                  }
-                },
-                {
-                  "IS_SENT_START": false
-                }
-              ],
-              "label": "TIMER_MESSAGE"
-            },
-            {
-              "pattern": [
-                {
-                  "TEXT": {
-                    "REGEX": "сообщение[:\\s]+(.*)"
-                  }
-                }
-              ],
-              "label": "TIMER_MESSAGE_COLON"
-            },
-            {
-              "pattern": [
-                {
-                  "TEXT": {
-                    "REGEX": "напомни[:\\s]+(.*)"
-                  }
-                }
-              ],
-              "label": "TIMER_MESSAGE_REMIND"
-            },
-            {
-              "pattern": [
-                {
-                  "TEXT": {
-                    "REGEX": "скажи[:\\s]+(.*)"
-                  }
-                }
-              ],
-              "label": "TIMER_MESSAGE_SAY"
-            }
-          ],
-          "aliases": [
-            "текст",
-            "напоминание"
-          ]
-        }
       ],
       "token_patterns": [
         [
@@ -406,7 +233,194 @@
           }
         }
       ],
-      "boost": 1.2
+      "parameters": [
+        {
+          "name": "duration",
+          "description": "Продолжительность таймера в числах",
+          "extraction_patterns": [
+            {
+              "pattern": [
+                {
+                  "LIKE_NUM": true
+                }
+              ],
+              "label": "DURATION_VALUE"
+            },
+            {
+              "pattern": [
+                {
+                  "TEXT": {
+                    "REGEX": ".*"
+                  }
+                }
+              ],
+              "label": "DURATION_VALUE"
+            },
+            {
+              "pattern": [
+                {
+                  "TEXT": {
+                    "REGEX": "(\\d+)\\s*(секунд|сек)"
+                  }
+                }
+              ],
+              "label": "DURATION_SECONDS"
+            },
+            {
+              "pattern": [
+                {
+                  "TEXT": {
+                    "REGEX": "(\\d+)\\s*(минут|мин)"
+                  }
+                }
+              ],
+              "label": "DURATION_MINUTES"
+            },
+            {
+              "pattern": [
+                {
+                  "TEXT": {
+                    "REGEX": "(\\d+)\\s*(час|часа|часов)"
+                  }
+                }
+              ],
+              "label": "DURATION_HOURS"
+            },
+            {
+              "pattern": [
+                {
+                  "TEXT": {
+                    "REGEX": "на\\s+(\\d+)\\s*(секунд|сек|минут|мин|час|часа|часов)"
+                  }
+                }
+              ],
+              "label": "DURATION_WITH_PREFIX"
+            },
+            {
+              "pattern": [
+                {
+                  "TEXT": {
+                    "REGEX": "через\\s+(\\d+)\\s*(секунд|сек|минут|мин|час|часа|часов)"
+                  }
+                }
+              ],
+              "label": "DURATION_WITH_THROUGH"
+            }
+          ],
+          "aliases": [
+            "время",
+            "длительность",
+            "на"
+          ]
+        },
+        {
+          "name": "unit",
+          "description": "Единица времени для продолжительности",
+          "extraction_patterns": [
+            {
+              "pattern": [
+                {
+                  "LEMMA": {
+                    "IN": [
+                      "секунда",
+                      "минута",
+                      "час"
+                    ]
+                  }
+                }
+              ],
+              "label": "TIME_UNIT"
+            },
+            {
+              "pattern": [
+                {
+                  "LOWER": {
+                    "IN": [
+                      "сек",
+                      "мин"
+                    ]
+                  }
+                }
+              ],
+              "label": "TIME_UNIT"
+            }
+          ],
+          "aliases": [
+            "единица",
+            "время"
+          ],
+          "default_value": "minutes",
+          "choice_surfaces": {
+            "seconds": [
+              "seconds"
+            ],
+            "minutes": [
+              "minutes"
+            ],
+            "hours": [
+              "hours"
+            ]
+          }
+        },
+        {
+          "name": "message",
+          "description": "Пользовательское сообщение при завершении таймера",
+          "extraction_patterns": [
+            {
+              "pattern": [
+                {
+                  "LOWER": {
+                    "IN": [
+                      "сообщение",
+                      "напомни",
+                      "скажи"
+                    ]
+                  }
+                },
+                {
+                  "IS_SENT_START": false
+                }
+              ],
+              "label": "TIMER_MESSAGE"
+            },
+            {
+              "pattern": [
+                {
+                  "TEXT": {
+                    "REGEX": "сообщение[:\\s]+(.*)"
+                  }
+                }
+              ],
+              "label": "TIMER_MESSAGE_COLON"
+            },
+            {
+              "pattern": [
+                {
+                  "TEXT": {
+                    "REGEX": "напомни[:\\s]+(.*)"
+                  }
+                }
+              ],
+              "label": "TIMER_MESSAGE_REMIND"
+            },
+            {
+              "pattern": [
+                {
+                  "TEXT": {
+                    "REGEX": "скажи[:\\s]+(.*)"
+                  }
+                }
+              ],
+              "label": "TIMER_MESSAGE_SAY"
+            }
+          ],
+          "aliases": [
+            "текст",
+            "напоминание"
+          ],
+          "default_value": "Таймер завершён!"
+        }
+      ]
     },
     {
       "method_name": "_handle_cancel_timer",
@@ -427,29 +441,6 @@
         "стоп",
         "таймер",
         "будильник"
-      ],
-      "parameters": [
-        {
-          "name": "timer_id",
-          "type": "string",
-          "required": false,
-          "description": "Конкретный ID таймера для отмены",
-          "extraction_patterns": [
-            {
-              "pattern": [
-                {
-                  "TEXT": {
-                    "REGEX": ".*"
-                  }
-                }
-              ],
-              "label": "TIMER_ID"
-            }
-          ],
-          "aliases": [
-            "номер"
-          ]
-        }
       ],
       "token_patterns": [
         [
@@ -487,7 +478,27 @@
           "parameters": {}
         }
       ],
-      "boost": 1.1
+      "parameters": [
+        {
+          "name": "timer_id",
+          "description": "Конкретный ID таймера для отмены",
+          "extraction_patterns": [
+            {
+              "pattern": [
+                {
+                  "TEXT": {
+                    "REGEX": ".*"
+                  }
+                }
+              ],
+              "label": "TIMER_ID"
+            }
+          ],
+          "aliases": [
+            "номер"
+          ]
+        }
+      ]
     },
     {
       "method_name": "_handle_stop_timer",
@@ -506,7 +517,6 @@
         "прекращать",
         "таймер"
       ],
-      "parameters": [],
       "token_patterns": [
         [
           {
@@ -533,8 +543,7 @@
           "text": "стоп таймер",
           "parameters": {}
         }
-      ],
-      "boost": 1.2
+      ]
     },
     {
       "method_name": "_handle_pause_timer",
@@ -553,7 +562,6 @@
         "задерживать",
         "таймер"
       ],
-      "parameters": [],
       "token_patterns": [
         [
           {
@@ -580,8 +588,7 @@
           "text": "пауза таймер",
           "parameters": {}
         }
-      ],
-      "boost": 1.1
+      ]
     },
     {
       "method_name": "_handle_resume_timer",
@@ -601,7 +608,6 @@
         "запускать",
         "таймер"
       ],
-      "parameters": [],
       "token_patterns": [
         [
           {
@@ -632,8 +638,7 @@
           "text": "продолжи таймер",
           "parameters": {}
         }
-      ],
-      "boost": 1.1
+      ]
     },
     {
       "method_name": "_handle_list_timers",
@@ -651,7 +656,6 @@
         "таймер",
         "активный"
       ],
-      "parameters": [],
       "token_patterns": [
         [
           {
@@ -694,8 +698,7 @@
           "text": "мои таймеры",
           "parameters": {}
         }
-      ],
-      "boost": 1.0
+      ]
     },
     {
       "method_name": "_handle_timer_status",
@@ -711,7 +714,6 @@
         "состояние",
         "таймер"
       ],
-      "parameters": [],
       "token_patterns": [
         [
           {
@@ -742,45 +744,14 @@
           "text": "статус таймеров",
           "parameters": {}
         }
-      ],
-      "boost": 1.0
+      ]
     }
   ],
-  "negative_patterns": [
-    [
-      {
-        "LEMMA": {
-          "IN": [
-            "нет",
-            "не",
-            "без"
-          ]
-        }
-      },
-      {
-        "LEMMA": "таймер"
-      }
-    ],
-    [
-      {
-        "TEXT": {
-          "REGEX": ".*"
-        }
-      },
-      {
-        "TEXT": "таймер"
-      }
-    ]
-  ],
-  "additional_recognition_patterns": [
-    "поставь таймер|установи таймер|таймер на",
-    "напомни через|разбуди через|сигнал через",
-    "засеки время|отсчитай время",
-    "отмени таймер|убери таймер|стоп таймер",
-    "покажи таймеры|список таймеров|мои таймеры",
-    "статус таймера|сколько осталось|время таймера",
-    "\\d+\\s*(секунд|сек|минут|мин|час|часа|часов)",
-    "на\\s+\\d+|через\\s+\\d+"
-  ],
-  "language": "ru"
+  "global_parameters": [
+    {
+      "name": "retain",
+      "description": "Сохранять ли состояние между сессиями",
+      "default_value": false
+    }
+  ]
 }

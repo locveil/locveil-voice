@@ -459,9 +459,11 @@ class IntentAssetLoader:
                         default_value=param.default_value,
                         description=param.description,
                         choices=param.choices,
+                        choice_surfaces=param.choice_surfaces,  # QUAL-29: carry canonical→surface map to the NLU
                         min_value=param.min_value,
                         max_value=param.max_value,
                         pattern=param.pattern,
+                        entity_type=param.entity_type,  # QUAL-29: carry entity classification
                         extraction_patterns=param.extraction_patterns,
                         aliases=param.aliases
                     ))
@@ -536,100 +538,141 @@ class IntentAssetLoader:
                 self._add_warning(f"No language-separated donation directory found for handler '{handler_name}': {language_donation_dir}")
     
     async def _load_language_separated_donations(self, lang_dir: Path, handler_name: str) -> None:
-        """Load and merge language-specific donation files into unified donation"""
-        language_donations = {}
-        
-        # Load each language file
+        """QUAL-29 (v1.1): load the language-neutral ``contract.json`` + per-language phrasing files and
+        assemble a unified ``HandlerDonation``. The contract holds the invariant ParameterSpec core (name/type/
+        required/choices=canonical/min-max/entity_type) + per-method room_context; the language files hold
+        phrases/lemmas/patterns/examples + per-param description/extraction_patterns/aliases/default_value/
+        choice_surfaces. Neither file is a complete donation alone."""
+        contract_path = lang_dir / "contract.json"
+        if not contract_path.exists():
+            self._add_warning(f"No contract.json (v1.1) for handler '{handler_name}' in {lang_dir}")
+            return
+        try:
+            contract = json.loads(contract_path.read_text(encoding="utf-8"))
+        except Exception as e:
+            self._add_warning(f"Failed to load contract.json for handler '{handler_name}': {e}")
+            return
+
+        lang_jsons = {}
         for lang_file in lang_dir.glob("*.json"):
+            if lang_file.name == "contract.json":
+                continue
             language = lang_file.stem
             if language in self.config.supported_languages:
                 try:
-                    lang_donation = await self._load_and_validate_donation(lang_file, handler_name)
-                    language_donations[language] = lang_donation
-                    logger.debug(f"Loaded {language} donation for handler '{handler_name}'")
+                    lang_jsons[language] = json.loads(lang_file.read_text(encoding="utf-8"))
                 except Exception as e:
-                    self._add_warning(f"Failed to load {language} donation for handler '{handler_name}': {e}")
-        
-        if not language_donations:
-            self._add_warning(f"No valid language donations found for handler '{handler_name}' in {lang_dir}")
+                    self._add_warning(f"Failed to load {language} phrasing for handler '{handler_name}': {e}")
+
+        if not lang_jsons:
+            self._add_warning(f"No language phrasing files for handler '{handler_name}' in {lang_dir}")
             return
-        
-        # Merge into unified HandlerDonation for optimal processing
-        merged_donation = self._merge_language_donations(language_donations, handler_name)
-        self.donations[handler_name] = merged_donation
-        
-        logger.info(f"Merged {len(language_donations)} language donations for handler '{handler_name}'")
+
+        try:
+            assembled = self._assemble_v11_donation(contract, lang_jsons)
+            donation = HandlerDonation(**assembled)
+        except Exception as e:
+            self._add_warning(f"Failed to assemble v1.1 donation for handler '{handler_name}': {e}")
+            return
+
+        if self.config.validate_method_existence:
+            await self._validate_method_existence(donation, handler_name)
+
+        self.donations[handler_name] = donation
+        logger.info(f"Assembled v1.1 donation for handler '{handler_name}' ({len(lang_jsons)} languages)")
     
-    def _merge_language_donations(self, language_donations: Dict[str, HandlerDonation], handler_name: str) -> HandlerDonation:
-        """Merge language-specific donations into unified donation for NLU processing"""
-        # Use first donation as base structure
-        base_donation = next(iter(language_donations.values()))
-        
-        # First pass: collect all phrases and metadata by method key
-        method_data = {}
-        
-        for language, donation in language_donations.items():
-            for method_donation in donation.method_donations:
-                method_key = f"{method_donation.method_name}#{method_donation.intent_suffix}"
-                
-                if method_key not in method_data:
-                    method_data[method_key] = {
-                        'method_name': method_donation.method_name,
-                        'intent_suffix': method_donation.intent_suffix,
-                        'description': method_donation.description,
-                        'phrases': [],
-                        'parameters': method_donation.parameters,
-                        'lemmas': [],
-                        'token_patterns': method_donation.token_patterns or [],
-                        'slot_patterns': method_donation.slot_patterns or {},
-                        'examples': [],
-                        'boost': method_donation.boost
-                    }
-                
-                # Accumulate phrases from all languages
-                method_data[method_key]['phrases'].extend(method_donation.phrases)
-                
-                # Merge other language-specific fields
-                if method_donation.lemmas:
-                    method_data[method_key]['lemmas'].extend(method_donation.lemmas)
-                if method_donation.examples:
-                    method_data[method_key]['examples'].extend(method_donation.examples)
-        
-        # Second pass: create MethodDonation objects with accumulated data
-        merged_methods = []
-        for method_key, data in method_data.items():
-            if data['phrases']:  # Only create if we have phrases
-                merged_method = MethodDonation(
-                    method_name=data['method_name'],
-                    intent_suffix=data['intent_suffix'],
-                    description=data['description'],
-                    phrases=data['phrases'],
-                    parameters=data['parameters'],
-                    lemmas=data['lemmas'],
-                    token_patterns=data['token_patterns'],
-                    slot_patterns=data['slot_patterns'],
-                    examples=data['examples'],
-                    boost=data['boost']
-                )
-                merged_methods.append(merged_method)
-        
-        # Create unified donation with merged methods
-        return HandlerDonation(
-            schema_version=base_donation.schema_version,
-            donation_version=base_donation.donation_version,
-            handler_domain=base_donation.handler_domain,
-            description=base_donation.description,
-            method_donations=merged_methods,
-            intent_name_patterns=base_donation.intent_name_patterns,
-            action_patterns=base_donation.action_patterns,
-            domain_patterns=base_donation.domain_patterns,
-            fallback_conditions=base_donation.fallback_conditions,
-            additional_recognition_patterns=base_donation.additional_recognition_patterns,
-            language_detection=base_donation.language_detection,
-            train_keywords=base_donation.train_keywords,
-            global_parameters=base_donation.global_parameters,
-            negative_patterns=base_donation.negative_patterns
-        )
+    @staticmethod
+    def _accumulate(field: str, sources: list) -> list:
+        """Union a list-valued field across sources, order-preserving (fixes the old first-language-wins drop)."""
+        seen, out = set(), []
+        for src in sources:
+            for item in (src.get(field) or []):
+                key = item if isinstance(item, str) else json.dumps(item, sort_keys=True, ensure_ascii=False)
+                if key not in seen:
+                    seen.add(key)
+                    out.append(item)
+        return out
+
+    def _assemble_v11_donation(self, contract: dict, lang_jsons: Dict[str, dict]) -> dict:
+        """Assemble a complete HandlerDonation dict from the neutral contract + per-language phrasing.
+
+        Russian is the primary language (wins single-valued picks like description/default_value); list-valued
+        phrasing (phrases/lemmas/token_patterns/extraction_patterns/aliases/examples) is ACCUMULATED across all
+        languages so both languages' recognition survives. ``choice_surfaces`` is built as
+        {canonical: [canonical] + every language's surface forms} so the canonical token is always self-matchable.
+        """
+        primary = 'ru' if 'ru' in lang_jsons else next(iter(lang_jsons))
+        langs_ordered = [primary] + [l for l in lang_jsons if l != primary]
+        lm = {lang: {f"{m['method_name']}#{m['intent_suffix']}": m
+                     for m in lang_jsons[lang].get('method_donations', [])} for lang in lang_jsons}
+
+        def assemble_param(cparam: dict, method_key, is_global: bool = False) -> dict:
+            p = dict(cparam)  # neutral core: name/type/required/choices(canonical)/min-max/pattern/entity_type
+            lang_params = []
+            for lang in langs_ordered:
+                src = lang_jsons[lang] if is_global else lm[lang].get(method_key, {})
+                plist = src.get('global_parameters', []) if is_global else src.get('parameters', [])
+                for lp in plist:
+                    if lp.get('name') == cparam['name']:
+                        lang_params.append(lp)
+            for lp in lang_params:  # primary-first single-valued picks
+                if lp.get('description') and not p.get('description'):
+                    p['description'] = lp['description']
+                if 'default_value' in lp and p.get('default_value') is None:
+                    p['default_value'] = lp['default_value']
+            p['extraction_patterns'] = self._accumulate('extraction_patterns', lang_params)
+            p['aliases'] = self._accumulate('aliases', lang_params)
+            if p.get('choices'):
+                surfaces = {}
+                for canonical in p['choices']:
+                    forms = [canonical]
+                    for lp in lang_params:
+                        for f in (lp.get('choice_surfaces') or {}).get(canonical, []):
+                            if f not in forms:
+                                forms.append(f)
+                    surfaces[canonical] = forms
+                p['choice_surfaces'] = surfaces
+            return p
+
+        methods = []
+        for cm in contract.get('method_donations', []):
+            mk = f"{cm['method_name']}#{cm['intent_suffix']}"
+            srcs = [lm[lang].get(mk, {}) for lang in langs_ordered]
+            m = dict(cm)  # neutral: method_name/intent_suffix/boost/room_context/parameters
+            m['phrases'] = self._accumulate('phrases', srcs)
+            m['lemmas'] = self._accumulate('lemmas', srcs)
+            m['token_patterns'] = self._accumulate('token_patterns', srcs)
+            m['examples'] = self._accumulate('examples', srcs)
+            slot_patterns = {}
+            for s in srcs:
+                for slot, pats in (s.get('slot_patterns') or {}).items():
+                    slot_patterns.setdefault(slot, [])
+                    for pat in pats:
+                        if pat not in slot_patterns[slot]:
+                            slot_patterns[slot].append(pat)
+            m['slot_patterns'] = slot_patterns
+            for s in srcs:  # method description: primary-first
+                if s.get('description'):
+                    m['description'] = s['description']
+                    break
+            m['parameters'] = [assemble_param(cp, mk) for cp in cm.get('parameters', [])]
+            methods.append(m)
+
+        assembled = dict(contract)  # handler-level neutral (schema_version/handler_domain/intent_name_patterns/…)
+        assembled.pop('$schema', None)
+        assembled['method_donations'] = methods
+        assembled['global_parameters'] = [assemble_param(cp, None, is_global=True)
+                                          for cp in contract.get('global_parameters', [])]
+        ordered_lang_docs = [lang_jsons[l] for l in langs_ordered]
+        for field in ('negative_patterns', 'action_patterns', 'additional_recognition_patterns', 'train_keywords'):
+            acc = self._accumulate(field, ordered_lang_docs)
+            if acc:
+                assembled[field] = acc
+        for doc in ordered_lang_docs:  # handler description: primary-first
+            if doc.get('description'):
+                assembled['description'] = doc['description']
+                break
+        return assembled
     
     def _get_asset_handler_name(self, handler_name: str) -> str:
         """Map handler file name to asset directory name"""

@@ -1,0 +1,118 @@
+{
+  "$schema": "../../donation_contract_v1.1.json",
+  "schema_version": "1.1",
+  "donation_version": "1.1.0",
+  "handler_domain": "speech_recognition",
+  "intent_name_patterns": [
+    "asr.show",
+    "asr.switch",
+    "asr.language",
+    "asr.config",
+    "speech.recognition"
+  ],
+  "domain_patterns": [
+    "asr",
+    "speech",
+    "recognition",
+    "configuration"
+  ],
+  "method_donations": [
+    {
+      "method_name": "_handle_show_recognition",
+      "intent_suffix": "show",
+      "boost": 1.3,
+      "room_context": "none",
+      "parameters": []
+    },
+    {
+      "method_name": "_handle_switch_asr_provider",
+      "intent_suffix": "switch",
+      "boost": 1.2,
+      "room_context": "none",
+      "parameters": [
+        {
+          "name": "provider",
+          "type": "choice",
+          "required": true,
+          "choices": [
+            "whisper",
+            "vosk",
+            "google_cloud",
+            "azure"
+          ],
+          "entity_type": "generic"
+        }
+      ]
+    },
+    {
+      "method_name": "_handle_switch_language",
+      "intent_suffix": "language",
+      "boost": 1.1,
+      "room_context": "none",
+      "parameters": [
+        {
+          "name": "language",
+          "type": "choice",
+          "required": true,
+          "choices": [
+            "spanish",
+            "russian",
+            "english",
+            "german",
+            "french"
+          ],
+          "entity_type": "generic"
+        }
+      ]
+    },
+    {
+      "method_name": "_handle_configure_quality",
+      "intent_suffix": "quality",
+      "boost": 1.0,
+      "room_context": "none",
+      "parameters": [
+        {
+          "name": "quality",
+          "type": "choice",
+          "required": false,
+          "choices": [
+            "low",
+            "medium",
+            "high",
+            "ultra"
+          ],
+          "entity_type": "generic"
+        }
+      ]
+    },
+    {
+      "method_name": "_handle_configure_microphone",
+      "intent_suffix": "microphone",
+      "boost": 0.9,
+      "room_context": "none",
+      "parameters": [
+        {
+          "name": "microphone",
+          "type": "string",
+          "required": false,
+          "entity_type": "generic"
+        }
+      ]
+    }
+  ],
+  "global_parameters": [
+    {
+      "name": "language",
+      "type": "choice",
+      "required": false,
+      "choices": [
+        "spanish",
+        "russian",
+        "english",
+        "german",
+        "french"
+      ],
+      "entity_type": "generic"
+    }
+  ]
+}

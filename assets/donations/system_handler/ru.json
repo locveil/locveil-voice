@@ -1,24 +1,41 @@
 {
-  "$schema": "../v1.0.json",
-  "schema_version": "1.0",
-  "donation_version": "1.0",
+  "$schema": "../../donation_language_v1.1.json",
+  "schema_version": "1.1",
   "handler_domain": "system",
+  "language": "ru",
   "description": "Информация о системе, помощь и статусные операции",
-  "intent_name_patterns": [],
   "action_patterns": [],
-  "domain_patterns": [],
-  "global_parameters": [
-    {
-      "name": "language",
-      "type": "choice",
-      "required": false,
-      "default_value": "ru",
-      "choices": [
-        "русский",
-        "английский"
-      ],
-      "description": "Предпочтение языка ответа"
-    }
+  "negative_patterns": [
+    [
+      {
+        "LEMMA": {
+          "IN": [
+            "нет",
+            "не"
+          ]
+        }
+      },
+      {
+        "LEMMA": {
+          "IN": [
+            "помощь",
+            "статус"
+          ]
+        }
+      }
+    ],
+    [
+      {
+        "TEXT": {
+          "REGEX": ".*"
+        }
+      },
+      {
+        "TEXT": {
+          "REGEX": ".*"
+        }
+      }
+    ]
   ],
   "method_donations": [
     {
@@ -37,34 +54,6 @@
         "уметь",
         "команда",
         "инструкция"
-      ],
-      "parameters": [
-        {
-          "name": "topic",
-          "type": "string",
-          "required": false,
-          "description": "Конкретная тема справки",
-          "extraction_patterns": [
-            {
-              "pattern": [
-                {
-                  "LOWER": {
-                    "IN": [
-                      "по"
-                    ]
-                  }
-                },
-                {
-                  "IS_ALPHA": true
-                }
-              ],
-              "label": "HELP_TOPIC"
-            }
-          ],
-          "aliases": [
-            "тема"
-          ]
-        }
       ],
       "token_patterns": [
         [
@@ -139,7 +128,32 @@
           "parameters": {}
         }
       ],
-      "boost": 1.3
+      "parameters": [
+        {
+          "name": "topic",
+          "description": "Конкретная тема справки",
+          "extraction_patterns": [
+            {
+              "pattern": [
+                {
+                  "LOWER": {
+                    "IN": [
+                      "по"
+                    ]
+                  }
+                },
+                {
+                  "IS_ALPHA": true
+                }
+              ],
+              "label": "HELP_TOPIC"
+            }
+          ],
+          "aliases": [
+            "тема"
+          ]
+        }
+      ]
     },
     {
       "method_name": "_handle_status_request",
@@ -157,36 +171,6 @@
         "дела",
         "здоровье",
         "система"
-      ],
-      "parameters": [
-        {
-          "name": "component",
-          "type": "string",
-          "required": false,
-          "description": "Specific component to check",
-          "extraction_patterns": [
-            {
-              "pattern": [
-                {
-                  "LEMMA": {
-                    "IN": [
-                      "статус",
-                      "состояние"
-                    ]
-                  }
-                },
-                {
-                  "IS_ALPHA": true
-                }
-              ],
-              "label": "COMPONENT"
-            }
-          ],
-          "aliases": [
-            "модуль",
-            "компонент"
-          ]
-        }
       ],
       "token_patterns": [
         [
@@ -236,7 +220,34 @@
           "parameters": {}
         }
       ],
-      "boost": 1.2
+      "parameters": [
+        {
+          "name": "component",
+          "description": "Specific component to check",
+          "extraction_patterns": [
+            {
+              "pattern": [
+                {
+                  "LEMMA": {
+                    "IN": [
+                      "статус",
+                      "состояние"
+                    ]
+                  }
+                },
+                {
+                  "IS_ALPHA": true
+                }
+              ],
+              "label": "COMPONENT"
+            }
+          ],
+          "aliases": [
+            "модуль",
+            "компонент"
+          ]
+        }
+      ]
     },
     {
       "method_name": "_handle_version_request",
@@ -250,7 +261,6 @@
         "версия",
         "какой"
       ],
-      "parameters": [],
       "token_patterns": [
         [
           {
@@ -284,8 +294,7 @@
           "text": "версия",
           "parameters": {}
         }
-      ],
-      "boost": 1.1
+      ]
     },
     {
       "method_name": "_handle_info_request",
@@ -300,36 +309,6 @@
         "информация",
         "сведения",
         "подробности"
-      ],
-      "parameters": [
-        {
-          "name": "info_type",
-          "type": "choice",
-          "required": false,
-          "choices": [
-            "краткая",
-            "подробная",
-            "техническая"
-          ],
-          "description": "Type of information to show",
-          "extraction_patterns": [
-            {
-              "pattern": [
-                {
-                  "LOWER": {
-                    "IN": [
-                      "система",
-                      "производительность",
-                      "конфигурация",
-                      "логи"
-                    ]
-                  }
-                }
-              ],
-              "label": "INFO_TYPE"
-            }
-          ]
-        }
       ],
       "token_patterns": [
         [
@@ -359,7 +338,29 @@
           "parameters": {}
         }
       ],
-      "boost": 1.0
+      "parameters": [
+        {
+          "name": "info_type",
+          "description": "Type of information to show",
+          "extraction_patterns": [
+            {
+              "pattern": [
+                {
+                  "LOWER": {
+                    "IN": [
+                      "система",
+                      "производительность",
+                      "конфигурация",
+                      "логи"
+                    ]
+                  }
+                }
+              ],
+              "label": "INFO_TYPE"
+            }
+          ]
+        }
+      ]
     },
     {
       "method_name": "_handle_general_info",
@@ -377,7 +378,6 @@
         "рассказать",
         "представиться"
       ],
-      "parameters": [],
       "token_patterns": [
         [
           {
@@ -438,41 +438,22 @@
           "text": "расскажи о себе",
           "parameters": {}
         }
-      ],
-      "boost": 1.1
+      ]
     }
   ],
-  "negative_patterns": [
-    [
-      {
-        "LEMMA": {
-          "IN": [
-            "нет",
-            "не"
-          ]
-        }
-      },
-      {
-        "LEMMA": {
-          "IN": [
-            "помощь",
-            "статус"
-          ]
-        }
+  "global_parameters": [
+    {
+      "name": "language",
+      "description": "Предпочтение языка ответа",
+      "default_value": "ru",
+      "choice_surfaces": {
+        "ru": [
+          "русский"
+        ],
+        "en": [
+          "английский"
+        ]
       }
-    ],
-    [
-      {
-        "TEXT": {
-          "REGEX": ".*"
-        }
-      },
-      {
-        "TEXT": {
-          "REGEX": ".*"
-        }
-      }
-    ]
-  ],
-  "language": "ru"
+    }
+  ]
 }

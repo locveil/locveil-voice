@@ -1,0 +1,90 @@
+{
+  "$schema": "../../donation_contract_v1.1.json",
+  "schema_version": "1.1",
+  "donation_version": "1.1.0",
+  "handler_domain": "random",
+  "intent_name_patterns": [
+    "random.coin_flip",
+    "random.dice_roll",
+    "random.number",
+    "random.choice"
+  ],
+  "domain_patterns": [
+    "random"
+  ],
+  "method_donations": [
+    {
+      "method_name": "_handle_coin_flip",
+      "intent_suffix": "coin_flip",
+      "boost": 1.4,
+      "room_context": "none",
+      "parameters": []
+    },
+    {
+      "method_name": "_handle_dice_roll",
+      "intent_suffix": "dice_roll",
+      "boost": 1.3,
+      "room_context": "none",
+      "parameters": [
+        {
+          "name": "sides",
+          "type": "integer",
+          "required": false,
+          "entity_type": "generic"
+        },
+        {
+          "name": "count",
+          "type": "integer",
+          "required": false,
+          "entity_type": "generic"
+        }
+      ]
+    },
+    {
+      "method_name": "_handle_random_number",
+      "intent_suffix": "number",
+      "boost": 1.2,
+      "room_context": "none",
+      "parameters": [
+        {
+          "name": "min",
+          "type": "integer",
+          "required": false,
+          "entity_type": "generic"
+        },
+        {
+          "name": "max",
+          "type": "integer",
+          "required": false,
+          "entity_type": "generic"
+        }
+      ]
+    },
+    {
+      "method_name": "_handle_random_choice",
+      "intent_suffix": "choice",
+      "boost": 1.1,
+      "room_context": "none",
+      "parameters": [
+        {
+          "name": "options",
+          "type": "string",
+          "required": true,
+          "entity_type": "generic"
+        }
+      ]
+    }
+  ],
+  "global_parameters": [
+    {
+      "name": "language",
+      "type": "choice",
+      "required": false,
+      "choices": [
+        "ru",
+        "en"
+      ],
+      "entity_type": "generic"
+    }
+  ]
+}

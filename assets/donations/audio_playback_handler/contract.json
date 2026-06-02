@@ -1,0 +1,96 @@
+{
+  "$schema": "../../donation_contract_v1.1.json",
+  "schema_version": "1.1",
+  "donation_version": "1.1.0",
+  "handler_domain": "audio",
+  "intent_name_patterns": [
+    "audio.play",
+    "audio.stop",
+    "audio.pause",
+    "audio.resume",
+    "audio.switch",
+    "audio.list"
+  ],
+  "domain_patterns": [
+    "audio",
+    "music",
+    "playback"
+  ],
+  "action_domain_priority": 90,
+  "method_donations": [
+    {
+      "method_name": "_handle_play_audio",
+      "intent_suffix": "play",
+      "boost": 1.3,
+      "room_context": "none",
+      "parameters": [
+        {
+          "name": "file_path",
+          "type": "string",
+          "required": false,
+          "entity_type": "generic"
+        }
+      ]
+    },
+    {
+      "method_name": "_handle_stop_audio",
+      "intent_suffix": "stop",
+      "boost": 1.4,
+      "room_context": "none",
+      "parameters": []
+    },
+    {
+      "method_name": "_handle_pause_audio",
+      "intent_suffix": "pause",
+      "boost": 1.3,
+      "room_context": "none",
+      "parameters": []
+    },
+    {
+      "method_name": "_handle_resume_audio",
+      "intent_suffix": "resume",
+      "boost": 1.3,
+      "room_context": "none",
+      "parameters": []
+    },
+    {
+      "method_name": "_handle_switch_audio_provider",
+      "intent_suffix": "switch",
+      "boost": 1.2,
+      "room_context": "none",
+      "parameters": [
+        {
+          "name": "provider",
+          "type": "choice",
+          "required": true,
+          "choices": [
+            "sounddevice",
+            "pulseaudio",
+            "alsa",
+            "portaudio"
+          ],
+          "entity_type": "generic"
+        }
+      ]
+    },
+    {
+      "method_name": "_handle_list_audio_providers",
+      "intent_suffix": "list",
+      "boost": 1.1,
+      "room_context": "none",
+      "parameters": []
+    }
+  ],
+  "global_parameters": [
+    {
+      "name": "language",
+      "type": "choice",
+      "required": false,
+      "choices": [
+        "ru",
+        "en"
+      ],
+      "entity_type": "generic"
+    }
+  ]
+}

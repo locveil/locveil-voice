@@ -25,6 +25,30 @@ class ParameterType(str, Enum):
     ENTITY = "entity"
 
 
+class EntityType(str, Enum):
+    """QUAL-29 (Q6): what kind of entity a parameter resolves to — selects the resolver and drives
+    declarative device/room resolution (consumed by the QUAL-11 typed accessor). Language-neutral."""
+    DEVICE = "device"
+    LOCATION = "location"
+    ROOM = "room"
+    PERSON = "person"
+    GENERIC = "generic"
+
+
+class RoomContext(str, Enum):
+    """QUAL-29 (Q6): per-method room-context enforcement policy. Language-neutral.
+
+    - ``required``    — always resolve room/device or fail-loud.
+    - ``none``        — never resolve (room-independent command).
+    - ``conditional`` — resolve iff the request carries room context (ESP32/WS registration or an
+      explicit REST ``room_alias``); otherwise skip with no failure. Only hard-fails when room context
+      IS present but the device can't be matched.
+    """
+    REQUIRED = "required"
+    NONE = "none"
+    CONDITIONAL = "conditional"
+
+
 class ParameterSpec(BaseModel):
     """Specification for a parameter that can be extracted from user input"""
     name: str = Field(..., description="Parameter name")
@@ -34,10 +58,18 @@ class ParameterSpec(BaseModel):
     description: str = Field("", description="Human-readable description")
     
     # Type-specific configurations
-    choices: Optional[List[str]] = Field(None, description="Valid choices for CHOICE type")
+    choices: Optional[List[str]] = Field(None, description="Canonical (language-neutral) choices for CHOICE type")
+    # QUAL-29 (Q6): per-language spoken surface forms mapping each canonical choice to the words a user may say
+    # in a given language. Assembled at load time as {canonical: [surfaces across all languages]}; the NLU matches
+    # surfaces and normalizes back to the canonical token (centralizes the RU→EN maps handlers hand-rolled before).
+    choice_surfaces: Optional[Dict[str, List[str]]] = Field(None, description="{canonical: [spoken surface forms]}")
     min_value: Optional[Union[int, float]] = Field(None, description="Minimum value for numeric types")
     max_value: Optional[Union[int, float]] = Field(None, description="Maximum value for numeric types")
     pattern: Optional[str] = Field(None, description="Regex pattern for STRING type")
+
+    # QUAL-29 (Q6): language-neutral entity classification — selects the resolver for ENTITY params
+    # (and informs device/room resolution). Defaults to GENERIC; refined per handler.
+    entity_type: EntityType = Field(EntityType.GENERIC, description="Entity classification (device/location/room/person/generic)")
     
     # Extraction configuration
     extraction_patterns: List[Dict[str, Any]] = Field(default_factory=list, description="spaCy extraction patterns")
@@ -85,7 +117,10 @@ class MethodDonation(BaseModel):
     
     # Configuration
     boost: float = Field(1.0, ge=0.0, le=10.0, description="Pattern strength multiplier")
-    
+
+    # QUAL-29 (Q6): language-neutral room-context enforcement policy for this method.
+    room_context: RoomContext = Field(RoomContext.NONE, description="Room-context policy (required/none/conditional)")
+
     @validator('method_name')
     def method_name_valid_identifier(cls, v):
         if not v.isidentifier():
@@ -120,7 +155,8 @@ class HandlerDonation(BaseModel):
     
     @validator('schema_version')
     def supported_schema_version(cls, v):
-        supported_versions = ['1.0']
+        # QUAL-29: v1.1 is the split format (language-neutral contract + per-language phrasing).
+        supported_versions = ['1.1']
         if v not in supported_versions:
             raise ValueError(f'Unsupported schema version: {v}. Supported: {supported_versions}')
         return v

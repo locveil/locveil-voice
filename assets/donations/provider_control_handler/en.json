@@ -1,14 +1,9 @@
 {
-  "$schema": "../v1.0.json",
-  "schema_version": "1.0",
-  "donation_version": "1.0",
+  "$schema": "../../donation_language_v1.1.json",
+  "schema_version": "1.1",
   "handler_domain": "provider_control",
+  "language": "en",
   "description": "Provider switching and management across all components",
-  "intent_name_patterns": [
-    "provider.switch",
-    "provider.list",
-    "provider.control"
-  ],
   "action_patterns": [
     "switch",
     "change",
@@ -16,23 +11,31 @@
     "show",
     "control"
   ],
-  "domain_patterns": [
-    "provider",
-    "control",
-    "management"
-  ],
-  "global_parameters": [
-    {
-      "name": "language",
-      "type": "choice",
-      "required": false,
-      "default_value": "ru",
-      "choices": [
-        "ru",
-        "en"
-      ],
-      "description": "Response language preference"
-    }
+  "negative_patterns": [
+    [
+      {
+        "LEMMA": {
+          "IN": []
+        }
+      },
+      {
+        "LEMMA": {
+          "IN": []
+        }
+      }
+    ],
+    [
+      {
+        "TEXT": {
+          "REGEX": "no|not"
+        }
+      },
+      {
+        "TEXT": {
+          "REGEX": "switch|change|provider"
+        }
+      }
+    ]
   ],
   "method_donations": [
     {
@@ -51,110 +54,6 @@
         "llm",
         "asr",
         "tts"
-      ],
-      "parameters": [
-        {
-          "name": "component",
-          "type": "choice",
-          "required": false,
-          "choices": [
-            "audio",
-            "llm",
-            "asr",
-            "tts"
-          ],
-          "description": "Component type to switch provider for",
-          "extraction_patterns": [
-            {
-              "pattern": [
-                {
-                  "LOWER": {
-                    "IN": [
-                      "audio"
-                    ]
-                  }
-                }
-              ],
-              "label": "COMPONENT"
-            },
-            {
-              "pattern": [
-                {
-                  "LOWER": {
-                    "IN": [
-                      "llm"
-                    ]
-                  }
-                }
-              ],
-              "label": "COMPONENT"
-            },
-            {
-              "pattern": [
-                {
-                  "LOWER": {
-                    "IN": [
-                      "asr"
-                    ]
-                  }
-                }
-              ],
-              "label": "COMPONENT"
-            },
-            {
-              "pattern": [
-                {
-                  "LOWER": {
-                    "IN": [
-                      "tts"
-                    ]
-                  }
-                }
-              ],
-              "label": "COMPONENT"
-            }
-          ],
-          "aliases": []
-        },
-        {
-          "name": "provider",
-          "type": "string",
-          "required": false,
-          "description": "Provider name to switch to",
-          "extraction_patterns": [
-            {
-              "pattern": [
-                {
-                  "TEXT": "on"
-                },
-                {
-                  "IS_ALPHA": true
-                }
-              ],
-              "label": "PROVIDER"
-            },
-            {
-              "pattern": [
-                {
-                  "TEXT": {
-                    "IN": [
-                      "switch",
-                      "change"
-                    ]
-                  }
-                },
-                {
-                  "TEXT": "to"
-                },
-                {
-                  "IS_ALPHA": true
-                }
-              ],
-              "label": "PROVIDER"
-            }
-          ],
-          "aliases": []
-        }
       ],
       "token_patterns": [
         [
@@ -309,33 +208,10 @@
           }
         }
       ],
-      "boost": 1.3
-    },
-    {
-      "method_name": "_handle_list_providers",
-      "intent_suffix": "list",
-      "description": "List providers for specific component or all components",
-      "phrases": [
-        "show providers",
-        "tts providers",
-        "available providers",
-        "component providers",
-        "all providers"
-      ],
-      "lemmas": [],
       "parameters": [
         {
           "name": "component",
-          "type": "choice",
-          "required": false,
-          "choices": [
-            "audio",
-            "llm",
-            "asr",
-            "tts",
-            "all"
-          ],
-          "description": "Component to list providers for (optional - lists all if not specified)",
+          "description": "Component type to switch provider for",
           "extraction_patterns": [
             {
               "pattern": [
@@ -384,23 +260,61 @@
                 }
               ],
               "label": "COMPONENT"
+            }
+          ],
+          "aliases": []
+        },
+        {
+          "name": "provider",
+          "description": "Provider name to switch to",
+          "extraction_patterns": [
+            {
+              "pattern": [
+                {
+                  "TEXT": "on"
+                },
+                {
+                  "IS_ALPHA": true
+                }
+              ],
+              "label": "PROVIDER"
             },
             {
               "pattern": [
                 {
-                  "LOWER": {
+                  "TEXT": {
                     "IN": [
-                      "all"
+                      "switch",
+                      "change"
                     ]
                   }
+                },
+                {
+                  "TEXT": "to"
+                },
+                {
+                  "IS_ALPHA": true
                 }
               ],
-              "label": "COMPONENT"
+              "label": "PROVIDER"
             }
           ],
           "aliases": []
         }
+      ]
+    },
+    {
+      "method_name": "_handle_list_providers",
+      "intent_suffix": "list",
+      "description": "List providers for specific component or all components",
+      "phrases": [
+        "show providers",
+        "tts providers",
+        "available providers",
+        "component providers",
+        "all providers"
       ],
+      "lemmas": [],
       "token_patterns": [
         [
           {
@@ -527,34 +441,82 @@
           }
         }
       ],
-      "boost": 1.2
+      "parameters": [
+        {
+          "name": "component",
+          "description": "Component to list providers for (optional - lists all if not specified)",
+          "extraction_patterns": [
+            {
+              "pattern": [
+                {
+                  "LOWER": {
+                    "IN": [
+                      "audio"
+                    ]
+                  }
+                }
+              ],
+              "label": "COMPONENT"
+            },
+            {
+              "pattern": [
+                {
+                  "LOWER": {
+                    "IN": [
+                      "llm"
+                    ]
+                  }
+                }
+              ],
+              "label": "COMPONENT"
+            },
+            {
+              "pattern": [
+                {
+                  "LOWER": {
+                    "IN": [
+                      "asr"
+                    ]
+                  }
+                }
+              ],
+              "label": "COMPONENT"
+            },
+            {
+              "pattern": [
+                {
+                  "LOWER": {
+                    "IN": [
+                      "tts"
+                    ]
+                  }
+                }
+              ],
+              "label": "COMPONENT"
+            },
+            {
+              "pattern": [
+                {
+                  "LOWER": {
+                    "IN": [
+                      "all"
+                    ]
+                  }
+                }
+              ],
+              "label": "COMPONENT"
+            }
+          ],
+          "aliases": []
+        }
+      ]
     }
   ],
-  "negative_patterns": [
-    [
-      {
-        "LEMMA": {
-          "IN": []
-        }
-      },
-      {
-        "LEMMA": {
-          "IN": []
-        }
-      }
-    ],
-    [
-      {
-        "TEXT": {
-          "REGEX": "no|not"
-        }
-      },
-      {
-        "TEXT": {
-          "REGEX": "switch|change|provider"
-        }
-      }
-    ]
-  ],
-  "language": "en"
+  "global_parameters": [
+    {
+      "name": "language",
+      "description": "Response language preference",
+      "default_value": "ru"
+    }
+  ]
 }

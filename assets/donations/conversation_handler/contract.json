@@ -1,0 +1,87 @@
+{
+  "$schema": "../../donation_contract_v1.1.json",
+  "schema_version": "1.1",
+  "donation_version": "1.1.0",
+  "handler_domain": "conversation",
+  "intent_name_patterns": [
+    "chat.start",
+    "chat.continue",
+    "chat.reference",
+    "chat.end"
+  ],
+  "domain_patterns": [
+    "conversation"
+  ],
+  "fallback_conditions": [
+    {
+      "domain": "general",
+      "confidence_threshold": 0.8
+    }
+  ],
+  "method_donations": [
+    {
+      "method_name": "_handle_start_conversation",
+      "intent_suffix": "start",
+      "boost": 1.1,
+      "room_context": "none",
+      "parameters": [
+        {
+          "name": "topic",
+          "type": "string",
+          "required": false,
+          "entity_type": "generic"
+        }
+      ]
+    },
+    {
+      "method_name": "_handle_end_conversation",
+      "intent_suffix": "end",
+      "boost": 1.0,
+      "room_context": "none",
+      "parameters": []
+    },
+    {
+      "method_name": "_handle_clear_conversation",
+      "intent_suffix": "clear",
+      "boost": 1.0,
+      "room_context": "none",
+      "parameters": []
+    },
+    {
+      "method_name": "_handle_reference_query",
+      "intent_suffix": "reference",
+      "boost": 1.2,
+      "room_context": "none",
+      "parameters": [
+        {
+          "name": "query_topic",
+          "type": "string",
+          "required": true,
+          "entity_type": "generic"
+        }
+      ]
+    },
+    {
+      "method_name": "_handle_continue_conversation",
+      "intent_suffix": "general",
+      "boost": 0.8,
+      "room_context": "none",
+      "parameters": [
+        {
+          "name": "context_reference",
+          "type": "string",
+          "required": false,
+          "entity_type": "generic"
+        }
+      ]
+    }
+  ],
+  "global_parameters": [
+    {
+      "name": "session_id",
+      "type": "string",
+      "required": true,
+      "entity_type": "generic"
+    }
+  ]
+}

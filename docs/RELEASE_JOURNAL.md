@@ -159,6 +159,22 @@ newest entries near the top of each dated section.
   **Gate 1: ARCH-1 ✓, ARCH-2 ✓, ARCH-3 ✓ — ARCH-4 (formalize ports) → ARCH-5 (import-linter) next.**
 
 ### 2026-06-02
+- **QUAL-29 backend Stages A–C — model + migration + loader (v1.0→v1.1 split). Smoke green.** (1) **Model**
+  (`donations.py`): added `EntityType`/`RoomContext` enums, `ParameterSpec.entity_type` (default generic) +
+  `choice_surfaces` ({canonical: [surfaces]}), `MethodDonation.room_context` (default none); `choices` redefined as the
+  **canonical** (language-neutral) token list; schema_version → `1.1`. (2) **Migration** (`scripts/migrate_donations_v11.py`):
+  split all 14 handlers into `<handler>/contract.json` (neutral core) + `<handler>/{en,ru}.json` (phrasing); encodes the
+  5 CHOICE cases + auto-derives the 6 clean-parallel surface maps; **fixed 2 latent data bugs** — ru `handler_domain`
+  localised to Cyrillic (`таймер`/`случайно` → canonical ASCII) and the divergent CHOICE sets per the recorded
+  decisions. (3) **Loader** (`intent_asset_loader.py`): `_load_language_separated_donations` now loads contract+lang as
+  raw JSON and `_assemble_v11_donation` merges them — neutral core from the contract, phrasing **accumulated across
+  languages** (phrases/lemmas/token_patterns/extraction_patterns/aliases/examples — **fixes the old
+  first-language-wins drop** where ru patterns were silently discarded), `choice_surfaces` assembled as
+  {canonical: [canonical]+all-language-surfaces} so the canonical token is always self-matchable. `convert_to_keyword_
+  donations` threads `entity_type`/`choice_surfaces` to the NLU. Verified: all 14 handlers assemble valid donations;
+  greetings `time_of_day` → `{morning:[morning,утро],…}`; translation `target_language` → free entity. **Remaining
+  (this task):** extraction surface→canonical normalization (hybrid + spacy), validator shrink, v1.1 JSON schemas,
+  config-ui (types/AJV/editors), + follow-up tasks for the dead-param handler wiring (datetime.format, system.info_type).
 - **QUAL-29 STARTED — donation format split; 4 design decisions locked with user (Invariant #5/#8 reconciliation).**
   Verified the task is valid as written: the language-neutral `ParameterSpec` core (`name`/`type`/`required`/`choices`/
   `min_value`/`max_value`) IS physically duplicated across `<handler>/en.json` + `ru.json` (28 files, 14 handlers), and

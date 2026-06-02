@@ -1,24 +1,41 @@
 {
-  "$schema": "../v1.0.json",
-  "schema_version": "1.0",
-  "donation_version": "1.0",
+  "$schema": "../../donation_language_v1.1.json",
+  "schema_version": "1.1",
   "handler_domain": "speech_recognition",
+  "language": "ru",
   "description": "Конфигурация ASR и управление распознаванием речи",
-  "intent_name_patterns": [],
   "action_patterns": [],
-  "domain_patterns": [],
-  "global_parameters": [
-    {
-      "name": "language",
-      "type": "choice",
-      "required": false,
-      "default_value": "ru",
-      "choices": [
-        "русский",
-        "английский"
-      ],
-      "description": "Предпочтение языка ответа"
-    }
+  "negative_patterns": [
+    [
+      {
+        "LEMMA": {
+          "IN": [
+            "нет",
+            "не"
+          ]
+        }
+      },
+      {
+        "LEMMA": {
+          "IN": [
+            "распознавание",
+            "микрофон"
+          ]
+        }
+      }
+    ],
+    [
+      {
+        "TEXT": {
+          "REGEX": ".*"
+        }
+      },
+      {
+        "TEXT": {
+          "REGEX": ".*"
+        }
+      }
+    ]
   ],
   "method_donations": [
     {
@@ -41,7 +58,6 @@
         "провайдер",
         "информация"
       ],
-      "parameters": [],
       "token_patterns": [
         [
           {
@@ -136,8 +152,7 @@
           "text": "показать asr провайдеры",
           "parameters": {}
         }
-      ],
-      "boost": 1.3
+      ]
     },
     {
       "method_name": "_handle_switch_asr_provider",
@@ -158,60 +173,6 @@
         "использовать",
         "распознавание",
         "провайдер"
-      ],
-      "parameters": [
-        {
-          "name": "provider",
-          "type": "choice",
-          "required": true,
-          "choices": [
-            "виспер",
-            "воск",
-            "гугл",
-            "облако"
-          ],
-          "description": "ASR провайдер для переключения",
-          "extraction_patterns": [
-            {
-              "pattern": [
-                {
-                  "LEMMA": "переключаться"
-                },
-                {
-                  "TEXT": "на"
-                },
-                {
-                  "LOWER": {
-                    "IN": [
-                      "виспер",
-                      "воск",
-                      "гугл"
-                    ]
-                  }
-                }
-              ],
-              "label": "PROVIDER"
-            },
-            {
-              "pattern": [
-                {
-                  "TEXT": {
-                    "IN": []
-                  }
-                },
-                {
-                  "TEXT": "to"
-                }
-              ],
-              "label": "PROVIDER"
-            }
-          ],
-          "aliases": [
-            "система",
-            "движок",
-            "сервис"
-          ]
-        }
       ],
       "token_patterns": [
         [
@@ -334,7 +295,66 @@
           }
         }
       ],
-      "boost": 1.2
+      "parameters": [
+        {
+          "name": "provider",
+          "description": "ASR провайдер для переключения",
+          "extraction_patterns": [
+            {
+              "pattern": [
+                {
+                  "LEMMA": "переключаться"
+                },
+                {
+                  "TEXT": "на"
+                },
+                {
+                  "LOWER": {
+                    "IN": [
+                      "виспер",
+                      "воск",
+                      "гугл"
+                    ]
+                  }
+                }
+              ],
+              "label": "PROVIDER"
+            },
+            {
+              "pattern": [
+                {
+                  "TEXT": {
+                    "IN": []
+                  }
+                },
+                {
+                  "TEXT": "to"
+                }
+              ],
+              "label": "PROVIDER"
+            }
+          ],
+          "aliases": [
+            "система",
+            "движок",
+            "сервис"
+          ],
+          "choice_surfaces": {
+            "whisper": [
+              "виспер"
+            ],
+            "vosk": [
+              "воск"
+            ],
+            "google_cloud": [
+              "гугл"
+            ],
+            "azure": [
+              "облако"
+            ]
+          }
+        }
+      ]
     },
     {
       "method_name": "_handle_switch_language",
@@ -354,58 +374,6 @@
         "язык",
         "распознавание",
         "использовать"
-      ],
-      "parameters": [
-        {
-          "name": "language",
-          "type": "choice",
-          "required": true,
-          "choices": [
-            "русский",
-            "английский",
-            "немецкий",
-            "французский"
-          ],
-          "description": "Язык для переключения ASR",
-          "extraction_patterns": [
-            {
-              "pattern": [
-                {
-                  "LEMMA": "язык"
-                },
-                {
-                  "TEXT": "на"
-                },
-                {
-                  "LOWER": {
-                    "IN": [
-                      "русский",
-                      "английский",
-                      "немецкий",
-                      "французский"
-                    ]
-                  }
-                }
-              ],
-              "label": "язык"
-            },
-            {
-              "pattern": [
-                {
-                  "TEXT": "язык"
-                },
-                {
-                  "TEXT": "to"
-                }
-              ],
-              "label": "язык"
-            }
-          ],
-          "aliases": [
-            "локаль",
-            "речь"
-          ]
-        }
       ],
       "token_patterns": [
         [
@@ -540,7 +508,67 @@
           }
         }
       ],
-      "boost": 1.1
+      "parameters": [
+        {
+          "name": "language",
+          "description": "Язык для переключения ASR",
+          "extraction_patterns": [
+            {
+              "pattern": [
+                {
+                  "LEMMA": "язык"
+                },
+                {
+                  "TEXT": "на"
+                },
+                {
+                  "LOWER": {
+                    "IN": [
+                      "русский",
+                      "английский",
+                      "немецкий",
+                      "французский"
+                    ]
+                  }
+                }
+              ],
+              "label": "язык"
+            },
+            {
+              "pattern": [
+                {
+                  "TEXT": "язык"
+                },
+                {
+                  "TEXT": "to"
+                }
+              ],
+              "label": "язык"
+            }
+          ],
+          "aliases": [
+            "локаль",
+            "речь"
+          ],
+          "choice_surfaces": {
+            "spanish": [
+              "испанский"
+            ],
+            "russian": [
+              "русский"
+            ],
+            "english": [
+              "английский"
+            ],
+            "german": [
+              "немецкий"
+            ],
+            "french": [
+              "французский"
+            ]
+          }
+        }
+      ]
     },
     {
       "method_name": "_handle_configure_quality",
@@ -561,42 +589,6 @@
         "распознавание",
         "точность",
         "настройка"
-      ],
-      "parameters": [
-        {
-          "name": "quality",
-          "type": "choice",
-          "required": false,
-          "default_value": "high",
-          "choices": [
-            "низкое",
-            "среднее",
-            "высокое",
-            "максимальное"
-          ],
-          "description": "Уровень качества для ASR",
-          "extraction_patterns": [
-            {
-              "pattern": [
-                {
-                  "LOWER": {
-                    "IN": [
-                      "низкое",
-                      "среднее",
-                      "высокое",
-                      "максимальное"
-                    ]
-                  }
-                }
-              ],
-              "label": "качество"
-            }
-          ],
-          "aliases": [
-            "уровень",
-            "степень"
-          ]
-        }
       ],
       "token_patterns": [
         [
@@ -693,7 +685,48 @@
           "parameters": {}
         }
       ],
-      "boost": 1.0
+      "parameters": [
+        {
+          "name": "quality",
+          "description": "Уровень качества для ASR",
+          "extraction_patterns": [
+            {
+              "pattern": [
+                {
+                  "LOWER": {
+                    "IN": [
+                      "низкое",
+                      "среднее",
+                      "высокое",
+                      "максимальное"
+                    ]
+                  }
+                }
+              ],
+              "label": "качество"
+            }
+          ],
+          "aliases": [
+            "уровень",
+            "степень"
+          ],
+          "default_value": "high",
+          "choice_surfaces": {
+            "low": [
+              "низкое"
+            ],
+            "medium": [
+              "среднее"
+            ],
+            "high": [
+              "высокое"
+            ],
+            "ultra": [
+              "максимальное"
+            ]
+          }
+        }
+      ]
     },
     {
       "method_name": "_handle_configure_microphone",
@@ -714,57 +747,6 @@
         "использовать",
         "выбирать",
         "настройка"
-      ],
-      "parameters": [
-        {
-          "name": "microphone",
-          "type": "string",
-          "required": false,
-          "default_value": "default",
-          "description": "Устройство микрофона для использования",
-          "extraction_patterns": [
-            {
-              "pattern": [
-                {
-                  "LEMMA": {
-                    "IN": [
-                      "настраивать",
-                      "использовать",
-                      "выбирать"
-                    ]
-                  }
-                },
-                {
-                  "LEMMA": "микрофон"
-                },
-                {
-                  "IS_ALPHA": true
-                }
-              ],
-              "label": "микрофон"
-            },
-            {
-              "pattern": [
-                {
-                  "TEXT": {
-                    "IN": []
-                  }
-                },
-                {
-                  "TEXT": "микрофон"
-                },
-                {
-                  "IS_ALPHA": true
-                }
-              ],
-              "label": "микрофон"
-            }
-          ],
-          "aliases": [
-            "устройство",
-            "девайс"
-          ]
-        }
       ],
       "token_patterns": [
         [
@@ -896,40 +878,79 @@
           }
         }
       ],
-      "boost": 0.9
+      "parameters": [
+        {
+          "name": "microphone",
+          "description": "Устройство микрофона для использования",
+          "extraction_patterns": [
+            {
+              "pattern": [
+                {
+                  "LEMMA": {
+                    "IN": [
+                      "настраивать",
+                      "использовать",
+                      "выбирать"
+                    ]
+                  }
+                },
+                {
+                  "LEMMA": "микрофон"
+                },
+                {
+                  "IS_ALPHA": true
+                }
+              ],
+              "label": "микрофон"
+            },
+            {
+              "pattern": [
+                {
+                  "TEXT": {
+                    "IN": []
+                  }
+                },
+                {
+                  "TEXT": "микрофон"
+                },
+                {
+                  "IS_ALPHA": true
+                }
+              ],
+              "label": "микрофон"
+            }
+          ],
+          "aliases": [
+            "устройство",
+            "девайс"
+          ],
+          "default_value": "default"
+        }
+      ]
     }
   ],
-  "negative_patterns": [
-    [
-      {
-        "LEMMA": {
-          "IN": [
-            "нет",
-            "не"
-          ]
-        }
-      },
-      {
-        "LEMMA": {
-          "IN": [
-            "распознавание",
-            "микрофон"
-          ]
-        }
+  "global_parameters": [
+    {
+      "name": "language",
+      "description": "Предпочтение языка ответа",
+      "default_value": "ru",
+      "choice_surfaces": {
+        "spanish": [
+          "испанский"
+        ],
+        "russian": [
+          "русский"
+        ],
+        "english": [
+          "английский"
+        ],
+        "german": [
+          "немецкий"
+        ],
+        "french": [
+          "французский"
+        ]
       }
-    ],
-    [
-      {
-        "TEXT": {
-          "REGEX": ".*"
-        }
-      },
-      {
-        "TEXT": {
-          "REGEX": ".*"
-        }
-      }
-    ]
-  ],
-  "language": "ru"
+    }
+  ]
 }

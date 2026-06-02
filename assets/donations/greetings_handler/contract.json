@@ -1,0 +1,69 @@
+{
+  "$schema": "../../donation_contract_v1.1.json",
+  "schema_version": "1.1",
+  "donation_version": "1.1.0",
+  "handler_domain": "greeting",
+  "intent_name_patterns": [
+    "greeting.hello",
+    "greeting.goodbye",
+    "greeting.welcome"
+  ],
+  "domain_patterns": [
+    "greetings"
+  ],
+  "method_donations": [
+    {
+      "method_name": "_handle_greeting",
+      "intent_suffix": "hello",
+      "boost": 1.3,
+      "room_context": "none",
+      "parameters": [
+        {
+          "name": "time_of_day",
+          "type": "choice",
+          "required": false,
+          "choices": [
+            "morning",
+            "afternoon",
+            "evening",
+            "night"
+          ],
+          "entity_type": "generic"
+        }
+      ]
+    },
+    {
+      "method_name": "_handle_farewell",
+      "intent_suffix": "goodbye",
+      "boost": 1.2,
+      "room_context": "none",
+      "parameters": [
+        {
+          "name": "return_time",
+          "type": "string",
+          "required": false,
+          "entity_type": "generic"
+        }
+      ]
+    },
+    {
+      "method_name": "_handle_welcome",
+      "intent_suffix": "welcome",
+      "boost": 1.1,
+      "room_context": "none",
+      "parameters": []
+    }
+  ],
+  "global_parameters": [
+    {
+      "name": "language",
+      "type": "choice",
+      "required": false,
+      "choices": [
+        "ru",
+        "en"
+      ],
+      "entity_type": "generic"
+    }
+  ]
+}

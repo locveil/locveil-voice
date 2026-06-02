@@ -1,24 +1,42 @@
 {
-  "$schema": "../v1.0.json",
-  "schema_version": "1.0",
-  "donation_version": "1.0",
+  "$schema": "../../donation_language_v1.1.json",
+  "schema_version": "1.1",
   "handler_domain": "service",
+  "language": "ru",
   "description": "Статус системных сервисов, статистика и мониторинг здоровья",
-  "intent_name_patterns": [],
   "action_patterns": [],
-  "domain_patterns": [],
-  "global_parameters": [
-    {
-      "name": "language",
-      "type": "choice",
-      "required": false,
-      "default_value": "ru",
-      "choices": [
-        "русский",
-        "английский"
-      ],
-      "description": "Предпочтение языка ответа"
-    }
+  "negative_patterns": [
+    [
+      {
+        "LEMMA": {
+          "IN": [
+            "нет",
+            "не"
+          ]
+        }
+      },
+      {
+        "LEMMA": {
+          "IN": [
+            "статус",
+            "сервис",
+            "здоровье"
+          ]
+        }
+      }
+    ],
+    [
+      {
+        "TEXT": {
+          "REGEX": ".*"
+        }
+      },
+      {
+        "TEXT": {
+          "REGEX": ".*"
+        }
+      }
+    ]
   ],
   "method_donations": [
     {
@@ -38,42 +56,6 @@
         "сервис",
         "работать",
         "проверить"
-      ],
-      "parameters": [
-        {
-          "name": "component",
-          "type": "string",
-          "required": false,
-          "description": "Конкретный компонент сервиса для проверки",
-          "extraction_patterns": [
-            {
-              "pattern": [
-                {
-                  "LEMMA": "статус"
-                },
-                {
-                  "IS_ALPHA": true
-                }
-              ],
-              "label": "COMPONENT"
-            },
-            {
-              "pattern": [
-                {
-                  "TEXT": "статус"
-                },
-                {
-                  "IS_ALPHA": true
-                }
-              ],
-              "label": "COMPONENT"
-            }
-          ],
-          "aliases": [
-            "модуль",
-            "компонент"
-          ]
-        }
       ],
       "token_patterns": [
         [
@@ -164,7 +146,40 @@
           }
         }
       ],
-      "boost": 1.4
+      "parameters": [
+        {
+          "name": "component",
+          "description": "Конкретный компонент сервиса для проверки",
+          "extraction_patterns": [
+            {
+              "pattern": [
+                {
+                  "LEMMA": "статус"
+                },
+                {
+                  "IS_ALPHA": true
+                }
+              ],
+              "label": "COMPONENT"
+            },
+            {
+              "pattern": [
+                {
+                  "TEXT": "статус"
+                },
+                {
+                  "IS_ALPHA": true
+                }
+              ],
+              "label": "COMPONENT"
+            }
+          ],
+          "aliases": [
+            "модуль",
+            "компонент"
+          ]
+        }
+      ]
     },
     {
       "method_name": "_handle_service_stats",
@@ -184,46 +199,6 @@
         "данные",
         "сервис",
         "система"
-      ],
-      "parameters": [
-        {
-          "name": "metric_type",
-          "type": "choice",
-          "required": false,
-          "choices": [
-            "performance",
-            "memory",
-            "cpu",
-            "network",
-            "all"
-          ],
-          "description": "Тип статистики для отображения",
-          "extraction_patterns": [
-            {
-              "pattern": [
-                {
-                  "LOWER": {
-                    "IN": [
-                      "производительность",
-                      "память",
-                      "процессор",
-                      "сеть"
-                    ]
-                  }
-                }
-              ],
-              "label": "METRIC_TYPE"
-            },
-            {
-              "pattern": [],
-              "label": "METRIC_TYPE"
-            }
-          ],
-          "aliases": [
-            "тип",
-            "вид"
-          ]
-        }
       ],
       "token_patterns": [
         [
@@ -321,7 +296,54 @@
           }
         }
       ],
-      "boost": 1.3
+      "parameters": [
+        {
+          "name": "metric_type",
+          "description": "Тип статистики для отображения",
+          "extraction_patterns": [
+            {
+              "pattern": [
+                {
+                  "LOWER": {
+                    "IN": [
+                      "производительность",
+                      "память",
+                      "процессор",
+                      "сеть"
+                    ]
+                  }
+                }
+              ],
+              "label": "METRIC_TYPE"
+            },
+            {
+              "pattern": [],
+              "label": "METRIC_TYPE"
+            }
+          ],
+          "aliases": [
+            "тип",
+            "вид"
+          ],
+          "choice_surfaces": {
+            "performance": [
+              "performance"
+            ],
+            "memory": [
+              "memory"
+            ],
+            "cpu": [
+              "cpu"
+            ],
+            "network": [
+              "network"
+            ],
+            "all": [
+              "all"
+            ]
+          }
+        }
+      ]
     },
     {
       "method_name": "_handle_service_health",
@@ -342,39 +364,6 @@
         "работать",
         "сервис",
         "система"
-      ],
-      "parameters": [
-        {
-          "name": "detailed",
-          "type": "boolean",
-          "required": false,
-          "default_value": false,
-          "description": "Показать подробную информацию о здоровье",
-          "extraction_patterns": [
-            {
-              "pattern": [
-                {
-                  "LOWER": {
-                    "IN": [
-                      "подробно",
-                      "детально",
-                      "полный"
-                    ]
-                  }
-                }
-              ],
-              "label": "DETAILED"
-            },
-            {
-              "pattern": [],
-              "label": "DETAILED"
-            }
-          ],
-          "aliases": [
-            "подробный",
-            "полный"
-          ]
-        }
       ],
       "token_patterns": [
         [
@@ -488,41 +477,52 @@
           "parameters": {}
         }
       ],
-      "boost": 1.2
+      "parameters": [
+        {
+          "name": "detailed",
+          "description": "Показать подробную информацию о здоровье",
+          "extraction_patterns": [
+            {
+              "pattern": [
+                {
+                  "LOWER": {
+                    "IN": [
+                      "подробно",
+                      "детально",
+                      "полный"
+                    ]
+                  }
+                }
+              ],
+              "label": "DETAILED"
+            },
+            {
+              "pattern": [],
+              "label": "DETAILED"
+            }
+          ],
+          "aliases": [
+            "подробный",
+            "полный"
+          ],
+          "default_value": false
+        }
+      ]
     }
   ],
-  "negative_patterns": [
-    [
-      {
-        "LEMMA": {
-          "IN": [
-            "нет",
-            "не"
-          ]
-        }
-      },
-      {
-        "LEMMA": {
-          "IN": [
-            "статус",
-            "сервис",
-            "здоровье"
-          ]
-        }
+  "global_parameters": [
+    {
+      "name": "language",
+      "description": "Предпочтение языка ответа",
+      "default_value": "ru",
+      "choice_surfaces": {
+        "ru": [
+          "русский"
+        ],
+        "en": [
+          "английский"
+        ]
       }
-    ],
-    [
-      {
-        "TEXT": {
-          "REGEX": ".*"
-        }
-      },
-      {
-        "TEXT": {
-          "REGEX": ".*"
-        }
-      }
-    ]
-  ],
-  "language": "ru"
+    }
+  ]
 }

@@ -1,26 +1,16 @@
 {
-  "$schema": "../v1.0.json",
-  "schema_version": "1.0",
-  "donation_version": "1.0",
+  "$schema": "../../donation_language_v1.1.json",
+  "schema_version": "1.1",
   "handler_domain": "timer",
+  "language": "en",
   "description": "Timer functionality with duration and message support",
-  "global_parameters": [
-    {
-      "name": "retain",
-      "type": "boolean",
-      "required": false,
-      "default_value": false,
-      "description": "Whether to retain state across sessions"
-    }
-  ],
-  "intent_name_patterns": [
-    "timer.set",
-    "timer.cancel",
-    "timer.stop",
-    "timer.pause",
-    "timer.resume",
-    "timer.list",
-    "timer.status"
+  "stop_command_patterns": [
+    "stop timer",
+    "cancel timer",
+    "halt timer",
+    "remove timer",
+    "stop alarm",
+    "cancel alarm"
   ],
   "action_patterns": [
     "set",
@@ -34,15 +24,29 @@
     "pause",
     "resume"
   ],
-  "stop_command_patterns": [
-    "stop timer",
-    "cancel timer",
-    "halt timer",
-    "remove timer",
-    "stop alarm",
-    "cancel alarm"
+  "additional_recognition_patterns": [],
+  "negative_patterns": [
+    [
+      {
+        "LEMMA": {
+          "IN": []
+        }
+      },
+      {
+        "LEMMA": "timer"
+      }
+    ],
+    [
+      {
+        "TEXT": {
+          "REGEX": "no|not|without"
+        }
+      },
+      {
+        "TEXT": "timer"
+      }
+    ]
   ],
-  "action_domain_priority": 70,
   "method_donations": [
     {
       "method_name": "_handle_set_timer",
@@ -56,167 +60,6 @@
         "remind me in"
       ],
       "lemmas": [],
-      "parameters": [
-        {
-          "name": "duration",
-          "type": "integer",
-          "required": true,
-          "description": "Timer duration number",
-          "min_value": 1,
-          "max_value": 86400,
-          "extraction_patterns": [
-            {
-              "pattern": [
-                {
-                  "LIKE_NUM": true
-                }
-              ],
-              "label": "DURATION_VALUE"
-            },
-            {
-              "pattern": [
-                {
-                  "TEXT": {
-                    "REGEX": "^\\d+$"
-                  }
-                }
-              ],
-              "label": "DURATION_VALUE"
-            },
-            {
-              "pattern": [
-                {
-                  "TEXT": {
-                    "REGEX": ".*"
-                  }
-                }
-              ],
-              "label": "DURATION_SECONDS"
-            },
-            {
-              "pattern": [
-                {
-                  "TEXT": {
-                    "REGEX": ".*"
-                  }
-                }
-              ],
-              "label": "DURATION_MINUTES"
-            },
-            {
-              "pattern": [
-                {
-                  "TEXT": {
-                    "REGEX": ".*"
-                  }
-                }
-              ],
-              "label": "DURATION_HOURS"
-            },
-            {
-              "pattern": [
-                {
-                  "TEXT": {
-                    "REGEX": ".*"
-                  }
-                }
-              ],
-              "label": "DURATION_WITH_PREFIX"
-            },
-            {
-              "pattern": [
-                {
-                  "TEXT": {
-                    "REGEX": ".*"
-                  }
-                }
-              ],
-              "label": "DURATION_WITH_THROUGH"
-            }
-          ],
-          "aliases": []
-        },
-        {
-          "name": "unit",
-          "type": "choice",
-          "required": false,
-          "default_value": "minutes",
-          "description": "Time unit for duration",
-          "choices": [
-            "seconds",
-            "minutes",
-            "hours"
-          ],
-          "extraction_patterns": [
-            {
-              "pattern": [],
-              "label": "TIME_UNIT"
-            },
-            {
-              "pattern": [
-                {
-                  "LOWER": {
-                    "IN": [
-                      "seconds",
-                      "minutes",
-                      "hours"
-                    ]
-                  }
-                }
-              ],
-              "label": "TIME_UNIT"
-            }
-          ],
-          "aliases": []
-        },
-        {
-          "name": "message",
-          "type": "string",
-          "required": false,
-          "description": "Custom message when timer completes",
-          "extraction_patterns": [
-            {
-              "pattern": [
-                {
-                  "IS_SENT_START": false
-                }
-              ],
-              "label": "TIMER_MESSAGE"
-            },
-            {
-              "pattern": [
-                {
-                  "TEXT": {
-                    "REGEX": ".*"
-                  }
-                }
-              ],
-              "label": "TIMER_MESSAGE_COLON"
-            },
-            {
-              "pattern": [
-                {
-                  "TEXT": {
-                    "REGEX": ".*"
-                  }
-                }
-              ],
-              "label": "TIMER_MESSAGE_REMIND"
-            },
-            {
-              "pattern": [
-                {
-                  "TEXT": {
-                    "REGEX": ".*"
-                  }
-                }
-              ],
-              "label": "TIMER_MESSAGE_SAY"
-            }
-          ],
-          "aliases": []
-        }
-      ],
       "token_patterns": [
         [
           {
@@ -318,7 +161,154 @@
           }
         }
       ],
-      "boost": 1.2
+      "parameters": [
+        {
+          "name": "duration",
+          "description": "Timer duration number",
+          "extraction_patterns": [
+            {
+              "pattern": [
+                {
+                  "LIKE_NUM": true
+                }
+              ],
+              "label": "DURATION_VALUE"
+            },
+            {
+              "pattern": [
+                {
+                  "TEXT": {
+                    "REGEX": "^\\d+$"
+                  }
+                }
+              ],
+              "label": "DURATION_VALUE"
+            },
+            {
+              "pattern": [
+                {
+                  "TEXT": {
+                    "REGEX": ".*"
+                  }
+                }
+              ],
+              "label": "DURATION_SECONDS"
+            },
+            {
+              "pattern": [
+                {
+                  "TEXT": {
+                    "REGEX": ".*"
+                  }
+                }
+              ],
+              "label": "DURATION_MINUTES"
+            },
+            {
+              "pattern": [
+                {
+                  "TEXT": {
+                    "REGEX": ".*"
+                  }
+                }
+              ],
+              "label": "DURATION_HOURS"
+            },
+            {
+              "pattern": [
+                {
+                  "TEXT": {
+                    "REGEX": ".*"
+                  }
+                }
+              ],
+              "label": "DURATION_WITH_PREFIX"
+            },
+            {
+              "pattern": [
+                {
+                  "TEXT": {
+                    "REGEX": ".*"
+                  }
+                }
+              ],
+              "label": "DURATION_WITH_THROUGH"
+            }
+          ],
+          "aliases": []
+        },
+        {
+          "name": "unit",
+          "description": "Time unit for duration",
+          "extraction_patterns": [
+            {
+              "pattern": [],
+              "label": "TIME_UNIT"
+            },
+            {
+              "pattern": [
+                {
+                  "LOWER": {
+                    "IN": [
+                      "seconds",
+                      "minutes",
+                      "hours"
+                    ]
+                  }
+                }
+              ],
+              "label": "TIME_UNIT"
+            }
+          ],
+          "aliases": [],
+          "default_value": "minutes"
+        },
+        {
+          "name": "message",
+          "description": "Custom message when timer completes",
+          "extraction_patterns": [
+            {
+              "pattern": [
+                {
+                  "IS_SENT_START": false
+                }
+              ],
+              "label": "TIMER_MESSAGE"
+            },
+            {
+              "pattern": [
+                {
+                  "TEXT": {
+                    "REGEX": ".*"
+                  }
+                }
+              ],
+              "label": "TIMER_MESSAGE_COLON"
+            },
+            {
+              "pattern": [
+                {
+                  "TEXT": {
+                    "REGEX": ".*"
+                  }
+                }
+              ],
+              "label": "TIMER_MESSAGE_REMIND"
+            },
+            {
+              "pattern": [
+                {
+                  "TEXT": {
+                    "REGEX": ".*"
+                  }
+                }
+              ],
+              "label": "TIMER_MESSAGE_SAY"
+            }
+          ],
+          "aliases": []
+        }
+      ]
     },
     {
       "method_name": "_handle_cancel_timer",
@@ -331,29 +321,6 @@
         "delete timer"
       ],
       "lemmas": [],
-      "parameters": [
-        {
-          "name": "timer_id",
-          "type": "string",
-          "required": false,
-          "description": "Specific timer ID to cancel",
-          "extraction_patterns": [
-            {
-              "pattern": [
-                {
-                  "TEXT": {
-                    "REGEX": "\\d+"
-                  }
-                }
-              ],
-              "label": "TIMER_ID"
-            }
-          ],
-          "aliases": [
-            "id"
-          ]
-        }
-      ],
       "token_patterns": [
         [
           {
@@ -372,7 +339,27 @@
           "parameters": {}
         }
       ],
-      "boost": 1.1
+      "parameters": [
+        {
+          "name": "timer_id",
+          "description": "Specific timer ID to cancel",
+          "extraction_patterns": [
+            {
+              "pattern": [
+                {
+                  "TEXT": {
+                    "REGEX": "\\d+"
+                  }
+                }
+              ],
+              "label": "TIMER_ID"
+            }
+          ],
+          "aliases": [
+            "id"
+          ]
+        }
+      ]
     },
     {
       "method_name": "_handle_stop_timer",
@@ -385,7 +372,6 @@
         "stop"
       ],
       "lemmas": [],
-      "parameters": [],
       "token_patterns": [
         [
           {
@@ -408,8 +394,7 @@
           "text": "stop timer",
           "parameters": {}
         }
-      ],
-      "boost": 1.2
+      ]
     },
     {
       "method_name": "_handle_pause_timer",
@@ -422,7 +407,6 @@
         "pause"
       ],
       "lemmas": [],
-      "parameters": [],
       "token_patterns": [
         [
           {
@@ -445,8 +429,7 @@
           "text": "pause timer",
           "parameters": {}
         }
-      ],
-      "boost": 1.1
+      ]
     },
     {
       "method_name": "_handle_resume_timer",
@@ -459,7 +442,6 @@
         "resume"
       ],
       "lemmas": [],
-      "parameters": [],
       "token_patterns": [
         [
           {
@@ -484,8 +466,7 @@
           "text": "resume timer",
           "parameters": {}
         }
-      ],
-      "boost": 1.1
+      ]
     },
     {
       "method_name": "_handle_list_timers",
@@ -498,7 +479,6 @@
         "active timers"
       ],
       "lemmas": [],
-      "parameters": [],
       "token_patterns": [
         [
           {
@@ -516,8 +496,7 @@
           "text": "list timers",
           "parameters": {}
         }
-      ],
-      "boost": 1.0
+      ]
     },
     {
       "method_name": "_handle_timer_status",
@@ -529,7 +508,6 @@
         "how are timers"
       ],
       "lemmas": [],
-      "parameters": [],
       "token_patterns": [
         [
           {
@@ -547,32 +525,14 @@
           "text": "timer status",
           "parameters": {}
         }
-      ],
-      "boost": 1.0
+      ]
     }
   ],
-  "negative_patterns": [
-    [
-      {
-        "LEMMA": {
-          "IN": []
-        }
-      },
-      {
-        "LEMMA": "timer"
-      }
-    ],
-    [
-      {
-        "TEXT": {
-          "REGEX": "no|not|without"
-        }
-      },
-      {
-        "TEXT": "timer"
-      }
-    ]
-  ],
-  "additional_recognition_patterns": [],
-  "language": "en"
+  "global_parameters": [
+    {
+      "name": "retain",
+      "description": "Whether to retain state across sessions",
+      "default_value": false
+    }
+  ]
 }

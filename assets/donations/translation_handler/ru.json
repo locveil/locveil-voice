@@ -1,24 +1,41 @@
 {
-  "$schema": "../v1.0.json",
-  "schema_version": "1.0",
-  "donation_version": "1.0",
+  "$schema": "../../donation_language_v1.1.json",
+  "schema_version": "1.1",
   "handler_domain": "translation",
+  "language": "ru",
   "description": "Команды перевода текста через LLM",
-  "intent_name_patterns": [],
   "action_patterns": [],
-  "domain_patterns": [],
-  "global_parameters": [
-    {
-      "name": "language",
-      "type": "choice",
-      "required": false,
-      "default_value": "ru",
-      "choices": [
-        "русский",
-        "английский"
-      ],
-      "description": "Предпочтение языка ответа"
-    }
+  "negative_patterns": [
+    [
+      {
+        "LEMMA": {
+          "IN": [
+            "нет",
+            "не"
+          ]
+        }
+      },
+      {
+        "LEMMA": {
+          "IN": [
+            "переводить",
+            "перевод"
+          ]
+        }
+      }
+    ],
+    [
+      {
+        "TEXT": {
+          "REGEX": ".*"
+        }
+      },
+      {
+        "TEXT": {
+          "REGEX": ".*"
+        }
+      }
+    ]
   ],
   "method_donations": [
     {
@@ -45,88 +62,6 @@
         "переносить",
         "изменять",
         "язык"
-      ],
-      "parameters": [
-        {
-          "name": "text",
-          "type": "string",
-          "required": false,
-          "description": "Текст для перевода (извлечённый из команды)",
-          "extraction_patterns": [
-            {
-              "pattern": [
-                {
-                  "LEMMA": "переводить"
-                },
-                {
-                  "IS_ALPHA": true,
-                  "OP": "+"
-                }
-              ],
-              "label": "TEXT"
-            },
-            {
-              "pattern": [
-                {},
-                {
-                  "IS_ALPHA": true,
-                  "OP": "+"
-                }
-              ],
-              "label": "TEXT"
-            }
-          ],
-          "aliases": [
-            "текст",
-            "фраза",
-            "слово"
-          ]
-        },
-        {
-          "name": "target_language",
-          "type": "choice",
-          "required": false,
-          "default_value": "английский",
-          "choices": [
-            "русский",
-            "английский"
-          ],
-          "description": "Целевой язык для перевода",
-          "extraction_patterns": [
-            {
-              "pattern": [
-                {
-                  "TEXT": "на"
-                },
-                {
-                  "LOWER": {
-                    "IN": [
-                      "русский",
-                      "английский",
-                      "испанский",
-                      "французский",
-                      "немецкий",
-                      "китайский"
-                    ]
-                  }
-                }
-              ],
-              "label": "TARGET_LANGUAGE"
-            },
-            {
-              "pattern": [
-                {
-                  "TEXT": "to"
-                }
-              ],
-              "label": "TARGET_LANGUAGE"
-            }
-          ],
-          "aliases": [
-            "язык",
-            "на язык"
-          ]
-        }
       ],
       "token_patterns": [
         [
@@ -233,76 +168,26 @@
           }
         }
       ],
-      "boost": 1.3
-    },
-    {
-      "method_name": "_handle_translate_specific",
-      "intent_suffix": "specific",
-      "description": "Перевести конкретный текст с извлечёнными сущностями",
-      "phrases": [
-        "переведи фразу",
-        "переведи слово",
-        "переведи текст на",
-        "переведи 'текст' на",
-        "конвертируй в",
-        "сделай перевод на",
-        "переложи на язык"
-      ],
-      "lemmas": [
-        "переводить",
-        "фраза",
-        "слово",
-        "текст",
-        "конвертировать"
-      ],
       "parameters": [
         {
           "name": "text",
-          "type": "string",
-          "required": true,
-          "description": "Конкретный текст для перевода",
+          "description": "Текст для перевода (извлечённый из команды)",
           "extraction_patterns": [
             {
               "pattern": [
                 {
-                  "TEXT": "'"
+                  "LEMMA": "переводить"
                 },
                 {
                   "IS_ALPHA": true,
                   "OP": "+"
-                },
-                {
-                  "TEXT": "'"
                 }
               ],
               "label": "TEXT"
             },
             {
               "pattern": [
-                {
-                  "TEXT": "\""
-                },
-                {
-                  "IS_ALPHA": true,
-                  "OP": "+"
-                },
-                {
-                  "TEXT": "\""
-                }
-              ],
-              "label": "TEXT"
-            },
-            {
-              "pattern": [
-                {
-                  "LEMMA": {
-                    "IN": [
-                      "фраза",
-                      "слово",
-                      "текст"
-                    ]
-                  }
-                },
+                {},
                 {
                   "IS_ALPHA": true,
                   "OP": "+"
@@ -312,20 +197,14 @@
             }
           ],
           "aliases": [
+            "текст",
             "фраза",
-            "слово",
-            "предложение"
+            "слово"
           ]
         },
         {
           "name": "target_language",
-          "type": "choice",
-          "required": true,
-          "choices": [
-            "русский",
-            "английский"
-          ],
-          "description": "Целевой язык для конкретного перевода",
+          "description": "Целевой язык для перевода",
           "extraction_patterns": [
             {
               "pattern": [
@@ -358,10 +237,31 @@
           ],
           "aliases": [
             "язык",
-            "на язык",
-            "в язык"
-          ]
+            "на язык"
+          ],
+          "default_value": "английский"
         }
+      ]
+    },
+    {
+      "method_name": "_handle_translate_specific",
+      "intent_suffix": "specific",
+      "description": "Перевести конкретный текст с извлечёнными сущностями",
+      "phrases": [
+        "переведи фразу",
+        "переведи слово",
+        "переведи текст на",
+        "переведи 'текст' на",
+        "конвертируй в",
+        "сделай перевод на",
+        "переложи на язык"
+      ],
+      "lemmas": [
+        "переводить",
+        "фраза",
+        "слово",
+        "текст",
+        "конвертировать"
       ],
       "token_patterns": [
         [
@@ -531,40 +431,121 @@
           }
         }
       ],
-      "boost": 1.4
+      "parameters": [
+        {
+          "name": "text",
+          "description": "Конкретный текст для перевода",
+          "extraction_patterns": [
+            {
+              "pattern": [
+                {
+                  "TEXT": "'"
+                },
+                {
+                  "IS_ALPHA": true,
+                  "OP": "+"
+                },
+                {
+                  "TEXT": "'"
+                }
+              ],
+              "label": "TEXT"
+            },
+            {
+              "pattern": [
+                {
+                  "TEXT": "\""
+                },
+                {
+                  "IS_ALPHA": true,
+                  "OP": "+"
+                },
+                {
+                  "TEXT": "\""
+                }
+              ],
+              "label": "TEXT"
+            },
+            {
+              "pattern": [
+                {
+                  "LEMMA": {
+                    "IN": [
+                      "фраза",
+                      "слово",
+                      "текст"
+                    ]
+                  }
+                },
+                {
+                  "IS_ALPHA": true,
+                  "OP": "+"
+                }
+              ],
+              "label": "TEXT"
+            }
+          ],
+          "aliases": [
+            "фраза",
+            "слово",
+            "предложение"
+          ]
+        },
+        {
+          "name": "target_language",
+          "description": "Целевой язык для конкретного перевода",
+          "extraction_patterns": [
+            {
+              "pattern": [
+                {
+                  "TEXT": "на"
+                },
+                {
+                  "LOWER": {
+                    "IN": [
+                      "русский",
+                      "английский",
+                      "испанский",
+                      "французский",
+                      "немецкий",
+                      "китайский"
+                    ]
+                  }
+                }
+              ],
+              "label": "TARGET_LANGUAGE"
+            },
+            {
+              "pattern": [
+                {
+                  "TEXT": "to"
+                }
+              ],
+              "label": "TARGET_LANGUAGE"
+            }
+          ],
+          "aliases": [
+            "язык",
+            "на язык",
+            "в язык"
+          ]
+        }
+      ]
     }
   ],
-  "negative_patterns": [
-    [
-      {
-        "LEMMA": {
-          "IN": [
-            "нет",
-            "не"
-          ]
-        }
-      },
-      {
-        "LEMMA": {
-          "IN": [
-            "переводить",
-            "перевод"
-          ]
-        }
+  "global_parameters": [
+    {
+      "name": "language",
+      "description": "Предпочтение языка ответа",
+      "default_value": "ru",
+      "choice_surfaces": {
+        "ru": [
+          "русский"
+        ],
+        "en": [
+          "английский"
+        ]
       }
-    ],
-    [
-      {
-        "TEXT": {
-          "REGEX": ".*"
-        }
-      },
-      {
-        "TEXT": {
-          "REGEX": ".*"
-        }
-      }
-    ]
-  ],
-  "language": "ru"
+    }
+  ]
 }

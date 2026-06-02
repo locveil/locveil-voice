@@ -1,17 +1,14 @@
 {
-  "$schema": "../v1.0.json",
-  "schema_version": "1.0",
-  "donation_version": "1.0",
+  "$schema": "../../donation_language_v1.1.json",
+  "schema_version": "1.1",
   "handler_domain": "voice_synthesis",
+  "language": "en",
   "description": "Text-to-speech with specific voices and TTS provider management",
-  "intent_name_patterns": [
-    "tts.speak",
-    "tts.voice",
-    "tts.list",
-    "tts.switch",
-    "voice_synthesis.stop",
-    "voice_synthesis.cancel",
-    "voice.synthesis"
+  "stop_command_patterns": [
+    "stop synthesis",
+    "stop speech",
+    "halt voice",
+    "cancel synthesis"
   ],
   "action_patterns": [
     "speak",
@@ -25,31 +22,31 @@
     "stop",
     "cancel"
   ],
-  "action_domain_priority": 60,
-  "stop_command_patterns": [
-    "stop synthesis",
-    "stop speech",
-    "halt voice",
-    "cancel synthesis"
-  ],
-  "domain_patterns": [
-    "tts",
-    "voice",
-    "speech",
-    "synthesis"
-  ],
-  "global_parameters": [
-    {
-      "name": "language",
-      "type": "choice",
-      "required": false,
-      "default_value": "ru",
-      "choices": [
-        "ru",
-        "en"
-      ],
-      "description": "Response language preference"
-    }
+  "negative_patterns": [
+    [
+      {
+        "LEMMA": {
+          "IN": []
+        }
+      },
+      {
+        "LEMMA": {
+          "IN": []
+        }
+      }
+    ],
+    [
+      {
+        "TEXT": {
+          "REGEX": "no|not"
+        }
+      },
+      {
+        "TEXT": {
+          "REGEX": "say|speak|voice"
+        }
+      }
+    ]
   ],
   "method_donations": [
     {
@@ -65,92 +62,6 @@
         "speak with silero"
       ],
       "lemmas": [],
-      "parameters": [
-        {
-          "name": "text",
-          "type": "string",
-          "required": false,
-          "description": "Text to speak",
-          "extraction_patterns": [
-            {
-              "pattern": [
-                {
-                  "IS_ALPHA": true,
-                  "OP": "+"
-                }
-              ],
-              "label": "TEXT"
-            },
-            {
-              "pattern": [
-                {
-                  "TEXT": {
-                    "IN": [
-                      "say",
-                      "speak"
-                    ]
-                  }
-                },
-                {
-                  "IS_ALPHA": true,
-                  "OP": "+"
-                },
-                {
-                  "TEXT": {
-                    "IN": [
-                      "voice",
-                      "with"
-                    ]
-                  }
-                }
-              ],
-              "label": "TEXT"
-            }
-          ],
-          "aliases": []
-        },
-        {
-          "name": "voice",
-          "type": "choice",
-          "required": false,
-          "choices": [
-            "xenia",
-            "aidar",
-            "silero",
-            "console",
-            "system"
-          ],
-          "description": "Voice to use for speech",
-          "extraction_patterns": [
-            {
-              "pattern": [],
-              "label": "VOICE"
-            },
-            {
-              "pattern": [
-                {
-                  "TEXT": "voice"
-                },
-                {
-                  "LOWER": {
-                    "IN": [
-                      "xenia",
-                      "aidar",
-                      "silero",
-                      "console",
-                      "system"
-                    ]
-                  }
-                }
-              ],
-              "label": "VOICE"
-            }
-          ],
-          "aliases": [
-            "speaker"
-          ]
-        }
-      ],
       "token_patterns": [
         [
           {
@@ -283,7 +194,81 @@
           }
         }
       ],
-      "boost": 1.4
+      "parameters": [
+        {
+          "name": "text",
+          "description": "Text to speak",
+          "extraction_patterns": [
+            {
+              "pattern": [
+                {
+                  "IS_ALPHA": true,
+                  "OP": "+"
+                }
+              ],
+              "label": "TEXT"
+            },
+            {
+              "pattern": [
+                {
+                  "TEXT": {
+                    "IN": [
+                      "say",
+                      "speak"
+                    ]
+                  }
+                },
+                {
+                  "IS_ALPHA": true,
+                  "OP": "+"
+                },
+                {
+                  "TEXT": {
+                    "IN": [
+                      "voice",
+                      "with"
+                    ]
+                  }
+                }
+              ],
+              "label": "TEXT"
+            }
+          ],
+          "aliases": []
+        },
+        {
+          "name": "voice",
+          "description": "Voice to use for speech",
+          "extraction_patterns": [
+            {
+              "pattern": [],
+              "label": "VOICE"
+            },
+            {
+              "pattern": [
+                {
+                  "TEXT": "voice"
+                },
+                {
+                  "LOWER": {
+                    "IN": [
+                      "xenia",
+                      "aidar",
+                      "silero",
+                      "console",
+                      "system"
+                    ]
+                  }
+                }
+              ],
+              "label": "VOICE"
+            }
+          ],
+          "aliases": [
+            "speaker"
+          ]
+        }
+      ]
     },
     {
       "method_name": "_handle_list_voices",
@@ -298,7 +283,6 @@
         "voice providers"
       ],
       "lemmas": [],
-      "parameters": [],
       "token_patterns": [
         [
           {
@@ -358,8 +342,7 @@
           "text": "show voices",
           "parameters": {}
         }
-      ],
-      "boost": 1.2
+      ]
     },
     {
       "method_name": "_handle_speak_text",
@@ -376,44 +359,6 @@
         "utter"
       ],
       "lemmas": [],
-      "parameters": [
-        {
-          "name": "text",
-          "type": "string",
-          "required": true,
-          "description": "Text to speak",
-          "extraction_patterns": [
-            {
-              "pattern": [
-                {
-                  "IS_ALPHA": true,
-                  "OP": "+"
-                }
-              ],
-              "label": "TEXT"
-            },
-            {
-              "pattern": [
-                {
-                  "TEXT": {
-                    "IN": [
-                      "say",
-                      "speak",
-                      "pronounce"
-                    ]
-                  }
-                },
-                {
-                  "IS_ALPHA": true,
-                  "OP": "+"
-                }
-              ],
-              "label": "TEXT"
-            }
-          ],
-          "aliases": []
-        }
-      ],
       "token_patterns": [
         [
           {
@@ -507,7 +452,42 @@
           }
         }
       ],
-      "boost": 1.3
+      "parameters": [
+        {
+          "name": "text",
+          "description": "Text to speak",
+          "extraction_patterns": [
+            {
+              "pattern": [
+                {
+                  "IS_ALPHA": true,
+                  "OP": "+"
+                }
+              ],
+              "label": "TEXT"
+            },
+            {
+              "pattern": [
+                {
+                  "TEXT": {
+                    "IN": [
+                      "say",
+                      "speak",
+                      "pronounce"
+                    ]
+                  }
+                },
+                {
+                  "IS_ALPHA": true,
+                  "OP": "+"
+                }
+              ],
+              "label": "TEXT"
+            }
+          ],
+          "aliases": []
+        }
+      ]
     },
     {
       "method_name": "_handle_switch_tts_provider",
@@ -522,59 +502,6 @@
         "switch synthesizer"
       ],
       "lemmas": [],
-      "parameters": [
-        {
-          "name": "provider",
-          "type": "choice",
-          "required": true,
-          "choices": [
-            "silero",
-            "silero3",
-            "silero4",
-            "console",
-            "system",
-            "vosk"
-          ],
-          "description": "TTS provider to switch to",
-          "extraction_patterns": [
-            {
-              "pattern": [
-                {
-                  "TEXT": "on"
-                }
-              ],
-              "label": "PROVIDER"
-            },
-            {
-              "pattern": [
-                {
-                  "TEXT": {
-                    "IN": [
-                      "switch",
-                      "change"
-                    ]
-                  }
-                },
-                {
-                  "TEXT": "to"
-                },
-                {
-                  "LOWER": {
-                    "IN": [
-                      "silero",
-                      "console",
-                      "system",
-                      "vosk"
-                    ]
-                  }
-                }
-              ],
-              "label": "PROVIDER"
-            }
-          ],
-          "aliases": []
-        }
-      ],
       "token_patterns": [
         [
           {
@@ -687,7 +614,49 @@
           }
         }
       ],
-      "boost": 1.1
+      "parameters": [
+        {
+          "name": "provider",
+          "description": "TTS provider to switch to",
+          "extraction_patterns": [
+            {
+              "pattern": [
+                {
+                  "TEXT": "on"
+                }
+              ],
+              "label": "PROVIDER"
+            },
+            {
+              "pattern": [
+                {
+                  "TEXT": {
+                    "IN": [
+                      "switch",
+                      "change"
+                    ]
+                  }
+                },
+                {
+                  "TEXT": "to"
+                },
+                {
+                  "LOWER": {
+                    "IN": [
+                      "silero",
+                      "console",
+                      "system",
+                      "vosk"
+                    ]
+                  }
+                }
+              ],
+              "label": "PROVIDER"
+            }
+          ],
+          "aliases": []
+        }
+      ]
     },
     {
       "method_name": "_handle_stop_synthesis",
@@ -701,7 +670,6 @@
         "stop"
       ],
       "lemmas": [],
-      "parameters": [],
       "token_patterns": [
         [
           {
@@ -732,8 +700,7 @@
           "text": "stop synthesis",
           "parameters": {}
         }
-      ],
-      "boost": 1.2
+      ]
     },
     {
       "method_name": "_handle_cancel_synthesis",
@@ -747,7 +714,6 @@
         "cancel"
       ],
       "lemmas": [],
-      "parameters": [],
       "token_patterns": [
         [
           {
@@ -776,35 +742,14 @@
           "text": "cancel synthesis",
           "parameters": {}
         }
-      ],
-      "boost": 1.2
+      ]
     }
   ],
-  "negative_patterns": [
-    [
-      {
-        "LEMMA": {
-          "IN": []
-        }
-      },
-      {
-        "LEMMA": {
-          "IN": []
-        }
-      }
-    ],
-    [
-      {
-        "TEXT": {
-          "REGEX": "no|not"
-        }
-      },
-      {
-        "TEXT": {
-          "REGEX": "say|speak|voice"
-        }
-      }
-    ]
-  ],
-  "language": "en"
+  "global_parameters": [
+    {
+      "name": "language",
+      "description": "Response language preference",
+      "default_value": "ru"
+    }
+  ]
 }
