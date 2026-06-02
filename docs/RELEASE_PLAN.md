@@ -284,7 +284,16 @@ See `docs/review/phase1_architecture_map.md` §5.
       legacy `docs/fire_forget_issues.md` "✅ COMPLETED" is **materially false** (banner added). Legacy issues:
       #4 FIXED, #6 FIXED-but-moot, #1 & #5 CHANGED-still-broken, #2 CHANGED-unreachable, #3 CONFIRMED. Plan
       correction: ~13 call sites in 3 handlers, not "~83".
-- [ ] **QUAL-9** [FAF] (P1) — Remediate F&F (ranked in the review). **P0s:** (1) **timers crash on launch** —
+- [ ] **QUAL-9** [FAF] (P1) — Remediate F&F (ranked in the review). **★ MERGED 2026-06-02 (user, Invariant #8):** the
+      F&F **launch + completion** path (`base.py`) is the same code as QUAL-28's action-store relocation (the
+      authoritative liveness = the task ref, created in the launch), so the launch/completion fixes — **(1)** dup-`session_id`
+      crash, **(2)** `action_name` keying, **(3)** `get_or_create_context` (now real), **(4)** task refs, **(5)**
+      unbounded leak — **move into QUAL-28 stage 3.2/3.3** (registered into the runtime store with the real task ref +
+      fire completion). **QUAL-9's remaining tail:** per-action **metrics re-key** (`metrics.py` domain→action_name),
+      **delete the duplicate** `workflow_manager._process_action_metadata_integration`, **timeout monitor** `wait_for`
+      (not flat-sleep) + capture-before-pop, finish timer-cancellation cleanup (`timer.py`), then **TEST-3**. Gated by
+      Invariant #4. _Original P0/P1 detail below (mostly absorbed by QUAL-28):_
+      **P0s:** (1) **timers crash on launch** —
       duplicate `session_id` kwarg in `execute_fire_and_forget_with_context` (`base.py:125`+kwargs vs
       `timer.py:228`) → `TypeError`, only `ValueError` caught → timer creation fails outright; (2) **domain vs
       action_name key mismatch** — launch stores `active_actions[action_name]` (`base.py:500`), removal keys by

@@ -159,6 +159,12 @@ newest entries near the top of each dated section.
   **Gate 1: ARCH-1 ✓, ARCH-2 ✓, ARCH-3 ✓ — ARCH-4 (formalize ports) → ARCH-5 (import-linter) next.**
 
 ### 2026-06-02
+- **QUAL-9 → QUAL-28 MERGE (user, Invariant #8).** Tracing the 3.2 relocation surfaced that (a) readers must hit the
+  store by `physical_id` *independently of the session* to get eviction-survival (not a context façade), and (b) the
+  authoritative liveness = the task ref, which is created in the F&F **launch** (`base.py`) — QUAL-9 territory. The
+  QUAL-28/QUAL-9 split is artificial at that seam, so the **launch + completion** fixes move into QUAL-28 stage
+  3.2/3.3 (one clean pass over `base.py`, fully testable via mini-TEST-3). QUAL-9 re-scoped to its tail (metrics
+  re-key, delete the duplicate write-back, timeout monitor, timer-cancel cleanup, TEST-3). Ledger entries updated.
 - **QUAL-28 Stage 3.1 — action-store skeleton (additive, nothing consumes it yet).** Added to `ClientRegistry`: an
   `ActionRecord` (action_name identity · domain index · live task ref · TTL) and a **runtime-only, non-persisted**
   action store keyed by `physical_id → action_name`, with the **4 reaper layers** (completion-remove · read-time
