@@ -404,24 +404,9 @@ class UnifiedVoiceAssistantWorkflow(Workflow):
         self.logger.debug(f"Stage: Intent Execution - {intent.name}")
         result = await self.intent_orchestrator.execute(intent, conversation_context, trace_context)
         
-        # Stage 4: Action Metadata Processing (fire-and-forget)
-        if result.action_metadata:
-            metadata_start_time = time.time()
-            await self._process_action_metadata(result.action_metadata, conversation_context)
-            metadata_time = time.time() - metadata_start_time
-            
-            if trace_context:
-                trace_context.record_stage(
-                    stage_name="action_metadata_processing",
-                    input_data=result.action_metadata,
-                    output_data={"processed": True},
-                    metadata={
-                        "metadata_keys": list(result.action_metadata.keys()) if isinstance(result.action_metadata, dict) else [],
-                        "processing_time": metadata_time
-                    },
-                    processing_time_ms=metadata_time * 1000
-                )
-        
+        # Stage 4: fire-and-forget actions are now registered directly in the action store by the
+        # handler-base launch (QUAL-28) — no context write-back of result.action_metadata is needed.
+
         # Update conversation history
         conversation_context.add_to_history(
             user_text=input_data,
@@ -684,17 +669,6 @@ class UnifiedVoiceAssistantWorkflow(Workflow):
                     processing_time_ms=0.0
                 )
             raise
-    
-    async def _process_action_metadata(self, action_metadata: Dict[str, Any], 
-                                     conversation_context: UnifiedConversationContext):
-        """Process action metadata and update conversation context"""
-        if 'active_actions' in action_metadata:
-            active_actions = action_metadata['active_actions']
-            for domain, action_info in active_actions.items():
-                conversation_context.add_active_action(domain, action_info)
-        
-        # Additional action metadata processing can be added here
-        # (e.g., action completion callbacks, error handling, etc.)
     
     async def _handle_tts_output(self, result: IntentResult, context: RequestContext):
         """Handle TTS output using temp file coordination"""

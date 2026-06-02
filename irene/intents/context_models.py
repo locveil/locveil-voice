@@ -16,6 +16,7 @@ from rapidfuzz import fuzz, process
 
 from .models import Intent, IntentResult
 from ..core.session_manager import SessionManager  # ARCH-5: RequestContext session-id gen
+from ..core.client_registry import get_client_registry, resolve_physical_id, ActionRecord  # QUAL-28: action store
 
 
 class ConversationState(Enum):
@@ -55,8 +56,9 @@ class UnifiedConversationContext:
     available_devices: List[Dict[str, Any]] = field(default_factory=list)
     language: str = "ru"
     
-    # CRITICAL: Fire-and-forget action tracking (room-scoped)
-    active_actions: Dict[str, Any] = field(default_factory=dict)      # Domain -> action info
+    # Fire-and-forget action tracking. QUAL-28: `active_actions` is no longer a stored field — it is a
+    # read-only view over the long-lived ClientRegistry action store (keyed by physical_id), so actions
+    # survive conversation-session eviction. See the `active_actions` property below.
     recent_actions: List[Dict[str, Any]] = field(default_factory=list) # Completed actions
     failed_actions: List[Dict[str, Any]] = field(default_factory=list) # Failed actions
     action_error_count: Dict[str, int] = field(default_factory=dict)   # Error tracking
@@ -239,109 +241,116 @@ class UnifiedConversationContext:
         self.handler_contexts[handler_name]["messages"] = messages
     
     # CRITICAL: Fire-and-forget action management (preserved from ConversationContext)
-    def add_active_action(self, domain: str, action_info: Dict[str, Any]):
-        """Add active action with automatic room context injection"""
-        self.active_actions[domain] = {
-            **action_info,
-            'room_id': self.client_id,
-            'room_name': self.room_name,
-            'session_id': self.session_id,
-            'started_at': time.time()
-        }
+    # ---- Fire-and-forget actions: read-only views + store-backed mutators (QUAL-28) ---- #
+    @property
+    def _action_pid(self) -> str:
+        """The physical scope id this context's actions live under (room/device → session)."""
+        return resolve_physical_id(self.client_id, self.room_name, self.session_id)
+
+    @property
+    def active_actions(self) -> Dict[str, Dict[str, Any]]:
+        """Read-only view of live actions for this scope: ``{action_name: info}`` (from the store)."""
+        out: Dict[str, Dict[str, Any]] = {}
+        for r in get_client_registry().get_live_actions(self._action_pid):
+            out[r.action_name] = {**r.metadata, "action": r.action_name, "domain": r.domain,
+                                  "started_at": r.started_at, "status": r.status,
+                                  "session_id": r.session_id, "room_id": r.room_id}
+        return out
+
+    def add_active_action(self, action_name: str, action_info: Dict[str, Any]):
+        """Register a (task-less) action in the store — best-effort. The handler-base launch performs the
+        primary registration with a real task ref; this path is for callers that don't have one."""
+        get_client_registry().add_action(ActionRecord(
+            action_name=action_name,
+            domain=action_info.get("domain", action_name),
+            physical_id=self._action_pid,
+            task=None,
+            expected_end=action_info.get("timeout_at"),
+            status=action_info.get("status", "running"),
+            session_id=self.session_id,
+            room_id=self.client_id or self.room_name,
+            metadata={k: v for k, v in action_info.items() if k not in ("domain", "status", "started_at")},
+        ))
         self.last_updated = time.time()
     
-    def complete_action(self, domain: str, success: bool = True, error: Optional[str] = None):
-        """Move an active action to recent actions as completed"""
-        if domain in self.active_actions:
-            action_info = self.active_actions.pop(domain)
-            action_info.update({
-                'completed_at': time.time(),
-                'success': success,
-                'error': error
-            })
-            self.recent_actions.append(action_info)
-            
-            # Keep only last 10 recent actions to prevent memory bloat
-            if len(self.recent_actions) > 10:
-                self.recent_actions = self.recent_actions[-10:]
-            
-            self.last_updated = time.time()
-    
+    def complete_action(self, key: str, success: bool = True, error: Optional[str] = None):
+        """Back-compat alias — remove the action (by action_name or domain) as completed."""
+        self.remove_completed_action(key, success=success, error=error)
+
     def has_active_action(self, domain: str) -> bool:
-        """Check if there's an active action in the specified domain"""
-        return domain in self.active_actions
-    
+        """Whether any live action exists in the given domain."""
+        return bool(get_client_registry().get_live_actions_by_domain(self._action_pid, domain))
+
     def get_active_action_domains(self) -> List[str]:
-        """Get list of domains with currently active actions"""
-        return list(self.active_actions.keys())
+        """Domains that currently have live actions."""
+        return list({r.domain for r in get_client_registry().get_live_actions(self._action_pid)})
     
-    def remove_completed_action(self, domain: str, success: bool = True, error: Optional[str] = None):
-        """Remove a completed action from active tracking and add to recent actions"""
-        if domain in self.active_actions:
-            action_info = self.active_actions.pop(domain)
-            action_info.update({
-                'completed_at': time.time(),
-                'status': 'completed' if success else 'failed',
-                'success': success,
-                'error': error
-            })
-            
-            # Add to recent actions
-            self.recent_actions.append(action_info)
-            
-            # If action failed, also add to failed actions with detailed error tracking
+    def remove_completed_action(self, key: str, success: bool = True, error: Optional[str] = None) -> bool:
+        """Remove an action from the store. Accepts an ``action_name`` (preferred) or a ``domain``
+        (removes all live actions in it); records a recent/failed summary best-effort."""
+        registry = get_client_registry()
+        pid = self._action_pid
+        removed = []
+        rec = registry.get_action(pid, key)
+        if rec is not None:
+            registry.remove_action(pid, key)
+            removed.append(rec)
+        else:
+            for rec in registry.get_live_actions_by_domain(pid, key):
+                registry.remove_action(pid, rec.action_name)
+                removed.append(rec)
+        for rec in removed:
+            info = {"action": rec.action_name, "domain": rec.domain, "started_at": rec.started_at,
+                    "completed_at": time.time(), "success": success, "error": error,
+                    "status": "completed" if success else "failed"}
+            self.recent_actions.append(info)
             if not success:
-                failed_action = action_info.copy()
-                failed_action.update({
-                    'failure_type': self._classify_error(error) if error else 'unknown',
-                    'retry_count': action_info.get('retry_count', 0),
-                    'is_critical': self._is_critical_failure(domain, error)
-                })
-                self.failed_actions.append(failed_action)
-                
-                # Update error count for this domain
-                self.action_error_count[domain] = self.action_error_count.get(domain, 0) + 1
-                
-                # Keep only last 20 failed actions to prevent memory bloat
-                if len(self.failed_actions) > 20:
-                    self.failed_actions = self.failed_actions[-20:]
-            
-            # Keep only last 10 recent actions to prevent memory bloat
-            if len(self.recent_actions) > 10:
-                self.recent_actions = self.recent_actions[-10:]
-            
+                info["failure_type"] = self._classify_error(error) if error else 'unknown'
+                info["is_critical"] = self._is_critical_failure(rec.domain, error)
+                self.failed_actions.append(info)
+                self.action_error_count[rec.domain] = self.action_error_count.get(rec.domain, 0) + 1
+        if len(self.failed_actions) > 20:
+            self.failed_actions = self.failed_actions[-20:]
+        if len(self.recent_actions) > 10:
+            self.recent_actions = self.recent_actions[-10:]
+        if removed:
             self.last_updated = time.time()
-            return True
-        return False
+        return bool(removed)
     
     # Additional fire-and-forget management methods
     def cancel_action(self, domain: str, reason: str = "User requested cancellation") -> bool:
-        """Cancel an active action and mark it as cancelled"""
-        if domain in self.active_actions:
-            self.active_actions[domain].update({
-                'status': 'cancelled',
-                'cancelled_at': time.time(),
-                'cancellation_reason': reason
-            })
+        """Cancel all live actions in a domain by cancelling their tasks (the done-callback then reaps
+        them from the store). Returns whether anything was cancelled."""
+        registry = get_client_registry()
+        pid = self._action_pid
+        cancelled = False
+        for rec in registry.get_live_actions_by_domain(pid, domain):
+            if rec.task is not None and not rec.task.done():
+                rec.task.cancel()
+            else:
+                registry.remove_action(pid, rec.action_name)
+            cancelled = True
+        if cancelled:
             self.last_updated = time.time()
-            return True
-        return False
-    
-    def update_action_status(self, domain: str, status: str, error: Optional[str] = None) -> bool:
-        """Update the status of a running action"""
-        if domain in self.active_actions:
-            self.active_actions[domain]['status'] = status
+        return cancelled
+
+    def update_action_status(self, key: str, status: str, error: Optional[str] = None) -> bool:
+        """Update the status of a live action (by action_name or domain) in the store."""
+        registry = get_client_registry()
+        pid = self._action_pid
+        rec = registry.get_action(pid, key)
+        recs = [rec] if rec is not None else registry.get_live_actions_by_domain(pid, key)
+        for rec in recs:
+            rec.status = status
             if error:
-                self.active_actions[domain]['error'] = error
-            self.active_actions[domain]['last_updated'] = time.time()
+                rec.metadata["error"] = error
+        if recs:
             self.last_updated = time.time()
-            return True
-        return False
-    
+        return bool(recs)
+
     def get_cancellable_actions(self) -> List[str]:
-        """Get list of domains with actions that can be cancelled"""
-        return [domain for domain, action_info in self.active_actions.items()
-                if action_info.get('status') == 'running']
+        """Domains with live (cancellable) actions."""
+        return self.get_active_action_domains()
     
     # Legacy compatibility methods from ConversationContext
     def set_client_context(self, client_id: str, metadata: Dict[str, Any]):

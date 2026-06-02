@@ -159,6 +159,19 @@ newest entries near the top of each dated section.
   **Gate 1: ARCH-1 ✓, ARCH-2 ✓, ARCH-3 ✓ — ARCH-4 (formalize ports) → ARCH-5 (import-linter) next.**
 
 ### 2026-06-02
+- **QUAL-28 Stage 3.2 — reader migration (the store is now the F&F source of truth).** `context.active_actions` is
+  now a **read-only property** over the `ClientRegistry` action store (keyed by the context's `physical_id`), so every
+  reader auto-migrates — orchestrator (contextual interception), `context.py` resolver, conversation summary, NLU
+  injection, trace snapshot, debug — all now read the store. The write/cancel methods (`add_active_action`/
+  `remove_completed_action`/`cancel_action`/`update_action_status`/`has_active_action`/`get_active_action_domains`)
+  are **store-backed** (cancel = cancel the task → the done-callback reaps it). Removed both write-backs
+  (`voice_assistant._process_action_metadata` + `workflow_manager._process_action_metadata_integration` call sites)
+  since the launch registers directly. Actions now **survive conversation-session eviction** (they live in the store,
+  not the session). Import contracts + smoke + 9 store tests green (15 passed). **Cleanup left for a later pass (dead,
+  uncalled):** `workflow_manager._process_action_metadata_integration` body + base.py `_handle_action_completion`/
+  `_update_context_on_completion`. **3.3 refinement:** make the `context.py` resolver read the store by `physical_id`
+  directly (today via the session context — works while the session is alive; true eviction-survival on the read side
+  needs the physical_id pass-through).
 - **QUAL-28 Stage 3.2 — store-centric F&F machinery (launch/completion/timeout) rewritten.** Per user, done
   store-centric (no session-threading), not the rejected `tracking_session_id` patch. `execute_fire_and_forget_*`
   now: resolves `physical_id` from the context, registers an `ActionRecord` **with the real task** in the

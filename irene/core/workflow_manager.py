@@ -462,11 +462,7 @@ class WorkflowManager:
         session_id = context.session_id
 
         result = await unified_workflow.process_text_input(text, context, trace_context)
-        
-        # Process action metadata if present
-        if result.action_metadata:
-            await self._process_action_metadata_integration(result, session_id)
-        
+        # (QUAL-28) F&F actions are registered in the store by the launch — no write-back needed.
         return result
     
     async def process_audio_input(
@@ -532,11 +528,7 @@ class WorkflowManager:
 
             # Process audio through unified workflow with trace support
             result = await unified_workflow.process_audio_input(audio_data, context, trace_context)
-            
-            # Process action metadata if present
-            if result.action_metadata:
-                await self._process_action_metadata_integration(result, session_id)
-            
+            # (QUAL-28) F&F actions are registered in the store by the launch — no write-back needed.
             return result
             
         except Exception as e:
@@ -620,9 +612,7 @@ class WorkflowManager:
         session_id = context.session_id
 
         async for result in unified_workflow.process_audio_stream(audio_stream, context):
-            # Process action metadata if present
-            if result.action_metadata:
-                await self._process_action_metadata_integration(result, session_id)
+            # (QUAL-28) F&F actions are registered in the store by the launch — no write-back needed.
             yield result
     
     async def _start_audio_workflow(self, input_source: InputSource, workflow: Workflow, context: RequestContext) -> None:
