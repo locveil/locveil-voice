@@ -304,7 +304,9 @@ See `docs/review/phase1_architecture_map.md` §5.
       the entity resolvers (degrade, don't crash the request, when the asset loader isn't wired); (5) **QUAL-22**
       (finish/delete the context-enhancement stub). **P1s:** typed `ParameterSpec`-driven entity accessor on
       `IntentHandler`; fix first-match span→value; default `_md` spaCy models for similarity; unify duplicate device
-      resolution. Gated by Invariant #4 (config-ui). **Concrete failing case (found by TEST-0):** `поставь таймер
+      resolution; **unify `_create_error_result` (P1-t, moved here from QUAL-27): the base uses `(text, error,
+      metadata)` but 6 handlers override with `(intent, context, error)` — pick one canonical signature for the result
+      helpers as part of the shared handler base.** Gated by Invariant #4 (config-ui). **Concrete failing case (found by TEST-0):** `поставь таймер
       на 5 минут` is not recognized (→ `conversation.general`) despite the timer donation being loaded — fix +
       verify via TEST-0's `test_set_timer_end_to_end` (currently xfail).
 - [x] **QUAL-12** [TXTPROC] (P2) — Text-processor subsystem review. **DONE 2026-06-01** →
@@ -441,12 +443,16 @@ _Apply to every remediation task below (from the 4 review docs + QUAL-25/26). So
   is a valid curated **superset**; deployment configs are minimal subsets — the check must not flag the superset.
 - **④ Data-contract integrity** — a model field means **one thing end-to-end**; no rename residue
   (`Intent.text`/`raw_text`, `WakeWordResult.word`/`wake_word`, action key `action_name`/`domain`, session scope).
-- [ ] **QUAL-27** [DFLOW] (P0) — **Data-contract fixes (theme ④; fast, unblocks the command surface).**
+- [x] **QUAL-27** `[release]` [DFLOW] (P0) — **Data-contract fixes (theme ④).** **DONE 2026-06-02.**
       `Intent.text`→`raw_text` at all 14 handler sites + `orchestrator.py:217` (P0-1, the biggest single defect;
-      `raw_text` = **original utterance**, NLU stops overwriting it — Q1); `WakeWordResult.word` consumer rename
-      (P1-b); **delete `Intent.session_id`** (use `context.session_id`); enforce the `IntentResult` error contract
-      (`success=False` ⟹ non-empty `error`, P1-a) + unify the forked `_create_error_result` (P1-t). Refs:
-      `dataflow_reconciliation.md` Q1/Q7.
+      `raw_text` = **original utterance** via a boundary override in `nlu_component.process(..., original_text=)`, NLU
+      stops overwriting it — Q1); `WakeWordResult.word` consumer rename (P1-b, 4 sites); **deleted `Intent.session_id`**
+      (field + 6 provider/component ctor kwargs + the orchestrator metrics read → `context.session_id` + the redundant
+      `_create_fallback_intent` param); enforced the `IntentResult` error contract via `__post_init__`
+      (`success=False` ⟹ non-empty `error`, P1-a — one backstop over all ~35 sites). Smoke green throughout
+      (5 passed / 1 xfailed). **Scope change (Invariant #8, user-approved):** P1-t (`_create_error_result` signature
+      unification) was found to be **6 handlers, not 2**, and is a shared-bases (theme ②) base-vs-handlers split →
+      **moved to QUAL-11** (handler-base/typed-accessor consolidation). Refs: `dataflow_reconciliation.md` Q1/Q7.
 - [ ] **QUAL-28** [DFLOW] (P0) — **Context & session refactor (Q2/Q3; foundational).** Split
       `UnifiedConversationContext` → a **long-lived physical-identity store** (room/device/client; holds
       `active_actions` + device capabilities; `ClientRegistry` = device source-of-truth) + a **short-lived conversation

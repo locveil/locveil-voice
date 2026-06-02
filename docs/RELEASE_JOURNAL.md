@@ -159,6 +159,14 @@ newest entries near the top of each dated section.
   **Gate 1: ARCH-1 ✓, ARCH-2 ✓, ARCH-3 ✓ — ARCH-4 (formalize ports) → ARCH-5 (import-linter) next.**
 
 ### 2026-06-02
+- **QUAL-27 DONE — data-contract fixes** (commits `cebb77e` + 2 follow-ups). `Intent.text`→`raw_text` sweep (14
+  sites + orchestrator; P0-1 command-surface crashes gone); NLU stamps `raw_text` = original utterance via a
+  boundary override in `nlu_component.process(original_text=)`; `WakeWordResult.word` rename (P1-b); **deleted
+  `Intent.session_id`** (field + 6 ctor kwargs + metrics read → `context.session_id` + fallback param);
+  `IntentResult.__post_init__` enforces `success=False ⟹ error` (P1-a, one backstop over ~35 sites). Smoke green
+  throughout. **Scope change (Invariant #8, user-approved):** P1-t (`_create_error_result` unification) found to be
+  **6 handlers not 2** + a shared-bases concern → moved to **QUAL-11**; review finding annotated. **NEXT: QUAL-29
+  (donation split) + QUAL-28 (context/action refactor) — the Gate-2 foundation.**
 - **Invariant #8 added — task-start reconciliation** (user). Before starting any task, reconcile it against
   `RELEASE_JOURNAL.md` + the current code (not just the ledger/review doc per #5): classify valid / partially-done /
   fully-done-obsolete / scope-drifted, and **consult the user before any scope change** — no silent stale/redundant

@@ -229,9 +229,12 @@ exist (`WakeWordResult.word`), → `AttributeError` (§3 P1-b). ENTRY B bypasses
 - **P1-s · No typed accessor — ~11 handlers hand-roll `intent.entities.get(...)`** with per-call divergent defaults,
   inline `int()`-to-default coercion, and the crash-prone `.get("text", intent.text)` idiom. `extract_entity` used by
   1 handler; `validate_entities` by 0. **CONFIRMS** PEX remediation #6 (the typed-accessor gap).
-- **P1-t · Two handlers override `_create_error_result` with an incompatible signature** (`(intent,context,error)`
+- **P1-t · Handlers override `_create_error_result` with an incompatible signature** (`(intent,context,error)`
   vs base `(text,error,metadata)`) — `translation_handler.py:214`, `text_enhancement_handler.py:243`. Latent footgun
   at the result-construction boundary. **NEW.**
+  _[Finding corrected 2026-06-02 (QUAL-27 reconcile): it's **6 handlers**, not 2 — also `voice_synthesis`,
+  `audio_playback`, `provider_control`, `speech_recognition`; a systematic base-vs-handlers split, not ad-hoc drift.
+  Unification moved to **QUAL-11** (shared handler base).]_
 
 ### P2 — smells / cleanup (abbreviated)
 
