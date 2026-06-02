@@ -159,6 +159,15 @@ newest entries near the top of each dated section.
   **Gate 1: ARCH-1 ✓, ARCH-2 ✓, ARCH-3 ✓ — ARCH-4 (formalize ports) → ARCH-5 (import-linter) next.**
 
 ### 2026-06-02
+- **QUAL-29 scope clarification (user) — REST API = unfinished Stage G; datetime gap filed as QUAL-33.** User flagged
+  that the donation **REST API still serves v1.0 concepts** and the datetime gap is unclosed. Grounded both: the REST
+  surface (`get_donation_schema` → `assets/v1.0.json`; the per-`{language}` GET/PUT/validate/create/delete treating a
+  lang file as a full donation-with-params; the dead `sync-parameters`; loader `get/save_donation_for_language`) is the
+  **config-ui/Invariant #4 obligation = QUAL-29 Stage G** — QUAL-29 stays `[~]` until it lands (documented explicitly in
+  `qual29_choices_decisions.md` Stage G). The **datetime gap is a distinct handler bug** (datetime.py reads no entities,
+  so its declared `format` is dead) — filed as **QUAL-33** (with system.info_type, same class: handlers ignoring declared
+  CHOICE params + authoring the deferred ru surfaces the validator already flags). Not part of the format split; doable
+  standalone.
 - **QUAL-29 Stages E + F — validator shrink + v1.1 JSON schemas. Smoke green.** (E) Rewrote
   `cross_language_validator` for v1.1: parameter parity is now structural (single-source contract) so
   `validate_parameter_consistency` was repurposed to **CHOICE surface completeness** (flags canonical tokens lacking

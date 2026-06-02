@@ -10,10 +10,22 @@
   `spacy_provider.py:867/905`. These get wired to match (canonical ∪ surfaces) → output canonical → validate vs canonical.
 - **Why it's a real fix:** `provider_control_handler` already hardcodes RU→EN maps (`"аудио":"audio"`, `"модель":"llm"`)
   — today Russian CHOICE recognition leans on per-handler hacks; the canonical model centralizes it declaratively.
-- **Build stages:** (1) model `choice_surfaces` → (2) migration script encodes all choice decisions + re-run →
-  (3) loader assembles contract+lang (choices=canonical, choice_surfaces=merged) → (4) extraction ×2 providers
-  (surface-match → canonical) → (5) validator shrink → (6) schemas (contract + language) → (7) config-ui (types/AJV/
-  editors) → (8) file follow-ups (datetime/system handler wiring) → (9) verify + commit.
+- **Build stages:** (A) model `choice_surfaces` ✅ → (B) migration encodes all choice decisions + re-run ✅ →
+  (C) loader assembles contract+lang ✅ → (D) extraction ×2 providers (surface→canonical) ✅ → (E) validator shrink ✅ →
+  (F) schemas (contract + language) + loader enforcement ✅ → (G) **config-ui surface (Invariant #4) — NOT yet done**
+  → (H) file follow-ups ✅ (QUAL-33).
+
+### Stage G — config-ui surface (the Invariant #4 obligation; REQUIRED to close QUAL-29)
+The runtime is v1.1 but the **donation editing REST API still serves v1.0 concepts** — QUAL-29 stays `[~]` until this lands:
+- **Backend REST (`intent_component.py`):** `GET /donations/schema` serves the old `assets/v1.0.json` → serve the v1.1
+  contract+language schemas. `GET·PUT·{lang}/validate·{lang}/create·DELETE /donations/{handler}/{language}` treat a
+  language file as a full donation **with params** — split into a **contract** editing surface (neutral: params/
+  choices=canonical/entity_type/room_context) + a **per-language phrasing** surface (phrases/extraction/surfaces/
+  default_value). `POST /donations/{handler}/sync-parameters` is dead (params single-source) → remove the endpoint.
+  Loader `get/save_donation_for_language` still read/write the single-file v1.0 shape → make contract-aware.
+- **Frontend (`config-ui/`):** `src/types/*` `DonationData`/`ParameterSpec` → canonical `choices` + `choice_surfaces` +
+  `entity_type` + `room_context`; AJV → the v1.1 schemas; `ParameterSpecEditor` (canonical vs per-language surfaces);
+  the language-tab editing flow. DoD: `cd config-ui && npm run type-check && npm run build` passes.
 
 
 Building the canonical+surface model for `choices` (user decision: Option B). For each CHOICE param:
