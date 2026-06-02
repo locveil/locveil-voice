@@ -53,6 +53,18 @@ The single active tracker for the road to release. Supersedes the legacy `docs/T
 7. **ONE JOURNAL.** `RELEASE_JOURNAL.md` is the **only** chronological log. No dated journals / "remediation round" /
    "status update" logs anywhere else (ledger or review docs). Journal entries reference task IDs but never assert
    their status.
+8. **TASK-START RECONCILIATION — no stale, redundant, or mis-scoped work.** Tasks are interdependent (esp. the Gate-2
+   foundational refactors QUAL-27/28/29, which will touch the surface of many later tasks). Before starting **any**
+   task, reconcile it against current reality — **not just the ledger/review doc (Invariant #5), but also**:
+   - **`RELEASE_JOURNAL.md`** — what actually landed since this task was written, and
+   - **the code itself** — does the described problem still exist, unchanged, in the place the task assumes?
+   - **Classify:** (a) **valid as written** → proceed; (b) **partially addressed** by prior work → narrow to the
+     remainder; (c) **already fully addressed** → close as obsolete; (d) **scope drifted** (earlier changes moved the
+     surface/approach) → redefine.
+   - **For (b)/(c)/(d): STOP and consult the user** with the proposed scope change **before** doing the work or
+     editing the ledger. **Never silently** proceed on stale work, or expand/shrink/close/redefine scope. On the
+     user's approval, update the ledger (status/description) + add a `RELEASE_JOURNAL.md` entry recording the change.
+   _Pairs with #5: #5 loads the context; #8 verifies the task is still the right task._
 
 ---
 

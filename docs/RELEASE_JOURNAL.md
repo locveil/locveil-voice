@@ -159,6 +159,10 @@ newest entries near the top of each dated section.
   **Gate 1: ARCH-1 ✓, ARCH-2 ✓, ARCH-3 ✓ — ARCH-4 (formalize ports) → ARCH-5 (import-linter) next.**
 
 ### 2026-06-02
+- **Invariant #8 added — task-start reconciliation** (user). Before starting any task, reconcile it against
+  `RELEASE_JOURNAL.md` + the current code (not just the ledger/review doc per #5): classify valid / partially-done /
+  fully-done-obsolete / scope-drifted, and **consult the user before any scope change** — no silent stale/redundant
+  work. Important given Gate-2's interdependent tasks (QUAL-27/28/29 will pre-touch QUAL-9/11/13).
 - **Doc-architecture restructure + scope-drift guard** (`cdd2dab`) — separated the three concerns into one home each:
   `RELEASE_PLAN.md` = task ledger (scope+status), new `RELEASE_JOURNAL.md` = the one journal, `docs/review/*` = frozen
   evidence (bannered). Refined Invariant #5 to a single status home; added #6 (single ledger + `[release]`/`[deferred]`
