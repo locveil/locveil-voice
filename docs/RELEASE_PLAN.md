@@ -57,6 +57,7 @@ Living findings behind the tasks (Invariant #5). `[x]` = exists; others are prod
 | `parameter_extraction_review.md` `[x]` | text→parameters review + gaps | QUAL-10 ✓, QUAL-11, TEST-4, DOC-7, UI-1/2/3, QUAL-22 |
 | `text_processing_review.md` `[x]` | text-processor subsystem review + LLM-text-proc question | QUAL-12 ✓, QUAL-13, TEST-5 |
 | `llm_usage_review.md` `[x]` | LLM usage + offline-first + NLU-LLM decision | QUAL-14 ✓, QUAL-15, QUAL-16 |
+| `dataflow_review.md` | end-to-end data/context-model flow map + defect hunt (gates Gate 2 cross-cutting) | QUAL-25, DOC-8, + remediations TBD |
 | `streaming_api_review.md` | AsyncAPI streaming-API tooling | QUAL-17/18 |
 | `esp32_wakeword_review.md` | ESP32 + wakeword keep/fix/cut | QUAL-19/20 |
 | `docs/design/mqtt_integration.md` | MQTT output-port design | ARCH-7/8 |
@@ -91,13 +92,25 @@ and the structural refactors **move code** — so blind refactoring/fixing is th
     Cheap; catches 3 of 4 review P0 *classes* (cascade names, console provider, dead stages) and stops regressions.
 - **Gate 1 — structural foundation:** **ARCH-1** (split god-module) → **ARCH-2** (config↔core cycle) →
   **ARCH-4** (formalize ports) → **ARCH-5** (import-linter; folds in QUAL-23). **DOC-4** in parallel (pin the target).
-- **Gate 2 — the review P0s, split by type:**
-  - **Surgical bug P0s** — can land any time **after Gate 0** (verifiable + restore basic function): QUAL-9 #1
-    (timer crash), QUAL-9 #3 (`get_or_create_context`), QUAL-11 #1 (cascade names), QUAL-15 #1 (console provider).
-    *(QUAL-23/Gate 0 already covers the name-resolution ones.)*
-  - **Refactor-flavored P0s** — land **after Gate 1**, as adapters behind the new ports: QUAL-11 #3 (shared
-    extraction base), QUAL-13 (collapse text-processors + wire stages), QUAL-9 #2 (F&F key-model rework — touches
-    the god-module ARCH-1 splits), QUAL-15 local-LLM provider (ties to ARCH-9/10).
+  **✓ COMPLETE 2026-06-02.**
+- **Gate 1.5 — dataflow review (do BEFORE Gate 2):** **QUAL-25 [DFLOW]** — map the end-to-end data/context-model
+  flow **and** hunt its defects (a QUAL-wave-species review → `docs/review/dataflow_review.md`). This **precedes**
+  the cross-cutting Gate 2 work because "fail-loud + a typed accessor at the handler boundary" *is* dataflow design —
+  map the threading before remediating. Spawns DOC-8 (write-up) + ranked remediation tasks.
+- **Gate 2 — the review P0s + the cross-cutting systemic remediation (downstream of Gate 1.5):**
+  - **Cross-cutting systemic fixes** (shared policy/utilities the 4 reviews + QUAL-25 all point to, established once
+    then applied across the per-review P0s): **fail-loud** (stop swallowing; typed entity/result accessor at the
+    handler boundary), **shared bases** (one extraction base / one prompt source / one F&F write-back / collapse
+    duplicate text-processors), **config-truth** (every key *consumed*, not just resolvable; kill dead trees; sync
+    schema↔model). Framing (principles block vs discrete QUAL-26/27/… task IDs) to be finalized **after QUAL-25**,
+    informed by its findings.
+  - **The review P0s, split by type:**
+    - **Surgical bug P0s** — can land any time **after Gate 0** (verifiable + restore basic function): QUAL-9 #1
+      (timer crash), QUAL-9 #3 (`get_or_create_context`), QUAL-11 #1 (cascade names), QUAL-15 #1 (console provider).
+      *(QUAL-23/Gate 0 already covers the name-resolution ones.)*
+    - **Refactor-flavored P0s** — land **after Gate 1**, as adapters behind the new ports: QUAL-11 #3 (shared
+      extraction base), QUAL-13 (collapse text-processors + wire stages), QUAL-9 #2 (F&F key-model rework — touches
+      the god-module ARCH-1 splits), QUAL-15 local-LLM provider (ties to ARCH-9/10).
 
 **One-line rule:** *bug P0s ride the smoke net; refactor P0s ride the ports.*
 
@@ -340,6 +353,24 @@ See `docs/review/phase1_architecture_map.md` §5.
       (inject the needed components via the existing handler-DI path, like the monitoring component injection),
       then **remove the `ignore_imports` exception** from the ARCH-5 domain contract so it enforces with no
       escape hatch. Domain-cleanliness; relates to ARCH-1.
+- [ ] **QUAL-25** [DFLOW] (P1) — **End-to-end dataflow & context-models review** → `docs/review/dataflow_review.md`.
+      A **map + findings** review (same species as the QUAL-8/10/12/14 wave: faithful as-is map **and** a defect
+      hunt, with ranked **P0/P1/P2** remediations). **Why a review, not just a doc:** end-to-end clarity on how data
+      moves through the pipeline needs an investigation pass first — `DATA_MODELS.md` (DOC-8) is the *output* of this
+      review, not the task itself (re-categorized 2026-06-02 per user; DOC-8 demoted to the downstream write-up).
+      **Scope — trace the full request→result lifecycle and how the model cast plays together, when each is needed
+      and why:** `RequestContext` (per-request input metadata) · `UnifiedConversationContext` (per-session state via
+      `ContextManager`) · `Intent` (NLU output) · `IntentResult` (handler output) · `AudioData`/`WakeWordResult`
+      (IO primitives) — the request-scoped vs session-scoped distinction being the key confusion to resolve.
+      **Hunt for:** data threaded-but-dropped / built-then-discarded; inconsistent or implicit handoffs across the
+      port boundaries; where the handler boundary lacks a typed entity/result accessor; session/request lifecycle
+      leaks or mismatches; models that diverge from how they're actually populated/consumed. **Gates Gate 2:** the
+      cross-cutting systemic remediation (fail-loud + typed accessor at the handler boundary / shared bases /
+      config-truth) is **downstream of this review** — "fail-loud + typed accessor" *is* dataflow design, so map the
+      threading before remediating. Likely uses the multi-agent (parallel subagents → synthesis) approach the QUAL
+      wave used. Refs: `phase1_architecture_map.md` §4; ARCH-1/5 (post-split model homes:
+      `intents/context_models.py`, `intents/models.py`, `utils/audio_data.py`). **Spawns:** DOC-8 (the write-up) +
+      ranked remediation tasks (numbered when the review lands).
 
 ### Tests (TEST)
 > **Strategy (decided 2026-06-01): do NOT keep repairing the existing suite.** Most tests were written against
@@ -439,7 +470,10 @@ See `docs/review/phase1_architecture_map.md` §5.
       handler consumption of `intent.entities`. → `docs/guides/PARAMETER_EXTRACTION_GUIDE.md`. Derived from QUAL-10.
 - [x] **DOC-6** (P2) — Archived stale historical-plan docs (`config_schemas`, `language_support`,
       `configuration_guide`, `PIPELINE_IMPLEMENTATION`, `irene_current`) → `docs/archive/`.
-- [ ] **DOC-8** (P1) — **Data & context-models map** → `docs/guides/DATA_MODELS.md`. A concise reference for how
+- [ ] **DOC-8** (P1) — **Data & context-models map** → `docs/guides/DATA_MODELS.md`. **Downstream of QUAL-25
+      [DFLOW]** (re-categorized 2026-06-02): this is the *write-up* that distills the dataflow **review** into a
+      concise developer reference; the investigation/findings now live in QUAL-25 → `docs/review/dataflow_review.md`.
+      Do this **after** QUAL-25 lands, consuming its map + confirmed model lifecycle. A concise reference for how
       the pipeline's models play together — **when each is needed and why** (the request-scoped vs session-scoped
       distinction is the key confusion to resolve). Cover the cast + responsibilities: **`RequestContext`**
       (per-*request* input metadata — source, session_id, wants_audio, skip flags, client/room/device, language;
@@ -623,6 +657,15 @@ Governed by Invariant #4 (config-ui must stay functional).
   **Gate 1: ARCH-1 ✓, ARCH-2 ✓, ARCH-3 ✓ — ARCH-4 (formalize ports) → ARCH-5 (import-linter) next.**
 
 ### 2026-06-02
+- **DOC-8 RE-CATEGORIZED** (user correction) — yesterday's DOC-8 was filed as a plain doc task ("write
+  `DATA_MODELS.md`"), but end-to-end dataflow clarity is a **macro-task that needs its own review first** (same
+  species as ARCH-0 / the QUAL-8/10/12/14 wave). Created **QUAL-25 [DFLOW]** — a **map + findings** review →
+  `docs/review/dataflow_review.md`; **DOC-8 demoted** to the downstream write-up that consumes it. Sequencing:
+  inserted **Gate 1.5** (QUAL-25) **before Gate 2** — the cross-cutting systemic remediation (fail-loud + typed
+  handler-boundary accessor / shared bases / config-truth) is now **downstream of the dataflow review**, since
+  "fail-loud + typed accessor" *is* dataflow design. The cross-cutting framing decision (principles block vs
+  discrete QUAL IDs) is deferred until QUAL-25 lands, to be informed by its findings. New tag **[DFLOW]**; index row
+  added.
 - **DOC-8 captured** (user request) — need a reference for how the pipeline's models play together (when/why each):
   `RequestContext` (request-scoped) vs `UnifiedConversationContext` (session-scoped), `Intent`/`IntentResult`,
   `AudioData`/`WakeWordResult`. → `docs/guides/DATA_MODELS.md` + a model-interplay note added to
