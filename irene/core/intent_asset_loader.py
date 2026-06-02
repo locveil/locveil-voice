@@ -552,6 +552,8 @@ class IntentAssetLoader:
         except Exception as e:
             self._add_warning(f"Failed to load contract.json for handler '{handler_name}': {e}")
             return
+        if self.config.validate_json_schema:
+            await self._validate_donation_schema(contract, contract_path, "donation_contract_v1.1.json")
 
         lang_jsons = {}
         for lang_file in lang_dir.glob("*.json"):
@@ -563,6 +565,9 @@ class IntentAssetLoader:
                     lang_jsons[language] = json.loads(lang_file.read_text(encoding="utf-8"))
                 except Exception as e:
                     self._add_warning(f"Failed to load {language} phrasing for handler '{handler_name}': {e}")
+                    continue
+                if self.config.validate_json_schema:
+                    await self._validate_donation_schema(lang_jsons[language], lang_file, "donation_language_v1.1.json")
 
         if not lang_jsons:
             self._add_warning(f"No language phrasing files for handler '{handler_name}' in {lang_dir}")
@@ -1516,6 +1521,28 @@ class IntentAssetLoader:
         
         return donation
     
+    async def _validate_donation_schema(self, json_data: dict, json_path: Path, schema_filename: str) -> None:
+        """QUAL-29: validate a v1.1 contract/language file against its JSON Schema (graceful if jsonschema absent)."""
+        try:
+            import jsonschema
+        except ImportError:
+            if self.config.strict_mode:
+                raise DonationDiscoveryError(f"jsonschema library not available for validation of {json_path}")
+            logger.warning("jsonschema library not available - skipping v1.1 schema validation")
+            return
+        schema_path = self.assets_root / schema_filename
+        if not schema_path.exists():
+            logger.warning(f"v1.1 schema not found at {schema_path} - skipping schema validation")
+            return
+        try:
+            schema = json.loads(schema_path.read_text(encoding="utf-8"))
+            jsonschema.validate(instance=json_data, schema=schema)
+        except jsonschema.ValidationError as e:
+            error_msg = f"v1.1 schema validation failed for {json_path} against {schema_filename}: {e.message}"
+            if self.config.strict_mode:
+                raise DonationDiscoveryError(error_msg)
+            self._add_error(error_msg)
+
     async def _validate_json_schema(self, json_data: dict, json_path: Path) -> None:
         """Validate JSON data against JSON Schema"""
         try:

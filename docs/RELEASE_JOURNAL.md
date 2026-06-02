@@ -159,6 +159,17 @@ newest entries near the top of each dated section.
   **Gate 1: ARCH-1 ✓, ARCH-2 ✓, ARCH-3 ✓ — ARCH-4 (formalize ports) → ARCH-5 (import-linter) next.**
 
 ### 2026-06-02
+- **QUAL-29 Stages E + F — validator shrink + v1.1 JSON schemas. Smoke green.** (E) Rewrote
+  `cross_language_validator` for v1.1: parameter parity is now structural (single-source contract) so
+  `validate_parameter_consistency` was repurposed to **CHOICE surface completeness** (flags canonical tokens lacking
+  per-language surfaces — correctly surfaces the deferred datetime.format/system.info_type gaps); `sync_parameters_
+  across_languages` is now a **no-op** (nothing to sync); `validate_method_completeness` + `suggest_translations`
+  reworked to read the v1.1 raw structure (contract method list + per-language phrases). Report dataclass shapes kept
+  so the 3 config-ui REST endpoints stay stable (Invariant #4). (F) Wrote `assets/donation_contract_v1.1.json` +
+  `assets/donation_language_v1.1.json` (the schemas the migrated `$schema` keys reference) and wired
+  `_validate_donation_schema` into the loader (guarded by `validate_json_schema`, graceful if jsonschema absent).
+  Verified all **14 contracts + 28 language files validate** against the schemas, and they're now enforced at load.
+  Remaining (QUAL-29): config-ui (Stage G, Invariant #4) + dead-param handler-wiring follow-ups (Stage H).
 - **QUAL-29 Stage D — extraction surface→canonical normalization. Smoke green.** Added
   `ParameterSpec.surface_to_canonical()` ({surface_lower: canonical}, all languages; canonical maps to itself).
   Rewrote the 4 CHOICE consumption spots — `hybrid_keyword_matcher` (fuzzy) + `spacy_provider` (similarity), both

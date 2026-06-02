@@ -1,0 +1,60 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "donation_contract_v1.1.json",
+  "title": "Irene Intent Donation — language-neutral contract (v1.1)",
+  "description": "QUAL-29: the invariant, language-neutral core of a handler donation. Holds the method list and the ParameterSpec core (name/type/required/choices=canonical/min-max/pattern/entity_type) plus the per-method room_context. Per-language phrasing lives in the sibling <lang>.json files.",
+  "type": "object",
+  "required": ["schema_version", "handler_domain", "method_donations"],
+  "additionalProperties": true,
+  "properties": {
+    "$schema": { "type": "string" },
+    "schema_version": { "const": "1.1" },
+    "donation_version": { "type": "string", "pattern": "^\\d+\\.\\d+(\\.\\d+)?$" },
+    "handler_domain": { "type": "string", "pattern": "^[A-Za-z0-9_-]+$",
+      "description": "Canonical, language-neutral domain key (ASCII; must match the intent_name_patterns prefix)." },
+    "description": { "type": "string" },
+    "intent_name_patterns": { "type": "array", "items": { "type": "string" } },
+    "domain_patterns": { "type": "array", "items": { "type": "string" } },
+    "fallback_conditions": { "type": "array", "items": { "type": "object" } },
+    "action_domain_priority": { "type": "integer" },
+    "method_donations": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/method" }
+    },
+    "global_parameters": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/param" }
+    }
+  },
+  "$defs": {
+    "method": {
+      "type": "object",
+      "required": ["method_name", "intent_suffix"],
+      "additionalProperties": false,
+      "properties": {
+        "method_name": { "type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" },
+        "intent_suffix": { "type": "string", "minLength": 1 },
+        "boost": { "type": "number", "minimum": 0.0, "maximum": 10.0 },
+        "room_context": { "enum": ["required", "none", "conditional"] },
+        "parameters": { "type": "array", "items": { "$ref": "#/$defs/param" } }
+      }
+    },
+    "param": {
+      "type": "object",
+      "required": ["name", "type"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "type": { "enum": ["string", "integer", "float", "duration", "datetime", "boolean", "choice", "entity"] },
+        "required": { "type": "boolean" },
+        "choices": { "type": ["array", "null"], "items": { "type": "string" },
+          "description": "Canonical (language-neutral) choice tokens; per-language spoken forms live in <lang>.json choice_surfaces." },
+        "min_value": { "type": ["number", "null"] },
+        "max_value": { "type": ["number", "null"] },
+        "pattern": { "type": ["string", "null"] },
+        "entity_type": { "enum": ["device", "location", "room", "person", "generic"] }
+      }
+    }
+  }
+}
