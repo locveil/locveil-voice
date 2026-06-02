@@ -246,29 +246,44 @@ class SystemIntentHandler(IntentHandler):
         )
     
     async def _handle_info_request(self, intent: Intent, context: UnifiedConversationContext) -> IntentResult:
-        """Handle general information request"""
-        # Use language from context (detected by NLU)
+        """Handle general information request. QUAL-33: honour the declared `info_type` CHOICE param
+        (canonical: system | performance) — was previously ignored."""
         language = context.language or "ru"
-        
         session_stats = self._get_session_stats(context)
-        version = __version__
-        
-        info_text = self._get_template(
-            "info", 
-            language,
-            version=version,
-            session_start_time=datetime.fromtimestamp(context.created_at).strftime('%H:%M'),
-            message_count=len(context.conversation_history),
-            session_id=context.session_id
-        )
-        
+        info_type = (intent.entities.get("info_type") or "system").strip().lower()
+
+        if info_type == "performance":
+            from ...core.metrics import get_metrics_collector
+            perf = get_metrics_collector().get_performance_summary()
+            uptime_seconds = time.time() - self.start_time
+            uptime_hours = int(uptime_seconds // 3600)
+            uptime_minutes = int((uptime_seconds % 3600) // 60)
+            if uptime_hours > 0:
+                uptime_str = (f"{uptime_hours} hours and {uptime_minutes} minutes" if language == "en"
+                              else f"{uptime_hours} часов и {uptime_minutes} минут")
+            else:
+                uptime_str = f"{uptime_minutes} minutes" if language == "en" else f"{uptime_minutes} минут"
+            info_text = self._get_template(
+                "performance", language,
+                uptime_str=uptime_str,
+                total_actions=perf.get("total_actions", 0),
+                success_rate=f"{perf.get('success_rate', 0.0) * 100:.0f}%",
+                avg_duration=f"{perf.get('average_duration', 0.0):.2f}s",
+            )
+        else:  # system (default)
+            info_type = "system"
+            info_text = self._get_template(
+                "info", language,
+                version=__version__,
+                session_start_time=datetime.fromtimestamp(context.created_at).strftime('%H:%M'),
+                message_count=len(context.conversation_history),
+                session_id=context.session_id
+            )
+
         return IntentResult(
             text=info_text,
             should_speak=True,
-            metadata={
-                "session_info": session_stats,
-                "language": language
-            }
+            metadata={"info_type": info_type, "session_info": session_stats, "language": language}
         )
     
     async def _handle_general_info(self, intent: Intent, context: UnifiedConversationContext) -> IntentResult:

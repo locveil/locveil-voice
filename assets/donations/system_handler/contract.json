@@ -60,9 +60,7 @@
           "required": false,
           "choices": [
             "system",
-            "performance",
-            "configuration",
-            "logs"
+            "performance"
           ],
           "entity_type": "generic"
         }

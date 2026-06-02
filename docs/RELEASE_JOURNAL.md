@@ -159,6 +159,17 @@ newest entries near the top of each dated section.
   **Gate 1: ARCH-1 ✓, ARCH-2 ✓, ARCH-3 ✓ — ARCH-4 (formalize ports) → ARCH-5 (import-linter) next.**
 
 ### 2026-06-02
+- **QUAL-33 (system half) — wired `system.info_type`; canonical set reduced to `[system, performance]`. QUAL-33 DONE.**
+  `_handle_info_request` now branches on `info_type` (was ignored). Per user, the canonical set was **reduced to
+  `[system, performance]`** — `configuration` and `logs` REMOVED from the donation contract entirely ("no handlers, no
+  donations"): there's no in-memory log buffer and the full system config isn't reachable from the handler, and the
+  honest fix for "declares an option it can't serve" is to **not declare it**. `performance` renders real metrics —
+  `get_metrics_collector().get_performance_summary()` (total_actions/success_rate/avg_duration) + uptime — via a new
+  bilingual `performance` template (`system_handler/{en,ru}.yaml`); `system` (default) keeps the existing info template.
+  Authored bilingual `choice_surfaces` for `info_type` (en: system/performance + synonyms like perf/metrics/stats; ru:
+  система/производительность/нагрузка/…). Verified: template placeholders render (no KeyError); surfaces resolve
+  ("производительность"→performance, "о системе"→system); donations schema-valid; smoke + store + contracts green.
+  **QUAL-33 complete** (both halves). ru surfaces are a proposal pending native-speaker review.
 - **QUAL-33 (datetime half) — wired `datetime.format`; the handler now honours its declared CHOICE param.**
   All three datetime handlers (`current_time`/`current_date`/`current_datetime`) read `intent.entities["format"]`
   (canonical, normalised by the NLU) and branch: time → 12hour (`12:40 AM`) / 24hour (`00:40`) / verbose (the natural

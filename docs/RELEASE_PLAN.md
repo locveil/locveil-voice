@@ -556,17 +556,19 @@ _Apply to every remediation task below (from the 4 review docs + QUAL-25/26). So
       `grep -rn TYPE_CHECKING irene/ --include=*.py` returns nothing (outside prose/docstrings) and imports/smoke stay
       green. _Two files already cleared opportunistically (2026-06-02): `intents/handlers/conversation.py` + `timer.py`
       (the QUAL-28 touch surface)._
-- [~] **QUAL-33** `[release]` [DFLOW] (P2) — **Handlers ignore declared CHOICE params (surfaced by QUAL-29). DOING.**
-      _Scope (user 2026-06-03): system.info_type = **full feature** (real per-category content), not a light template map._ Two
-      handlers DECLARE a CHOICE parameter their code never reads — a genuine bug the format split exposed: **(a)**
-      `datetime` handler (`intents/handlers/datetime.py`) reads **zero** `intent.entities` and formats date/time purely
-      from locale templates, so the `format` param (canonical per method: `current_time` `[12hour,24hour,verbose]` ·
-      `current_date` `[short,full,iso,verbose]` · `current_datetime` `[iso,readable,unix,verbose]`) is dead — wire the
-      handler to branch on `format`; **(b)** `system` handler `_handle_info_request` ignores `info_type` (canonical
-      `[system,performance,configuration,logs]`) — branch on it. For both, **author the deferred ru `choice_surfaces`**
-      (QUAL-29 left them `{}` because the param was dead — the validator's surface-completeness check flags exactly
-      these). Done when each handler consumes its CHOICE param, ru surfaces exist, and the QUAL-29 validator reports
-      surface-complete for `datetime`/`system`. Refs: `qual29_choices_decisions.md` Cases 1–2.
+- [x] **QUAL-33** `[release]` [DFLOW] (P2) — **Handlers ignore declared CHOICE params (surfaced by QUAL-29). DONE.**
+      Two handlers DECLARED a CHOICE parameter their code never read — a genuine bug the format split exposed.
+      **(a) `datetime.format` — DONE:** all three handlers (`current_time`/`current_date`/`current_datetime`) now branch
+      on the canonical `format` (time: 12hour/24hour/verbose · date: short/iso/full=verbose · datetime: iso/unix/
+      readable/verbose), rendering via `strftime` with the natural template as the verbose default. **(b) `system.info_
+      type` — DONE (user-reduced scope):** `_handle_info_request` branches on `info_type`; the canonical set was
+      **reduced to `[system, performance]`** — `configuration`/`logs` REMOVED from the donation entirely (user 2026-06-03:
+      "no handlers, no donations" — not declaring options we don't implement is the *fix* for this bug class, not a
+      regression). `performance` renders real metrics (`get_metrics_collector().get_performance_summary()` + uptime) via
+      a new bilingual `performance` template; `system` keeps the existing info. **Authored bilingual `choice_surfaces`**
+      for both (`datetime.format` en+ru; `system.info_type` en+ru), making the values reachable (QUAL-29's matcher
+      extracts CHOICE via surfaces). Validator now reports `datetime`/`system` surface-complete. _ru surfaces are a
+      proposal pending native-speaker review._ Refs: `qual29_choices_decisions.md` Cases 1–2.
 
 ### Tests (TEST)
 > **Strategy (decided 2026-06-01): do NOT keep repairing the existing suite.** Most tests were written against

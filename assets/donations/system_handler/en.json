@@ -261,7 +261,23 @@
               "pattern": [],
               "label": "INFO_TYPE"
             }
-          ]
+          ],
+          "choice_surfaces": {
+            "system": [
+              "system",
+              "system info",
+              "about the system",
+              "about"
+            ],
+            "performance": [
+              "performance",
+              "perf",
+              "metrics",
+              "stats",
+              "statistics",
+              "load"
+            ]
+          }
         }
       ]
     },

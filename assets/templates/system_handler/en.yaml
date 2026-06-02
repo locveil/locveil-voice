@@ -27,6 +27,15 @@ info: |
 
   Ready to assist you!
 
+performance: |
+  System Performance:
+  ⏱️ Uptime: {uptime_str}
+  🎯 Actions processed: {total_actions}
+  ✅ Success rate: {success_rate}
+  ⚡ Average duration: {avg_duration}
+
+  Running smoothly!
+
 status: |
   System Status: ✅ Running
   Uptime: {uptime_str}
