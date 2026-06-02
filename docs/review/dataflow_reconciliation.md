@@ -24,8 +24,8 @@ committed after every decision, so an interrupted session continues from the fir
 | Q5 | **Conversation history** — pick the canonical representation (3 today) and a single writer | P1-q | ✅ DECIDED (by consequence) |
 | Q6 | **Device-context pipeline** — who populates `device_context`/`available_devices` at the entry | P1-j (blocks the PEX device-resolution P0) | ✅ DECIDED |
 | Q7 | **Fail-loud philosophy + typed accessor** (theme #1) — raise vs result-signal; where the typed entity/result accessor lives | P0-9, P1-a/s; the whole handler boundary | ✅ DECIDED |
-| Q8 | **Shared-bases consolidations** (theme #2) — extraction base · prompt source · F&F write-back · collapse text processors · `_create_error_result` signature | P1-f/k/r/t | 🔵 OPEN |
-| Q9 | **Config-truth scope** (theme #3) — cascade phantoms · `language` plumbing · dead config trees · schema↔model drift | P1-e/h/i, P2 tail | ⚪ pending |
+| Q8 | **Shared-bases consolidations** (theme #2) — extraction base · prompt source · F&F write-back · collapse text processors · `_create_error_result` signature | P1-f/k/r/t | ✅ DECIDED |
+| Q9 | **Config-truth scope** (theme #3) — cascade phantoms · `language` plumbing · dead config trees · schema↔model drift | P1-e/h/i, P2 tail | 🔵 OPEN |
 | Q10 | **Gate 2 framing + numbering** (meta) — principles block vs discrete tasks (QUAL-27/28/…); number the new P0s | finalizes Gate 2 | ⚪ pending |
 
 **Mechanical fixes confirmed with no decision needed** (fold into the relevant remediation task): `WakeWordResult.word`
@@ -202,6 +202,25 @@ structured rows: original user_text, response, intent, timestamp); the LLM `mess
   `pending_clarification` on the **conversation session** (transient). **Spawns (→ Q10):** clarification responder
   (Gate 2, configurable LLM/deterministic) + multi-turn slot-filling feature task.
 
-<!-- next: Q8 -->
+### Q8 — Shared-bases consolidations · ✅ DECIDED
+**Already settled earlier:** F&F write-back → Q3 (one workflow-level path); `_create_error_result` → Q7c (unified
+contract); handler-side extraction → Q7b (typed accessor). **Three remaining, all confirmed:**
+1. **NLU provider extraction base** (P1-r) — one **shared, donation-`ParameterSpec`-driven** extraction contract both
+   `hybrid_keyword_matcher` and `spacy_nlu` use, so extraction is provider-independent (fixes the DURATION divergence).
+   → QUAL-11 [PEX].
+2. **One LLM prompt source** (P1, triplicated) — **confirmed WITH the condition that centralization *is* the
+   LLM-independent prompt-hardening layer**: written once, applied to all providers, using provider-agnostic
+   techniques (instruction/data separation + delimited user content, no model-specific features), with **deterministic
+   output validation + fail-safe fallback** (Q7) as the backstop and the offline path always available so prompts are
+   never load-bearing. → QUAL-16 [PROMPTS].
+3. **Collapse the 4 text processors** (P1-h) into one config-driven processor with stages wired (Q4) — **confirmed WITH
+   the condition it covers normalization/lingua_franca:** verified `lingua_franca` is scattered across all 4 processors
+   + `utils/text_processing.py` + the component, plus `Runorm` (Russian) in `tts`/`utils/text_normalizers.py`.
+   Consolidate both into the unified processor's normalization layer **behind a normalization seam** that (a) contains
+   the abandoned-MycroftAI `lingua_franca` debt in one place, (b) makes the eventual **OVOS migration a localized
+   swap**, (c) selects multilingual vs Russian normalization per stage/language via config. → QUAL-13 [TXTPROC] +
+   lingua-franca-techdebt.
+
+<!-- next: Q9 -->
 
 
