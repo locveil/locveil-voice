@@ -76,7 +76,7 @@ class ContextManager:
         if session_id in self.sessions:
             context = self.sessions[session_id]
             # Check if session has expired
-            if time.time() - context.last_updated > self.session_timeout:
+            if time.time() - self._effective_last_active(context) > self.session_timeout:
                 logger.info(f"Session {session_id} expired, creating new context")
                 
                 # Phase 2: Record session end for expired session
@@ -123,16 +123,11 @@ class ContextManager:
         room_name = None
         
         if request_context:
-            # Priority 1: Explicit room information
+            # Room/device identity travels as explicit RequestContext fields (QUAL-28 Q2) — populated
+            # by the entry adapter / ClientRegistry registration (ARCH-6). No more lossy parsing of the
+            # room back out of the session id (the `extract_room_from_session` heuristic is gone, P1-o).
             room_id = getattr(request_context, 'client_id', None)
             room_name = getattr(request_context, 'room_name', None)
-            
-            # Priority 2: Extract from session ID if room-based
-            if not room_id:
-                from ..core.session_manager import SessionManager
-                room_id = SessionManager().extract_room_from_session(session_id)
-                
-            # Priority 3: Extract from device context
             if not room_name and request_context.device_context:
                 room_name = request_context.device_context.get('room_name')
         
@@ -266,6 +261,14 @@ class ContextManager:
             "max_history_turns": self.max_history_turns
         }
     
+    @staticmethod
+    def _effective_last_active(context: UnifiedConversationContext) -> float:
+        """Most-recent activity by EITHER clock (QUAL-28 eviction-unify): `last_updated` (touched by
+        history/action writes) vs `last_activity` (touched by state/thread/request-info). Eviction reads
+        this `max` so a session kept alive via one path but not the other is never evicted prematurely."""
+        return max(getattr(context, 'last_updated', 0.0) or 0.0,
+                   getattr(context, 'last_activity', 0.0) or 0.0)
+
     async def _cleanup_expired_sessions(self):
         """Remove expired sessions from memory."""
         current_time = time.time()
@@ -276,7 +279,7 @@ class ContextManager:
         
         expired_sessions = []
         for session_id, context in self.sessions.items():
-            if current_time - context.last_updated > self.session_timeout:
+            if current_time - self._effective_last_active(context) > self.session_timeout:
                 expired_sessions.append(session_id)
         
         for session_id in expired_sessions:
@@ -950,14 +953,9 @@ class ContextManager:
         Returns:
             True if context has expired, False otherwise
         """
-        if not hasattr(context, 'last_activity') or context.last_activity is None:
-            # If no last_activity, use created_at
-            last_activity = getattr(context, 'created_at', time.time())
-        else:
-            last_activity = context.last_activity
-        
-        # Check if context has been inactive longer than timeout
-        return (time.time() - last_activity) > self.session_timeout
+        # QUAL-28: unify on the max of both activity clocks (see _effective_last_active).
+        last_active = self._effective_last_active(context) or getattr(context, 'created_at', time.time())
+        return (time.time() - last_active) > self.session_timeout
     
     async def remove_context(self, session_id: str) -> None:
         """

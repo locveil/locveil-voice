@@ -159,6 +159,13 @@ newest entries near the top of each dated section.
   **Gate 1: ARCH-1 ✓, ARCH-2 ✓, ARCH-3 ✓ — ARCH-4 (formalize ports) → ARCH-5 (import-linter) next.**
 
 ### 2026-06-02
+- **QUAL-28 Stage 3.3 — kill `extract_room_from_session` + eviction-unify.** Removed the lossy
+  `extract_room_from_session` heuristic (P1-o) and its only consumer `get_session_type` (both unused externally); room
+  identity now comes only from the explicit `RequestContext` fields (Q2; ARCH-6 populates them) — the Priority-2
+  session-id parse in `get_context_with_request_info` is gone. **Eviction unified** on a new `_effective_last_active`
+  = `max(last_updated, last_activity)`; all three checks (the get_context inline check, the lazy
+  `_cleanup_expired_sessions`, the background `_is_context_expired`) now use it, so a session kept alive via one clock
+  but not the other is never evicted prematurely (P1-p). Imports + contracts + smoke + store tests green (15 passed).
 - **QUAL-28 Stage 3.3 (start) — contextual resolver reads the store by `physical_id`.** `resolve_contextual_command_
   ambiguity`/`_resolve_contextual_command_internal` now take `physical_id` (not `session_id`) and read live actions
   straight from the action store — no `self.sessions[session_id]` lookup — so a "стоп"/"pause" still resolves **after
