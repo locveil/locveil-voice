@@ -25,8 +25,8 @@ committed after every decision, so an interrupted session continues from the fir
 | Q6 | **Device-context pipeline** — who populates `device_context`/`available_devices` at the entry | P1-j (blocks the PEX device-resolution P0) | ✅ DECIDED |
 | Q7 | **Fail-loud philosophy + typed accessor** (theme #1) — raise vs result-signal; where the typed entity/result accessor lives | P0-9, P1-a/s; the whole handler boundary | ✅ DECIDED |
 | Q8 | **Shared-bases consolidations** (theme #2) — extraction base · prompt source · F&F write-back · collapse text processors · `_create_error_result` signature | P1-f/k/r/t | ✅ DECIDED |
-| Q9 | **Config-truth scope** (theme #3) — cascade phantoms · `language` plumbing · dead config trees · schema↔model drift | P1-e/h/i, P2 tail | 🔵 OPEN |
-| Q10 | **Gate 2 framing + numbering** (meta) — principles block vs discrete tasks (QUAL-27/28/…); number the new P0s | finalizes Gate 2 | ⚪ pending |
+| Q9 | **Config-truth scope** (theme #3) — cascade phantoms · `language` plumbing · dead config trees · schema↔model drift | P1-e/h/i, P2 tail | ✅ DECIDED |
+| Q10 | **Gate 2 framing + numbering** (meta) — principles block vs discrete tasks (QUAL-27/28/…); number the new P0s | finalizes Gate 2 | 🔵 OPEN |
 
 **Mechanical fixes confirmed with no decision needed** (fold into the relevant remediation task): `WakeWordResult.word`
 vs `.wake_word` consumer rename (P1-b); the `intent.text` → correct-field replacement is mechanical *once Q1 sets the
@@ -221,6 +221,24 @@ contract); handler-side extraction → Q7b (typed accessor). **Three remaining, 
    swap**, (c) selects multilingual vs Russian normalization per stage/language via config. → QUAL-13 [TXTPROC] +
    lingua-franca-techdebt.
 
-<!-- next: Q9 -->
+### Q9 — Config-truth · ✅ DECIDED
+**Deployment model confirmed (user):** `config-master.toml` = canonical fully-commented **superset** reference
+(dev/test + docs; 57 `enabled=true` / 20 `enabled=false` — a *curated* superset, not blindly-all-on); **real
+deployments use a minimal config** with only needed components (already exist: `minimal/api-only/voice/full/
+embedded-armv7/development.toml`; profile auto-detected by `get_deployment_profile()`; `REL-2` finalizes the canonical
+minimal starter).
+- **9a — config-truth check is DEPLOYMENT-AWARE (refined):** two layers — (1) **schema-parity + no dead trees** (every
+  key is schema-known; no config tree consumed by *no* codepath in *any* profile) applies to ALL configs incl.
+  config-master; (2) **enabled-set resolvability** (every *enabled* component/provider/stage resolves to real code)
+  applies per-loaded-config (QUAL-23, already deployment-aware). **NOT** "every key active this run" (would wrongly flag
+  the superset). Extend QUAL-23 + add a schema↔model parity test.
+- **9b — remove dead config trees** (`[text_processor.normalizers.*]`, `number_options`, …) now that Q8 defines the
+  real normalization config.
+- **9c — sync schema↔model drift** (e.g. `LLMConfig` catch-all `Dict` → typed; train-schedule nesting QUAL-7).
+- **`language` (P1-i): WIRE, don't delete** — populate from the `ClientRegistry` client record / global config
+  (deployment/client language), per-utterance detection as fallback/override. Consumed + robust + aligns with the
+  per-language donation/normalization model.
+
+<!-- next: Q10 -->
 
 
