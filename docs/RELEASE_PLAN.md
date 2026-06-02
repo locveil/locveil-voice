@@ -65,6 +65,14 @@ The single active tracker for the road to release. Supersedes the legacy `docs/T
      editing the ledger. **Never silently** proceed on stale work, or expand/shrink/close/redefine scope. On the
      user's approval, update the ledger (status/description) + add a `RELEASE_JOURNAL.md` entry recording the change.
    _Pairs with #5: #5 loads the context; #8 verifies the task is still the right task._
+9. **NO `TYPE_CHECKING` / no `if TYPE_CHECKING:` import guards.** Imports are honest: if a type can be imported at
+   runtime, import it at module top (plainly) and annotate with the real symbol — not a stringized forward ref behind
+   a guard. A `TYPE_CHECKING` block is a **band-aid for an import cycle**, and a cycle is an architecture smell: it
+   means dependencies don't point inward (Invariant #3). The fix is to **break the cycle** (move the shared type to a
+   lower layer / use a port), not to hide it from the runtime. Hard third-party deps (e.g. `pydantic`, in
+   `pyproject.toml`) are never optional, so guarding their imports is pure ceremony. When touching a file that has a
+   `TYPE_CHECKING` block, remove it: hoist the import if there's no cycle, or fix the cycle if there is. _(Tracked as
+   QUAL-32 for the residual repo-wide sweep; new code must comply from the start.)_
 
 ---
 
@@ -517,6 +525,14 @@ _Apply to every remediation task below (from the 4 review docs + QUAL-25/26). So
       on the conversation session + `ConversationState = awaiting-clarification` + a pipeline pre-check that fills the
       slot from the next turn and completes the original intent (symmetric to the F&F `contextual` check, but transient).
       Expires with the Q2 idle window. Follow-up to QUAL-30.
+- [ ] **QUAL-32** `[release]` [QUAL] (P2) — **Purge `TYPE_CHECKING` import guards repo-wide (Invariant #9).** ~13 files
+      still carry an `if TYPE_CHECKING:` block (`core/metadata.py`, `core/interfaces/webapi.py`, several
+      `intents/handlers/*.py`, `utils/audio_helpers.py`, …). For each: if there's no real import cycle, hoist the import
+      to module top and de-stringize the annotation; if there **is** a cycle, fix it at the architecture level (break
+      the upward edge — move the shared type down / route via a port, per Invariant #3) rather than re-guard. Done when
+      `grep -rn TYPE_CHECKING irene/ --include=*.py` returns nothing (outside prose/docstrings) and imports/smoke stay
+      green. _Two files already cleared opportunistically (2026-06-02): `intents/handlers/conversation.py` + `timer.py`
+      (the QUAL-28 touch surface)._
 
 ### Tests (TEST)
 > **Strategy (decided 2026-06-01): do NOT keep repairing the existing suite.** Most tests were written against

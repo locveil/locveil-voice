@@ -159,6 +159,14 @@ newest entries near the top of each dated section.
   **Gate 1: ARCH-1 ✓, ARCH-2 ✓, ARCH-3 ✓ — ARCH-4 (formalize ports) → ARCH-5 (import-linter) next.**
 
 ### 2026-06-02
+- **Invariant #9 added — no `TYPE_CHECKING` import guards (+ QUAL-32 to sweep the residue).** User flagged
+   `TYPE_CHECKING` as a no-go for this project: it's a band-aid for an import cycle, and a cycle violates the
+   inward-pointing hexagon (Invariant #3) — fix the cycle, don't hide it from the runtime; and hard deps like
+   `pydantic` are never optional so guarding them is pure ceremony. Codified as **Invariant #9**. Cleared the two
+   files in this session's touch surface: `conversation.py` + `timer.py` both guarded `from pydantic import BaseModel`
+   (used only in `get_config_schema(cls) -> Type[BaseModel]`) — hoisted to a plain top import, de-stringized the
+   annotation; both schemas still resolve (`ConversationHandlerConfig` / `TimerHandlerConfig`). Filed **QUAL-32** for
+   the ~13 remaining files repo-wide. Smoke + store + contracts green.
 - **QUAL-28 Stage 3b — retired the `ContextLayer` indirection; conversation handler consumes context directly.**
   Invariant #8 caught the map-agent's claim that `ContextLayer` was already dead — a grep showed it was *live*,
   used only inside `conversation.py` via `resolve_layered_context`/`get_contextual_summary`. So the scope became

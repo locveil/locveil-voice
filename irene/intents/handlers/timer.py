@@ -9,15 +9,14 @@ import asyncio
 import re
 import time
 import logging
-from typing import Dict, List, Optional, Any, Type, TYPE_CHECKING
+from typing import Dict, List, Optional, Any, Type
 from datetime import datetime, timedelta
+
+from pydantic import BaseModel
 
 from .base import IntentHandler
 from ..models import Intent, IntentResult
 from ..context_models import UnifiedConversationContext
-
-if TYPE_CHECKING:
-    from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
 
@@ -81,7 +80,7 @@ class TimerIntentHandler(IntentHandler):
     
     # Configuration metadata methods
     @classmethod
-    def get_config_schema(cls) -> Type["BaseModel"]:
+    def get_config_schema(cls) -> Type[BaseModel]:
         """Return configuration schema for timer handler"""
         from ...config.models import TimerHandlerConfig
         return TimerHandlerConfig
