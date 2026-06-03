@@ -12,6 +12,21 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-03
+- **ARCH-11 hierarchy-fork RESOLVED + staging locked (discussion, no code yet).** Opened the deferred ARCH-11 session
+  with the `EntryPointMetadata`-vs-`PluginInterface` decision, as agreed. Traced the real graph instead of trusting the
+  summary: the live architecture is `EntryPointMetadata`-rooted (every real adapter/component extends it); `PluginInterface`
+  is a **near-dead legacy skin** — capability ports have **0 concrete subclasses** (MI mixins only), `core/interfaces/input.
+  InputPlugin` is a dead duplicate of `inputs.base.InputSource`, and the whole `irene/plugins/` manager is dormant.
+  **Empirically verified it loads 0 plugins:** `engine.py:95` calls `load_plugins()` with no paths → builtin branch is
+  `pass` → `_plugins` stays `{}`; the ~8 `core.plugin_manager._plugins` status readers all report 0. **Decision (c):**
+  retire `PluginInterface`, re-root all ports onto the single clean base `EntryPointMetadata` (abc+typing only; the
+  `core/interfaces` port layer is already import-clean) → clean dependency direction + enforceable contracts. Honest
+  asterisks recorded: `EntryPointMetadata` stays a "fat" root (concern-bleed, not a direction violation — purist split is
+  Gate-2 gold-plating) and ARCH-12's residual edges survive. **Scope staged:** full (c) forces touching the legacy system
+  (typed on `PluginInterface`) which is read via the QUAL-24 service-locator pattern at ~8 status sites — so the teardown
+  is **split to new ARCH-13** to keep ARCH-11 a single-purpose, bisectable hexagon commit before Gate 2. ARCH-11 = invert
+  4 edges + re-root ports + consolidate input port + contracts; ARCH-13 = delete `irene/plugins/`, finish `PluginInterface`
+  removal, rewire the 8 readers. Locked into the ARCH-11 ledger entry + filed ARCH-13.
 - **ARCH-6 CORE DONE — WS streaming-input driving adapter + room/device activation (design + implement, per user).**
   Reconciliation up front (with the user): scoped to the **transport + identity core**, because the **device-model half**
   has no substrate yet (no device/room handlers, all 13 `entity_type` decls `generic`, no MQTT handler) — authoring it now

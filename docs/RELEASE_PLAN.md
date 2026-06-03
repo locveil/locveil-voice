@@ -295,16 +295,34 @@ See `docs/review/phase1_architecture_map.md` §5.
       (4) `engine.py→inputs.manager.InputManager` (**construction**). **User decisions:** edge-4 construction → **move
       ALL manager construction (Component/Input/Workflow) out of `AsyncVACore` into the runners/a composition module**
       (purest; touches every runner); input abstraction → **consolidate `InputSource`+`InputPlugin` into ONE port**.
-      **★ OPEN THE FRESH ARCH-11 SESSION WITH THIS DISCUSSION (user, 2026-06-03) — decide before coding:** there are
-      **two parallel base hierarchies** — `EntryPointMetadata` (discovery metadata; `InputSource` AND `Component` extend
-      it) vs `PluginInterface` (capability ports `ASRPlugin`/`InputPlugin` extend it, no metadata). Consolidating the input
-      port forces deciding how those two relate, and it **ripples to `Component`** (same split), so it's bigger than inputs
-      — a port-layer architecture decision, not a local one. Candidate directions: (a) input port extends EntryPointMetadata
-      (matches Component, the discoverable-adapter analog); (b) unify — `PluginInterface` extends `EntryPointMetadata` so ALL
-      ports share one base (cleanest, biggest blast radius). **Discuss, decide, THEN stage.** **Staging (each leaves a working
-      app):** S1 input-port consolidation + hierarchy decision · S2 Component+Workflow ports in `core/interfaces` + core
-      imports them · S3 construction inversion (managers→composition/runners, AsyncVACore port-typed) · S4 import-linter
-      contracts forbidding `core→{inputs,workflows,components}.base` + remove the ARCH-5 exemptions. _Original below._
+      **★ HIERARCHY-FORK DISCUSSION — RESOLVED 2026-06-03 (decision locked):** the two parallel base hierarchies were
+      `EntryPointMetadata` (class-level discovery/build/asset metadata; the **live** base of `Component`/`ProviderBase`/
+      `InputSource`/`Workflow`/`IntentHandler`) vs `PluginInterface` (instance-level lifecycle `name`/`version`/`initialize`/
+      `shutdown`; base of the `core/interfaces/*` capability ports). **Investigation finding:** `PluginInterface` is a
+      **near-dead legacy skin** — the capability ports (`ASRPlugin`/`TTSPlugin`/`InputPlugin`/…) have **0 concrete
+      subclasses** (used only as MI mixins alongside `Component`, e.g. `class ASRComponent(Component, ASRPlugin, WebAPIPlugin)`,
+      or as `isinstance` markers); `core/interfaces/input.InputPlugin` is a **dead duplicate** of `inputs.base.InputSource`
+      (0 readers); and the whole `irene/plugins/` system (`BasePlugin`/`AsyncPluginManager`/`PluginRegistry`) is **dormant** —
+      `engine.py:95` calls `load_plugins()` with no paths → the builtin branch is `pass` → **verified loads exactly 0 plugins**
+      (`_plugins` stays `{}`; all status endpoints reading `core.plugin_manager._plugins` report 0). **DECISION (c):** retire
+      `PluginInterface` and re-root all ports onto the single clean base `EntryPointMetadata` (imports only abc+typing → zero
+      outward deps; the `core/interfaces` port layer is already import-clean). This gives clean dependency *direction* +
+      enforceable import-linter contracts. _Two acknowledged asterisks (not direction violations, so contracts stay green):_
+      `EntryPointMetadata` remains a "fat" root (conflates capability with build/packaging metadata — purist split deferred,
+      gold-plating for Gate 2); and ARCH-12's residual upward edges survive until ARCH-12.
+      **DECISION (scope) — STAGE THE TEARDOWN.** Full (c) (deleting `PluginInterface`) would *force* touching the legacy
+      system (its `AsyncPluginManager`/`BasePlugin`/registry are typed on `PluginInterface`), and that legacy manager is read
+      via the QUAL-24 service-locator pattern (`getattr(core, 'plugin_manager')._plugins`) at **~8 status/debug/health sites**
+      (`runners/cli.py:369`, `runners/base.py:388`, `webapi_runner.py:406`, `webapi_router.py` ×6, `core/components.py:276`).
+      To keep ARCH-11 a single-purpose, bisectable hexagon commit right before Gate 2, the legacy teardown is **split to
+      ARCH-13**. **ARCH-11 scope:** invert the 4 edges + re-root the capability ports onto `EntryPointMetadata` +
+      consolidate the input port (delete the dead `core/interfaces/input.InputPlugin`, land `InputPort` in `core/interfaces`
+      that `core` imports inward and `inputs/` adapters implement) + add the import-linter contracts. **ARCH-13 scope (filed):**
+      remove the dormant `irene/plugins/` system, complete `PluginInterface`'s deletion, and rewire the ~8 service-locator
+      status readers (all currently report 0). **Staging (each leaves a working app):** S1 input-port consolidation +
+      re-root onto EntryPointMetadata · S2 Component+Workflow ports in `core/interfaces` + core imports them · S3 construction
+      inversion (managers→composition/runners, AsyncVACore port-typed) · S4 import-linter contracts forbidding
+      `core→{inputs,workflows,components}.base` + remove the ARCH-5 exemptions. _Original below._
       (which deemed them "legitimate composition-root behavior" and
       left them unenforced; user reverses that 2026-06-02). Edges: `core.{engine,workflow_manager}→inputs.base`,
       `core.workflow_manager→workflows.base`, `core.components→components.base`. **Fix = invert via DI/ports:** the
@@ -321,6 +339,18 @@ See `docs/review/phase1_architecture_map.md` §5.
       emit metrics directly) and `utils.logging → config.models` (a `LogLevel` enum reach-up). Captured to close the
       single-ledger gap (Invariant #6) — these were the only findings living solely in a review doc
       (`phase1_architecture_map.md` §2.3). Deferred: do post-Gate-2 (or alongside ARCH-11) if cheap.
+- [ ] **ARCH-13** `[release]` (P2) — **Retire the dormant `irene/plugins/` legacy system** (split out of ARCH-11,
+      2026-06-03). **Verified dead:** `engine.py:95` calls `AsyncPluginManager.load_plugins()` with no paths → builtin
+      branch is `pass` → loads **exactly 0 plugins** (`_plugins == {}`); there is no `irene.plugins` entry-point group in
+      `pyproject.toml`. **Scope:** (1) delete `irene/plugins/` (`manager.py` `AsyncPluginManager`, `base.py` `BasePlugin`,
+      `registry.py` `PluginRegistry`) + the `engine.py:56/84/95/127` lifecycle wiring; (2) complete the removal of
+      `core/interfaces/plugin.PluginInterface` begun in ARCH-11 (after the capability ports re-root onto `EntryPointMetadata`,
+      `PluginInterface` has no remaining subclasses); (3) rewire the **~8 service-locator status readers** that introspect
+      `core.plugin_manager._plugins`/`.plugin_count` (`runners/cli.py:369`, `runners/base.py:388`, `webapi_runner.py:406`,
+      `webapi_router.py` ×6, `core/components.py:276`) — all currently report 0, so they become either a removed field or a
+      report sourced from the real component/handler registries. **Why split from ARCH-11:** keeps the hexagon-inversion
+      commit single-purpose and bisectable before Gate 2; the status-endpoint regression surface here is verified in
+      isolation. Same DI/anti-service-locator family as QUAL-24. Slot: AFTER ARCH-11; post-Gate-2 acceptable.
 
 ### Code Quality & Review (QUAL)
 - [x] **QUAL-1** — Phase-0 static baseline (ruff/pyright/vulture/validators/import-graph). → `docs/review/phase0_static_baseline.md` (6e39886)
