@@ -173,54 +173,58 @@ class DeviceEntityResolver:
     def __init__(self, asset_loader=None):
         self.asset_loader = asset_loader
         self.logger = logging.getLogger(f"{__name__}.DeviceEntityResolver")
-    
+        self._assets_warned = False  # warn-once guard for missing/empty localization assets
+
+    def _warn_assets_once(self, message: str) -> None:
+        """Log a degradation warning at most once per resolver (avoid per-request log spam)."""
+        if not self._assets_warned:
+            self.logger.warning(message)
+            self._assets_warned = True
+
     def _load_device_types(self, language: str = "en") -> Dict[str, List[str]]:
-        """Load device type keywords from localization files"""
+        """Load device type keywords from localization files.
+
+        Best-effort: returns {} (with a one-time warning) when the asset loader isn't wired yet or
+        the localization data is missing/empty, rather than raising. The resolver then simply skips
+        type-inference matching and degrades — a device utterance must never abort the whole request
+        just because deferred asset coordination hasn't run (QUAL-11 P0 #4)."""
         if not self.asset_loader:
-            raise RuntimeError(
-                "DeviceEntityResolver: Asset loader not initialized. "
-                "Cannot load device type mappings from localization files. "
-                "This is a fatal configuration error - device type mappings must be externalized."
+            self._warn_assets_once(
+                "DeviceEntityResolver: asset loader not wired — skipping device type-inference "
+                "(exact/fuzzy device-name matching still works)."
             )
-        
+            return {}
+
         try:
             device_localization = self.asset_loader.localizations.get("devices", {})
             device_data = device_localization.get(language, {})
-            
+
             if not device_data and language != "en":
                 # Fallback to English
                 device_data = device_localization.get("en", {})
-            
-            if not device_data:
-                raise RuntimeError(
-                    f"DeviceEntityResolver: No device type mappings found for language '{language}' "
-                    f"in assets/localization/devices/. This is a fatal error - device type mappings "
-                    f"must be defined in localization files."
-                )
-            
-            device_types = device_data.get("device_types", {})
+
+            device_types = device_data.get("device_types", {}) if device_data else {}
             if not device_types:
-                raise RuntimeError(
-                    f"DeviceEntityResolver: Empty device_types in "
-                    f"assets/localization/devices/{language}.yaml. "
-                    f"Device type mappings must be defined for language '{language}'."
+                self._warn_assets_once(
+                    f"DeviceEntityResolver: no device type mappings for language '{language}' "
+                    f"in assets/localization/devices/ — skipping type-inference."
                 )
-            
+                return {}
+
             # Convert to expected format
             result = {}
             for device_type, config in device_types.items():
                 keywords = config.get("keywords", [])
                 aliases = config.get("aliases", [])
                 result[device_type] = keywords + aliases
-            
+
             return result
         except Exception as e:
-            if isinstance(e, RuntimeError):
-                raise  # Re-raise our own runtime errors
-            raise RuntimeError(
-                f"DeviceEntityResolver: Failed to load device types from localization files: {e}. "
-                f"Check assets/localization/devices/ directory and file structure."
+            self._warn_assets_once(
+                f"DeviceEntityResolver: failed to load device types from localization files: {e} — "
+                f"skipping type-inference."
             )
+            return {}
     
     
     async def resolve(self, device_reference: str, context: UnifiedConversationContext) -> Optional[EntityResolutionResult]:
@@ -301,47 +305,51 @@ class LocationEntityResolver:
     def __init__(self, asset_loader=None):
         self.asset_loader = asset_loader
         self.logger = logging.getLogger(f"{__name__}.LocationEntityResolver")
-    
+        self._assets_warned = False  # warn-once guard for missing/empty localization assets
+
+    def _warn_assets_once(self, message: str) -> None:
+        """Log a degradation warning at most once per resolver (avoid per-request log spam)."""
+        if not self._assets_warned:
+            self.logger.warning(message)
+            self._assets_warned = True
+
     def _load_location_keywords(self, language: str = "en") -> Dict[str, List[str]]:
-        """Load location keywords from localization files"""
+        """Load location keywords from localization files.
+
+        Best-effort: returns {} (with a one-time warning) when the asset loader isn't wired yet or
+        the data is missing/empty, rather than raising. resolve() then skips "here"-inference and
+        degrades to exact/fuzzy room matching — a location utterance must never abort the request
+        just because deferred asset coordination hasn't run (QUAL-11 P0 #4)."""
         if not self.asset_loader:
-            raise RuntimeError(
-                "LocationEntityResolver: Asset loader not initialized. "
-                "Cannot load location keywords from localization files. "
-                "This is a fatal configuration error - location keywords must be externalized."
+            self._warn_assets_once(
+                "LocationEntityResolver: asset loader not wired — skipping 'here'-inference "
+                "(exact/fuzzy room matching still works)."
             )
-        
+            return {}
+
         try:
             room_localization = self.asset_loader.localizations.get("rooms", {})
             room_data = room_localization.get(language, {})
-            
+
             if not room_data and language != "en":
                 # Fallback to English
                 room_data = room_localization.get("en", {})
-            
-            if not room_data:
-                raise RuntimeError(
-                    f"LocationEntityResolver: No location keywords found for language '{language}' "
-                    f"in assets/localization/rooms/. This is a fatal error - location keywords "
-                    f"must be defined in localization files."
-                )
-            
-            room_keywords = room_data.get("room_keywords", {})
+
+            room_keywords = room_data.get("room_keywords", {}) if room_data else {}
             if not room_keywords:
-                raise RuntimeError(
-                    f"LocationEntityResolver: Empty room_keywords in "
-                    f"assets/localization/rooms/{language}.yaml. "
-                    f"Location keywords must be defined for language '{language}'."
+                self._warn_assets_once(
+                    f"LocationEntityResolver: no location keywords for language '{language}' "
+                    f"in assets/localization/rooms/ — skipping 'here'-inference."
                 )
-            
+                return {}
+
             return room_keywords
         except Exception as e:
-            if isinstance(e, RuntimeError):
-                raise  # Re-raise our own runtime errors
-            raise RuntimeError(
-                f"LocationEntityResolver: Failed to load location keywords from localization files: {e}. "
-                f"Check assets/localization/rooms/ directory and file structure."
+            self._warn_assets_once(
+                f"LocationEntityResolver: failed to load location keywords from localization files: {e} — "
+                f"skipping 'here'-inference."
             )
+            return {}
     
     
     async def resolve(self, location_reference: str, context: UnifiedConversationContext) -> Optional[EntityResolutionResult]:

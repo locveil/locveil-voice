@@ -328,8 +328,13 @@ See `docs/review/phase1_architecture_map.md` §5.
       switched to non-destructive `NFC`. Also fixed P0 #1 — the phantom default `provider_cascade_order`
       (`keyword_matcher`/`spacy_rules_sm`/`spacy_semantic_md` → real `hybrid_keyword_matcher`/`spacy_nlu`) and the
       phantom `keyword_matcher` always-on fallback. `test_set_timer_end_to_end` flipped **xfail→PASS** (timer works
-      end-to-end: recognition + QUAL-28 F&F). **Remaining stages:** shared-extraction-base + required-param contract
-      (P0 #3) · resolver de-fatalization (P0 #4) · `entity_type`/`room_context` consumption + heuristic swap (Q7b) ·
+      end-to-end: recognition + QUAL-28 F&F).
+      **Stage B DONE (2026-06-03):** de-fatalized the entity resolvers (P0 #4) — `_load_device_types`/
+      `_load_location_keywords` no longer raise uncaught `RuntimeError` (which aborted any device/location request
+      before deferred asset-coordination ran); they now warn-once + return `{}`, so resolve() degrades (skips
+      type/here-inference, keeps exact/fuzzy name matching) instead of crashing.
+      **Remaining stages:** shared-extraction-base + required-param contract
+      (P0 #3) · `entity_type`/`room_context` consumption + heuristic swap + duplicate-device-path unify + `_resolution_failed` (Q7b/P1 #9) ·
       typed `ParameterSpec` accessor (P1) + `_create_error_result` unification (P1-t) · QUAL-22 (P0 #5) · the
       slot/extraction-pattern decision (P0 #2, design fork). _Original P0/P1 detail below:_
       **P0s:** (1) fix the default `provider_cascade_order`

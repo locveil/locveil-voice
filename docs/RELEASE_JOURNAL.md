@@ -12,6 +12,16 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-03
+- **QUAL-11 [PEX] Stage B — de-fatalized the entity resolvers (P0 #4).** `DeviceEntityResolver._load_device_types`
+  and `LocationEntityResolver._load_location_keywords` raised uncaught `RuntimeError` ("fatal configuration error")
+  when the asset loader wasn't wired or localization data was missing/empty — and the resolver is built **asset-less**
+  (injected later in `post_initialize_coordination`), so any device/location utterance before/without successful
+  coordination **aborted the whole request**. The location path was worst: `_load_location_keywords` is called
+  unconditionally at the top of `resolve()`. Both helpers now **degrade best-effort** — warn-once + return `{}` —
+  so resolve() skips the asset-dependent inference (device type-inference / "here"-inference) but exact/fuzzy
+  name matching still works and the request proceeds. Verified: both resolvers return `None` (not raise) with a
+  null asset loader; maintained suite green (17/17). _(`_resolution_failed` markers + duplicate-path unify are
+  Stage C.)_
 - **QUAL-11 [PEX] Stage A — fixed the timer recognition gap (root cause) + the phantom cascade defaults.
   `test_set_timer_end_to_end` flips xfail→PASS.** Reconciled QUAL-11 against current code first (Invariant #8):
   every P0/P1 still live as written (nothing silently fixed by QUAL-23/27/29) → valid, proceed.
