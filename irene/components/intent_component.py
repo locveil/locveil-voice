@@ -72,7 +72,15 @@ class IntentComponent(Component, WebAPIPlugin):
                 }
             else:
                 handler_config = {}
-        
+
+        # QUAL-36: inject the ONE canonical language policy (CoreConfig top level) into the asset-loader
+        # config so the handler-facing IntentAssetLoader derives its default/supported languages from the
+        # single source instead of its own hardcoded "ru"/["ru","en"] dataclass defaults.
+        asset_validation = dict(handler_config.get("asset_validation", {}) or {})
+        asset_validation.setdefault("default_language", core.config.default_language)
+        asset_validation.setdefault("supported_languages", list(core.config.supported_languages))
+        handler_config["asset_validation"] = asset_validation
+
         # Phase 5: Pass full intent system config for handler-specific configurations
         await self.handler_manager.initialize(handler_config, intent_system_config=intent_config)
         

@@ -753,8 +753,35 @@ _Apply to every remediation task below (from the 4 review docs + QUAL-25/26). So
       `room_context` resolution authored under **ARCH-6**. Gated by Invariant #4 (any donation-schema change → config-ui;
       note the parked T2 pattern fields already exist, so no new schema surface unless extended). Refs:
       `parameter_extraction_review.md` (T2 = the "dead best mechanisms" themes 1+3), QUAL-11 (T1 baseline), Q6/Q7.
-- [ ] **QUAL-36** `[release]` [DFLOW][I18N] (P1) — **Single language source-of-truth; purge hardcoded language codes
-      (theme ④; user observation 2026-06-03).** Hardcoded `"ru"` (and inconsistently `"en"`) language codes pervade the
+- [x] **QUAL-36** `[release]` [DFLOW][I18N] (P1) — **Single language source-of-truth; purge hardcoded language codes
+      (theme ④; user observation 2026-06-03). DONE 2026-06-03.** **Consolidation decision (user, mid-task):** found FOUR
+      competing declarations (`CoreConfig.language="en-US"` locale-form, `nlu.default_language`/`supported_languages`,
+      `nlu_analysis.languages.*`, `IntentAssetLoader`'s own); user chose **promote to top-level `CoreConfig.default_language`
+      + `supported_languages` (2-letter)** as the one canonical source — read at the composition root, injected inward.
+      **Delivered:** (1) canonical top-level config fields; removed the `nlu.*` duplicates; deprecated the `en-US` field;
+      config-master.toml updated. (2) `ContextManager` injected `default_language`+`supported_languages` (mirrors
+      `max_history_turns`); `engine.py` wires them; seed fixed. (3) NLU detection reads canonical + clamps; `_analyze_text_
+      language` returns `None` (no signal) → caller applies default; providers receive canonical via config injection. (4)
+      invariant established. (5) **deleted all 67 `or "ru"` fallbacks** → bare `context.language`; ripped out the timer/audio/
+      voice-synthesis `_get_language` re-detection heuristics; **fixed the `hybrid_keyword_matcher` `'en'`-vs-`'ru'` divergence
+      bug**; made handler `language="ru"` default params required (T4). (6) language-switch validation (`system.py`) now reads
+      the new **`context.supported_languages`** (seeded from canonical) — no baked `["ru","en"]`. (7) **localized the LLM
+      context-injection labels** → `assets/localization/conversation/{ru,en}.yaml` (`_context_label`, by user language).
+      **Verified:** new `test_language_source_of_truth.py` (6) proves en-primary + arbitrary-language seeding/clamp/labels/
+      no-stomp; suite at baseline parity (0 regressions). **Carve-out → QUAL-38:** processing-language defaults (number-spelling
+      utils / silero TTS / ASR / text-processor) + inline bilingual handler messages (`== 'ru'` branches) are a distinct
+      concern, filed separately. Refs: `RELEASE_JOURNAL.md` 2026-06-03, QUAL-16.
+- [ ] **QUAL-38** `[deferred]` [DFLOW][I18N] (P2) — **Processing-language threading + inline-bilingual purge (carved from
+      QUAL-36).** Two residuals distinct from the *session*-language source-of-truth (now done): **(a) processing-language
+      defaults** — `utils/text_processing.py` (`all_num_to_text` et al.), `utils/text_normalizers.py`, `text_processor_
+      component.convert_numbers_to_words`, `providers/tts/silero_v3|v4` (`language="ru"`), `asr_component` transcription
+      language — these take a *number-spelling / synthesis / transcription* language that should derive from the pipeline/
+      synthesis context, not a literal (TTS/ASR/text-proc subsystem threading; QUAL-13 family). **(b) inline bilingual
+      messages** — ~33 `context.language == 'ru'` branches across handlers select hardcoded RU/EN strings inline
+      (localization debt) vs provider language-conditional logic (legitimate); externalize the handler messages to
+      templates. Done when: number/synthesis language is threaded from context, and handler user-facing strings are
+      externalized (provider-internal `== 'ru'` logic may remain).
+- [ ] **QUAL-37** `[deferred]` [DFLOW] (P2) — **Targeted no-intent clarification (enhancement; split from QUAL-30).**
       runtime and defeat the installation-agnostic design. **Findings:** (T1) context-ignoring hardcodes — `timer._get_
       language()` ignores `context.language` entirely (Cyrillic-sniff heuristic → `return "ru"`); `context.py:86` seeds
       new sessions `language="ru"`. (T2) the systemic bake — `context.language or "ru"` at **63 handler sites** +

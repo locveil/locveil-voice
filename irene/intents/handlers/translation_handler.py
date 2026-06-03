@@ -90,7 +90,7 @@ class TranslationIntentHandler(IntentHandler):
         text_and_lang = llm_component.extract_translation_request(intent.raw_text)
         
         # Use language from context (detected by NLU) for response
-        language = context.language or "ru"
+        language = context.language
         
         if text_and_lang:
             text, target_lang = text_and_lang
@@ -125,7 +125,7 @@ class TranslationIntentHandler(IntentHandler):
             return self._error_result(context, "LLM component not available")
         
         # Use language from context (detected by NLU) first
-        language = context.language or "ru"
+        language = context.language
         
         # Extract text and target language from intent entities
         text_to_translate = intent.entities.get("text")
@@ -185,7 +185,7 @@ class TranslationIntentHandler(IntentHandler):
         
 
         
-    def _get_template(self, template_name: str, language: str = "ru", **format_args) -> str:
+    def _get_template(self, template_name: str, language: str, **format_args) -> str:
         """Get template from asset loader - raises fatal error if not available"""
         if not self.has_asset_loader():
             raise RuntimeError(
@@ -214,7 +214,7 @@ class TranslationIntentHandler(IntentHandler):
     
     def _error_result(self, context: UnifiedConversationContext, error: str) -> IntentResult:
         """Create error result with language awareness"""
-        language = context.language or "ru"
+        language = context.language
         
         error_text = self._get_template("error_translation", language, error=error)
         

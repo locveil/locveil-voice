@@ -81,6 +81,7 @@ class LLMComponent(Component, LLMPlugin, WebAPIPlugin):
         self.default_provider = "openai"
         self.default_task = "improve"
         self.fallback_providers: List[str] = []  # QUAL-15: real runtime fallback chain
+        self._default_language = "ru"  # QUAL-36: canonical default, set from CoreConfig in initialize()
         self._unavailable_messages: Dict[str, str] = {}  # localized, lazy-loaded from assets/localization/llm
         self._messages_loaded = False
         
@@ -111,6 +112,10 @@ class LLMComponent(Component, LLMPlugin, WebAPIPlugin):
                     "Please check your configuration file for proper v14 llm section formatting."
                 )
             
+            # QUAL-36: capture the ONE canonical default language (CoreConfig top level) for prompt
+            # resolution + offline messages, and to thread into provider configs below.
+            self._default_language = core.config.default_language
+
             # Initialize enabled providers with ABC error handling
             # Handle both dict and Pydantic config objects
             if isinstance(config, dict):
@@ -128,13 +133,17 @@ class LLMComponent(Component, LLMPlugin, WebAPIPlugin):
             
             for provider_name, provider_class in self._provider_classes.items():
                 if isinstance(providers_config, dict):
-                    provider_config = providers_config.get(provider_name, {})
+                    provider_config = dict(providers_config.get(provider_name, {}))
                     provider_enabled = provider_config.get("enabled", False)
                 else:
                     provider_config = getattr(providers_config, provider_name, {})
                     provider_enabled = getattr(provider_config, "enabled", False) if hasattr(provider_config, "enabled") else False
-                
+
                 if provider_enabled:
+                    # QUAL-36: thread the canonical default into the provider config (e.g. the console
+                    # floor provider keys its offline message by language) — one source, no local "ru".
+                    if isinstance(provider_config, dict):
+                        provider_config.setdefault("default_language", self._default_language)
                     try:
                         provider = provider_class(provider_config)
                         if await provider.is_available():
@@ -194,7 +203,7 @@ class LLMComponent(Component, LLMPlugin, WebAPIPlugin):
         """Resolve the externalized, hardened system prompt for an LLM `task` (QUAL-16) from
         assets/prompts/llm/<lang>.yaml, keyed by the USER's language. Falls back to a minimal generic
         instruction only if the asset is unreachable. Formats variables (e.g. {target_language})."""
-        language = language or "ru"
+        language = language or self._default_language
         prompt = None
         al = self._asset_loader()
         if al is not None:
@@ -236,7 +245,7 @@ class LLMComponent(Component, LLMPlugin, WebAPIPlugin):
     def _unavailable_text(self, language: Optional[str] = None) -> str:
         self._ensure_unavailable_messages()
         m = self._unavailable_messages
-        return m.get(language or "ru") or m.get("ru") or _LLM_UNAVAILABLE_LAST_RESORT
+        return m.get(language or self._default_language) or m.get(self._default_language) or _LLM_UNAVAILABLE_LAST_RESORT
 
     def _provider_chain(self, preferred: Optional[str] = None) -> List[str]:
         """QUAL-15: ordered LOADED provider names to try — preferred/default first, then the configured

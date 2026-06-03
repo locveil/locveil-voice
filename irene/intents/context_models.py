@@ -45,8 +45,12 @@ class UnifiedConversationContext:
     conversation_history: List[Dict[str, Any]] = field(default_factory=list)
     client_metadata: Dict[str, Any] = field(default_factory=dict)
     available_devices: List[Dict[str, Any]] = field(default_factory=list)
+    # Resolved session language + the instance's supported set — both seeded from the ONE canonical
+    # config source (QUAL-36) by ContextManager. Downstream reads these instead of importing config or
+    # baking literals. `language` is an invariant: always a valid member of `supported_languages`.
     language: str = "ru"
-    
+    supported_languages: List[str] = field(default_factory=lambda: ["ru", "en"])
+
     # Fire-and-forget action tracking. QUAL-28: active_actions AND the completed-action history
     # (recent_actions/failed_actions/action_error_count) are no longer stored fields — they are
     # read-only views over the long-lived, physical-identity-scoped ClientRegistry store, so they all
@@ -726,7 +730,7 @@ class RequestContext:
                  client_id: Optional[str] = None,
                  room_name: Optional[str] = None,
                  device_context: Optional[Dict[str, Any]] = None,
-                 language: str = "ru"):
+                 language: Optional[str] = None):
         """
         Initialize request context with client identification support.
         
@@ -740,7 +744,9 @@ class RequestContext:
             client_id: Client/node identifier (e.g., "kitchen_node", "living_room_esp32")
             room_name: Human-readable room name (e.g., "Кухня", "Kitchen")
             device_context: Available devices and capabilities in this client context
-            language: Primary language for this request (defaults to Russian)
+            language: Language EXPLICITLY carried by this request, or None when unspecified (QUAL-36).
+                None means "use the session's resolved language" — the seeded context.language is NOT
+                overridden. An adapter only passes a value when it actually knows the request language.
         """
         self.source = source
         # QUAL-28 (P0-6): the literal "default" must NOT bypass session derivation — it would
@@ -767,4 +773,5 @@ class RequestContext:
             self.metadata["room_name"] = room_name
         if device_context:
             self.metadata["device_context"] = device_context
-        self.metadata["language"] = language
+        if language:
+            self.metadata["language"] = language

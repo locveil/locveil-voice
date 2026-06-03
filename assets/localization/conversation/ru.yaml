@@ -1,0 +1,12 @@
+# Russian localization for ConversationIntentHandler machine-context labels (QUAL-36, folded from QUAL-16).
+# These label the session-state context injected into the LLM as system messages. They are keyed by the
+# USER's language so the model's working context matches the conversation language. Not spoken to the user.
+context_labels:
+  currently_active: "Сейчас активно: {summary}"
+  recent_activity: "Недавняя активность: {summary}"
+  session: "Сессия: {room} (устройств: {device_count})"
+  thread: "Тема: {domain} (сообщений: {msg_count}, {age_min} мин)"
+  actions: "Действия: активных {active_count}, недавних {recent_count}"
+  flow: "Ход: недавних {history_count}{state_info}"
+  flow_state: ", состояние: элементов {count}"
+  context_wrapper: "Контекст: {parts}"

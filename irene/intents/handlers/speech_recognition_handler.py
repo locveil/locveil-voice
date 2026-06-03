@@ -90,7 +90,7 @@ class SpeechRecognitionIntentHandler(IntentHandler):
         info = asr_component.get_providers_info()
         
         # Use language from context (detected by NLU)
-        language = context.language or "ru"
+        language = context.language
         
         self.logger.info(f"ASR providers info requested")
         
@@ -119,7 +119,7 @@ class SpeechRecognitionIntentHandler(IntentHandler):
             return self._error_result(context, "Provider name not specified")
         
         # Use language from context (detected by NLU)
-        language = context.language or "ru"
+        language = context.language
         
         success = asr_component.set_default_provider(provider_name)
         
@@ -154,7 +154,7 @@ class SpeechRecognitionIntentHandler(IntentHandler):
         success, message = await asr_component.switch_language(target_language)
         
         # Use language from context (detected by NLU)
-        language = context.language or "ru"
+        language = context.language
         
         self.logger.info(f"ASR language switch to {target_language} - success: {success}")
         
@@ -176,7 +176,7 @@ class SpeechRecognitionIntentHandler(IntentHandler):
         quality = intent.entities.get("quality", "high")
         
         # Use language from context (detected by NLU)
-        language = context.language or "ru"
+        language = context.language
         
         # TODO: Implement quality configuration logic
         response_text = self._get_template("quality_not_implemented", language, quality=quality)
@@ -201,7 +201,7 @@ class SpeechRecognitionIntentHandler(IntentHandler):
         microphone = intent.entities.get("microphone", "default")
         
         # Use language from context (detected by NLU)
-        language = context.language or "ru"
+        language = context.language
         
         # TODO: Implement microphone configuration logic
         response_text = self._get_template("microphone_not_implemented", language, microphone=microphone)
@@ -236,7 +236,7 @@ class SpeechRecognitionIntentHandler(IntentHandler):
         
 
         
-    def _get_template(self, template_name: str, language: str = "ru", **format_args) -> str:
+    def _get_template(self, template_name: str, language: str, **format_args) -> str:
         """Get template from asset loader - raises fatal error if not available"""
         if not self.has_asset_loader():
             raise RuntimeError(
@@ -265,7 +265,7 @@ class SpeechRecognitionIntentHandler(IntentHandler):
     
     def _error_result(self, context: UnifiedConversationContext, error: str) -> IntentResult:
         """Create error result with language awareness"""
-        language = context.language or "ru"
+        language = context.language
         
         error_text = self._get_template("error_configuration", language, error=error)
         

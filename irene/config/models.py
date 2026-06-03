@@ -308,13 +308,12 @@ class NLUConfig(BaseModel):
     cache_recognition_results: bool = Field(default=False, description="Cache recognition results")
     cache_ttl_seconds: int = Field(default=300, description="Cache TTL in seconds")
     
-    # Language detection settings
+    # Language detection settings — the supported-list + default now live ONCE at CoreConfig top level
+    # (QUAL-36 single source of truth); these flags only govern detection *behavior*, not the language policy.
     auto_detect_language: bool = Field(default=True, description="Enable automatic language detection")
     language_detection_confidence_threshold: float = Field(default=0.8, description="Language detection confidence threshold")
     persist_language_preference: bool = Field(default=True, description="Persist language preference across conversation")
-    supported_languages: List[str] = Field(default_factory=lambda: ["ru", "en"], description="Supported languages")
-    default_language: str = Field(default="ru", description="Default language when detection fails")
-    
+
     providers: Dict[str, Dict[str, Any]] = Field(
         default_factory=dict,
         description="NLU provider instance configurations"
@@ -1255,8 +1254,14 @@ class CoreConfig(BaseSettings):
     nlu_analysis: NLUAnalysisConfig = Field(default_factory=NLUAnalysisConfig, description="NLU Analysis component configuration (Phase 2)")
     
     
-    # Language and locale
-    language: str = Field(default="en-US", description="Primary language")
+    # Language and locale — SINGLE SOURCE OF TRUTH (QUAL-36).
+    # `default_language` + `supported_languages` are the one canonical declaration of the instance's
+    # language policy: the composition root reads them and injects the plain values inward (ContextManager
+    # seed, NLU detection clamp, asset loader). Everything downstream READS `context.language`; no module
+    # re-declares a default or re-detects. Use 2-letter codes ("ru", "en") — NOT locale form.
+    default_language: str = Field(default="ru", description="Canonical default language (2-letter, e.g. 'ru'/'en'). Seeds new sessions and is the detection fallback — the single source of truth.")
+    supported_languages: List[str] = Field(default_factory=lambda: ["ru", "en"], description="Canonical list of supported languages (2-letter). Detection clamps to this list → default_language.")
+    language: str = Field(default="en-US", description="[DEPRECATED — use default_language] Legacy primary-language/locale string; retained only for config round-trip back-compat.")
     timezone: Optional[str] = Field(default=None, description="Timezone (e.g., UTC, America/New_York)")
     
     # Runtime settings

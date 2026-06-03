@@ -1,0 +1,12 @@
+# English localization for ConversationIntentHandler machine-context labels (QUAL-36, folded from QUAL-16).
+# These label the session-state context injected into the LLM as system messages. They are keyed by the
+# USER's language so the model's working context matches the conversation language. Not spoken to the user.
+context_labels:
+  currently_active: "Currently active: {summary}"
+  recent_activity: "Recent activity: {summary}"
+  session: "Session: {room} ({device_count} devices)"
+  thread: "Thread: {domain} ({msg_count} msgs, {age_min}m)"
+  actions: "Actions: {active_count} active, {recent_count} recent"
+  flow: "Flow: {history_count} recent{state_info}"
+  flow_state: ", state: {count} items"
+  context_wrapper: "Context: {parts}"

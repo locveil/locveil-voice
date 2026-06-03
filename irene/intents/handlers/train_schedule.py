@@ -112,7 +112,7 @@ class TrainScheduleIntentHandler(IntentHandler):
             # Fallback to general train query
             return await self.handle_train_query(intent, context)
     
-    def _get_template(self, template_name: str, language: str = "ru", **format_args) -> str:
+    def _get_template(self, template_name: str, language: str, **format_args) -> str:
         """Get template from asset loader - raises fatal error if not available"""
         if not self.has_asset_loader():
             raise RuntimeError(
@@ -144,7 +144,7 @@ class TrainScheduleIntentHandler(IntentHandler):
         try:
             # Check availability
             if not await self.is_available():
-                language = context.language or "ru"
+                language = context.language
                 if not REQUESTS_AVAILABLE:
                     error_text = self._get_template("missing_dependency", language)
                     return self._create_error_result(
@@ -166,7 +166,7 @@ class TrainScheduleIntentHandler(IntentHandler):
             time_param = self.extract_entity(intent, "time", None)
             
             # Use language from context (detected by NLU)
-            language = context.language or "ru"
+            language = context.language
             
             # Get train schedule
             schedule_text = await self._get_train_schedule(from_station, to_station, language)
@@ -183,7 +183,7 @@ class TrainScheduleIntentHandler(IntentHandler):
                     }
                 )
             else:
-                language = context.language or "ru"
+                language = context.language
                 error_text = self._get_template("schedule_unavailable", language)
                 return self._create_error_result(
                     error_text,
@@ -192,14 +192,14 @@ class TrainScheduleIntentHandler(IntentHandler):
         
         except Exception as e:
             logger.exception(f"Error in train schedule handler: {e}")
-            language = context.language or "ru"
+            language = context.language
             error_text = self._get_template("execution_error", language)
             return self._create_error_result(
                 error_text,
                 f"execution_error: {str(e)}"
             )
     
-    async def _get_train_schedule(self, from_station: str, to_station: str, language: str = "ru") -> Optional[str]:
+    async def _get_train_schedule(self, from_station: str, to_station: str, language: str) -> Optional[str]:
         """Get train schedule from Yandex API"""
         try:
             # Current date
@@ -248,7 +248,7 @@ class TrainScheduleIntentHandler(IntentHandler):
             logger.error(f"API request failed: {e}")
             return None
     
-    def _format_schedule_response(self, data: Dict[str, Any], current_time: datetime, language: str = "ru") -> str:
+    def _format_schedule_response(self, data: Dict[str, Any], current_time: datetime, language: str) -> str:
         """Format schedule data into natural language text"""
         try:
             segments = data.get("segments", [])

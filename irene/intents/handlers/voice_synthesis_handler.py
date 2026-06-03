@@ -88,7 +88,7 @@ class VoiceSynthesisIntentHandler(IntentHandler):
             return self._error_result(context, "TTS component not available")
         
         # Use language from context (detected by NLU)
-        language = context.language or "ru"
+        language = context.language
         
         # Extract text and voice parameters from command
         text_to_speak, voice_name = self._extract_speech_parameters(intent.raw_text)
@@ -134,7 +134,7 @@ class VoiceSynthesisIntentHandler(IntentHandler):
         success = True
         
         # Use language from context (detected by NLU)
-        language = context.language or "ru"
+        language = context.language
         
         self.logger.info(f"List voices request - success: {success}")
         
@@ -161,7 +161,7 @@ class VoiceSynthesisIntentHandler(IntentHandler):
             return self._error_result(context, "No text to speak")
         
         # Use language from context (detected by NLU)
-        language = context.language or "ru"
+        language = context.language
         
         # Use fire-and-forget action execution for basic TTS
         synthesis_id = f"tts_basic_{int(time.time() * 1000)}"
@@ -194,7 +194,7 @@ class VoiceSynthesisIntentHandler(IntentHandler):
             return self._error_result(context, "TTS component not available")
         
         # Use language from context (detected by NLU)
-        language = context.language or "ru"
+        language = context.language
         
         # Parse provider name from text and switch
         provider_name = self._parse_tts_provider_name(intent.raw_text)
@@ -226,7 +226,7 @@ class VoiceSynthesisIntentHandler(IntentHandler):
         Phase 2 TODO16: Standardized stop handling - only receives resolved intents.
         """
         # Determine language
-        language = self._get_language_from_context(context)
+        language = context.language
         
         # Use fire-and-forget action execution for stopping synthesis
         stop_id = f"tts_stop_all_{int(time.time() * 1000)}"
@@ -253,7 +253,7 @@ class VoiceSynthesisIntentHandler(IntentHandler):
         Phase 2 TODO16: Standardized cancel handling - only receives resolved intents.
         """
         # Determine language
-        language = self._get_language_from_context(context)
+        language = context.language
         
         # Use fire-and-forget action execution for canceling synthesis
         cancel_id = f"tts_cancel_all_{int(time.time() * 1000)}"
@@ -287,7 +287,7 @@ class VoiceSynthesisIntentHandler(IntentHandler):
         
         return self._tts_component
         
-    def _get_template(self, template_name: str, language: str = "ru", **format_args) -> str:
+    def _get_template(self, template_name: str, language: str, **format_args) -> str:
         """Get template from asset loader - raises fatal error if not available"""
         if not self.has_asset_loader():
             raise RuntimeError(
@@ -314,7 +314,7 @@ class VoiceSynthesisIntentHandler(IntentHandler):
                 f"Check assets/templates/voice_synthesis/{language}/synthesis_status.yaml for correct placeholders."
             )
     
-    def _get_provider_mappings(self, language: str = "ru") -> Dict[str, Any]:
+    def _get_provider_mappings(self, language: str) -> Dict[str, Any]:
         """Get provider mappings from asset loader - raises fatal error if not available"""
         if not self.has_asset_loader():
             raise RuntimeError(
@@ -344,7 +344,7 @@ class VoiceSynthesisIntentHandler(IntentHandler):
         
     def _error_result(self, context: UnifiedConversationContext, error: str) -> IntentResult:
         """Create error result with language awareness"""
-        language = context.language or "ru"
+        language = context.language
         error_text = self._get_template("synthesis_error", language, error=error)
         
         return IntentResult(
@@ -549,10 +549,6 @@ class VoiceSynthesisIntentHandler(IntentHandler):
     # Configuration metadata: No configuration needed
     # This handler delegates to TTS component and uses asset loader for voice mappings
     # No get_config_schema() method = no configuration required
-    
-    def _get_language_from_context(self, context: UnifiedConversationContext) -> str:
-        """Get language from conversation context with fallback"""
-        return context.language or "ru"
     
     async def _stop_synthesis_action(self, language: str) -> bool:
         """Stop voice synthesis action"""

@@ -12,6 +12,34 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-03
+- **QUAL-36 [DFLOW][I18N] DONE — single language source-of-truth; hardcoded `"ru"` purged from the session path.**
+  **Reconciliation found the spec was incomplete:** not one language source but FOUR competing declarations
+  (`CoreConfig.language="en-US"` in locale form *and* actually consumed; `nlu.default_language`/`supported_languages`;
+  `nlu_analysis.languages.*`; `IntentAssetLoader`'s own `"ru"`/`["ru","en"]`). Surfaced the conflict via AskUserQuestion;
+  user chose **promote to a top-level canonical `CoreConfig.default_language` + `supported_languages` (2-letter)** read
+  at the composition root and injected inward — `nlu.*`/`en-US`/asset-loader derive/retire. **Implementation, correctness-
+  first (establish the invariant BEFORE deleting fallbacks):** added the canonical fields + removed the `nlu.*` duplicates
+  (config-master.toml synced); injected `default_language`+`supported_languages` into `ContextManager` (mirrors the existing
+  `max_history_turns` DI) and seeded sessions; repointed NLU detection to the canonical source + made `_analyze_text_language`
+  return `None` on no-signal (caller applies the default, clamped to supported); threaded canonical into NLU **and** LLM
+  provider configs. Then **deleted all 67 `context.language or "ru"` fallbacks** → bare reads; ripped out the timer/audio/
+  voice-synthesis `_get_language` Cyrillic-sniff heuristics; **fixed a real bug — `hybrid_keyword_matcher` defaulted to `'en'`
+  while everything else defaulted `'ru'`**, so an unset language partitioned keywords wrongly; made handler `language="ru"`
+  default params required (keyword-only where they followed defaulted args). Added **`context.supported_languages`** (seeded
+  from canonical) so the `system.py` language-switch validates against it — no baked `["ru","en"]`. **A real non-RU bug
+  caught:** `RequestContext.language` defaulted to `"ru"`, and the request→session merge overrides on any truthy value — so
+  an unspecified request would STOMP an English seed; changed the default to `None` ("unspecified"). **T7 (folded from
+  QUAL-16):** localized the LLM machine-context labels (`Currently active:`/`Session:`/`Recent activity:`/`Thread:`/`Actions:`/
+  `Flow:`/`Context:`) → `assets/localization/conversation/{ru,en}.yaml` + a `_context_label` resolver keyed by user language
+  (with an offline English last-resort, console-floor pattern). **Folder-naming note (user-flagged live):** localization uses
+  bare domain dirs (`conversation/`, like `voice_synthesis/`/`datetime/`), distinct from the `_handler`-suffixed prompt/template
+  dirs — both key to `"conversation"` via the loader; verified, not a duplicate. **Verification:** new
+  `test_language_source_of_truth.py` (6 tests) proves English-primary AND arbitrary-language (`de`) seeding, detection clamp,
+  `supported_languages` on context, label localization, and the no-stomp contract; updated the one test that encoded the old
+  `RequestContext`→`"ru"` default; **precise mine-vs-baseline diff = 0 new failures** (the perf/VAD timing tests are flaky and
+  fluctuate run-to-run). **Carve-out → QUAL-38** (filed): processing-language defaults (number-spelling/silero/ASR/text-proc)
+  + inline bilingual handler messages (`== 'ru'` branches) are a distinct concern from the session source-of-truth. Hexagonal
+  held: domain reads `context.language`/`context.supported_languages`, never imports config; the composition root injects.
 - **QUAL-17 [STREAMAPI] DONE — critical review of the streaming-API exposure; keep/upgrade/replace filed.** Found the
   surface is **two** independently hand-rolled subsystems, not one: a 474-LOC code-first generator
   (`irene/api/asyncapi.py` — `@websocket_api`/`WebSocketRegistry`/custom Pydantic→AsyncAPI **2.6.0**) **and** a fully

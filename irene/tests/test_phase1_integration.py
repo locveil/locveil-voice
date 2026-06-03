@@ -333,17 +333,22 @@ class TestPhase1RussianLanguageSupport:
         print("✅ Russian language defaults test passed!")
     
     def test_russian_language_preference_in_context(self):
-        """Test Russian language preference in context objects"""
-        # Test UnifiedConversationContext defaults to Russian
+        """Test language defaults in context objects (QUAL-36 contract)."""
+        # UnifiedConversationContext keeps a structural default; the ContextManager seeds the real
+        # value from the canonical config source.
         context = UnifiedConversationContext(session_id="test")
         assert context.language == "ru"
-        
-        # Test RequestContext defaults to Russian
+
+        # QUAL-36: RequestContext no longer hardcodes a language. None means "unspecified by this
+        # request" → the session's resolved language is used (not stomped with a literal "ru").
         from irene.workflows.base import RequestContext
         request_context = RequestContext()
-        assert request_context.language == "ru"
-        
-        print("✅ Russian language preference in context test passed!")
+        assert request_context.language is None
+
+        # When the request DOES carry a language, it is honored.
+        assert RequestContext(language="en").language == "en"
+
+        print("✅ Language-default context contract test passed!")
     
     def test_conversation_context_russian_defaults(self):
         """Test that UnifiedConversationContext defaults to Russian"""

@@ -55,7 +55,10 @@ class AsyncVACore:
         self.component_manager = ComponentManager(config)
         self.plugin_manager = AsyncPluginManager()
         self.input_manager = InputManager(self.component_manager, config.inputs)
-        self.context_manager = ContextManager()
+        self.context_manager = ContextManager(  # QUAL-36: seed sessions from the one canonical language source
+            default_language=config.default_language,
+            supported_languages=config.supported_languages,
+        )
         self.timer_manager = AsyncTimerManager()
         self.metrics_collector = get_metrics_collector()  # Phase 2: Unified metrics through MetricsCollector
 

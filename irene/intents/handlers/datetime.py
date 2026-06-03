@@ -59,7 +59,7 @@ class DateTimeIntentHandler(IntentHandler):
         """Execute datetime intent"""
         try:
             # Use language from context (detected by NLU)
-            language = context.language or "ru"
+            language = context.language
             
             if intent.action == "current_date" or intent.name == "datetime.current_date":
                 return await self._handle_date_request(intent, context)
@@ -82,7 +82,7 @@ class DateTimeIntentHandler(IntentHandler):
         """DateTime functionality is always available"""
         return True
     
-    def _get_localization_data(self, language: str = "ru") -> Dict[str, List[str]]:
+    def _get_localization_data(self, language: str) -> Dict[str, List[str]]:
         """Get localization data from asset loader - raises fatal error if not available"""
         if not self.has_asset_loader():
             raise RuntimeError(
@@ -105,7 +105,7 @@ class DateTimeIntentHandler(IntentHandler):
     async def _handle_date_request(self, intent: Intent, context: UnifiedConversationContext) -> IntentResult:
         """Handle current date request"""
         # Use language from context (detected by NLU)
-        language = context.language or "ru"
+        language = context.language
         
         now = datetime.now()
 
@@ -150,7 +150,7 @@ class DateTimeIntentHandler(IntentHandler):
     async def _handle_time_request(self, intent: Intent, context: UnifiedConversationContext) -> IntentResult:
         """Handle current time request"""
         # Use language from context (detected by NLU)
-        language = context.language or "ru"
+        language = context.language
         
         now = datetime.now()
 
@@ -221,7 +221,7 @@ class DateTimeIntentHandler(IntentHandler):
     async def _handle_datetime_request(self, intent: Intent, context: UnifiedConversationContext) -> IntentResult:
         """Handle combined date and time request"""
         # Use language from context (detected by NLU)
-        language = context.language or "ru"
+        language = context.language
         
         now = datetime.now()
 

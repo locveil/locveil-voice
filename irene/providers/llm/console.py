@@ -41,8 +41,9 @@ class ConsoleLLMProvider(LLMProvider):
         self._default_language = config.get("default_language", "ru")
 
     def _message(self, **kwargs) -> str:
-        lang = (kwargs.get("language") or self._default_language or "ru")
-        return self._responses.get(lang) or self._responses.get("ru") or _LAST_RESORT
+        # default_language is injected from the ONE canonical source (QUAL-36); no local "ru".
+        lang = kwargs.get("language") or self._default_language
+        return self._responses.get(lang) or self._responses.get(self._default_language) or _LAST_RESORT
 
     @classmethod
     def _get_default_credentials(cls) -> List[str]:

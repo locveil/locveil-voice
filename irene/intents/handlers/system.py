@@ -118,7 +118,7 @@ class SystemIntentHandler(IntentHandler):
         """Execute system intent"""
         try:
             # Use language from context (detected by NLU)
-            language = context.language or "ru"
+            language = context.language
             
             if intent.action == "help" or intent.name == "system.help":
                 return await self._handle_help_request(intent, context)
@@ -136,7 +136,7 @@ class SystemIntentHandler(IntentHandler):
                 
         except Exception as e:
             logger.error(f"System intent execution failed: {e}")
-            language = context.language or "ru"
+            language = context.language
             return IntentResult(
                 text="Извините, произошла ошибка при выполнении системной команды." if language == "ru" else "Sorry, there was an error executing the system command.",
                 should_speak=True,
@@ -148,7 +148,7 @@ class SystemIntentHandler(IntentHandler):
         """System commands are always available"""
         return True
     
-    def _get_template(self, template_name: str, language: str = "ru", **format_args) -> str:
+    def _get_template(self, template_name: str, language: str, **format_args) -> str:
         """Get template from asset loader - raises fatal error if not available"""
         if not self.has_asset_loader():
             raise RuntimeError(
@@ -178,7 +178,7 @@ class SystemIntentHandler(IntentHandler):
     async def _handle_help_request(self, intent: Intent, context: UnifiedConversationContext) -> IntentResult:
         """Handle help/assistance request"""
         # Use language from context (detected by NLU)
-        language = context.language or "ru"
+        language = context.language
         
         help_text = self._get_template("help", language)
         
@@ -195,7 +195,7 @@ class SystemIntentHandler(IntentHandler):
     async def _handle_status_request(self, intent: Intent, context: UnifiedConversationContext) -> IntentResult:
         """Handle system status request"""
         # Use language from context (detected by NLU)
-        language = context.language or "ru"
+        language = context.language
         
         uptime_seconds = time.time() - self.start_time
         uptime_hours = int(uptime_seconds // 3600)
@@ -230,7 +230,7 @@ class SystemIntentHandler(IntentHandler):
     async def _handle_version_request(self, intent: Intent, context: UnifiedConversationContext) -> IntentResult:
         """Handle version information request"""
         # Use language from context (detected by NLU)
-        language = context.language or "ru"
+        language = context.language
         
         version = __version__
         version_text = self._get_template("version", language, version=version)
@@ -248,7 +248,7 @@ class SystemIntentHandler(IntentHandler):
     async def _handle_info_request(self, intent: Intent, context: UnifiedConversationContext) -> IntentResult:
         """Handle general information request. QUAL-33: honour the declared `info_type` CHOICE param
         (canonical: system | performance) — was previously ignored."""
-        language = context.language or "ru"
+        language = context.language
         session_stats = self._get_session_stats(context)
         info_type = (intent.entities.get("info_type") or "system").strip().lower()
 
@@ -289,7 +289,7 @@ class SystemIntentHandler(IntentHandler):
     async def _handle_general_info(self, intent: Intent, context: UnifiedConversationContext) -> IntentResult:
         """Handle general system information request"""
         # Use language from context (detected by NLU)
-        language = context.language or "ru"
+        language = context.language
         
         version = __version__
         info_text = self._get_template("general", language, version=version)
@@ -309,12 +309,12 @@ class SystemIntentHandler(IntentHandler):
         
         Phase 3: Language switching support implementation.
         """
-        target_language = intent.entities.get('language', 'ru')
-        
-        # Validate language
-        if target_language not in ['ru', 'en']:
+        target_language = intent.entities.get('language')
+
+        # Validate against the canonical supported set carried on the session (QUAL-36) — no baked ["ru","en"]
+        if not target_language or target_language not in context.supported_languages:
             return IntentResult(
-                text="Поддерживаются только русский и английский языки." if context.language == 'ru' 
+                text="Поддерживаются только русский и английский языки." if context.language == 'ru'
                      else "Only Russian and English languages are supported.",
                 should_speak=True
             )

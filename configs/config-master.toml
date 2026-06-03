@@ -21,8 +21,13 @@ version = "15.0.0"                  # Configuration version
 debug = false                       # Enable debug mode for detailed logging
 log_level = "INFO"                  # Logging level: DEBUG, INFO, WARNING, ERROR, CRITICAL
 
-# Language and locale settings
-language = "en-US"                  # Primary language (en-US, ru-RU, etc.)
+# Language and locale settings — SINGLE SOURCE OF TRUTH (QUAL-36).
+# default_language + supported_languages are the ONE canonical language policy for this instance.
+# The composition root reads them and injects inward (session seeding, NLU detection clamp, asset loading);
+# everything downstream reads the resolved session language. Use 2-letter codes ("ru", "en").
+default_language = "ru"             # Canonical default language (2-letter) — seeds sessions + detection fallback
+supported_languages = ["ru", "en"]  # Canonical supported-language list (detection clamps to this → default)
+language = "en-US"                  # [DEPRECATED — use default_language] legacy locale string, kept for round-trip
 timezone = "UTC"                    # Timezone (UTC, America/New_York, Europe/Moscow, etc.)
 
 # Runtime performance settings
@@ -339,12 +344,11 @@ cascade_timeout_ms = 200           # Timeout per cascade attempt
 cache_recognition_results = false   # Cache recognition results
 cache_ttl_seconds = 300            # Cache TTL in seconds
 
-# Language Detection Configuration
+# Language Detection Configuration — the supported-list + default now live ONCE at the top level
+# (QUAL-36); these flags only tune detection *behavior*.
 auto_detect_language = true         # Enable automatic language detection
 language_detection_confidence_threshold = 0.8  # Language detection confidence threshold
 persist_language_preference = true  # Persist language preference across conversation
-supported_languages = ["ru", "en"] # Supported languages
-default_language = "ru"            # Default language when detection fails
 
 # Hybrid Keyword Matcher Provider (fast, pattern-based) - Phase 1 Enhanced
 [nlu.providers.hybrid_keyword_matcher]

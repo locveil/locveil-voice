@@ -121,7 +121,7 @@ class RandomIntentHandler(IntentHandler):
     async def _handle_coin_flip(self, intent: Intent, context: UnifiedConversationContext) -> IntentResult:
         """Handle coin flip request"""
         # Use language from context (detected by NLU)
-        language = context.language or "ru"
+        language = context.language
         
         # Add small delay to simulate async operation
         await asyncio.sleep(0.05)
@@ -140,7 +140,7 @@ class RandomIntentHandler(IntentHandler):
     async def _handle_dice_roll(self, intent: Intent, context: UnifiedConversationContext) -> IntentResult:
         """Handle dice roll request"""
         # Use language from context (detected by NLU)
-        language = context.language or "ru"
+        language = context.language
         
         # Extract parameters from intent
         sides = intent.entities.get("sides", 6)
@@ -157,7 +157,7 @@ class RandomIntentHandler(IntentHandler):
         await asyncio.sleep(0.05)
         
         try:
-            result = self.roll_dice(sides, count, language)
+            result = self.roll_dice(sides, count, language=language)
             
             self.logger.info(f"Dice roll result: {result['result_text']}")
             
@@ -185,7 +185,7 @@ class RandomIntentHandler(IntentHandler):
     async def _handle_random_number(self, intent: Intent, context: UnifiedConversationContext) -> IntentResult:
         """Handle random number generation request"""
         # Use language from context (detected by NLU)
-        language = context.language or "ru"
+        language = context.language
         
         # Extract parameters from intent (Phase 5: Use configured defaults)
         min_val = intent.entities.get("min", 1)
@@ -202,7 +202,7 @@ class RandomIntentHandler(IntentHandler):
         await asyncio.sleep(0.05)
         
         try:
-            result = self.generate_random_number(min_val, max_val, language)
+            result = self.generate_random_number(min_val, max_val, language=language)
             
             self.logger.info(f"Random number generated: {result['number']}")
             
@@ -229,7 +229,7 @@ class RandomIntentHandler(IntentHandler):
     async def _handle_random_choice(self, intent: Intent, context: UnifiedConversationContext) -> IntentResult:
         """Handle random choice from options"""
         # Use language from context (detected by NLU)
-        language = context.language or "ru"
+        language = context.language
         
         # Extract options from intent
         options = intent.entities.get("options", [])
@@ -275,7 +275,7 @@ class RandomIntentHandler(IntentHandler):
 
     
     # Random functionality methods (core logic)
-    def flip_coin(self, language: str = "ru") -> Dict[str, Any]:
+    def flip_coin(self, language: str) -> Dict[str, Any]:
         """Flip a coin and return result"""
         result_index = random.randint(0, 1)
         
@@ -288,7 +288,7 @@ class RandomIntentHandler(IntentHandler):
             "language": language
         }
     
-    def roll_dice(self, sides: int = None, count: int = 1, language: str = "ru") -> Dict[str, Any]:
+    def roll_dice(self, sides: int = None, count: int = 1, *, language: str) -> Dict[str, Any]:
         """Roll dice and return results (Phase 5: Use configured defaults)"""
         # Use configured default dice sides if not specified
         if sides is None:
@@ -322,7 +322,7 @@ class RandomIntentHandler(IntentHandler):
             "language": language
         }
     
-    def generate_random_number(self, min_val: int = 1, max_val: int = 100, language: str = "ru") -> Dict[str, Any]:
+    def generate_random_number(self, min_val: int = 1, max_val: int = 100, *, language: str) -> Dict[str, Any]:
         """Generate a random number in specified range"""
         if min_val >= max_val:
             raise ValueError("min_val must be less than max_val")
@@ -341,7 +341,7 @@ class RandomIntentHandler(IntentHandler):
             "language": language
         }
     
-    def random_choice(self, options: List[str], language: str = "ru") -> Dict[str, Any]:
+    def random_choice(self, options: List[str], language: str) -> Dict[str, Any]:
         """Choose randomly from a list of options"""
         if not options:
             raise ValueError("Options list cannot be empty")
@@ -361,7 +361,7 @@ class RandomIntentHandler(IntentHandler):
     
 
         
-    def _get_template_data(self, template_name: str, language: str = "ru") -> List[str]:
+    def _get_template_data(self, template_name: str, language: str) -> List[str]:
         """Get template data from asset loader - raises fatal error if not available"""
         if not self.has_asset_loader():
             raise RuntimeError(
@@ -389,7 +389,7 @@ class RandomIntentHandler(IntentHandler):
         
         return template_data
     
-    def _get_template(self, template_name: str, language: str = "ru", **format_args) -> str:
+    def _get_template(self, template_name: str, language: str, **format_args) -> str:
         """Get template from asset loader - raises fatal error if not available"""
         if not self.has_asset_loader():
             raise RuntimeError(

@@ -131,15 +131,10 @@ class ContextAwareNLUProcessor:
         3. Text-based detection
         4. System default
         """
-        # Get NLU configuration for language detection settings
-        nlu_config = getattr(self.nlu_component.core.config, 'nlu', None)
-        if not nlu_config:
-            # Fallback to defaults if no config
-            default_language = "ru"
-            supported_languages = ["ru", "en"]
-        else:
-            default_language = getattr(nlu_config, 'default_language', "ru")
-            supported_languages = getattr(nlu_config, 'supported_languages', ["ru", "en"])
+        # Language policy comes from the ONE canonical source — CoreConfig top level (QUAL-36).
+        core_config = self.nlu_component.core.config
+        default_language = core_config.default_language
+        supported_languages = core_config.supported_languages
         
         # Check user preferences
         if context.user_preferences.get('language'):
@@ -153,20 +148,22 @@ class ContextAwareNLUProcessor:
             self._get_language_confidence(context) > 0.8):
             return context.language
         
-        # Perform text-based detection
+        # Perform text-based detection (returns None when the text carries no language signal)
         detected_language = self._analyze_text_language(text)
-        
-        # Validate detected language is supported
-        if detected_language not in supported_languages:
-            self.logger.warning(f"Detected language '{detected_language}' not in supported languages {supported_languages}, using default")
+
+        # No signal, or a detected language outside the supported list → canonical default (QUAL-36)
+        if not detected_language or detected_language not in supported_languages:
+            if detected_language:
+                self.logger.warning(f"Detected language '{detected_language}' not in supported languages {supported_languages}, using default")
             return default_language
-            
+
         return detected_language
 
-    def _analyze_text_language(self, text: str) -> str:
-        """Analyze text to detect language using multiple indicators."""
+    def _analyze_text_language(self, text: str) -> Optional[str]:
+        """Analyze text to detect a language signal. Returns a 2-letter code, or None when no signal
+        is present (the caller then applies the canonical default — no policy literal lives here)."""
         if not text or not text.strip():
-            return "ru"  # Default for empty text
+            return None  # No signal — caller applies the canonical default
             
         text_lower = text.lower()
         
@@ -182,13 +179,13 @@ class ContextAwareNLUProcessor:
         english_indicators = ['what', 'how', 'where', 'when', 'why', 'hello', 'thanks', 'yes', 'no', 'time', 'now']
         english_count = sum(1 for word in english_indicators if word in text_lower)
         
-        # Decision logic
+        # Decision logic — these are detected-signal codes (clamped by the caller), not policy defaults
         if cyrillic_ratio > 0.3 or russian_count > english_count:
             return "ru"
         elif english_count > 0:
             return "en"
         else:
-            return "ru"  # Default to Russian
+            return None  # No decisive signal — caller applies the canonical default
     
     def _should_redetect_language(self, context: UnifiedConversationContext) -> bool:
         """
@@ -341,8 +338,12 @@ class NLUComponent(Component, NLUPlugin, WebAPIPlugin):
         # Initialize enabled providers
         enabled_count = 0
         for provider_name, provider_class in self._provider_classes.items():
-            provider_config = providers_config.get(provider_name, {})
+            provider_config = dict(providers_config.get(provider_name, {}))
             if provider_config.get("enabled", False):
+                # QUAL-36: thread the ONE canonical language policy into every provider config so
+                # providers (e.g. hybrid_keyword_matcher) stop carrying their own divergent defaults.
+                provider_config.setdefault("default_language", self.core.config.default_language)
+                provider_config.setdefault("supported_languages", list(self.core.config.supported_languages))
                 try:
                     provider = provider_class(provider_config)
                     

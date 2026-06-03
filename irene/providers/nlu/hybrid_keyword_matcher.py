@@ -53,6 +53,10 @@ class HybridKeywordMatcherProvider(NLUProvider):
         self.exact_patterns: Dict[str, List[Pattern]] = {}
         self.flexible_patterns: Dict[str, List[Pattern]] = {}
         self.partial_patterns: Dict[str, List[Pattern]] = {}
+        # Canonical default language injected from CoreConfig (QUAL-36). The matcher used to default to
+        # 'en' while the rest of the system defaulted to 'ru' — an unset context.language would then
+        # partition keywords by the WRONG language. Now there's no divergence: one injected default.
+        self.default_language = config.get('default_language', 'ru')
         self.pattern_confidence = config.get('pattern_confidence', 0.9)
         self.exact_match_boost = config.get('exact_match_boost', 1.2)
         self.flexible_match_boost = config.get('flexible_match_boost', 0.9)
@@ -419,9 +423,12 @@ class HybridKeywordMatcherProvider(NLUProvider):
             )
         
         # Phase 1 TODO16: Check for contextual intents first (highest priority)
-        language = getattr(context, 'language', 'en') or 'en'
-        if language not in ['en', 'ru']:
-            language = 'en'  # Fallback to English
+        # context.language is an invariant (always a valid supported language, QUAL-36); the
+        # `or self.default_language` is pure defense, and clamps to what THIS matcher actually
+        # supports (it carries separate ru/en keyword maps) — never the old hardcoded 'en'.
+        language = getattr(context, 'language', None) or self.default_language
+        if language not in self.get_supported_languages():
+            language = self.default_language
         
         contextual_intent = self._detect_contextual_intent(text, language)
         if contextual_intent:

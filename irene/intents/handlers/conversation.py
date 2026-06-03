@@ -176,7 +176,7 @@ class ConversationIntentHandler(IntentHandler):
         
         return self.llm_component
     
-    def _get_prompt(self, prompt_type: str, language: str = "ru") -> str:
+    def _get_prompt(self, prompt_type: str, language: str) -> str:
         """Get prompt from asset loader - raises fatal error if not available"""
         if not self.has_asset_loader():
             raise RuntimeError(
@@ -196,7 +196,30 @@ class ConversationIntentHandler(IntentHandler):
         
         return prompt
 
-    def _get_template_data(self, template_name: str, language: str = "ru") -> List[str]:
+    # QUAL-36 (folded from QUAL-16): machine-context labels for the LLM, localized to the user's language.
+    # English templates here are only an offline last-resort if the localization asset is unreachable
+    # (same degradation pattern as the console floor) — the live values come from
+    # assets/localization/conversation/<lang>.yaml.
+    _CONTEXT_LABELS_FALLBACK = {
+        "currently_active": "Currently active: {summary}",
+        "recent_activity": "Recent activity: {summary}",
+        "session": "Session: {room} ({device_count} devices)",
+        "thread": "Thread: {domain} ({msg_count} msgs, {age_min}m)",
+        "actions": "Actions: {active_count} active, {recent_count} recent",
+        "flow": "Flow: {history_count} recent{state_info}",
+        "flow_state": ", state: {count} items",
+        "context_wrapper": "Context: {parts}",
+    }
+
+    def _context_label(self, key: str, language: str, **fmt) -> str:
+        """Resolve a localized context label template (by the user's language) and format it."""
+        template = self._CONTEXT_LABELS_FALLBACK[key]
+        if self.has_asset_loader():
+            loc = self.asset_loader.get_localization("conversation", language) or {}
+            template = (loc.get("context_labels") or {}).get(key, template)
+        return template.format(**fmt)
+
+    def _get_template_data(self, template_name: str, language: str) -> List[str]:
         """Get template data (arrays) from asset loader - raises fatal error if not available"""
         if not self.has_asset_loader():
             raise RuntimeError(
@@ -223,7 +246,7 @@ class ConversationIntentHandler(IntentHandler):
         
         return template_data
 
-    def _get_template(self, template_name: str, language: str = "ru", **format_args) -> str:
+    def _get_template(self, template_name: str, language: str, **format_args) -> str:
         """Get template string from asset loader - raises fatal error if not available"""
         if not self.has_asset_loader():
             raise RuntimeError(
@@ -280,7 +303,7 @@ class ConversationIntentHandler(IntentHandler):
             handler_context["messages"] = [{"role": "system", "content": system_prompt}]
         
         # Use language from context (detected by NLU)
-        language = context.language or "ru"
+        language = context.language
         
         # Get greeting templates from asset loader
         greetings = self._get_template_data("start_greetings", language)
@@ -300,7 +323,7 @@ class ConversationIntentHandler(IntentHandler):
     async def _handle_end_conversation(self, intent: Intent, context: UnifiedConversationContext) -> IntentResult:
         """Handle conversation end intent"""
         # Use language from context (detected by NLU)
-        language = context.language or "ru"
+        language = context.language
         
         # Get farewell templates from asset loader
         farewells = self._get_template_data("end_farewells", language)
@@ -323,7 +346,7 @@ class ConversationIntentHandler(IntentHandler):
         context.clear_handler_context("conversation", keep_system=True)
         
         # Use language from context (detected by NLU)
-        language = context.language or "ru"
+        language = context.language
         
         # Get clear response template from asset loader
         response = self._get_template("clear_response", language)
@@ -483,7 +506,7 @@ class ConversationIntentHandler(IntentHandler):
         """
         try:
             # Use language from context (detected by NLU) or default to Russian
-            language = context.language or "ru"
+            language = context.language
             
             # Get the original text that couldn't be recognized
             original_text = intent.raw_text or intent.entities.get("original_text", "")
@@ -527,7 +550,7 @@ class ConversationIntentHandler(IntentHandler):
             logger.error(f"Fallback handling failed: {e}")
             
             # Final emergency fallback - hardcoded message
-            language = context.language or "ru"
+            language = context.language
             if language == "en":
                 emergency_response = f"I couldn't understand '{intent.raw_text}'. Please try using simpler commands."
             else:
@@ -543,7 +566,7 @@ class ConversationIntentHandler(IntentHandler):
                 }
             )
     
-    def _build_fallback_context_prompt(self, fallback_context: Dict[str, Any], language: str = "ru") -> str:
+    def _build_fallback_context_prompt(self, fallback_context: Dict[str, Any], language: str) -> str:
         """Build the LLM context prompt for an unrecognized command (NLU fallback). Uses the
         externalized, localized, hardened `fallback_context` prompt (QUAL-16) — no hardcoded English.
         The optional guessed topic is filled via the `fallback_topic` fragment."""
@@ -573,7 +596,7 @@ class ConversationIntentHandler(IntentHandler):
             actions_summary = self._build_active_actions_summary(context.active_actions)
             context_messages.append({
                 "role": "system",
-                "content": f"Currently active: {actions_summary}"
+                "content": self._context_label("currently_active", context.language, summary=actions_summary)
             })
         
         # 2. Inject recent domain activity context if relevant
@@ -732,7 +755,7 @@ class ConversationIntentHandler(IntentHandler):
             
             summaries.append(summary)
         
-        return f"Recent activity: {'; '.join(summaries)}"
+        return self._context_label("recent_activity", context.language, summary='; '.join(summaries))
     
     def _manage_conversation_state(self, context: UnifiedConversationContext, intent: Intent, is_fallback: bool) -> None:
         """Manage conversation state transitions based on intent and context"""
@@ -929,7 +952,7 @@ class ConversationIntentHandler(IntentHandler):
         # Session: room + devices
         room = context.room_name or context.client_id or "unknown"
         device_count = len(context.available_devices or [])
-        parts.append(f"Session: {room} ({device_count} devices)")
+        parts.append(self._context_label("session", context.language, room=room, device_count=device_count))
 
         # Thread: domain conversation summary (domain-specific conversations)
         if domain:
@@ -937,21 +960,21 @@ class ConversationIntentHandler(IntentHandler):
             msg_count = thread.get("message_count", 0)
             if msg_count > 0:
                 age_min = int(thread.get("age_seconds", 0) / 60)
-                parts.append(f"Thread: {domain} ({msg_count} msgs, {age_min}m)")
+                parts.append(self._context_label("thread", context.language, domain=domain, msg_count=msg_count, age_min=age_min))
 
         # Actions: active + recent (from the store-backed views)
         active_count = len(context.active_actions)
         recent_count = len(context.recent_actions)
         if active_count or recent_count:
-            parts.append(f"Actions: {active_count} active, {recent_count} recent")
+            parts.append(self._context_label("actions", context.language, active_count=active_count, recent_count=recent_count))
 
         # Conversation flow
         history_count = len(context.conversation_history)
         if history_count > 0:
-            state_info = f", state: {len(context.state_context)} items" if context.state_context else ""
-            parts.append(f"Flow: {history_count} recent{state_info}")
+            state_info = self._context_label("flow_state", context.language, count=len(context.state_context)) if context.state_context else ""
+            parts.append(self._context_label("flow", context.language, history_count=history_count, state_info=state_info))
 
-        return f"Context: {' | '.join(parts)}" if parts else ""
+        return self._context_label("context_wrapper", context.language, parts=' | '.join(parts)) if parts else ""
 
     def _get_context_coordination_summary(self, context: UnifiedConversationContext, domain: Optional[str] = None) -> Dict[str, Any]:
         """Diagnostic context summary (QUAL-28: direct accessors, no ContextLayer)."""

@@ -20,17 +20,26 @@ logger = logging.getLogger(__name__)
 class ContextManager:
     """Manages conversation context and history for sessions."""
     
-    def __init__(self, session_timeout: int = 1800, max_history_turns: int = 10):
+    def __init__(self, session_timeout: int = 1800, max_history_turns: int = 10,
+                 default_language: str = "ru", supported_languages: Optional[List[str]] = None):
         """
         Initialize the context manager.
-        
+
         Args:
             session_timeout: Session timeout in seconds (default: 30 minutes)
             max_history_turns: Maximum conversation turns to keep in history
+            default_language: Canonical default language injected from CoreConfig (QUAL-36 single
+                source of truth). New sessions are SEEDED with this — it's the only language default
+                in the session layer; downstream code reads context.language, never a literal.
+            supported_languages: Canonical supported-language list injected from CoreConfig (QUAL-36).
+                Seeded onto each session so handlers (e.g. language switching) can validate against it
+                without importing config or baking ["ru","en"].
         """
         self.sessions: Dict[str, UnifiedConversationContext] = {}
         self.session_timeout = session_timeout
         self.max_history_turns = max_history_turns
+        self.default_language = default_language
+        self.supported_languages = list(supported_languages) if supported_languages else [default_language]
         self.cleanup_interval = 300  # Cleanup every 5 minutes
         self.last_cleanup = time.time()
         self.metrics_collector = get_metrics_collector()  # Phase 2: Session analytics integration
@@ -83,7 +92,8 @@ class ContextManager:
             return existing
         context = UnifiedConversationContext(
             session_id=session_id,
-            language="ru",  # Russian-first default
+            language=self.default_language,  # canonical default injected from CoreConfig (QUAL-36)
+            supported_languages=list(self.supported_languages),  # canonical supported set (QUAL-36)
             max_history_turns=self.max_history_turns,
         )
         self.sessions[session_id] = context

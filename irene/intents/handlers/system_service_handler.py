@@ -88,7 +88,7 @@ class SystemServiceIntentHandler(IntentHandler):
         except Exception as e:
             logger.error(f"System service intent execution failed: {e}")
             # Use language from context (detected by NLU) for error response
-            language = context.language or "ru"
+            language = context.language
             error_text = self._get_template("general_error", language)
             
             return IntentResult(
@@ -105,7 +105,7 @@ class SystemServiceIntentHandler(IntentHandler):
         self._last_heartbeat = datetime.now()
         
         # Use language from context (detected by NLU)
-        language = context.language or "ru"
+        language = context.language
         
         # Format response using external template
         status_text = self._get_template(
@@ -141,7 +141,7 @@ class SystemServiceIntentHandler(IntentHandler):
         self._last_heartbeat = datetime.now()
         
         # Use language from context (detected by NLU)
-        language = context.language or "ru"
+        language = context.language
         
         # Format response using external template
         stats_text = self._get_template(
@@ -177,7 +177,7 @@ class SystemServiceIntentHandler(IntentHandler):
         self._last_heartbeat = datetime.now()
         
         # Use language from context (detected by NLU)
-        language = context.language or "ru"
+        language = context.language
         
         # Calculate health metrics
         uptime_seconds = (datetime.now() - self._start_time).total_seconds()
@@ -210,7 +210,7 @@ class SystemServiceIntentHandler(IntentHandler):
     
 
     
-    def _get_uptime(self, language: str = "ru") -> str:
+    def _get_uptime(self, language: str) -> str:
         """Get service uptime using external templates with language support"""
         if not self._last_heartbeat:
             return self._get_template("uptime_no_heartbeats", language)
@@ -241,7 +241,7 @@ class SystemServiceIntentHandler(IntentHandler):
             
 
     
-    def _get_template(self, template_name: str, language: str = "ru", **format_args) -> str:
+    def _get_template(self, template_name: str, language: str, **format_args) -> str:
         """Get template from asset loader - raises fatal error if not available"""
         if not self.has_asset_loader():
             raise RuntimeError(

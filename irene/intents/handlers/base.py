@@ -907,7 +907,7 @@ class IntentHandler(EntryPointMetadata, ABC):
             confidence=1.0
         )
     
-    def _get_stop_patterns(self, language: str = "ru") -> List[str]:
+    def _get_stop_patterns(self, language: str) -> List[str]:
         """Get stop command patterns from asset loader - raises fatal error if not available"""
         if not self.has_asset_loader():
             raise RuntimeError(
@@ -934,7 +934,7 @@ class IntentHandler(EntryPointMetadata, ABC):
         
         return stop_patterns
     
-    def _get_domain_hints(self, language: str = "ru") -> Dict[str, List[str]]:
+    def _get_domain_hints(self, language: str) -> Dict[str, List[str]]:
         """Get domain hints from asset loader - raises fatal error if not available"""
         if not self.has_asset_loader():
             raise RuntimeError(

@@ -133,7 +133,7 @@ class TimerIntentHandler(IntentHandler):
         except Exception as e:
             logger.error(f"Timer intent execution failed: {e}")
             # Determine language for error response
-            language = self._get_language(intent, context)
+            language = context.language
             error_text = self._get_template("general_error", language)
             
             return IntentResult(
@@ -147,20 +147,7 @@ class TimerIntentHandler(IntentHandler):
         """Timer functionality is always available"""
         return True
     
-    def _get_language(self, intent: Intent, context: UnifiedConversationContext) -> str:
-        """Determine language from intent or context"""
-        # Check intent entities first
-        if hasattr(intent, 'entities') and "language" in intent.entities:
-            return intent.entities["language"]
-        
-        # Check if text contains Russian characters
-        if hasattr(intent, 'raw_text') and any(char in intent.raw_text for char in "абвгдеёжзийклмнопрстуфхцчшщъыьэюя"):
-            return "ru"
-
-        # Default to Russian
-        return "ru"
-        
-    def _get_template(self, template_name: str, language: str = "ru", **format_args) -> str:
+    def _get_template(self, template_name: str, language: str, **format_args) -> str:
         """Get template from asset loader - raises fatal error if not available"""
         if not self.has_asset_loader():
             raise RuntimeError(
@@ -203,7 +190,7 @@ class TimerIntentHandler(IntentHandler):
             duration, unit, message = self._parse_timer_from_text(intent.raw_text)
         
         if not duration:
-            language = self._get_language(intent, context)
+            language = context.language
             error_text = self._get_template("timer_duration_parse_error", language)
             return IntentResult(
                 text=error_text,
@@ -235,7 +222,7 @@ class TimerIntentHandler(IntentHandler):
             )
             
             # Format response using template
-            language = self._get_language(intent, context)
+            language = context.language
             time_str = self._format_duration(duration_seconds)
             response = self._get_template("timer_set_success", language, time_str=time_str, message=message)
             
@@ -248,7 +235,7 @@ class TimerIntentHandler(IntentHandler):
             )
             
         except ValueError as e:
-            language = self._get_language(intent, context)
+            language = context.language
             error_text = self._get_template("timer_set_error", language, error=str(e))
             return IntentResult(
                 text=error_text,
@@ -264,7 +251,7 @@ class TimerIntentHandler(IntentHandler):
         """Cancel a specific timer (by id) or all timers — by cancelling their store tasks."""
         timer_id = intent.entities.get('timer_id')
         active = self._session_timer_names(context)
-        language = self._get_language(intent, context)
+        language = context.language
 
         if not active:
             return IntentResult(text=self._get_template("timer_no_active", language), should_speak=True)
@@ -287,7 +274,7 @@ class TimerIntentHandler(IntentHandler):
         
         Phase 2 TODO16: Standardized stop handling - only receives resolved intents.
         """
-        language = context.language or "ru"
+        language = context.language
         active = self._session_timer_names(context)
         if not active:
             return IntentResult(text=self._get_template("stop_no_timers", language),
@@ -304,7 +291,7 @@ class TimerIntentHandler(IntentHandler):
         """
         # NOTE: a sleeping timer task can't truly be paused; this flags status only (the prior
         # implementation was likewise cosmetic). Marks the timers "paused" in the store.
-        language = context.language or "ru"
+        language = context.language
         active = self._session_timer_names(context)
         if not active:
             return IntentResult(text=self._get_template("pause_no_active_timers", language),
@@ -319,7 +306,7 @@ class TimerIntentHandler(IntentHandler):
         
         Phase 2 TODO16: Standardized contextual command handling.
         """
-        language = context.language or "ru"
+        language = context.language
         paused = [name for name, info in context.active_actions.items()
                   if info.get("domain") == "timers" and info.get("status") == "paused"]
         if not paused:
@@ -331,7 +318,7 @@ class TimerIntentHandler(IntentHandler):
     
     async def _handle_list_timers(self, intent: Intent, context: UnifiedConversationContext) -> IntentResult:
         """Handle list timers intent"""
-        language = self._get_language(intent, context)
+        language = context.language
         timers = [(name, info) for name, info in context.active_actions.items() if info.get("domain") == "timers"]
         if not timers:
             return IntentResult(text=self._get_template("timer_list_empty", language), should_speak=True)
@@ -354,7 +341,7 @@ class TimerIntentHandler(IntentHandler):
     
     async def _handle_timer_status(self, intent: Intent, context: UnifiedConversationContext) -> IntentResult:
         """Handle timer status inquiry intent"""
-        language = self._get_language(intent, context)
+        language = context.language
         timers = [(name, info) for name, info in context.active_actions.items() if info.get("domain") == "timers"]
         if not timers:
             return IntentResult(text=self._get_template("timer_no_active", language), should_speak=True)

@@ -99,7 +99,7 @@ class ProviderControlIntentHandler(IntentHandler):
             return self._error_result(context, f"Component {component_type} not available")
         
         # Determine language
-        language = context.language or "ru"
+        language = context.language
         
         # Switch provider based on component type
         success, message = self._switch_component_provider(component, component_type, provider_name, language)
@@ -141,7 +141,7 @@ class ProviderControlIntentHandler(IntentHandler):
         info = self._get_component_providers_info(component, component_type)
         
         # Determine language
-        language = context.language or "ru"
+        language = context.language
         
         self.logger.info(f"List providers request for {component_type}")
         
@@ -161,7 +161,7 @@ class ProviderControlIntentHandler(IntentHandler):
         info_parts = []
         
         # Determine language
-        language = context.language or "ru"
+        language = context.language
         
         if language == "ru":
             info_parts.append("Все доступные провайдеры:")
@@ -229,7 +229,7 @@ class ProviderControlIntentHandler(IntentHandler):
             logger.error(f"Error getting {component_type} provider info: {e}")
             return f"Error getting provider info: {e}"
     
-    def _get_component_mappings(self, language: str = "ru") -> Dict[str, str]:
+    def _get_component_mappings(self, language: str) -> Dict[str, str]:
         """Get component mappings from asset loader - raises fatal error if not available"""
         if not self.has_asset_loader():
             raise RuntimeError(
@@ -354,7 +354,7 @@ class ProviderControlIntentHandler(IntentHandler):
         
     def _error_result(self, context: UnifiedConversationContext, error: str) -> IntentResult:
         """Create error result with language awareness"""
-        language = context.language or "ru"
+        language = context.language
         
         if language == "ru":
             error_text = f"Ошибка управления провайдерами: {error}"

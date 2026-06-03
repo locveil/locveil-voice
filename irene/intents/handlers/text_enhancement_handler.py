@@ -87,7 +87,7 @@ class TextEnhancementIntentHandler(IntentHandler):
         text_to_enhance = llm_component.extract_text_from_command(intent.raw_text)
         
         # Use language from context (detected by NLU)
-        language = context.language or "ru"
+        language = context.language
         
         if text_to_enhance:
             try:
@@ -133,7 +133,7 @@ class TextEnhancementIntentHandler(IntentHandler):
             improved = await llm_component.enhance_text(text_to_improve, task="improve", language=context.language, trace_context=self._trace_context)
             
             # Use language from context (detected by NLU)
-            language = context.language or "ru"
+            language = context.language
             
             response_text = self._get_template("improved_text", language, improved=improved)
             
@@ -175,7 +175,7 @@ class TextEnhancementIntentHandler(IntentHandler):
             corrected = await llm_component.enhance_text(text_to_correct, task="grammar_correction", language=context.language, trace_context=self._trace_context)
             
             # Use language from context (detected by NLU)
-            language = context.language or "ru"
+            language = context.language
             
             response_text = self._get_template("corrected_text", language, corrected=corrected)
             
@@ -213,7 +213,7 @@ class TextEnhancementIntentHandler(IntentHandler):
         
 
         
-    def _get_template(self, template_name: str, language: str = "ru", **format_args) -> str:
+    def _get_template(self, template_name: str, language: str, **format_args) -> str:
         """Get template from asset loader - raises fatal error if not available"""
         if not self.has_asset_loader():
             raise RuntimeError(
@@ -242,7 +242,7 @@ class TextEnhancementIntentHandler(IntentHandler):
     
     def _error_result(self, context: UnifiedConversationContext, error: str) -> IntentResult:
         """Create error result with language awareness"""
-        language = context.language or "ru"
+        language = context.language
         
         error_text = self._get_template("error_enhancement", language, error=error)
         

@@ -279,7 +279,7 @@ class DeviceEntityResolver:
         
         # 3. Type-based matching using localization files
         # Determine language from context
-        language = getattr(context, 'language', 'ru') or 'ru'
+        language = context.language
         device_types = self._load_device_types(language)
         
         for device_type, keywords in device_types.items():
@@ -374,7 +374,7 @@ class LocationEntityResolver:
         # 1. Current room inference using localization files
         current_room = context.get_room_name()
         # Determine language from context
-        language = getattr(context, 'language', 'ru') or 'ru'
+        language = context.language
         location_keywords = self._load_location_keywords(language)
         here_keywords = location_keywords.get("here_indicators", [])
         

@@ -80,7 +80,7 @@ class GreetingsIntentHandler(IntentHandler):
         """Execute greeting intent"""
         try:
             # Use language from context (detected by NLU)
-            language = context.language or "ru"  # Fallback to Russian if not set
+            language = context.language  # Fallback to Russian if not set
             
             if intent.action == "goodbye" or intent.name == "greeting.goodbye":
                 return await self._handle_farewell(intent, context)
@@ -103,7 +103,7 @@ class GreetingsIntentHandler(IntentHandler):
         """Greetings are always available"""
         return True
     
-    def _get_template_data(self, template_name: str, language: str = "ru") -> List[str]:
+    def _get_template_data(self, template_name: str, language: str) -> List[str]:
         """Get template data from asset loader - raises fatal error if not available"""
         if not self.has_asset_loader():
             raise RuntimeError(
@@ -131,7 +131,7 @@ class GreetingsIntentHandler(IntentHandler):
         
         return template_data
     
-    def _get_time_based_greeting_template(self, time_period: str, language: str = "ru") -> str:
+    def _get_time_based_greeting_template(self, time_period: str, language: str) -> str:
         """Get time-based greeting from templates - raises fatal error if not available"""
         if not self.has_asset_loader():
             raise RuntimeError(
@@ -163,7 +163,7 @@ class GreetingsIntentHandler(IntentHandler):
     async def _handle_greeting(self, intent: Intent, context: UnifiedConversationContext) -> IntentResult:
         """Handle hello greeting intent"""
         # Use language from context (already detected by NLU)
-        language = context.language or "ru"
+        language = context.language
         
         greetings = self._get_template_data("greetings", language)
         greeting = random.choice(greetings)
@@ -186,7 +186,7 @@ class GreetingsIntentHandler(IntentHandler):
     async def _handle_farewell(self, intent: Intent, context: UnifiedConversationContext) -> IntentResult:
         """Handle goodbye farewell intent"""
         # Use language from context (already detected by NLU)
-        language = context.language or "ru"
+        language = context.language
         
         farewells = self._get_template_data("farewells", language)
         farewell = random.choice(farewells)
@@ -204,7 +204,7 @@ class GreetingsIntentHandler(IntentHandler):
     async def _handle_welcome(self, intent: Intent, context: UnifiedConversationContext) -> IntentResult:
         """Handle welcome message intent"""
         # Use language from context (already detected by NLU)
-        language = context.language or "ru"
+        language = context.language
         
         welcome_messages = self._get_template_data("welcome_messages", language)
         welcome = random.choice(welcome_messages)
