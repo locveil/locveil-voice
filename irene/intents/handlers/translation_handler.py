@@ -95,7 +95,7 @@ class TranslationIntentHandler(IntentHandler):
         if text_and_lang:
             text, target_lang = text_and_lang
             try:
-                translated = await llm_component.enhance_text(text, task="translation", target_language=target_lang, trace_context=self._trace_context)
+                translated = await llm_component.enhance_text(text, task="translation", target_language=target_lang, language=context.language, trace_context=self._trace_context)
                 response_text = self._get_template("translation_result", language, translated=translated)
                     
                 self.logger.info(f"Translation completed: {text} -> {target_lang}")
@@ -144,6 +144,7 @@ class TranslationIntentHandler(IntentHandler):
                 text_to_translate, 
                 task="translation", 
                 target_language=target_language,
+                language=context.language,
                 trace_context=self._trace_context
             )
             

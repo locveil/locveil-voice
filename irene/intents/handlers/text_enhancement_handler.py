@@ -91,7 +91,7 @@ class TextEnhancementIntentHandler(IntentHandler):
         
         if text_to_enhance:
             try:
-                enhanced = await llm_component.enhance_text(text_to_enhance, task="improve", trace_context=self._trace_context)
+                enhanced = await llm_component.enhance_text(text_to_enhance, task="improve", language=context.language, trace_context=self._trace_context)
                 response_text = self._get_template("enhanced_text", language, enhanced=enhanced)
                     
                 self.logger.info(f"Text enhancement completed")
@@ -130,7 +130,7 @@ class TextEnhancementIntentHandler(IntentHandler):
             return self._error_result(context, "Text to improve not found")
         
         try:
-            improved = await llm_component.enhance_text(text_to_improve, task="improve", trace_context=self._trace_context)
+            improved = await llm_component.enhance_text(text_to_improve, task="improve", language=context.language, trace_context=self._trace_context)
             
             # Use language from context (detected by NLU)
             language = context.language or "ru"
@@ -172,7 +172,7 @@ class TextEnhancementIntentHandler(IntentHandler):
             return self._error_result(context, "Text to correct not found")
         
         try:
-            corrected = await llm_component.enhance_text(text_to_correct, task="correct", trace_context=self._trace_context)
+            corrected = await llm_component.enhance_text(text_to_correct, task="grammar_correction", language=context.language, trace_context=self._trace_context)
             
             # Use language from context (detected by NLU)
             language = context.language or "ru"

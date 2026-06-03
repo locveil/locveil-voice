@@ -1460,7 +1460,34 @@ class IntentAssetLoader:
                 
             except Exception as e:
                 self._add_warning(f"Failed to load prompts for handler '{handler_name}': {e}")
-    
+
+        # System-level prompt sets NOT tied to an enabled handler (loaded unconditionally) — e.g. the
+        # QUAL-16 shared LLM task prompts (assets/prompts/llm/<lang>.yaml).
+        for system_set in ("llm",):
+            sys_dir = prompts_dir / system_set
+            if not sys_dir.exists() or system_set in self.prompts:
+                continue
+            try:
+                sys_prompts: Dict[str, Any] = {}
+                for lang_file in sys_dir.glob("*.yaml"):
+                    language = lang_file.stem
+                    with open(lang_file, 'r', encoding='utf-8') as f:
+                        data = yaml.safe_load(f) or {}
+                    for prompt_type, prompt_data in data.items():
+                        if isinstance(prompt_data, dict) and 'content' in prompt_data:
+                            sys_prompts[f"{prompt_type}_{language}"] = prompt_data['content'].strip()
+                            sys_prompts[f"{prompt_type}_{language}_metadata"] = {
+                                'description': prompt_data.get('description', ''),
+                                'usage_context': prompt_data.get('usage_context', ''),
+                                'variables': prompt_data.get('variables', []),
+                                'prompt_type': prompt_data.get('prompt_type', 'system'),
+                            }
+                if sys_prompts:
+                    self.prompts[system_set] = sys_prompts
+                    logger.debug(f"Loaded system prompt set '{system_set}'")
+            except Exception as e:
+                self._add_warning(f"Failed to load system prompt set '{system_set}': {e}")
+
     async def _load_localizations(self, handler_names: List[str]) -> None:
         """Load localization data (Category C: YAML parsing)"""
         localization_dir = self.assets_root / "localization"
