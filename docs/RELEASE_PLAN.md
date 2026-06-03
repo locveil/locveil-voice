@@ -286,7 +286,14 @@ See `docs/review/phase1_architecture_map.md` §5.
       int8) on a shared runtime+asset helper, alongside vosk/whisper; then expand per the design (TTS family,
       wake-word) keeping whisper/silero as first-class options. Gated by Invariant #4 (provider config →
       config-ui). Split into PR-sized tasks from the design.
-- [ ] **ARCH-11** `[release]` (P1) — **Fix the `core → inputs/workflows/components.base` composition-root edges
+- [x] **ARCH-11** `[release]` (P1) — **DONE 2026-06-03 (S1-S4, commits 64c4050·0453b12·b64be87·+S4).** Inverted all 4
+      `core → inputs/workflows/components.base` composition-root edges + locked them with the import-linter contract "Core
+      does not import the outer layers (ARCH-11)" (8th contract; teeth-checked: a planted `core→inputs` import breaks it).
+      Decision (c) applied (input/Component/Workflow ports rooted on `EntryPointMetadata` in `core/interfaces`); all manager
+      construction moved to `runners/composition.build_core`; `RequestContext` imported inward from domain. Legacy
+      `irene/plugins/` teardown + `PluginInterface` removal remain split to **ARCH-13** (core→plugins incidentally already
+      clean). 8/8 contracts kept, suite 85=85 FAILED (0 net regression across all 4 stages). _Original plan retained below._
+      **Fix the `core → inputs/workflows/components.base` composition-root edges
       properly — REVOKES the ARCH-5 reclassification.** _**Reconciled + decisions locked 2026-06-03 (ready to execute as a
       staged refactor):**_ prerequisites met (ARCH-6 ✓, QUAL-28 ✓). **4 edges:** (1) `workflow_manager→inputs.base.
       InputSource` (type in 3 sigs); (2) `core/components.py→components.base.Component` (24× type/TypeVar/isinstance);
@@ -341,8 +348,12 @@ See `docs/review/phase1_architecture_map.md` §5.
       `plugins.manager` (bonus — `core→plugins` gone, eases ARCH-13); the two outward managers are typed `Any` in core to keep
       the edge out. Single production call site `runners/base.py` + the 2 `examples/` demos route through `build_core`.
       **ALL 4 EDGES REMOVED.** Verified: zero `core→{inputs,plugins}` imports, `build_core` assembles a working core,
-      import-linter 7/7 kept, suite 85=85 FAILED (0 net regression). NEXT = S4 (add import-linter contracts forbidding
-      `core→{inputs,workflows,components}.base` + remove the ARCH-5 exemptions — locks the inversion). _Original below._
+      import-linter 7/7 kept, suite 85=85 FAILED (0 net regression). **✓ S4 DONE 2026-06-03 — ARCH-11 COMPLETE.** Added the
+      8th import-linter contract "Core does not import the outer layers (ARCH-11)" (`source=irene.core`, forbidden
+      `irene.{inputs,workflows,components}`). No literal ARCH-5 exemptions existed to remove — ARCH-5 left these edges
+      *unenforced* (added no contract), so adding the contract IS the revocation. Teeth-checked (planted `core→inputs`
+      import → BROKEN; reverted → 8 kept). 8/8 contracts kept, contracts-test green, suite 85=85 FAILED (0 net regression).
+      _Original below._
       (which deemed them "legitimate composition-root behavior" and
       left them unenforced; user reverses that 2026-06-02). Edges: `core.{engine,workflow_manager}→inputs.base`,
       `core.workflow_manager→workflows.base`, `core.components→components.base`. **Fix = invert via DI/ports:** the

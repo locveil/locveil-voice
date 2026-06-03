@@ -4,7 +4,9 @@ Runs import-linter against the `[tool.importlinter]` contracts in pyproject.toml
 and asserts every contract holds, so the directional rules established by
 ARCH-1..4 (domain depends on nothing outward; config has no upward imports;
 components don't import delivery; adapters don't import application; provider
-categories are independent) cannot silently regress.
+categories are independent), ARCH-6/SCC-2 (the input port doesn't import its
+adapters), and ARCH-11 (core depends only on its own ports, never outward on the
+inputs/workflows/components layers) cannot silently regress.
 
 Also runnable directly from the repo root: ``lint-imports``.
 """

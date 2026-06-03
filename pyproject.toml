@@ -411,6 +411,22 @@ forbidden_modules = [
     "irene.inputs.manager",
 ]
 
+[[tool.importlinter.contracts]]
+# ARCH-11: core depends only on its own ports (irene.core.interfaces), never outward on the
+# application/delivery/adapter layers. This REVOKES the ARCH-5 reclassification that left the
+# core->{inputs,workflows,components} composition-root edges unenforced. The edges were inverted in
+# ARCH-11 S1-S3 (input port + Component/Workflow ports lifted into irene.core.interfaces; all manager
+# construction moved to the composition root irene.runners.composition.build_core). NB: irene.core.*
+# (e.g. irene.core.components, irene.core.workflow_manager) is NOT irene.components/irene.workflows.
+name = "Core does not import the outer layers (ARCH-11)"
+type = "forbidden"
+source_modules = ["irene.core"]
+forbidden_modules = [
+    "irene.inputs",
+    "irene.workflows",
+    "irene.components",
+]
+
 [tool.mypy]
 # Basic settings - detailed configuration in mypy.ini (matching wb-mqtt-bridge)
 python_version = "3.11"

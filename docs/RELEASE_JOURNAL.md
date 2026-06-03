@@ -12,6 +12,16 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-03
+- **ARCH-11 S4 DONE — locked the inversion; ARCH-11 COMPLETE.** Added the 8th import-linter contract "Core does not import
+  the outer layers (ARCH-11)" (`source=irene.core`, forbidden `irene.{inputs,workflows,components}`). Found there were **no
+  literal ARCH-5 exemptions** to remove — ARCH-5 had simply left these composition-root edges *unenforced* (added no
+  contract at all), so adding the enforcing contract IS the revocation. Guarded against the `irene.core.components` vs
+  `irene.components` package-name gotcha (different packages — no false positive). **Teeth-checked**: planted a temporary
+  `core→inputs.manager` import → contract went BROKEN (7 kept/1 broken); reverted → 8 kept. The generic contracts test
+  (`test_import_contracts.py`) covers the new contract automatically; updated its docstring. **8/8 contracts kept**, suite
+  **85=85 FAILED** (0 net regression). **ARCH-11 closed across S1-S4** (4 edges inverted, decision (c) applied, construction
+  moved to the composition root, all locked). Legacy `irene/plugins/` teardown stays split to ARCH-13 (core→plugins is
+  incidentally already clean as an S3 byproduct).
 - **ARCH-11 S3 DONE — construction inversion (edge 4 removed; all 4 edges now done).** Topology was friendly: a single
   production instantiation (`runners/base.py:85`, inherited by every runner) plus two `examples/` demos. Added the
   composition root `irene/runners/composition.build_core(config, config_path)` which constructs ALL 7 managers
