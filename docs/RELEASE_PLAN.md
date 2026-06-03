@@ -667,9 +667,9 @@ See `docs/review/phase1_architecture_map.md` §5.
       8 handlers. **Approach (user chose Option A — domain-owned ports, over the entry's looser "inject components"
       sketch, to truly satisfy Invariant #3):** added domain-owned capability **ports** `irene/intents/ports.py`
       (`LLMPort`/`TTSPort`/`AudioPort`/`ASRPort` + shared `ComponentControlPort` + `ComponentControlRegistryPort`,
-      Protocols); the 8 handlers now depend only on these domain abstractions and the application
-      (`IntentComponent.post_initialize_handler_dependencies`) injects the real components inward as **structural**
-      impls (no component imports the port → no new edges). `system` uses the already-injected `context_manager`;
+      **ABCs** — see hardening below); the 8 handlers now depend only on these domain abstractions and the application
+      (`IntentComponent.post_initialize_handler_dependencies`) injects the real components inward. `system` uses the
+      already-injected `context_manager`;
       `provider_control` gets the registry port. **Removed** the `from ...core.engine import get_core` service-locator
       from every handler and the **`ignore_imports` escape hatch** from the ARCH-1 contract — ARCH-1 now holds with
       **no hatch** (9/9 contracts kept), proving the transitive `intents→core.engine→{components,inputs,workflows}`
@@ -677,10 +677,19 @@ See `docs/review/phase1_architecture_map.md` §5.
       handlers that had them. Found a latent bug en route (the old `await component_manager.get_component(...)` awaited a
       **sync** method — the fallback was already broken; injection is what worked). **Invariant #4:** no backend
       contract changed (internal DI only) → config-ui untouched. Verified: suite 85=85 FAILED (0 net regression).
-      **Byproduct finding (surfaced for decision, not yet scoped):** `core.engine.get_core()` now has **zero callers** —
-      the whole global-core service-locator (`get_core`/`set_core`/`_global_core`) is orphaned (still `set_core`'d in
-      engine, never read). Removing it touches `engine.py` + 3 test files, so it is **out of QUAL-24's scope** pending a
-      user call (remove now vs. file a follow-up).
+      **Hardening (user-directed, same session):** (1) **ports are ABCs, and the application components now INHERIT
+      them** (`LLMComponent(…, LLMPort)`, `TTSComponent(…, TTSPort)`, `AudioComponent(…, AudioPort)`,
+      `ASRComponent(…, ASRPort)`, `ComponentManager(ComponentControlRegistryPort)`) — `components→intents.ports` is
+      application→domain (inward, legal; 9/9 contracts kept). Nominal inheritance means an unimplemented port method now
+      **fails at instantiation** (startup), not as a latent `AttributeError`. (2) That enforcement surfaced **4 methods with
+      no implementer** (consumer-defined ports faithfully captured pre-existing **dead handler calls**): implemented them —
+      `AudioComponent.pause_audio`/`resume_audio` delegate to the active provider's `pause_playback`/`resume_playback`
+      (real); `TTSComponent.stop_synthesis`/`cancel_synthesis` are honest best-effort (TTS providers can't interrupt → graceful
+      no-op, no crash). NB: injection also **repaired latent breakage** — only `conversation` was injected before, so the other
+      5 capability handlers were getting `None` (compounded by the await-sync bug); they're now wired for the first time (no
+      test covers these paths — flagged for TEST-7). (3) **Removed** the orphaned global-core service-locator
+      (`get_core`/`set_core`/`_global_core`) from `engine.py` — zero callers; no test referenced it (the 3 flagged files
+      matched on `llm_component`, not `get_core`). All verified: components instantiate (ABC), 9/9 contracts, suite 85=85.
 - [x] **QUAL-25** [DFLOW] (P1) — **End-to-end dataflow & context-models review.** **DONE 2026-06-02** →
       `docs/review/dataflow_review.md` (~9 P0, ~20 P1, long P2 tail; 5 parallel tracers → synthesis →
       adversarial-verify on the headline NEW P0s). **Headline NEW finding: a field rename `Intent.text`→`raw_text`

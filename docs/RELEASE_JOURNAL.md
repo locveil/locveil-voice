@@ -26,8 +26,15 @@ newest entries near the top of each dated section.
   Honored Invariant #9 (removed `TYPE_CHECKING` guards in the 6 touched handlers that had them; the 2 untouched handlers'
   guards stay for QUAL-32). Caught a latent bug: the old `await component_manager.get_component(...)` awaited a **sync**
   method, so the get_core fallback was already broken — injection is what actually worked. Invariant #4: no backend
-  contract changed → config-ui untouched. Suite 85=85 FAILED (0 net regression). **Byproduct:** `get_core()`/`set_core`/
-  `_global_core` are now fully orphaned — surfaced in the QUAL-24 ledger entry for a remove-now-vs-follow-up decision.
+  contract changed → config-ui untouched. Suite 85=85 FAILED (0 net regression). **Hardening (user-directed, same
+  session):** user asked "who implements the ports?" — verified, and it surfaced that the ports (consumer-defined)
+  faithfully captured 4 **pre-existing dead handler calls** (`stop_synthesis`/`cancel_synthesis`/`pause_audio`/`resume_audio`
+  with no implementer) AND that the old injection only wired `conversation` (the other 5 handlers were getting `None`). Per
+  the user's directive, converted the ports from Protocols to **ABCs** and made the application **components inherit** them
+  (`components→intents.ports` = application→domain, inward; 9/9 contracts kept) so unimplemented methods fail at
+  instantiation. Implemented the 4: audio pause/resume delegate to providers (real); TTS stop/cancel are honest best-effort
+  (providers can't interrupt). Removed the orphaned global-core service-locator (`get_core`/`set_core`/`_global_core`) from
+  `engine.py` — zero callers, no test referenced it. The now-wired-but-untested handler paths are flagged for TEST-7.
 - **ARCH-12 DONE — removed the last two residual upward edges; locked `utils` with contract #9.** Edge 1
   (`utils.vad → core.metrics`) was a **dead import** (`get_metrics_collector` imported but never called — a Phase-4
   leftover after VAD metrics unified into `MetricsCollector`); deleted it. Edge 2 (`utils.logging → config.models`):

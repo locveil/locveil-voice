@@ -26,19 +26,10 @@ from .metrics import MetricsCollector
 
 logger = logging.getLogger(__name__)
 
-# Global core instance for component access by handlers
-_global_core: Optional['AsyncVACore'] = None
-
-
-def get_core() -> Optional['AsyncVACore']:
-    """Get the global AsyncVACore instance for component access"""
-    return _global_core
-
-
-def set_core(core: 'AsyncVACore') -> None:
-    """Set the global AsyncVACore instance"""
-    global _global_core
-    _global_core = core
+# QUAL-24: the global-core service-locator (`get_core`/`set_core`/`_global_core`)
+# was removed once the intent handlers stopped reaching into core for components
+# (they now depend on domain-owned ports injected by the application). Components
+# receive what they need via DI; nothing reads a global core.
 
 
 class AsyncVACore:
@@ -82,10 +73,7 @@ class AsyncVACore:
     async def start(self) -> None:
         """Initialize and start the assistant"""
         logger.info("Starting Irene Voice Assistant v13...")
-        
-        # Set this instance as the global core for component access
-        set_core(self)
-        
+
         try:
             # Initialize components first - PASS CORE REFERENCE
             await self.component_manager.initialize_components(self)
@@ -123,10 +111,7 @@ class AsyncVACore:
         logger.info("Stopping Irene Voice Assistant...")
         
         self._running = False
-        
-        # Clear global core instance
-        set_core(None)
-        
+
         try:
             await self.timer_manager.stop()
             await self.context_manager.stop()

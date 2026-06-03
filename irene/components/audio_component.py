@@ -18,6 +18,7 @@ from .base import Component
 from ..core.interfaces.audio import AudioPlugin
 from ..core.interfaces.webapi import WebAPIPlugin
 from ..core.trace_context import TraceContext
+from ..intents.ports import AudioPort  # QUAL-24: domain capability port (application implements it)
 
 
 # Import audio provider base class and dynamic loader
@@ -27,7 +28,7 @@ from ..utils.loader import dynamic_loader
 logger = logging.getLogger(__name__)
 
 
-class AudioComponent(Component, AudioPlugin, WebAPIPlugin):
+class AudioComponent(Component, AudioPlugin, WebAPIPlugin, AudioPort):
     """
     Audio Component that manages multiple audio providers.
     
@@ -285,13 +286,23 @@ class AudioComponent(Component, AudioPlugin, WebAPIPlugin):
         """Stop current audio playback"""
         if self._current_provider and self._current_provider in self.providers:
             await self.providers[self._current_provider].stop_playback()
-        
+
         # Stop all providers as fallback
         for provider in self.providers.values():
             try:
                 await provider.stop_playback()
             except Exception as e:
                 logger.debug(f"Error stopping provider: {e}")
+
+    async def pause_audio(self) -> None:
+        """Pause current audio playback (AudioPort, QUAL-24) — delegates to the active provider."""
+        if self._current_provider and self._current_provider in self.providers:
+            await self.providers[self._current_provider].pause_playback()
+
+    async def resume_audio(self) -> None:
+        """Resume paused audio playback (AudioPort, QUAL-24) — delegates to the active provider."""
+        if self._current_provider and self._current_provider in self.providers:
+            await self.providers[self._current_provider].resume_playback()
     
     def get_supported_formats(self) -> list[str]:
         """Get union of all supported formats from all providers"""

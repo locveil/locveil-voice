@@ -21,6 +21,7 @@ from ..core.interfaces.tts import TTSPlugin
 from ..core.interfaces.webapi import WebAPIPlugin
 from ..core.trace_context import TraceContext
 from ..core.session_manager import SessionManager
+from ..intents.ports import TTSPort  # QUAL-24: domain capability port (application implements it)
 
 # Import TTS provider base class and dynamic loader
 from ..providers.tts import TTSProvider
@@ -29,7 +30,7 @@ from ..utils.loader import dynamic_loader
 logger = logging.getLogger(__name__)
 
 
-class TTSComponent(Component, TTSPlugin, WebAPIPlugin):
+class TTSComponent(Component, TTSPlugin, WebAPIPlugin, TTSPort):
     """
     TTS component that coordinates multiple TTS providers.
     
@@ -365,14 +366,33 @@ class TTSComponent(Component, TTSPlugin, WebAPIPlugin):
             processing_time_ms=(time.time() - stage_start) * 1000
         )
     
+    async def stop_synthesis(self) -> None:
+        """Stop current synthesis (TTSPort, QUAL-24).
+
+        Best-effort: delegates to the active provider's `stop_synthesis` if it
+        exposes one. Current TTS providers synthesize to a file and do not
+        support mid-synthesis interruption, so this is a graceful no-op there
+        rather than an error.
+        """
+        provider = self.providers.get(self.default_provider) if self.default_provider else None
+        stop = getattr(provider, "stop_synthesis", None)
+        if callable(stop):
+            await stop()
+        else:
+            self.logger.debug("stop_synthesis requested; active TTS provider does not support interruption")
+
+    async def cancel_synthesis(self) -> None:
+        """Cancel current synthesis (TTSPort, QUAL-24) — same semantics as stop for TTS."""
+        await self.stop_synthesis()
+
     async def speak(self, text: str, **kwargs) -> str:
         """
         Convert text to speech and save to timestamped file.
-        
+
         Args:
             text: Text to convert to speech
             **kwargs: Engine-specific parameters (voice, speed, etc.)
-            
+
         Returns:
             str: Filename of the generated audio file
         """

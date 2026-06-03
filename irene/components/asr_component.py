@@ -20,6 +20,7 @@ from ..core.interfaces.asr import ASRPlugin
 from ..core.interfaces.webapi import WebAPIPlugin
 from ..core.trace_context import TraceContext
 from ..intents.models import AudioData
+from ..intents.ports import ASRPort  # QUAL-24: domain capability port (application implements it)
 from ..core.metrics import get_metrics_collector
 from ..api.asyncapi import websocket_api, extract_websocket_specs_from_router
 from ..api.schemas import AudioChunkMessage, TranscriptionResultMessage, TranscriptionErrorMessage, BinaryAudioSessionMessage, BinaryAudioStreamMessage, BinaryWebSocketProtocol
@@ -32,7 +33,7 @@ from ..utils.loader import dynamic_loader
 logger = logging.getLogger(__name__)
 
 
-class ASRComponent(Component, ASRPlugin, WebAPIPlugin):
+class ASRComponent(Component, ASRPlugin, WebAPIPlugin, ASRPort):
     """
     ASR Component - Speech Recognition Coordinator
     

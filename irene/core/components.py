@@ -16,6 +16,7 @@ from pathlib import Path
 from ..config.models import CoreConfig, ComponentConfig
 from ..utils.loader import DependencyChecker, get_component_status
 from .interfaces.component import ComponentPort
+from ..intents.ports import ComponentControlRegistryPort  # QUAL-24: registry port (application implements it)
 from ..__version__ import __version__
 
 logger = logging.getLogger(__name__)
@@ -100,7 +101,7 @@ class DependencyResolver:
         return result
 
 
-class ComponentManager:
+class ComponentManager(ComponentControlRegistryPort):
     """
     Component Manager - Advanced component management with dependency injection
     
