@@ -295,10 +295,13 @@ See `docs/review/phase1_architecture_map.md` §5.
       (4) `engine.py→inputs.manager.InputManager` (**construction**). **User decisions:** edge-4 construction → **move
       ALL manager construction (Component/Input/Workflow) out of `AsyncVACore` into the runners/a composition module**
       (purest; touches every runner); input abstraction → **consolidate `InputSource`+`InputPlugin` into ONE port**.
-      **★ NEW sub-fork surfaced by the consolidation (needs a call):** there are **two parallel base hierarchies** —
-      `EntryPointMetadata` (discovery metadata; `InputSource` AND `Component` extend it) vs `PluginInterface` (capability
-      ports `ASRPlugin`/`InputPlugin` extend it, no metadata). Consolidating the input port forces deciding how those two
-      relate, and it **ripples to `Component`** (same split), so it's bigger than inputs. **Staging (each leaves a working
+      **★ OPEN THE FRESH ARCH-11 SESSION WITH THIS DISCUSSION (user, 2026-06-03) — decide before coding:** there are
+      **two parallel base hierarchies** — `EntryPointMetadata` (discovery metadata; `InputSource` AND `Component` extend
+      it) vs `PluginInterface` (capability ports `ASRPlugin`/`InputPlugin` extend it, no metadata). Consolidating the input
+      port forces deciding how those two relate, and it **ripples to `Component`** (same split), so it's bigger than inputs
+      — a port-layer architecture decision, not a local one. Candidate directions: (a) input port extends EntryPointMetadata
+      (matches Component, the discoverable-adapter analog); (b) unify — `PluginInterface` extends `EntryPointMetadata` so ALL
+      ports share one base (cleanest, biggest blast radius). **Discuss, decide, THEN stage.** **Staging (each leaves a working
       app):** S1 input-port consolidation + hierarchy decision · S2 Component+Workflow ports in `core/interfaces` + core
       imports them · S3 construction inversion (managers→composition/runners, AsyncVACore port-typed) · S4 import-linter
       contracts forbidding `core→{inputs,workflows,components}.base` + remove the ARCH-5 exemptions. _Original below._
