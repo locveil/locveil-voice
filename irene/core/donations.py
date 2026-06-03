@@ -102,6 +102,49 @@ class ParameterSpec(BaseModel):
                 mapping[surface.lower()] = canonical
         return mapping
 
+    def coerce(self, value: Any) -> Any:
+        """QUAL-11: the single, shared type-coercion + validation step for an extracted value.
+
+        Used by **both** the NLU providers (extraction time) and the handler typed accessor
+        (`IntentHandler.get_param`, read time) so the parameter surface is identical no matter which
+        provider won the cascade or whether the handler re-reads it. Raises ``ValueError`` on a
+        range/choice violation or an un-coercible value (the caller decides whether to apply
+        ``default_value`` or fail loud — never silently swallow).
+        """
+        # Type conversion
+        if self.type == ParameterType.INTEGER:
+            value = int(value)
+        elif self.type == ParameterType.FLOAT:
+            value = float(value)
+        elif self.type == ParameterType.STRING:
+            value = str(value)
+        elif self.type == ParameterType.BOOLEAN:
+            if isinstance(value, str):
+                lowered = value.strip().lower()
+                if lowered in ("true", "yes", "1", "да", "вкл", "включи"):
+                    value = True
+                elif lowered in ("false", "no", "0", "нет", "выкл", "выключи"):
+                    value = False
+                else:
+                    value = bool(value)
+            else:
+                value = bool(value)
+
+        # Range validation for numeric types
+        if self.type in (ParameterType.INTEGER, ParameterType.FLOAT):
+            if self.min_value is not None and value < self.min_value:
+                raise ValueError(f"Value {value} below minimum {self.min_value}")
+            if self.max_value is not None and value > self.max_value:
+                raise ValueError(f"Value {value} above maximum {self.max_value}")
+
+        # Choice validation (normalise a surface form to its canonical token first)
+        if self.type == ParameterType.CHOICE and self.choices:
+            value = self.surface_to_canonical().get(str(value).lower(), value)
+            if value not in self.choices:
+                raise ValueError(f"Value {value!r} not in allowed choices {self.choices}")
+
+        return value
+
 
 class TrainingExample(BaseModel):
     """Training example with expected parameters"""

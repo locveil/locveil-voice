@@ -359,8 +359,16 @@ See `docs/review/phase1_architecture_map.md` §5.
       (scoped to attempted-but-unresolved device/location refs, for the QUAL-30 boundary); made the parked T2 patterns
       **honest** — `spacy_provider._validate_and_store_spacy_patterns` now documents that `advanced_patterns` is
       validated-but-not-applied (QUAL-35), killing the silent validate-then-discard footgun.
-      **Remaining stages (lightweight scope):** Stage D — shared-extraction-base + required-param contract (P0 #3) + typed
-      `ParameterSpec` accessor (P1 #6) + `_create_error_result` unification (P1-t) · Stage E — QUAL-22 (P0 #5).
+      **Stage D DONE (2026-06-03):** shared coercion base — `ParameterSpec.coerce()` (both NLU providers delegate; the
+      "two contracts" divergence collapsed) + hybrid default-on-coercion-failure fix (P0 #3, no silent drop); typed
+      **`IntentHandler.get_param(intent, name, default)`** accessor (P1 #6 — spec-driven coerce + declared default +
+      required→`ParameterExtractionError`, the fail-loud → QUAL-30 boundary). Found+fixed a latent correctness bug on the
+      timer exemplar: "5 минут" was creating a **5-second** timer (unit CHOICE had English-only `choice_surfaces` + the
+      handler hardcoded `'seconds'` over the donation's `"minutes"` default) — authored Russian unit surfaces + adopted
+      `get_param` in timer; TEST-0 hardened to assert "5 мин".
+      **Remaining stages (lightweight scope):** Stage E — `_create_error_result` unification (P1-t) + QUAL-22 (P0 #5).
+      _Per-handler `get_param` migration (the other ~10 handlers off ad-hoc `.get`) folds into **QUAL-34** — same
+      handlers/files; consuming a declared param via the typed accessor IS QUAL-34's "wire-or-remove"._
       _Original P0/P1 detail below (P0 #2 → QUAL-35; P0 #4 ✓ Stage B; the entity_type half of P0 #4 → ARCH-6):_
       **P0s:** (1) fix the default `provider_cascade_order`
       default `provider_cascade_order` — it names non-existent providers (`keyword_matcher`/`spacy_rules_sm`/
@@ -621,7 +629,10 @@ _Apply to every remediation task below (from the 4 review docs + QUAL-25/26). So
       `intent.raw_text` instead of the NLU entity; e.g. `voice_synthesis.voice` → `voice_name`) → **fold into QUAL-11**
       (typed `ParameterSpec` accessor; same as QUAL-25 P1-r/P1-s). Also decide the `language`-as-pseudo-param pattern
       (declared CHOICE in most handlers but satisfied by `context.language`). Done when every declared param is either
-      consumed or removed, and the audit re-runs clean. Refs: `declared_param_audit.md`, QUAL-11, QUAL-33, Q6/Q7.
+      consumed or removed, and the audit re-runs clean. **Per-handler adoption of `IntentHandler.get_param` (QUAL-11
+      Stage D) folds in here** — migrating each handler off ad-hoc `intent.entities.get(...)` to the typed accessor IS
+      "consume the declared param" (and resolves Bucket B's raw_text bypass at the same site). The timer handler is the
+      done reference (Stage D). Refs: `declared_param_audit.md`, QUAL-11, QUAL-33, Q6/Q7.
 - [ ] **QUAL-35** `[release]` [PEX][MQTT] (P-TBD) — **Declarative NLU tiers T2 + T3 — MUST-HAVE for smart-home/MQTT
       (gated on ARCH-7/8). Split out of QUAL-11 (2026-06-03, user).** QUAL-11 deliberately shipped the **lightweight (T1)**
       extraction contract — keyword/NER + regex + CHOICE surfaces + lemmas, which is what the `hybrid_keyword_matcher`

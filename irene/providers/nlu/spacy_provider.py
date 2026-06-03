@@ -885,33 +885,9 @@ class SpaCyNLUProvider(NLUProvider):
         return None
     
     def _convert_and_validate_parameter(self, value: Any, param_spec: ParameterSpec) -> Any:
-        """Convert and validate parameter value according to spec"""
-        from ...core.donations import ParameterType
-        
-        # Type conversion
-        if param_spec.type == ParameterType.INTEGER:
-            value = int(value)
-        elif param_spec.type == ParameterType.FLOAT:
-            value = float(value)
-        elif param_spec.type == ParameterType.STRING:
-            value = str(value)
-        elif param_spec.type == ParameterType.BOOLEAN:
-            value = bool(value)
-        
-        # Range validation for numeric types
-        if param_spec.type in [ParameterType.INTEGER, ParameterType.FLOAT]:
-            if param_spec.min_value is not None and value < param_spec.min_value:
-                raise ValueError(f"Value {value} below minimum {param_spec.min_value}")
-            if param_spec.max_value is not None and value > param_spec.max_value:
-                raise ValueError(f"Value {value} above maximum {param_spec.max_value}")
-        
-        # Choice validation (QUAL-29: normalize a surface form to its canonical token first)
-        if param_spec.type == ParameterType.CHOICE and param_spec.choices:
-            value = param_spec.surface_to_canonical().get(str(value).lower(), value)
-            if value not in param_spec.choices:
-                raise ValueError(f"Value {value} not in allowed choices {param_spec.choices}")
-
-        return value
+        """Convert + validate via the shared `ParameterSpec.coerce` (QUAL-11: one contract for both
+        NLU providers, so the parameter surface is identical regardless of which won the cascade)."""
+        return param_spec.coerce(value)
     
     def get_supported_intents(self) -> List[str]:
         """Return list of intents this provider can recognize"""

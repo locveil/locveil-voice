@@ -134,6 +134,9 @@ def test_set_timer_end_to_end(webapi):
     assert code == 200, r
     assert r["success"] is True, r
     assert r["metadata"]["intent_name"].startswith("timer"), r
+    # Correctness, not just success: the unit must be MINUTES (→ 300s, rendered "5 мин"), not the old
+    # hardcoded-seconds default ("5 сек"). Guards the QUAL-11 unit-surface + get_param fix.
+    assert "5 мин" in r["response"], r
 
 
 # --- CLI boot (separate process, BUILD-1 path) ----------------------------------

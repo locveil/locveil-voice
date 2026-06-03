@@ -189,11 +189,15 @@ class TimerIntentHandler(IntentHandler):
     
     async def _handle_set_timer(self, intent: Intent, context: UnifiedConversationContext) -> IntentResult:
         """Handle timer creation intent with fire-and-forget action execution"""
-        # Extract timer parameters from intent entities or text
-        duration = intent.entities.get('duration')
-        unit = intent.entities.get('unit', 'seconds')
-        message = intent.entities.get('message', self._get_template("timer_completed_default", "ru"))
-        
+        # Extract timer parameters via the donation-driven typed accessor (QUAL-11):
+        # - duration: required int; pass an explicit None so a miss degrades to text-parsing (below)
+        #   instead of raising;
+        # - unit/message: the declared per-language default_value wins (was a hardcoded 'seconds' that
+        #   ignored the donation's "minutes" default — the latent "5 минут → 5 seconds" bug).
+        duration = self.get_param(intent, 'duration', None)
+        unit = self.get_param(intent, 'unit', 'minutes')
+        message = self.get_param(intent, 'message', self._get_template("timer_completed_default", "ru"))
+
         # If no duration in entities, try to parse from text
         if not duration:
             duration, unit, message = self._parse_timer_from_text(intent.raw_text)

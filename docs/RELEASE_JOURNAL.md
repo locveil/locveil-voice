@@ -29,6 +29,23 @@ newest entries near the top of each dated section.
   room/device registration; ARCH-6 now explicitly owns authoring the non-generic types + the `_is_device/location_entity`
   → `entity_type` swap). QUAL-11 keeps only the safe cleanup (dedupe device path + `_resolution_failed`) and refocuses its
   remaining energy on the universal hot-path wins: shared extraction base + required-param contract + typed accessor.
+- **QUAL-11 [PEX] Stage D — shared coercion base + typed `get_param` accessor; fixed a latent timer-unit bug.**
+  (1) **Shared coercion (theme ②):** lifted the duplicated `_convert_and_validate_parameter` (identical in both NLU
+  providers — the "two contracts" divergence) onto **`ParameterSpec.coerce()`** in `core/donations.py`; both providers
+  now delegate, so the parameter surface is identical regardless of which won the cascade. (2) **Provider default-on-
+  failure fix (P0 #3):** the hybrid extraction loop no longer silently drops a param when coercion raises — it applies
+  the declared `default_value` (or leaves it absent for the accessor to enforce required), never swallows. (3) **Typed
+  accessor (P1 #6):** added **`IntentHandler.get_param(intent, name, default)`** — finds the donation `ParameterSpec`
+  (`_find_param_spec`), coerces via the shared base, applies the declared `default_value`, and raises
+  `ParameterExtractionError` on missing-required-no-default (fail-loud → QUAL-30 clarification). One handler-boundary
+  read replacing ad-hoc `intent.entities.get(...)` with bespoke defaults. (4) **Latent correctness bug found + fixed on
+  the headline exemplar:** "поставь таймер на 5 минут" was silently creating a **5-second** timer — the timer `unit`
+  CHOICE had **English-only `choice_surfaces`** (no «минут»/«секунд»/«час»), so unit never extracted, and the handler
+  **hardcoded `'seconds'`**, ignoring the donation's `default_value="minutes"`. Authored Russian unit surfaces +
+  adopted `get_param` in the timer handler (donation default wins). Verified: "5 минут"→unit=minutes, "30 секунд"→
+  seconds; **hardened TEST-0** to assert the response says "5 мин" (not "5 сек"). Suite 17/17.
+  _Remaining QUAL-11: `_create_error_result` unification (P1-t) + QUAL-22 (Stage E); the per-handler `get_param`
+  migration folds into QUAL-34 (same handlers/files — consume the declared param via the accessor)._
 - **QUAL-11 [PEX] Stage C — unified the duplicate device path, added `_resolution_failed`, made parked patterns honest.**
   (1) **Duplicate device resolution removed:** `ContextAwareNLUProcessor._resolve_device_entities` (a hardcoded
   English-only keyword path that re-resolved devices with a different strategy and wrote `{e}_device_id`/`_device_type`/

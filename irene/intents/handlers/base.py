@@ -396,16 +396,80 @@ class IntentHandler(EntryPointMetadata, ABC):
     def extract_entity(self, intent: Intent, entity_name: str, default: Any = None) -> Any:
         """
         Extract an entity value from the intent.
-        
+
         Args:
             intent: Intent to extract from
             entity_name: Name of the entity to extract
             default: Default value if entity is not found
-            
+
         Returns:
             Entity value or default
         """
         return intent.entities.get(entity_name, default)
+
+    def _find_param_spec(self, intent: Intent, name: str) -> Optional[Any]:
+        """Find the donation `ParameterSpec` for `name` on the method matching `intent` (else a global
+        param). Returns None if there's no donation or no such declared parameter."""
+        donation = self.donation
+        if donation is None:
+            return None
+        # Match the method whose full intent name (handler_domain.intent_suffix) equals intent.name.
+        domain = getattr(donation, 'handler_domain', None)
+        for method in getattr(donation, 'method_donations', []) or []:
+            if domain is not None and f"{domain}.{method.intent_suffix}" != intent.name:
+                continue
+            for spec in list(method.parameters) + list(getattr(donation, 'global_parameters', []) or []):
+                if spec.name == name:
+                    return spec
+        # Fall back to global parameters even if the method didn't match (e.g. intent-name drift).
+        for spec in getattr(donation, 'global_parameters', []) or []:
+            if spec.name == name:
+                return spec
+        return None
+
+    # Sentinel so get_param can tell "no caller default given" from "default is None".
+    _UNSET = object()
+
+    def get_param(self, intent: Intent, name: str, default: Any = _UNSET) -> Any:
+        """QUAL-11: the typed, donation-`ParameterSpec`-driven accessor — the single handler-boundary
+        read for a declared parameter. Whichever NLU provider populated `intent.entities`, this returns
+        a coerced/validated value, applies the declared `default_value`, and enforces required-vs-optional
+        in one place (replacing ad-hoc `intent.entities.get(...)` with bespoke per-handler defaults).
+
+        - present value → `spec.coerce(value)` (type/choices/range); on a coercion error, fall back to
+          the declared default (or the caller's `default`), never silently return a bad value;
+        - absent value → declared `default_value`, else the caller's `default` if given;
+        - absent + required + no default → raise `ParameterExtractionError` (fail loud; the orchestrator
+          boundary turns this into a clarification — QUAL-30). For an undeclared param it behaves like
+          `extract_entity` (plain get with the caller default).
+        """
+        from ...core.donations import ParameterExtractionError
+        spec = self._find_param_spec(intent, name)
+        raw = intent.entities.get(name)
+
+        if raw is not None and raw != "":
+            if spec is not None:
+                try:
+                    return spec.coerce(raw)
+                except Exception as e:
+                    self.logger.warning(f"get_param('{name}') coercion failed for {raw!r} on "
+                                        f"intent '{intent.name}': {e}")
+                    # fall through to default handling below
+                else:
+                    pass
+            else:
+                return raw
+
+        # Missing (or coercion failed): apply declared default, then caller default.
+        if spec is not None and spec.default_value is not None:
+            return spec.default_value
+        if default is not IntentHandler._UNSET:
+            return default
+        if spec is not None and spec.required:
+            raise ParameterExtractionError(
+                f"Missing required parameter '{name}' for intent '{intent.name}'"
+            )
+        return None
     
     async def preprocess_intent(self, intent: Intent, context: UnifiedConversationContext) -> Intent:
         """
