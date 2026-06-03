@@ -13,7 +13,7 @@ from pathlib import Path
 
 from ..config.models import CoreConfig, ComponentConfig
 from ..plugins.manager import AsyncPluginManager
-from ..inputs.base import InputManager
+from ..inputs.manager import InputManager
 from ..intents.context import ContextManager
 from .timers import AsyncTimerManager
 

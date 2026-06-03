@@ -205,20 +205,11 @@ class WebInput(InputSource):
                     }
                     await websocket.send_text(json.dumps(response))
                     
-            # Handle raw audio data (no processing - pure capture)
-            elif message.get("type") == "audio_data":
-                audio_data = message.get("data", "")
-                if audio_data:
-                    # Queue raw audio data for workflow processing
-                    await self.send_command(f"AUDIO_DATA:{audio_data}")
-                    
-                    response = {
-                        "type": "ack",
-                        "success": True,
-                        "message": "Audio data received"
-                    }
-                    await websocket.send_text(json.dumps(response))
-                
+            # NOTE (ARCH-6, P0-8): the old base64 `AUDIO_DATA:` text-frame placeholder was removed — nothing
+            # downstream parsed that prefix (it was a broken capture path). Audio streaming now has a proper
+            # driving adapter at `/ws/audio` (binary PCM + registration handshake). See
+            # docs/design/ws_esp32_transport.md.
+
         except json.JSONDecodeError as e:
             logger.error(f"Invalid JSON in WebSocket message: {e}")
             response = {

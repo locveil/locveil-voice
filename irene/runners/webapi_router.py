@@ -6,6 +6,7 @@ Contains all endpoint definitions and request handlers.
 """
 
 import asyncio
+import json
 import logging
 import time
 import uuid
@@ -789,6 +790,75 @@ def create_webapi_router(
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
     
+    # ARCH-6: WebSocket streaming-input DRIVING adapter (ESP32 mic-node primary transport).
+    # Registration handshake → ClientRegistry → stream raw PCM → FULL pipeline → response.
+    # Wake-word is on-device, so skip_wake_word=True. Distinct from the ASR-utility /asr/* endpoints
+    # (those return transcription only). See docs/design/ws_esp32_transport.md.
+    from fastapi import WebSocket  # local import: fastapi is an optional/web extra
+
+    @router.websocket("/ws/audio")
+    async def ws_audio_driving_input(websocket: WebSocket):
+        from fastapi import WebSocketDisconnect
+        from ..core.client_registry import get_client_registry, ClientRegistration
+        from ..intents.models import AudioData
+
+        await websocket.accept()
+        session_id = uuid.uuid4().hex  # stable across utterances on this connection (room/device continuity)
+        try:
+            # Step 1 — registration handshake (first TEXT frame): the identity linchpin (QUAL-28 store).
+            reg = json.loads(await websocket.receive_text())
+            if reg.get("type") != "register":
+                await websocket.send_json({"type": "error", "error": "first frame must be type=register"})
+                await websocket.close()
+                return
+            registration = ClientRegistration.from_dict(reg)
+            await get_client_registry().register_client(registration)
+            sample_rate = int(reg.get("sample_rate", 16000))
+            wants_audio = bool(reg.get("wants_audio", False))
+            # client_context flows into RequestContext → context.client_id/room_name → resolve_physical_id
+            # returns the PHYSICAL origin (room/device) instead of the ephemeral session id. ARCH-6 activation.
+            client_context = {
+                "source": "ws_audio",
+                "skip_wake_word": True,  # on-device wake word
+                "client_id": registration.client_id,
+                "room_name": registration.room_name,
+                "device_context": {"available_devices": [
+                    {"id": d.id, "name": d.name, "type": d.type, "capabilities": d.capabilities,
+                     "location": d.location} for d in registration.available_devices]},
+            }
+            await websocket.send_json({"type": "registered", "client_id": registration.client_id,
+                                       "session_id": session_id})
+
+            # Step 2 — utterance loop: accumulate binary PCM until an {"type":"end"} control frame.
+            while True:
+                frames = bytearray()
+                while True:
+                    msg = await websocket.receive()
+                    if msg.get("type") == "websocket.disconnect":
+                        return
+                    if msg.get("bytes") is not None:
+                        frames.extend(msg["bytes"])
+                    elif msg.get("text") is not None:
+                        if (json.loads(msg["text"]) or {}).get("type") == "end":
+                            break
+                if not frames:
+                    continue
+                audio = AudioData(data=bytes(frames), timestamp=time.time(), sample_rate=sample_rate,
+                                  channels=1, metadata={"source": "ws_audio", "client_id": registration.client_id})
+                result = await core.workflow_manager.process_audio_input(
+                    audio_data=audio, session_id=session_id, wants_audio=wants_audio,
+                    client_context=client_context)
+                await websocket.send_json({"type": "response", "text": result.text,
+                                           "success": result.success, "metadata": result.metadata})
+        except WebSocketDisconnect:
+            logger.debug(f"WS audio driving input disconnected (session {session_id})")
+        except Exception as e:
+            logger.error(f"WS audio driving input error (session {session_id}): {e}")
+            try:
+                await websocket.send_json({"type": "error", "error": str(e)})
+            except Exception:
+                pass
+
     # AsyncAPI documentation endpoints
     @router.get("/asyncapi", response_class=HTMLResponse, include_in_schema=False)
     async def asyncapi_docs():

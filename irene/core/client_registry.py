@@ -58,16 +58,19 @@ class ClientRegistration:
     
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'ClientRegistration':
-        """Create registration from dictionary"""
-        # Convert device dicts back to ClientDevice objects
-        devices_data = data.get('available_devices', [])
-        devices = [ClientDevice(**device) if isinstance(device, dict) else device 
-                  for device in devices_data]
-        
-        # Create registration with devices
-        registration_data = data.copy()
+        """Create registration from dictionary. Tolerant of extra keys (ARCH-6: the WS handshake frame
+        also carries control fields like `type`/`sample_rate`/`wants_audio`) — only known registration
+        fields are used; devices likewise keep only ClientDevice fields."""
+        import dataclasses
+        reg_fields = {f.name for f in dataclasses.fields(cls)}
+        dev_fields = {f.name for f in dataclasses.fields(ClientDevice)}
+
+        devices = [ClientDevice(**{k: v for k, v in device.items() if k in dev_fields})
+                   if isinstance(device, dict) else device
+                   for device in (data.get('available_devices') or [])]
+
+        registration_data = {k: v for k, v in data.items() if k in reg_fields}
         registration_data['available_devices'] = devices
-        
         return cls(**registration_data)
     
     def update_last_seen(self):

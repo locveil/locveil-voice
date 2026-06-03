@@ -210,8 +210,24 @@ See `docs/review/phase1_architecture_map.md` §5.
       separately). _The deliverable that makes "follows the architecture" verifiable._ **Gate 1 COMPLETE
       (ARCH-1..5 ✓).** _Note (2026-06-02): the `core→inputs/workflows/components.base` edges were left unenforced here
       as "composition-root behavior" — that reclassification is **REVOKED → ARCH-11** (fix via DI + add the contract)._
-- [ ] **ARCH-6** [WS] (P1) — **REFRAMED by QUAL-26 (Q4): WebSocket streaming-input driving adapter — the primary
-      ESP32 transport.** The dead `InputManager._input_queue` + base64 `AUDIO_DATA:` path (P0-8) is a broken
+- [x] **ARCH-6** [WS] (P1) — **DONE 2026-06-03 (transport + identity activation + SCC-2); device-half relocated to QUAL-35.**
+      Built the **WS streaming-input DRIVING adapter** `/ws/audio` (`webapi_router.py`): registration handshake →
+      `ClientRegistry` → stream raw PCM → **full** pipeline (`process_audio_input`, `skip_wake_word=True` since wake is
+      on-device) → response frame. The handshake threads `client_id`/`room_name`/`device_context` into `client_context`,
+      so **`resolve_physical_id` now returns the physical origin** (room/device) — the "room/device story switches on"
+      with no seam rewrite (it already returned `client_id or room_name or session_id`). Made `ClientRegistration.from_dict`
+      tolerant of the handshake's control keys. Removed the dead P0-8 base64 `AUDIO_DATA:` branch (`inputs/web.py`).
+      Design: `docs/design/ws_esp32_transport.md` (server-first; the in-repo ESP32 firmware is stale → inspiration only).
+      Tests: `test_ws_driving_input.py` (3 — activation seam, from_dict, end-to-end handshake→pipeline via TestClient).
+      **Deferred (device-half → relocated to ARCH-7 [MQTT] + QUAL-35):** authoring non-generic `entity_type`/`room_context`
+      + the `_is_device_entity`/`_is_location_entity` resolver swap + room_context resolve-or-clarify — at design time NO
+      device/room handlers exist (all 13 `entity_type` decls `generic`; no MQTT handler), so doing it now = the ledger's
+      own "inert branch". **SCC-2 cycle FIXED (not via service-locator — cf. QUAL-24):** the cycle was `inputs.base` (the
+      `InputSource` PORT) co-located with the `InputManager` ORCHESTRATOR that imports the concrete adapters. Split them —
+      `InputManager` → new `irene/inputs/manager.py` (the input-layer composition point, imports adapters explicitly); the
+      port module now imports NO adapters. Clean DAG `base ← {cli,web,microphone} ← manager`; **locked by a new
+      import-linter contract** ("Input port does not import its adapters"). _Original
+      reframing below._ The dead `InputManager._input_queue` + base64 `AUDIO_DATA:` path (P0-8) is a broken
       placeholder to be **replaced by a proper WS streaming adapter**, not patched. Design (needs a **design session**):
       wake word runs **on-device (ESP32)** → device streams audio over WS (`skip_wake_word=True` server-side) → server
       ASR → pipeline; the WS connection also runs the **`ClientRegistry` registration handshake** (room +
@@ -241,7 +257,9 @@ See `docs/review/phase1_architecture_map.md` §5.
       `_handle_tts_output`; there is no `irene/outputs/` package). Evaluate placement (output adapter vs
       fire-and-forget action type [FAF] vs MQTT intent handlers per `docs/intent_mqtt.md`); integrate
       `ClientRegistry`/`DeviceEntityResolver` for room/device topics; define topic schema (HA convention?) + config
-      model; reconcile/supersede `docs/intent_mqtt.md`. → `docs/design/mqtt_integration.md`.
+      model; reconcile/supersede `docs/intent_mqtt.md`. **The device-command handlers built here are the substrate for
+      QUAL-35's device-half** (the `entity_type`/`room_context` authoring + `_is_device_entity`→declarative resolver
+      swap, relocated from ARCH-6 2026-06-03) — pair the two. → `docs/design/mqtt_integration.md`.
 - [ ] **ARCH-8** [MQTT] (P-TBD) — Implement per ARCH-7 (output-port seam + MQTT adapter + config + handler/action
       integration + tests). Split into PR-sized tasks from the design.
 - [ ] **ARCH-9** [INFER] (P-TBD) — **Design session** (needs live collaboration): a **shared sherpa-onnx (k2-fsa)
@@ -764,8 +782,15 @@ _Apply to every remediation task below (from the 4 review docs + QUAL-25/26). So
         ("**если** темно, включи свет"). Ties to the local-LLM-assist lane (QUAL-15) + ARCH-9/10 [INFER]; opt-in,
         local-only.
       **Sequencing:** design with **ARCH-7** (MQTT/output-port + room/device model) and land before/with **ARCH-8**
-      (smart-home actuation) — complex device commands are unusable on T1 alone. Also activates the `entity_type`/
-      `room_context` resolution authored under **ARCH-6**. Gated by Invariant #4 (any donation-schema change → config-ui;
+      (smart-home actuation) — complex device commands are unusable on T1 alone. **OWNS the device-half relocated
+      from ARCH-6 (2026-06-03):** ARCH-6 deferred the `entity_type`/`room_context` *consumption* because at its build
+      time NO device/room handlers existed (all decls `generic`) — that work lives HERE, where the device handlers do.
+      So this task: **(a)** authors the non-generic `entity_type`/`room_context` (device/location/room/person) on the
+      smart-home handlers it builds; **(b)** replaces the brittle `_is_device_entity`/`_is_location_entity` name-heuristics
+      (`entity_resolver.py`) with declarative `entity_type`-driven resolver selection (the Q7b "typed accessor IS the
+      replacement" atomic swap); **(c)** implements the `room_context` resolve-or-clarify policy (with QUAL-30). ARCH-6
+      left the seam ready (`resolve_physical_id` returns the registered physical id; `ClientRegistry` populated by the WS
+      handshake). Gated by Invariant #4 (any donation-schema change → config-ui;
       note the parked T2 pattern fields already exist, so no new schema surface unless extended). Refs:
       `parameter_extraction_review.md` (T2 = the "dead best mechanisms" themes 1+3), QUAL-11 (T1 baseline), Q6/Q7.
 - [x] **QUAL-36** `[release]` [DFLOW][I18N] (P1) — **Single language source-of-truth; purge hardcoded language codes

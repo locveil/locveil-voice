@@ -12,6 +12,28 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-03
+- **ARCH-6 CORE DONE — WS streaming-input driving adapter + room/device activation (design + implement, per user).**
+  Reconciliation up front (with the user): scoped to the **transport + identity core**, because the **device-model half**
+  has no substrate yet (no device/room handlers, all 13 `entity_type` decls `generic`, no MQTT handler) — authoring it now
+  would be the ledger's own "inert branch", so it's **relocated to ARCH-7 [MQTT] + QUAL-35**. ESP32 firmware is stale →
+  designed **server-first** (`docs/design/ws_esp32_transport.md`). Built `/ws/audio` (`webapi_router.py`): registration
+  handshake → `ClientRegistry.register_client` → stream raw PCM (16k/mono binary frames) → `process_audio_input` with
+  `skip_wake_word=True` (on-device wake) → response frame. The pipeline entry already accepted `client_context`
+  (`client_id`/`room_name`/`device_context`), and `resolve_physical_id` already returned `client_id or room_name or
+  session_id` — so the activation is exactly: **the handshake populates those, and the physical origin keys the action
+  store**, no seam rewrite. Made `ClientRegistration.from_dict` tolerant of the handshake's control keys (`type`/
+  `sample_rate`/`wants_audio`). Removed the dead P0-8 base64 `AUDIO_DATA:` branch (`inputs/web.py`); kept `_input_queue`
+  (it's live — CLI/mic input). Tests: `test_ws_driving_input.py` (3 — incl. an end-to-end TestClient handshake→pipeline
+  with a stubbed core). **SCC-2 cycle FIXED — and the user caught a wrong first approach.** My initial instinct
+  (entry-point/runtime discovery) would have been a **service-locator** — the exact pattern this project is removing
+  (QUAL-24). The correct fix is dependency *separation*, not service-location: `inputs.base` mixed the `InputSource`
+  PORT with the `InputManager` ORCHESTRATOR (which legitimately imports the concrete adapters). Split them —
+  `InputManager` → `irene/inputs/manager.py` (the input-layer composition point); `base.py` now imports NO adapters →
+  clean DAG `base ← {cli,web,microphone} ← manager`, deps point inward to the port. **Locked with a new import-linter
+  contract** ("Input port does not import its adapters") so it can't regress. Also corrected the device-half hand-off
+  bookkeeping: QUAL-35 now explicitly OWNS the `entity_type`/`room_context` authoring + `_is_device_entity` swap (it had
+  stale-pointed back to ARCH-6); ARCH-7 references the device handlers as its substrate. 0 net regressions; 7/7 import
+  contracts kept. **ARCH-6 fully DONE `[x]`** (device-half is QUAL-35's, tracked).
 - **ASSET-2 DONE — liveness-checked every model download URL; fixed 2 real defects.** Swept all 33 model URLs in
   `irene/` (range-GET each, judging on bytes-served vs stall per the fake-IP caveat — all hosts resolve into
   `198.18.0.0/15`, normal). Hosts all healthy: silero.ai served the real 40MB `v4_ru.pt`; alphacephei/vosk, github

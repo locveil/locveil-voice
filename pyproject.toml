@@ -397,6 +397,20 @@ modules = [
     "irene.providers.text_processing",
 ]
 
+[[tool.importlinter.contracts]]
+# ARCH-6/SCC-2: the input PORT module must not import its concrete adapters (no base⇄subclass cycle,
+# no service-locator). The InputManager orchestrator lives in irene.inputs.manager, which is the input
+# layer's composition point and legitimately depends outward on the adapters.
+name = "Input port does not import its adapters (ARCH-6 / SCC-2)"
+type = "forbidden"
+source_modules = ["irene.inputs.base"]
+forbidden_modules = [
+    "irene.inputs.cli",
+    "irene.inputs.microphone",
+    "irene.inputs.web",
+    "irene.inputs.manager",
+]
+
 [tool.mypy]
 # Basic settings - detailed configuration in mypy.ini (matching wb-mqtt-bridge)
 python_version = "3.11"
