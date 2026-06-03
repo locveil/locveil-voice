@@ -12,7 +12,8 @@ from typing import Dict, Any, Optional, AsyncIterator, List, Union
 from enum import Enum
 
 from .trace_context import TraceContext
-from ..workflows.base import Workflow, RequestContext
+from .interfaces.workflow import WorkflowPort
+from ..intents.context_models import RequestContext
 from ..utils.audio_data import AudioData
 from ..intents.models import IntentResult
 from .interfaces.input import InputPort
@@ -47,9 +48,9 @@ class WorkflowManager:
     def __init__(self, component_manager, config):
         self.component_manager = component_manager
         self.config = config
-        self.workflows: Dict[str, Workflow] = {}
+        self.workflows: Dict[str, WorkflowPort] = {}
         self.workflow_states: Dict[str, WorkflowState] = {}
-        self.active_workflow: Optional[Workflow] = None
+        self.active_workflow: Optional[WorkflowPort] = None
         self.active_mode: Optional[WorkflowMode] = None
         self.input_manager = None
         self._workflow_task: Optional[asyncio.Task] = None
@@ -100,9 +101,8 @@ class WorkflowManager:
                 return None
             
             # Validate that the class is actually a workflow
-            from ..workflows.base import Workflow
-            if not issubclass(workflow_class, Workflow):
-                logger.error(f"Class for workflow '{workflow_name}' does not inherit from Workflow base class")
+            if not issubclass(workflow_class, WorkflowPort):
+                logger.error(f"Class for workflow '{workflow_name}' does not implement the WorkflowPort contract")
                 return None
             
             return workflow_class
@@ -373,7 +373,7 @@ class WorkflowManager:
             self._progress_monitor_task = None
             logger.info("Stopped progress monitoring")
     
-    async def _inject_components(self, workflow: Workflow) -> None:
+    async def _inject_components(self, workflow: WorkflowPort) -> None:
         """Inject required components into a workflow"""
         try:
             # Get actual component instances, not classes
@@ -615,7 +615,7 @@ class WorkflowManager:
             # (QUAL-28) F&F actions are registered in the store by the launch — no write-back needed.
             yield result
     
-    async def _start_audio_workflow(self, input_source: InputPort, workflow: Workflow, context: RequestContext) -> None:
+    async def _start_audio_workflow(self, input_source: InputPort, workflow: WorkflowPort, context: RequestContext) -> None:
         """Start audio processing workflow"""
         try:
             # Start input source
@@ -635,7 +635,7 @@ class WorkflowManager:
             logger.error(f"Failed to start audio workflow: {e}")
             raise
     
-    async def _run_workflow(self, workflow: Workflow, audio_stream: AsyncIterator[AudioData], context: RequestContext) -> None:
+    async def _run_workflow(self, workflow: WorkflowPort, audio_stream: AsyncIterator[AudioData], context: RequestContext) -> None:
         """Run the workflow with audio stream processing"""
         try:
             async for result in workflow.process_audio_stream(audio_stream, context):
@@ -954,7 +954,7 @@ class WorkflowManager:
         
         return status
 
-    async def _get_model_loading_progress(self, workflow: Workflow) -> Dict[str, Any]:
+    async def _get_model_loading_progress(self, workflow: WorkflowPort) -> Dict[str, Any]:
         """Get model loading progress for workflow components"""
         progress = {
             "total_providers": 0,

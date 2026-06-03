@@ -327,7 +327,15 @@ See `docs/review/phase1_architecture_map.md` §5.
       dead `InputPlugin` and stripped its dormant refs from `plugins/manager.py`; adapters (cli/microphone/web) + `InputManager`
       now implement/type against `InputPort`; `inputs/base.py` reduced to the adapter-side `ComponentNotAvailable`;
       `workflow_manager.py` imports the port inward (`core→inputs.base` input edge **removed** — 1 of 4 edges done). Verified:
-      import-linter 7/7 kept (SCC-2 contract holds), suite 85=85 FAILED (0 net regression). NEXT = S2. _Original below._
+      import-linter 7/7 kept (SCC-2 contract holds), suite 85=85 FAILED (0 net regression). **✓ S2 DONE 2026-06-03** — added
+      thin ABC ports `core/interfaces/component.ComponentPort` + `workflows`-side `core/interfaces/workflow.WorkflowPort`
+      (both `EntryPointMetadata`-rooted, declaring only the generic manager-facing surface; component-specific methods like
+      TTS `synthesize_to_file` stay duck-typed as today). Fat bases now implement them (`Component(ComponentPort)`,
+      `Workflow(WorkflowPort)`); `core/components.py` + `core/workflow_manager.py` type against the ports (incl. the runtime
+      `issubclass(WorkflowPort)` discovery gate); `RequestContext` now imported inward from `intents.context_models` directly.
+      **Edges 2 & 3 removed** (`core→components.base`, `core→workflows.base` — verified zero remaining core imports of either).
+      3 of 4 edges done. Verified: import-linter 7/7 kept, suite 85=85 FAILED (0 net regression). NEXT = S3 (construction
+      inversion: managers→composition/runners, AsyncVACore port-typed — edge 4). _Original below._
       (which deemed them "legitimate composition-root behavior" and
       left them unenforced; user reverses that 2026-06-02). Edges: `core.{engine,workflow_manager}→inputs.base`,
       `core.workflow_manager→workflows.base`, `core.components→components.base`. **Fix = invert via DI/ports:** the

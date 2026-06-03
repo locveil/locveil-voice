@@ -12,6 +12,21 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-03
+- **ARCH-11 S2 DONE — Component + Workflow ports into `core/interfaces` (edges 2 & 3 removed).** Both `Component` (400 LOC)
+  and `Workflow` (257 LOC) turned out to be fat *shared concrete bases* (provider switching, DI, health — `name`/`providers`/
+  `initialized` are `__init__` attrs), not thin interfaces, and `core` had **no `isinstance(Component/Workflow)`** checks and
+  reached component-specific methods (`synthesize_to_file`, `play_file`) by duck-typing. So rather than relocate the fat code
+  into the port layer, I followed the codebase's own `ASRPlugin` pattern: thin ABC ports declaring only the generic
+  manager-facing surface. Added `core/interfaces/component.ComponentPort` (initialize/shutdown/inject_dependency/
+  get_dependency/get_component_dependencies/get_service_dependencies + name/providers/initialized) and
+  `core/interfaces/workflow.WorkflowPort` (initialize/add_component/process_audio_stream/process_text_input/shutdown +
+  name/components/initialized) — both `EntryPointMetadata`-rooted (decision c). Fat bases now `Component(ComponentPort)` /
+  `Workflow(WorkflowPort)`. `core/components.py` and `core/workflow_manager.py` type against the ports; caught + re-pointed
+  the **runtime `issubclass(workflow_class, Workflow)` discovery gate** (a 2nd `workflows.base` import site) to `WorkflowPort`;
+  `RequestContext` now imported inward from `intents.context_models` directly (the ledger-flagged domain re-export). Verified:
+  no core import of `components.*`/`workflows.*` remains, smoke `issubclass` checks pass for `ASRComponent` +
+  `UnifiedVoiceAssistantWorkflow`, import-linter **7/7 kept**, suite **85=85 FAILED** (0 net regression). 3 of 4 edges done;
+  NEXT = S3 (construction inversion — edge 4: `engine.py→inputs.manager`, move manager construction to composition/runners).
 - **ARCH-11 S1 DONE — input-port consolidation + re-root onto EntryPointMetadata.** First of the 4 staged edges.
   Landed the single input port as `core/interfaces/input.InputPort(EntryPointMetadata)` (+ the `InputData` value type),
   replacing both the former `inputs.base.InputSource` (which created the `core→inputs.base` edge) and the dead duplicate

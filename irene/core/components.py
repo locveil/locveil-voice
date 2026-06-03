@@ -15,7 +15,7 @@ from pathlib import Path
 
 from ..config.models import CoreConfig, ComponentConfig
 from ..utils.loader import DependencyChecker, get_component_status
-from ..components.base import Component
+from .interfaces.component import ComponentPort
 from ..__version__ import __version__
 
 logger = logging.getLogger(__name__)
@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 # Extract major version for consistent messaging
 MAJOR_VERSION = __version__.split('.')[0]
 
-T = TypeVar('T', bound='Component')
+T = TypeVar('T', bound='ComponentPort')
 
 
 class ComponentNotAvailable(Exception):
@@ -115,7 +115,7 @@ class ComponentManager:
     
     def __init__(self, config: CoreConfig):
         self.config = config
-        self._components: Dict[str, Component] = {}
+        self._components: Dict[str, ComponentPort] = {}
         self._failed_components: Dict[str, Exception] = {}
         self._dependency_resolver: Optional[DependencyResolver] = None
         self._initialized = False
@@ -250,7 +250,7 @@ class ComponentManager:
         
         logger.info("Post-initialization coordination completed")
     
-    async def _inject_component_dependencies(self, component: Component) -> None:
+    async def _inject_component_dependencies(self, component: ComponentPort) -> None:
         """Inject component dependencies"""
         required_components = component.get_component_dependencies()
         
@@ -261,7 +261,7 @@ class ComponentManager:
             else:
                 logger.warning(f"Component dependency '{dep_name}' not available for '{component.name}'")
     
-    async def _inject_service_dependencies(self, component: Component, core) -> None:
+    async def _inject_service_dependencies(self, component: ComponentPort, core) -> None:
         """Inject service dependencies (core services like context manager, etc.)"""
         required_services = component.get_service_dependencies()
         
@@ -360,7 +360,7 @@ class ComponentManager:
         """Check if a component is available and initialized"""
         return name in self._components and self._components[name].initialized
         
-    def get_component(self, name: str) -> Optional[Component]:
+    def get_component(self, name: str) -> Optional[ComponentPort]:
         """Get a component by name"""
         return self._components.get(name)
         
@@ -368,7 +368,7 @@ class ComponentManager:
         """Get list of active (initialized) component names"""
         return list(self._components.keys())
     
-    def get_components(self) -> Dict[str, Component]:
+    def get_components(self) -> Dict[str, ComponentPort]:
         """Get all component instances (for WorkflowManager)"""
         return self._components.copy()
         

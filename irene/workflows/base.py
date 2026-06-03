@@ -1,12 +1,12 @@
 """Base workflow class for orchestrating assistant operations."""
 
 import logging
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 from typing import Dict, Any, AsyncIterator, Optional, List
 
 from ..intents.models import AudioData, IntentResult
 from ..intents.context_models import UnifiedConversationContext
-from ..core.metadata import EntryPointMetadata
+from ..core.interfaces.workflow import WorkflowPort
 from ..core.session_manager import SessionManager
 
 logger = logging.getLogger(__name__)
@@ -17,8 +17,8 @@ logger = logging.getLogger(__name__)
 from ..intents.context_models import RequestContext  # ARCH-5
 
 
-class Workflow(EntryPointMetadata, ABC):
-    """Base class for all workflow implementations."""
+class Workflow(WorkflowPort):
+    """Base class for all workflow implementations (implements WorkflowPort)."""
     
     def __init__(self):
         """Initialize the workflow."""

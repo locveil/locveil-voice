@@ -1,18 +1,18 @@
 """Base component class for fundamental voice assistant components."""
 
 import logging
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 from typing import Dict, Any, List, Optional, Type
 
 from pydantic import BaseModel
-from ..core.metadata import EntryPointMetadata
+from ..core.interfaces.component import ComponentPort
 from ..config.models import CoreConfig
 
 logger = logging.getLogger(__name__)
 
 
-class Component(EntryPointMetadata, ABC):
-    """Base class for all fundamental components."""
+class Component(ComponentPort):
+    """Base class for all fundamental components (implements ComponentPort)."""
     
     def __init__(self):
         """Initialize the component."""

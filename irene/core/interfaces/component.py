@@ -1,0 +1,63 @@
+"""
+Component Port - The management contract for fundamental components.
+
+ARCH-11 / S2: the abstraction that `core` (ComponentManager) depends on, lifted
+into the port layer so `core` no longer imports `components.base` outward. The
+fat shared implementation (provider switching, health, status, DI plumbing)
+stays in `irene/components/base.Component`, which implements this port.
+
+Rooted on `EntryPointMetadata` (decision (c)), matching the other capability
+ports (`ASRPlugin`, `TTSPlugin`, …) and the live `Component` hierarchy.
+"""
+
+from typing import Any, Dict, List, Optional
+from abc import ABC, abstractmethod
+
+from ..metadata import EntryPointMetadata
+
+
+class ComponentPort(EntryPointMetadata, ABC):
+    """
+    Port for fundamental components.
+
+    Declares only the generic, manager-facing surface ComponentManager relies
+    on. Component-specific capabilities (e.g. TTS `synthesize_to_file`, audio
+    `play_file`) are not part of this contract and remain accessed via the
+    concrete component types. See `irene/components/base.Component` for the
+    shared implementation.
+    """
+
+    # Instance attributes established by the implementation's __init__:
+    name: str
+    providers: Dict[str, Any]
+    initialized: bool
+
+    @abstractmethod
+    async def initialize(self, core: Any = None) -> None:
+        """Initialize the component (and its providers)."""
+        ...
+
+    @abstractmethod
+    async def shutdown(self) -> None:
+        """Shut the component down and release resources."""
+        ...
+
+    @abstractmethod
+    def inject_dependency(self, name: str, dependency: Any) -> None:
+        """Inject a named dependency for cross-component wiring."""
+        ...
+
+    @abstractmethod
+    def get_dependency(self, name: str) -> Optional[Any]:
+        """Return a previously injected dependency, or None."""
+        ...
+
+    @abstractmethod
+    def get_component_dependencies(self) -> List[str]:
+        """Return the names of other components this one depends on."""
+        ...
+
+    @abstractmethod
+    def get_service_dependencies(self) -> Dict[str, type]:
+        """Return the service protocols this component requires from core."""
+        ...
