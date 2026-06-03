@@ -272,10 +272,12 @@ model = "gpt-3.5-turbo"            # Model to use
 max_tokens = 150                   # Maximum response tokens
 temperature = 0.3                  # Creativity level
 
-# Console LLM Provider (for testing/development)
+# Console LLM Provider — the offline FLOOR (QUAL-15). Deterministic, no network, always available;
+# returns a localized "language model unavailable" message so generate_response never crashes offline
+# and fallback_providers=["console"] resolves. NOT a real model (real offline LLM = local model, ARCH-9/10).
 [llm.providers.console]
-enabled = true                      # Enable console LLM simulation
-response = "LLM response would appear here"  # Default response text
+enabled = true                      # keep enabled — this is the offline fallback
+# responses = { ru = "...", en = "..." }   # optional per-language override; omit to use built-in localized defaults
 
 # ============================================================
 # VOICE TRIGGER (WAKE WORD) COMPONENT CONFIGURATION

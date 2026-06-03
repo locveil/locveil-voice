@@ -1,0 +1,7 @@
+# Russian LLM localization (QUAL-15).
+# Spoken via TTS → plain text, no markdown.
+
+messages:
+  # Returned by the console offline-floor provider (and the component's terminal fallback) when no
+  # real language model produced a response.
+  unavailable: "Извините, языковая модель сейчас недоступна."

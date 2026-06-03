@@ -23,6 +23,10 @@ from ..utils.loader import dynamic_loader
 
 logger = logging.getLogger(__name__)
 
+# Absolute last-resort only (the localized text lives in assets/localization/llm/<lang>.yaml, read
+# lazily via the asset loader; this fires only if that asset is unreachable).
+_LLM_UNAVAILABLE_LAST_RESORT = "Sorry, a language model isn't available right now."
+
 
 class LLMComponent(Component, LLMPlugin, WebAPIPlugin):
     """
@@ -71,6 +75,9 @@ class LLMComponent(Component, LLMPlugin, WebAPIPlugin):
         self.providers: Dict[str, LLMProvider] = {}  # Proper ABC type hint
         self.default_provider = "openai"
         self.default_task = "improve"
+        self.fallback_providers: List[str] = []  # QUAL-15: real runtime fallback chain
+        self._unavailable_messages: Dict[str, str] = {}  # localized, lazy-loaded from assets/localization/llm
+        self._messages_loaded = False
         
         # Dynamic provider discovery from entry-points (replaces hardcoded classes)
         self._provider_classes: Dict[str, type] = {}
@@ -139,9 +146,11 @@ class LLMComponent(Component, LLMPlugin, WebAPIPlugin):
             if isinstance(config, dict):
                 self.default_provider = config.get("default_provider", "openai")
                 self.default_task = config.get("default_task", "improve")
+                self.fallback_providers = list(config.get("fallback_providers", []) or [])
             else:
                 self.default_provider = getattr(config, "default_provider", "openai")
                 self.default_task = getattr(config, "default_task", "improve")
+                self.fallback_providers = list(getattr(config, "fallback_providers", []) or [])
             
             # Ensure we have at least one provider
             if not self.providers:
@@ -153,6 +162,90 @@ class LLMComponent(Component, LLMPlugin, WebAPIPlugin):
             logger.error(f"Failed to initialize Universal LLM Plugin: {e}")
     
     # Primary LLM interface - used by other plugins
+    async def is_available(self) -> bool:
+        """QUAL-15: a REAL (non-stub) language model is loaded. The console offline-floor does NOT
+        count — callers that gate LLM-vs-their-own-fallback (e.g. the conversation handler's template
+        path) must not be fooled into thinking a real model is up when only the stub is."""
+        if not self.initialized:
+            return False
+        return any(not getattr(p, "is_stub", False) for p in self.providers.values())
+
+    def _ensure_unavailable_messages(self) -> None:
+        """Lazy-load the localized 'LLM unavailable' text from assets/localization/llm/<lang>.yaml
+        (the established localization asset category) and push it into the console floor provider, so
+        no localized text is hardcoded. Lazy because the asset loader is wired during coordination;
+        by the first request it's ready. Attempted once; degrades to the last-resort string."""
+        if self._messages_loaded:
+            return
+        self._messages_loaded = True
+        try:
+            intent_component = self.get_dependency('intent_system')
+            asset_loader = getattr(getattr(intent_component, 'handler_manager', None), '_asset_loader', None)
+            if asset_loader is None:
+                return
+            messages = {}
+            for lang in ("ru", "en"):
+                loc = asset_loader.get_localization("llm", lang) or {}
+                msg = (loc.get("messages") or {}).get("unavailable")
+                if msg:
+                    messages[lang] = msg
+            if messages:
+                self._unavailable_messages = messages
+                console = self.providers.get("console")
+                if console is not None and hasattr(console, "_responses"):
+                    console._responses.update(messages)  # inject into the floor provider
+        except Exception as e:
+            logger.debug(f"Could not load LLM localization (using last-resort): {e}")
+
+    def _unavailable_text(self, language: Optional[str] = None) -> str:
+        self._ensure_unavailable_messages()
+        m = self._unavailable_messages
+        return m.get(language or "ru") or m.get("ru") or _LLM_UNAVAILABLE_LAST_RESORT
+
+    def _provider_chain(self, preferred: Optional[str] = None) -> List[str]:
+        """QUAL-15: ordered LOADED provider names to try — preferred/default first, then the configured
+        `fallback_providers`, deduped, filtered to what's actually loaded. The console floor (always
+        loaded when enabled) is appended last so every call has a terminal, non-crashing fallback."""
+        order = [preferred or self.default_provider] + list(self.fallback_providers)
+        seen, chain = set(), []
+        for name in order:
+            if name and name in self.providers and name not in seen:
+                seen.add(name)
+                chain.append(name)
+        if "console" in self.providers and "console" not in seen:
+            chain.append("console")
+        return chain
+
+    async def _chat_with_fallback(self, messages: List[Dict[str, str]], preferred: Optional[str],
+                                  model: Optional[str], **kwargs) -> str:
+        """Try chat_completion across the provider chain; never raise (QUAL-15). Returns the first
+        success, else a graceful message (the console floor, when loaded, makes this deterministic)."""
+        self._ensure_unavailable_messages()  # also injects the localized text into the console floor
+        chain = self._provider_chain(preferred)
+        last_err = None
+        for name in chain:
+            try:
+                return await self.providers[name].chat_completion(messages, model=model, **kwargs)
+            except Exception as e:
+                last_err = e
+                logger.warning(f"LLM chat_completion failed with '{name}': {e}; trying next provider")
+        logger.error(f"No LLM provider produced a response (chain={chain}, last error={last_err})")
+        return self._unavailable_text(kwargs.get("language"))
+
+    async def _enhance_with_fallback(self, text: str, task: str, preferred: Optional[str], **kwargs) -> str:
+        """Try enhance_text across the provider chain; never raise (QUAL-15). Falls back to the original
+        text if every provider fails (the console stub returns the original as a no-op)."""
+        chain = self._provider_chain(preferred)
+        last_err = None
+        for name in chain:
+            try:
+                return await self.providers[name].enhance_text(text, task=task, **kwargs)
+            except Exception as e:
+                last_err = e
+                logger.warning(f"LLM enhance_text failed with '{name}': {e}; trying next provider")
+        logger.error(f"All LLM providers failed for enhance_text (chain={chain}, last error={last_err})")
+        return text
+
     async def enhance_text(self, text: str, task: str = "improve", trace_context: Optional[TraceContext] = None, **kwargs) -> str:
         """
         Core LLM functionality - enhance text using specified task with optional tracing
@@ -167,96 +260,31 @@ class LLMComponent(Component, LLMPlugin, WebAPIPlugin):
         Returns:
             Enhanced text
         """
-        # Fast path - existing logic when no tracing
+        # Fast path - no tracing. QUAL-15: iterate the real fallback chain (preferred/default →
+        # fallback_providers → console), never silently pick keys()[0].
         if not trace_context or not trace_context.enabled:
-            # Original implementation unchanged
-            provider_name = kwargs.get("provider", self.default_provider)
-            
-            if provider_name not in self.providers:
-                logger.warning(f"LLM provider '{provider_name}' not available, using fallback")
-                # Try to use any available provider as fallback
-                if self.providers:
-                    provider_name = list(self.providers.keys())[0]
-                    logger.info(f"Using fallback provider: {provider_name}")
-                else:
-                    logger.error("No LLM providers available")
-                    return text  # Return original text if no providers
-            
-            provider = self.providers[provider_name]
-            try:
-                return await provider.enhance_text(text, task=task, **kwargs)
-            except Exception as e:
-                logger.error(f"LLM enhancement failed with {provider_name}: {e}")
-                return text  # Return original text on error
+            preferred = kwargs.pop("provider", None)
+            return await self._enhance_with_fallback(text, task, preferred, **kwargs)
         
-        # Trace path - detailed enhancement tracking
+        # Trace path - same fallback-chain logic, with stage recording (QUAL-15)
         stage_start = time.time()
-        provider_name = kwargs.get("provider", self.default_provider)
-        enhancement_metadata = {
-            "input_text_length": len(text),
-            "input_word_count": len(text.split()),
-            "task": task,
-            "provider": provider_name,
-            "component_name": self.__class__.__name__
-        }
-        
-        # Handle provider availability and fallbacks with tracing
-        original_provider = provider_name
-        if provider_name not in self.providers:
-            logger.warning(f"LLM provider '{provider_name}' not available, using fallback")
-            if self.providers:
-                provider_name = list(self.providers.keys())[0]
-                logger.info(f"Using fallback provider: {provider_name}")
-                enhancement_metadata["fallback_used"] = True
-                enhancement_metadata["original_provider"] = original_provider
-                enhancement_metadata["actual_provider"] = provider_name
-            else:
-                logger.error("No LLM providers available")
-                enhancement_metadata.update({
-                    "enhancement_success": False,
-                    "error": "No LLM providers available",
-                    "fallback_to_original": True
-                })
-                
-                trace_context.record_stage(
-                    stage_name="llm_enhancement",
-                    input_data=text,
-                    output_data=text,
-                    metadata=enhancement_metadata,
-                    processing_time_ms=(time.time() - stage_start) * 1000
-                )
-                return text
-        
-        # Execute enhancement with timing
-        provider = self.providers[provider_name]
-        try:
-            enhanced_text = await provider.enhance_text(text, task=task, **kwargs)
-            enhancement_metadata.update({
-                "enhancement_success": True,
-                "text_changed": text != enhanced_text,
-                "output_text_length": len(enhanced_text),
-                "output_word_count": len(enhanced_text.split()),
-                "provider_used": provider_name
-            })
-            
-        except Exception as e:
-            logger.error(f"LLM enhancement failed with {provider_name}: {e}")
-            enhanced_text = text
-            enhancement_metadata.update({
-                "enhancement_success": False,
-                "error": str(e),
-                "fallback_to_original": True,
-                "provider_used": provider_name
-            })
-        
+        preferred = kwargs.pop("provider", None)
+        chain = self._provider_chain(preferred)
+        enhanced_text = await self._enhance_with_fallback(text, task, preferred, **kwargs)
         trace_context.record_stage(
             stage_name="llm_enhancement",
             input_data=text,
             output_data=enhanced_text,
-            metadata=enhancement_metadata,
+            metadata={
+                "input_text_length": len(text),
+                "task": task,
+                "preferred_provider": preferred or self.default_provider,
+                "provider_chain": chain,
+                "text_changed": text != enhanced_text,
+                "component_name": self.__class__.__name__,
+            },
             processing_time_ms=(time.time() - stage_start) * 1000
         )
-        
         return enhanced_text
     
     # Public methods for intent handler delegation
@@ -279,91 +307,35 @@ class LLMComponent(Component, LLMPlugin, WebAPIPlugin):
         Returns:
             Generated response text
         """
-        # Fast path - existing logic when no tracing
-        if not trace_context or not trace_context.enabled:
-            # Original implementation unchanged
-            # Parse provider/model format if present
-            if model and "/" in model and not provider:
-                provider_name, model_name = model.split("/", 1)
-                if provider_name not in self.providers:
-                    logger.warning(f"Provider '{provider_name}' from model spec '{model}' not available, using default")
-                    provider_name = self.default_provider
-                    model_name = model  # Use full original model string as fallback
-                else:
-                    model = model_name  # Use just the model part for the provider
-            else:
-                provider_name = provider or self.default_provider
-            
-            if provider_name not in self.providers:
-                raise ValueError(f"LLM provider '{provider_name}' not available")
-            
-            # Forward to provider's chat_completion method
-            response = await self.providers[provider_name].chat_completion(
-                messages, model=model, **kwargs
-            )
-            
-            return response
-        
-        # Trace path - detailed conversation generation tracking
-        stage_start = time.time()
-        
-        # Parse provider/model format if present
+        # Resolve the preferred provider + model from the optional "provider/model" convenience format.
+        preferred = provider
         if model and "/" in model and not provider:
-            provider_name, model_name = model.split("/", 1)
-            if provider_name not in self.providers:
-                logger.warning(f"Provider '{provider_name}' from model spec '{model}' not available, using default")
-                provider_name = self.default_provider
-                model_name = model  # Use full original model string as fallback
-            else:
-                model = model_name  # Use just the model part for the provider
-        else:
-            provider_name = provider or self.default_provider
-        
-        conversation_metadata = {
-            "message_count": len(messages),
-            "conversation_length": sum(len(msg.get("content", "")) for msg in messages),
-            "roles_present": list(set(msg.get("role", "") for msg in messages)),
-            "model": model,
-            "provider": provider_name,
-            "component_name": self.__class__.__name__
-        }
-        
-        try:
-            if provider_name not in self.providers:
-                raise ValueError(f"LLM provider '{provider_name}' not available")
-            
-            # Execute conversation generation with timing
-            response = await self.providers[provider_name].chat_completion(
-                messages, model=model, **kwargs
-            )
-            
-            conversation_metadata.update({
-                "generation_success": True,
-                "response_length": len(response),
-                "response_word_count": len(response.split()),
-                "provider_used": provider_name
-            })
-            
-        except Exception as e:
-            conversation_metadata.update({
-                "generation_success": False,
-                "error": str(e),
-                "provider_used": provider_name
-            })
-            raise
-        
+            maybe_provider, model_name = model.split("/", 1)
+            if maybe_provider in self.providers:
+                preferred, model = maybe_provider, model_name
+            # else: not a real provider prefix — leave model as-is, use the default chain
+
+        # Fast path - no tracing. QUAL-15: iterate the fallback chain; never raise (console terminates it).
+        if not trace_context or not trace_context.enabled:
+            return await self._chat_with_fallback(messages, preferred, model, **kwargs)
+
+        # Trace path - same chain, with stage recording
+        stage_start = time.time()
+        chain = self._provider_chain(preferred)
+        response = await self._chat_with_fallback(messages, preferred, model, **kwargs)
         trace_context.record_stage(
             stage_name="llm_conversation",
-            input_data={
-                "messages": messages,
-                "model": model,
-                "provider": provider_name
-            },
+            input_data={"messages": messages, "model": model, "provider_chain": chain},
             output_data=response,
-            metadata=conversation_metadata,
+            metadata={
+                "message_count": len(messages),
+                "preferred_provider": preferred or self.default_provider,
+                "provider_chain": chain,
+                "model": model,
+                "component_name": self.__class__.__name__,
+            },
             processing_time_ms=(time.time() - stage_start) * 1000
         )
-        
         return response
 
     
