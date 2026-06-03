@@ -687,7 +687,7 @@ See `docs/review/phase1_architecture_map.md` §5.
       (real); `TTSComponent.stop_synthesis`/`cancel_synthesis` are honest best-effort (TTS providers can't interrupt → graceful
       no-op, no crash). NB: injection also **repaired latent breakage** — only `conversation` was injected before, so the other
       5 capability handlers were getting `None` (compounded by the await-sync bug); they're now wired for the first time (no
-      test covers these paths — flagged for TEST-7). (3) **Removed** the orphaned global-core service-locator
+      test covers these paths — **filed as TEST-8**). (3) **Removed** the orphaned global-core service-locator
       (`get_core`/`set_core`/`_global_core`) from `engine.py` — zero callers; no test referenced it (the 3 flagged files
       matched on `llm_component`, not `get_core`). All verified: components instantiate (ABC), 9/9 contracts, suite 85=85.
 - [x] **QUAL-25** [DFLOW] (P1) — **End-to-end dataflow & context-models review.** **DONE 2026-06-02** →
@@ -999,6 +999,18 @@ _Apply to every remediation task below (from the 4 review docs + QUAL-25/26). So
       the 8 ParameterTypes, the 4 entity resolvers, pattern matching; rebuild around `test_parameter_schema_unification`/
       `test_context_aware_nlu`/`test_cascading_nlu`/`test_web_api_parameter_schemas`.
 - [ ] **TEST-5** [TXTPROC] (P2) — _(coverage goal for TEST-7)_ Text-processor / normalizer coverage, after QUAL-12/13.
+- [ ] **TEST-8** [PORTS] (P1) — _(coverage goal for TEST-7)_ **Capability-port handler coverage (surfaced by QUAL-24).**
+      QUAL-24 found that only `conversation` was ever injected — the **5 other capability handlers**
+      (`voice_synthesis`, `audio_playback`, `speech_recognition`, `translation`, `text_enhancement`) were silently
+      getting `None` for their component (compounded by an await-sync bug) and are now **wired for the first time**
+      via domain-owned ports (`irene/intents/ports.py`). **No test exercises these handler→port paths** — so the repair
+      is unverified. Cover: (1) the injection wiring itself — `IntentComponent.post_initialize_handler_dependencies`
+      sets each handler's port (and `provider_control`'s registry) and handlers degrade gracefully when a component is
+      absent; (2) each handler's actions through its injected port — LLM `generate_response`/`enhance_text`/`extract_*`,
+      TTS `speak` + the **best-effort `stop_synthesis`/`cancel_synthesis`** (graceful no-op, no crash), Audio `play_file`
+      + the **provider-delegated `pause_audio`/`resume_audio`/`stop_playback`**, ASR `switch_language`; (3) ABC
+      enforcement — a component missing a port method fails at instantiation (regression guard for the ports↔components
+      contract). Fixtures: the localization-asset-loader pattern + fake port impls. Relates to QUAL-24, ARCH-1.
 
 ### Build & CI (BUILD)
 - [x] **BUILD-1** (P0) — Verify clean `uv sync` + CLI and WebAPI boot at v15. **DONE 2026-06-01** (`bab6f97`):

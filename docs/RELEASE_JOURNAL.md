@@ -34,7 +34,8 @@ newest entries near the top of each dated section.
   (`components→intents.ports` = application→domain, inward; 9/9 contracts kept) so unimplemented methods fail at
   instantiation. Implemented the 4: audio pause/resume delegate to providers (real); TTS stop/cancel are honest best-effort
   (providers can't interrupt). Removed the orphaned global-core service-locator (`get_core`/`set_core`/`_global_core`) from
-  `engine.py` — zero callers, no test referenced it. The now-wired-but-untested handler paths are flagged for TEST-7.
+  `engine.py` — zero callers, no test referenced it. The now-wired-but-untested handler paths are **filed as TEST-8**
+  (capability-port handler coverage, a TEST-7 coverage goal).
 - **ARCH-12 DONE — removed the last two residual upward edges; locked `utils` with contract #9.** Edge 1
   (`utils.vad → core.metrics`) was a **dead import** (`get_metrics_collector` imported but never called — a Phase-4
   leftover after VAD metrics unified into `MetricsCollector`); deleted it. Edge 2 (`utils.logging → config.models`):
