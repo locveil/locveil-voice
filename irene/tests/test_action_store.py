@@ -221,3 +221,29 @@ async def test_completed_action_history_lives_in_store_and_survives_eviction():
     fresh = UnifiedConversationContext(session_id="study_session")
     assert {a["action"] for a in fresh.recent_actions} == {"a_ok", "a_bad"}
     assert [a["action"] for a in fresh.failed_actions] == ["a_bad"]
+
+
+# --- QUAL-9: metrics keyed by (domain, action_name), not domain alone --- #
+
+def test_metrics_concurrent_same_domain_no_clobber():
+    """Two concurrent same-domain actions (e.g. two timers, domain='timers') must each be tracked —
+    the old domain-only key clobbered the first when the second started, so completion popped the
+    wrong one and the first leaked as perpetually-running."""
+    from irene.core.metrics import MetricsCollector
+
+    mc = MetricsCollector()
+    mc.record_action_start("timers", "timer_1", "TimerHandler")
+    mc.record_action_start("timers", "timer_2", "TimerHandler")
+    # both live — not clobbered
+    assert mc.get_active_actions_summary()["count"] == 2
+
+    # completing one leaves the other live (and untouched)
+    mc.record_action_completion("timers", "timer_1", success=True)
+    summary = mc.get_active_actions_summary()
+    assert summary["count"] == 1
+    assert summary["actions"][0]["action_name"] == "timer_2"
+    assert summary["actions"][0]["domain"] == "timers"
+
+    mc.record_action_completion("timers", "timer_2", success=True)
+    assert mc.get_active_actions_summary()["count"] == 0
+    assert mc._system_metrics["total_actions_completed"] == 2

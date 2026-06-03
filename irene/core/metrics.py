@@ -193,7 +193,9 @@ class MetricsCollector:
             session_id=session_id
         )
         
-        self._active_actions[domain] = action
+        # QUAL-9: key by the UNIQUE (domain, action_name) pair, not domain alone — two concurrent
+        # same-domain actions (e.g. two timers, domain="timers") used to clobber each other's metric.
+        self._active_actions[f"{domain}:{action_name}"] = action
         self._system_metrics["total_actions_started"] += 1
         self._system_metrics["current_concurrent_actions"] = len(self._active_actions)
         
@@ -203,16 +205,18 @@ class MetricsCollector:
         
         self.logger.debug(f"Action started: {domain}/{action_name}")
     
-    def record_action_completion(self, domain: str, success: bool = True, 
+    def record_action_completion(self, domain: str, action_name: str, success: bool = True,
                                error: Optional[str] = None, error_type: Optional[str] = None,
                                retry_count: int = 0, timeout_occurred: bool = False,
                                memory_usage: Optional[float] = None) -> None:
-        """Record the completion of a fire-and-forget action"""
-        if domain not in self._active_actions:
-            self.logger.warning(f"Attempted to complete unknown action in domain: {domain}")
+        """Record the completion of a fire-and-forget action (QUAL-9: keyed by the unique
+        (domain, action_name) pair so concurrent same-domain actions don't clobber)."""
+        key = f"{domain}:{action_name}"
+        if key not in self._active_actions:
+            self.logger.warning(f"Attempted to complete unknown action: {key}")
             return
-        
-        action = self._active_actions.pop(domain)
+
+        action = self._active_actions.pop(key)
         action.completed_at = time.time()
         action.duration = action.completed_at - action.started_at
         action.success = success
@@ -327,10 +331,10 @@ class MetricsCollector:
         current_time = time.time()
         
         active_summary = []
-        for domain, action in self._active_actions.items():
+        for _key, action in self._active_actions.items():
             running_time = current_time - action.started_at
             active_summary.append({
-                "domain": domain,
+                "domain": action.domain,
                 "action_name": action.action_name,
                 "handler": action.handler,
                 "running_time": running_time,
@@ -645,7 +649,7 @@ class MetricsCollector:
         
         # Track as fire-and-forget action
         self.record_action_start(domain, "recognition", "intent_system", session_id)
-        self.record_action_completion(domain, success=True)
+        self.record_action_completion(domain, "recognition", success=True)
         
         # Store intent-specific metrics
         if domain not in self._domain_metrics:
@@ -676,7 +680,7 @@ class MetricsCollector:
         
         # Track as fire-and-forget action
         self.record_action_start(domain, "execution", "intent_system", session_id)
-        self.record_action_completion(domain, success=success, error=error, error_type="intent_execution_failure" if not success else None)
+        self.record_action_completion(domain, "execution", success=success, error=error, error_type="intent_execution_failure" if not success else None)
         
         # Store intent-specific execution metrics
         if domain not in self._domain_metrics:
@@ -745,7 +749,7 @@ class MetricsCollector:
             
             # Complete the session action
             if domain in self._active_actions:
-                self.record_action_completion(domain, success=True)
+                self.record_action_completion(domain, "session", success=True)
             
             self.logger.debug(f"Session ended: {session_id}")
     
@@ -978,10 +982,10 @@ class MetricsCollector:
         # Track as an action for consistency with fire-and-forget pattern
         if success:
             self.record_action_start(domain, "resampling", component_name)
-            self.record_action_completion(domain, success=True)
+            self.record_action_completion(domain, "resampling", success=True)
         else:
             self.record_action_start(domain, "resampling", component_name)
-            self.record_action_completion(domain, success=False, error="resampling_failed")
+            self.record_action_completion(domain, "resampling", success=False, error="resampling_failed")
         
         # Store resampling-specific metrics
         if not hasattr(self._domain_metrics[domain], 'resampling_metrics'):
@@ -1008,7 +1012,7 @@ class MetricsCollector:
         
         # Track as an action
         self.record_action_start(domain, "detection", component_name)
-        self.record_action_completion(domain, success=success)
+        self.record_action_completion(domain, "detection", success=success)
         
         # Store detection-specific metrics
         if not hasattr(self._domain_metrics[domain], 'detection_metrics'):

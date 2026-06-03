@@ -12,6 +12,17 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-03
+- **QUAL-9 [FAF] DONE — tail reconciled to metrics re-key + TEST-3; everything else already in QUAL-28.** Per the
+  task-start reconciliation (Invariant #8), verified against current code that QUAL-28 had absorbed the entire F&F P0
+  set AND most of the documented tail (timeout monitor `wait_for`, duplicate write-back processor deletion, timer-
+  cancellation cleanup, capture-before-pop). The only genuinely-open items were the **per-action metrics re-key** and
+  **TEST-3** (user-approved this narrowed scope before work). Fixed `metrics._active_actions`: keyed by the unique
+  `(domain, action_name)` pair instead of `domain` alone — two concurrent same-domain actions (e.g. two timers,
+  `domain="timers"`) used to clobber each other's metric, so completion popped the wrong one and the first leaked as
+  perpetually-running. `record_action_completion` now takes `action_name`; updated all 9 callers (6 internal synchronous
+  helpers + 3 F&F sites in `base.py`); `get_active_actions_summary` reads `action.domain`. Added the TEST-3 seed
+  `test_metrics_concurrent_same_domain_no_clobber`. `test_set_timer_end_to_end` green end-to-end (QUAL-11 recognition +
+  QUAL-28 F&F). Suite 18/18. **The QUAL-11 + QUAL-9 arc the user picked — timers working end-to-end — is complete.**
 - **Decision (user) — QUAL-11 goes LIGHTWEIGHT (T1); the heavy NLU tiers split out. Filed QUAL-35; entity_type → ARCH-6.**
   Worked through the slot/extraction-pattern fork (P0 #2) and the entity_type fork (Q7b) together — they're the **same
   species** (heavy declarative extraction), and a three-tier picture clarified the call: **T1** = keyword/NER + regex +

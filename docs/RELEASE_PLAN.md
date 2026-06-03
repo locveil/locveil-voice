@@ -303,7 +303,18 @@ See `docs/review/phase1_architecture_map.md` §5.
       legacy `docs/fire_forget_issues.md` "✅ COMPLETED" is **materially false** (banner added). Legacy issues:
       #4 FIXED, #6 FIXED-but-moot, #1 & #5 CHANGED-still-broken, #2 CHANGED-unreachable, #3 CONFIRMED. Plan
       correction: ~13 call sites in 3 handlers, not "~83".
-- [ ] **QUAL-9** [FAF] (P1) — Remediate F&F (ranked in the review). **★ MERGED 2026-06-02 (user, Invariant #8):** the
+- [x] **QUAL-9** [FAF] (P1) — **DONE 2026-06-03.** **Tail reconciled (Invariant #8, user-approved 2026-06-03):** a
+      code reconciliation found QUAL-28 had absorbed even more than credited — dup-`session_id` crash, `action_name`
+      keying, `get_or_create_context`, strong task refs, bounded+reaped store, **timeout monitor `wait_for`** (already
+      `base.py`), **duplicate write-back processor** (both `_process_action_metadata*` already deleted), **timer-
+      cancellation cleanup** (already store-owned), and **capture-before-pop** (record passed by reference) were ALL
+      already done. The only genuinely-open tail items were **(1)** the per-action **metrics re-key** and **(2)** TEST-3.
+      Both landed 2026-06-03: `metrics._active_actions` now keyed by the unique `(domain, action_name)` pair (was
+      `domain` alone → two same-domain timers clobbered each other's metric; the first leaked as perpetually-running);
+      `record_action_completion` takes `action_name`; all 9 callers updated; **TEST-3 seed** added
+      (`test_metrics_concurrent_same_domain_no_clobber` + the existing F&F-lifecycle tests in `test_action_store.py`).
+      `test_set_timer_end_to_end` is green (the F&F half + QUAL-11 recognition half — timers work end-to-end). _Original
+      remediation framing:_ Remediate F&F (ranked in the review). **★ MERGED 2026-06-02 (user, Invariant #8):** the
       F&F **launch + completion** path (`base.py`) is the same code as QUAL-28's action-store relocation (the
       authoritative liveness = the task ref, created in the launch), so the launch/completion fixes — **(1)** dup-`session_id`
       crash, **(2)** `action_name` keying, **(3)** `get_or_create_context` (now real), **(4)** task refs, **(5)**

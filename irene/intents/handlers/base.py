@@ -582,7 +582,7 @@ class IntentHandler(EntryPointMetadata, ABC):
             self.logger.error(f"Failed to start action {action_name}: {e}")
             if self._metrics_collector:
                 try:
-                    self._metrics_collector.record_action_completion(domain=domain, success=False, error=str(e))
+                    self._metrics_collector.record_action_completion(domain=domain, action_name=action_name, success=False, error=str(e))
                 except Exception:
                     pass
             return {"active_actions": {action_name: {
@@ -619,7 +619,7 @@ class IntentHandler(EntryPointMetadata, ABC):
         if self._metrics_collector:
             try:
                 self._metrics_collector.record_action_completion(
-                    domain=record.domain, success=success, error=error)
+                    domain=record.domain, action_name=record.action_name, success=success, error=error)
             except Exception as me:
                 self.logger.error(f"Failed to record action completion metrics: {me}")
 
@@ -1085,6 +1085,7 @@ class IntentHandler(EntryPointMetadata, ABC):
                         if self._metrics_collector:
                             self._metrics_collector.record_action_completion(
                                 domain=domain,
+                                action_name=action_name,
                                 success=False,
                                 error=f"Cancelled: {reason}",
                                 error_type="cancelled"
