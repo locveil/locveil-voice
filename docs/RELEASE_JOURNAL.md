@@ -12,6 +12,19 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-03
+- **QUAL-37 [DFLOW] DONE — targeted no-intent clarification (offline path).** The signal
+  (`_fallback_context.likely_domain`, computed by `_create_fallback_intent`) was already consumed on the ONLINE path
+  (QUAL-16's `_build_fallback_context_prompt` injects the guessed topic into the LLM prompt); the gap was the OFFLINE
+  (no-LLM) path, which gave a generic "didn't understand «…»" responder. Now `_handle_fallback_without_llm` reads
+  `likely_domain` and, when it maps to a known domain, returns a **deterministic, localized, offline** targeted
+  explain-and-ask ("Возможно, вы хотели поставить таймер?" / "Did you want to set a timer?") — new `fallback_targeted`
+  template + a `fallback_domain_labels` map (domain→friendly action phrase) added to the existing
+  `assets/localization/conversation/{ru,en}.yaml`; otherwise it falls through to the generic responder (no guess /
+  unknown domain). Result metadata gains `targeted`/`likely_domain`. Both fallback paths now consume the NLU's guess.
+  Tests: `test_no_intent_clarification.py` (5) — targeted ru/en, generic + unknown-domain fall-through, determinism +
+  offline; 0 net suite regressions. **Ledger hygiene (user-flagged):** there were two QUAL-37 entries — the QUAL-36
+  done-edit had only matched the first 2 lines of the old QUAL-36 entry, orphaning the rest of its body under a stray
+  duplicate QUAL-37 header; removed the corrupted block, leaving the single correct QUAL-37 (now `[x]`).
 - **QUAL-38 [DFLOW][I18N] DONE — processing-language config-derive + inline-bilingual externalization (carved from QUAL-36).**
   **Key correction during reconciliation:** the carve-out spec framed (a) as "thread from context", but the processing
   language is the **audio-MODEL/deployment** language (which number-spelling/transcription rules to apply), NOT the session

@@ -219,6 +219,14 @@ class ConversationIntentHandler(IntentHandler):
             template = (loc.get("context_labels") or {}).get(key, template)
         return template.format(**fmt)
 
+    def _get_fallback_domain_labels(self, language: str) -> Dict[str, str]:
+        """QUAL-37: localized map of NLU-guessed domain → a friendly action phrase, used to build a
+        targeted no-intent clarification. Empty (→ generic responder) if the asset is unreachable."""
+        if not self.has_asset_loader():
+            return {}
+        loc = self.asset_loader.get_localization("conversation", language) or {}
+        return loc.get("fallback_domain_labels") or {}
+
     def _get_template_data(self, template_name: str, language: str) -> List[str]:
         """Get template data (arrays) from asset loader - raises fatal error if not available"""
         if not self.has_asset_loader():
@@ -510,28 +518,37 @@ class ConversationIntentHandler(IntentHandler):
             
             # Get the original text that couldn't be recognized
             original_text = intent.raw_text or intent.entities.get("original_text", "")
-            
-            # Get fallback response templates
-            fallback_responses = self._get_template_data("fallback_no_llm_responses", language)
-            help_suggestions = self._get_template_data("fallback_help_suggestions", language)
-            
-            # Select random responses
-            import random
-            fallback_response = random.choice(fallback_responses)
-            help_suggestion = random.choice(help_suggestions)
-            
-            # Format the response with the original text
-            formatted_response = fallback_response.format(original_text=original_text)
-            
-            # Combine response with helpful suggestion
-            full_response = f"{formatted_response} {help_suggestion}"
-            
+
+            # QUAL-37: if the NLU guessed a likely domain, offer a TARGETED, deterministic clarification
+            # ("Did you want to set a timer?") instead of the generic one. Offline guarantee — purely
+            # template-driven, no LLM. Falls through to the generic responder when there's no guess.
+            fallback_context = intent.entities.get("_fallback_context") or {}
+            likely_domain = fallback_context.get("likely_domain")
+            domain_labels = self._get_fallback_domain_labels(language)
+            targeted = bool(likely_domain and likely_domain in domain_labels)
+
+            if targeted:
+                full_response = self._get_template(
+                    "fallback_targeted", language, action=domain_labels[likely_domain]
+                )
+            else:
+                # Generic responder: a varied "didn't understand" line + a help suggestion.
+                fallback_responses = self._get_template_data("fallback_no_llm_responses", language)
+                help_suggestions = self._get_template_data("fallback_help_suggestions", language)
+
+                import random
+                fallback_response = random.choice(fallback_responses)
+                help_suggestion = random.choice(help_suggestions)
+                formatted_response = fallback_response.format(original_text=original_text)
+                full_response = f"{formatted_response} {help_suggestion}"
+
             # Get cascade attempt information if available
             cascade_attempts = intent.entities.get("_cascade_attempts", 0)
             
             logger.info(f"Handled fallback without LLM: original_text='{original_text}', "
-                       f"cascade_attempts={cascade_attempts}, language={language}")
-            
+                       f"cascade_attempts={cascade_attempts}, language={language}, "
+                       f"targeted={targeted}, likely_domain={likely_domain}")
+
             return IntentResult(
                 text=full_response,
                 should_speak=True,
@@ -542,7 +559,9 @@ class ConversationIntentHandler(IntentHandler):
                     "cascade_attempts": cascade_attempts,
                     "language": language,
                     "recognition_provider": "fallback",
-                    "llm_required": False
+                    "llm_required": False,
+                    "targeted": targeted,
+                    "likely_domain": likely_domain
                 }
             )
             

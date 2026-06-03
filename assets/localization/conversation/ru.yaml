@@ -10,3 +10,12 @@ context_labels:
   flow: "Ход: недавних {history_count}{state_info}"
   flow_state: ", состояние: элементов {count}"
   context_wrapper: "Контекст: {parts}"
+
+# QUAL-37: NLU-guessed domain → friendly action phrase, for targeted no-intent clarification.
+# Keys match _analyze_likely_domain's domains (audio/timer/system/datetime/translation).
+fallback_domain_labels:
+  audio: включить музыку
+  timer: поставить таймер
+  system: проверить систему
+  datetime: узнать время или дату
+  translation: перевести текст

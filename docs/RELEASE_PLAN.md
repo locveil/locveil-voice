@@ -787,41 +787,17 @@ _Apply to every remediation task below (from the 4 review docs + QUAL-25/26). So
       `== 'ru'` branch). **Kept (legitimate, per done-criteria):** `system_service_handler` Russian pluralization grammar
       (strings already templated), and Russian command-keyword *parsing*. **Verified:** templates load + resolve ru/en; 0 net
       suite regressions. Done: processing language derives from model/config; handler user-facing strings externalized.
-- [ ] **QUAL-37** `[deferred]` [DFLOW] (P2) — **Targeted no-intent clarification (enhancement; split from QUAL-30).**
-      runtime and defeat the installation-agnostic design. **Findings:** (T1) context-ignoring hardcodes — `timer._get_
-      language()` ignores `context.language` entirely (Cyrillic-sniff heuristic → `return "ru"`); `context.py:86` seeds
-      new sessions `language="ru"`. (T2) the systemic bake — `context.language or "ru"` at **63 handler sites** +
-      `entity_resolver.py` ×2. (T3) a real **inconsistency bug** — `hybrid_keyword_matcher.py:422` defaults to `'en'`
-      while everything else defaults `'ru'`, so an unset `context.language` partitions keywords by the wrong language.
-      (T4) `def …(language: str = "ru")` default params across handlers. (T5) baked `["ru","en"]` sets (`system.py:315`,
-      `text_processor_component`). **Target architecture (user, 2026-06-03):** config declares the **supported-languages
-      list + default**; the **session/context** identifies the language *from the supported list* (default if unconfident/
-      out-of-list — **silent fallback**, user-chosen); **all downstream just READS `context.language`** — no fallback,
-      no re-detection, no literals. So the fix is *not* relocating the default to 70 sites — it's **make `context.language`
-      an invariant (always a valid supported language) then DELETE the fallbacks**. **Hexagonal (Invariant #3,
-      user-required):** config (`config/models.py:315-316` already declares `supported_languages`/`default_language` —
-      consolidate as the one source) is read at the **composition root** and the plain values are **injected inward** —
-      `ContextManager` gets `default_language` to seed with (same DI pattern as its existing `max_history_turns`); the NLU
-      component gets the supported-list + default to **clamp detection**. Domain (handlers, `context_models`) **never
-      imports config** — it reads the resolved `context.language` field. **Scope:** (1) consolidate/confirm the config
-      source; (2) inject + seed context with the default (fix `context.py:86`); (3) detection clamps to supported-list →
-      default; (4) establish the invariant (context.language never None/out-of-list); (5) delete the 63 `or "ru"`
-      fallbacks → bare `context.language`; rip out the `_get_language` re-detection heuristics; fix the hybrid `'en'`
-      divergence; drop the `language="ru"` default params; (6) make the `["ru","en"]` set config-driven; (7) **localize
-      the LLM context-injection labels** (folded from QUAL-16): the hardcoded English system-message labels in
-      `conversation.py` `_prepare_llm_context`/`_build_*_summary` (`Currently active:`, `Session:`, `Recent activity:`,
-      `Thread:`, `Actions:`, `Flow:`, `Context:`) — machine-context for the LLM, not persona/task prompts, so QUAL-16
-      left them; localize them with the user-language plumbing here. Done when: no
-      hardcoded language literal remains in `irene/` runtime (outside config defaults + tests), and an English-primary
-      config produces English fallbacks end-to-end. Sibling to **QUAL-32** (cross-cutting purge). Refs: `RELEASE_JOURNAL.md`
-      2026-06-03 findings, QUAL-16.
-- [ ] **QUAL-37** `[deferred]` [DFLOW] (P2) — **Targeted no-intent clarification (enhancement; split from QUAL-30).**
-      Today an unrecognized command yields a **generic** "didn't understand «…», try saying …" (offline templates) or is
-      treated as LLM chat (online). But the NLU already computes **`_fallback_context.likely_domain`** ("probably timer")
-      + `ambiguous_entities` in `_create_fallback_intent` — and **nothing consumes it**. Use that signal in the
-      conversation fallback to offer a *targeted* explain-and-ask ("Did you want to set a timer?") instead of a generic
-      one; deterministic + localized (offline guarantee), same shape as the QUAL-30 responder. Beyond QUAL-30's delivered
-      Grade-1 scope (7d's "explain-and-ask" requirement is met generically); this is the quality lift. Refs: QUAL-30, Q7.
+- [x] **QUAL-37** `[deferred]` [DFLOW] (P2) — **Targeted no-intent clarification (enhancement; split from QUAL-30).
+      DONE 2026-06-03.** The online (LLM) path already consumed `_fallback_context.likely_domain` (via
+      `_build_fallback_context_prompt`, QUAL-16); the gap was the **offline** path. **Delivered:** `_handle_fallback_
+      without_llm` now reads `likely_domain` and, when it matches a known domain, emits a **deterministic, localized,
+      offline** targeted clarification ("Возможно, вы хотели поставить таймер?" / "Did you want to set a timer?") via a
+      new `fallback_targeted` template + a `fallback_domain_labels` map (domain→friendly action phrase) in
+      `assets/localization/conversation/{ru,en}.yaml`; falls through to the generic responder when there's no guess /
+      unknown domain. Metadata now carries `targeted`/`likely_domain`. **Verified:** new `test_no_intent_clarification.py`
+      (5) covers targeted ru/en, generic fall-through, unknown-domain fall-through, determinism + offline; 0 net suite
+      regressions. **Ledger fix:** removed a corrupted duplicate QUAL-37 header that had orphaned QUAL-36's old body
+      (collateral from the QUAL-36 done-edit). Refs: QUAL-30, QUAL-16, Q7.
 
 ### Tests (TEST)
 > **Strategy (decided 2026-06-01): do NOT keep repairing the existing suite.** Most tests were written against

@@ -26,3 +26,6 @@ fallback_help_suggestions:
   - "You can ask about time, set a timer, request system information, or say hello."
   - "Try commands like 'what time is it', 'set timer for 5 minutes', 'how are you', or 'help'."
   - "Available commands: time, timer, greetings, system information, and others."
+
+# QUAL-37: targeted no-intent clarification (deterministic, offline) when the NLU guessed a domain.
+fallback_targeted: "Did you want to {action}? If not, try rephrasing your request."
