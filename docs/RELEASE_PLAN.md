@@ -620,7 +620,15 @@ _Apply to every remediation task below (from the 4 review docs + QUAL-25/26). So
       enhancement); **device/room clarification** → **ARCH-6** (no registered devices yet); **per-handler activation** →
       **QUAL-34** (handlers adopt `get_param` for required params — only timer uses the accessor today, with a caller
       default, so nothing triggers it in production yet); **no-intent** clarification already exists via the conversation
-      fallback (now with honest confidence). Grade 2 (multi-turn slot-filling) is **QUAL-31**. Refs: Q7. _Original spec:_
+      fallback (now with honest confidence). Grade 2 (multi-turn slot-filling) is **QUAL-31**.
+      **Residuals — extend the fail-loud family (slotted, not forgotten):** (a) **`InvalidParameter`** (out-of-range /
+      bad-choice, distinct from missing) → **QUAL-34** (per-handler, build the exception + decide clarify-vs-default);
+      (b) **`UnresolvedDevice`** raise→clarify when `room_context=required` can't resolve → **ARCH-6** (it owns the
+      resolve-or-clarify policy; today resolvers degrade with a `_resolution_failed` marker, don't raise); (c) **targeted
+      no-intent clarification** — today no-intent gives a *generic* "didn't understand, try X" (offline) or LLM chat
+      (online); the NLU already computes `_fallback_context.likely_domain` ("probably timer") but **nothing uses it** for
+      a "did you mean to set a timer?" prompt — enhancement, tracked here. **System** errors (component down) correctly
+      stay graceful errors (not clarifications); their hardcoded English message → QUAL-36. Refs: Q7. _Original spec:_
       At the fail-loud boundary, convert structured failures into explain-and-ask; configurable responder; fix
       `confidence=1.0`.
 - [ ] **QUAL-31** [DFLOW] (P2, feature) — **Clarification UX — Grade 2 (multi-turn slot-filling).** `pending_clarification`
@@ -661,7 +669,11 @@ _Apply to every remediation task below (from the 4 review docs + QUAL-25/26). So
       consumed or removed, and the audit re-runs clean. **Per-handler adoption of `IntentHandler.get_param` (QUAL-11
       Stage D) folds in here** — migrating each handler off ad-hoc `intent.entities.get(...)` to the typed accessor IS
       "consume the declared param" (and resolves Bucket B's raw_text bypass at the same site). The timer handler is the
-      done reference (Stage D). Refs: `declared_param_audit.md`, QUAL-11, QUAL-33, Q6/Q7.
+      done reference (Stage D). **Also (extends QUAL-30's fail-loud family):** per handler, decide **invalid-value**
+      behavior — build/raise **`InvalidParameter`** (review Q7b: out-of-range / not-in-choices, *distinct* from
+      missing-required) → flows through the existing `_clarify` boundary; vs clamp to the declared `default_value`.
+      Today `get_param` either clamps-to-default (silent) or raises `MissingRequiredParameter` (mislabeling an invalid
+      required value as "missing") — fix the distinction here. Refs: `declared_param_audit.md`, QUAL-11, QUAL-30, QUAL-33, Q6/Q7.
 - [ ] **QUAL-35** `[release]` [PEX][MQTT] (P-TBD) — **Declarative NLU tiers T2 + T3 — MUST-HAVE for smart-home/MQTT
       (gated on ARCH-7/8). Split out of QUAL-11 (2026-06-03, user).** QUAL-11 deliberately shipped the **lightweight (T1)**
       extraction contract — keyword/NER + regex + CHOICE surfaces + lemmas, which is what the `hybrid_keyword_matcher`
