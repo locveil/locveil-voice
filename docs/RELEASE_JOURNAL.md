@@ -25,8 +25,15 @@ newest entries near the top of each dated section.
   Rewrote the 3 broken WebAPI endpoints onto the unified provider's `stage_map`/`normalizers_for_stage`. RUNorm now
   `enabled=false` by default (documented HF-model-download offline hazard). Verified: chains correct per stage, "5 минут"→
   "пять минут", disabled normalizers don't run; `test_text_processing.py` (5) + full suite 26/26; WebAPI boots (smoke).
-  **Carve-outs:** optional `llm_text_processor` + the dead `universal_llm` ASR-enhance path → QUAL-15; config-ui
-  text-processor editor (old shape, passes blob without enforcing) → UI-5 (Invariant #4 debt). **QUAL-13 done (Stages 1+2).**
+  **Carve-outs:** optional `llm_text_processor` + the dead `universal_llm` ASR-enhance path → QUAL-15. **QUAL-13 done (Stages 1+2).**
+- **QUAL-13 Invariant #4 — VERIFIED config-ui is schema-agnostic (user-prompted; corrected my earlier carve-out).** I had
+  initially carved a config-ui text-processor-editor update to UI-5. Wrong: the config editing is fully schema-driven —
+  `ConfigurationPage` fetches the backend Pydantic schema (`getConfigSchema()`) and renders each section through a
+  generic recursive `ConfigSection` (renders the `providers` tree + nested `normalizers` dynamically; only a
+  `text_processor`↔`text_processing` name alias is component-specific). The `TextProcessorConfig` TS type is already
+  generic (`Record<string,Record<string,any>>`), so the collapsed shape matches. Changed zero config-ui files; ran
+  `npm run type-check` **and** `npm run build` — both pass clean. So QUAL-13 carries **no** config-ui debt; Invariant #4
+  satisfied for the config surface. (The donations editor UI-5 deferral is unrelated — that's the donations schema, not config.)
 - **QUAL-13 Stage 1 + ASSET-3 DONE — lingua-franca → ovos-number-parser.** Investigated the abandoned MycroftAI git pin
   vs successors (research agent + WebSearch): irene's real usage is tiny (`pronounce_number` only; the stateless OVOS
   successor needs `lang=` per call, no global `load_language`), confined to `irene/utils/text_processing.py`, with a

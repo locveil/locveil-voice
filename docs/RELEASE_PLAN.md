@@ -424,9 +424,13 @@ See `docs/review/phase1_architecture_map.md` §5.
       **opt-in (`enabled=false`)** with a "downloads a HF model" note (offline hazard); lingua-franca → ovos-number-parser
       (Stage 1 / ASSET-3). Tests: `test_text_processing.py` (5, green); suite 26/26. **Carve-outs (deferred, not blockers):**
       (5) optional `llm_text_processor` (asr_output) → **QUAL-15** (gated on a real LLM); the dead `universal_llm`
-      ASR-enhance path (`asr_component.py`) → **QUAL-15** (LLM territory). **Invariant #4 debt:** config-ui's
-      text-processor editor still targets the old config shape (it passes the blob without enforcing schema, so the
-      build won't break) → **carve to UI-5** like the donations editor. _Original spec:_ Refine per QUAL-12: **collapse + wire.** (1) Collapse the 4 providers into ONE
+      ASR-enhance path (`asr_component.py`) → **QUAL-15** (LLM territory). **Invariant #4 SATISFIED (verified 2026-06-03,
+      user-prompted):** config-ui's config editing is **schema-agnostic** — `ConfigurationPage` fetches the backend
+      Pydantic schema (`getConfigSchema()`) and renders each section via a generic recursive `ConfigSection` (it renders
+      the `providers` tree + nested `normalizers` dynamically; the only `text_processor`-specific code is a name alias).
+      The `TextProcessorConfig` TS type already uses generic `Record<string,Record<string,any>>` dicts, so the new shape
+      matches. Zero config-ui files changed; `npm run type-check` **and** `npm run build` pass clean. No UI-5 carve-out
+      needed for the config editor. _Original spec:_ Refine per QUAL-12: **collapse + wire.** (1) Collapse the 4 providers into ONE
       config-driven `TextProcessor` with ordered **per-stage normalizer chains** (make the config tree real, delete
       the provider-per-stage classes + redundant `number` provider); (2) **actually wire the two real stages** —
       `process()` must pass the caller's stage (`asr_output` at `voice_assistant.py:383`) and **add the missing
