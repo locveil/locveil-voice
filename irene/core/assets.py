@@ -386,7 +386,7 @@ class AssetManager:
                 "anthropic": ["ANTHROPIC_API_KEY"],
                 "elevenlabs": ["ELEVENLABS_API_KEY"],
                 "google_cloud": ["GOOGLE_APPLICATION_CREDENTIALS", "GOOGLE_CLOUD_PROJECT_ID"],
-                "vsegpt": ["VSEGPT_API_KEY"]
+                "deepseek": ["DEEPSEEK_API_KEY"]
             }
             
             if provider in env_patterns:

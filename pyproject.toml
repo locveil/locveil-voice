@@ -208,8 +208,8 @@ google_cloud = "irene.providers.asr.google_cloud:GoogleCloudASRProvider"
 
 [project.entry-points."irene.providers.llm"]
 console = "irene.providers.llm.console:ConsoleLLMProvider"
+deepseek = "irene.providers.llm.deepseek:DeepSeekLLMProvider"
 openai = "irene.providers.llm.openai:OpenAILLMProvider"
-vsegpt = "irene.providers.llm.vsegpt:VseGPTLLMProvider"
 anthropic = "irene.providers.llm.anthropic:AnthropicLLMProvider"
 
 [project.entry-points."irene.providers.voice_trigger"]

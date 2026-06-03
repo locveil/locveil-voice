@@ -1010,13 +1010,24 @@ class EnvironmentVariableResolver:
     def _substitute_recursive(value: Any, path: List[str], root_config: Dict[str, Any]) -> Any:
         """Recursively substitute environment variables with enablement awareness"""
         if isinstance(value, str) and value.startswith("${") and value.endswith("}"):
-            var_name = value[2:-1]
-            
+            inner = value[2:-1]
+
+            # Optional form ${VAR:-default} (shell-style): never errors — resolves to the env value or
+            # the default (e.g. "${DEEPSEEK_API_KEY:-}" makes a cloud key OPTIONAL so the system still
+            # boots offline / without a key; the provider's is_available() then declines and the chain
+            # falls to the offline floor). QUAL-15.
+            if ":-" in inner:
+                var_name, default = inner.split(":-", 1)
+                if not EnvironmentVariableResolver._is_section_enabled(path, root_config):
+                    return value
+                return os.getenv(var_name, default)
+
+            var_name = inner
             # Skip validation for disabled sections
             if not EnvironmentVariableResolver._is_section_enabled(path, root_config):
                 return value  # Return unresolved for disabled sections
-            
-            # Validate and resolve for enabled sections
+
+            # Required form ${VAR}: enabled sections must have it set.
             env_value = os.getenv(var_name)
             if env_value is None:
                 config_path = ".".join(path) if path else "root"

@@ -209,13 +209,18 @@ class AnthropicProviderSchema(LLMProviderSchema):
     temperature: float = Field(default=0.3, ge=0.0, le=1.0, description="Temperature")
 
 
-class VSEGPTProviderSchema(LLMProviderSchema):
-    """VSEGPT provider configuration schema"""
-    api_key: str = Field(description="VSE GPT API key")
-    base_url: str = Field(default="https://api.vsegpt.ru/v1", description="Custom API base URL")
-    model: str = Field(default="gpt-3.5-turbo", description="Model to use")
+class DeepSeekProviderSchema(LLMProviderSchema):
+    """DeepSeek provider configuration schema (OpenAI-compatible API)"""
+    api_key: str = Field(description="DeepSeek API key (use ${DEEPSEEK_API_KEY})")
+    base_url: str = Field(default="https://api.deepseek.com", description="DeepSeek API base URL")
+    model: str = Field(default="deepseek-chat", description="Model: deepseek-chat (V3) | deepseek-reasoner (R1)")
     max_tokens: int = Field(default=150, description="Maximum response tokens")
     temperature: float = Field(default=0.3, description="Creativity level")
+
+
+class ConsoleLLMProviderSchema(LLMProviderSchema):
+    """Console (offline-floor) LLM provider config — deterministic, no network, no key."""
+    pass
 
 
 # ============================================================

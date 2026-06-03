@@ -238,13 +238,23 @@ encoding = "LINEAR16"              # Audio encoding format
 # ============================================================
 [llm]
 enabled = true                      # Enable LLM component
-default_provider = "openai"         # Default provider: "openai", "anthropic", "vsegpt", "console"
-fallback_providers = ["console"]    # Fallback providers in order
+default_provider = "deepseek"       # Default provider: "deepseek", "openai", "anthropic", "console"
+fallback_providers = ["console"]    # Runtime fallback chain (console = offline floor)
+
+# DeepSeek LLM Provider (OpenAI-compatible API; cost-effective; QUAL-15 default)
+[llm.providers.deepseek]
+enabled = true                      # Enable DeepSeek provider
+api_key = "${DEEPSEEK_API_KEY:-}"    # API key from environment variable
+base_url = "https://api.deepseek.com"  # DeepSeek API base URL
+model = "deepseek-chat"            # deepseek-chat (V3) | deepseek-reasoner (R1)
+max_tokens = 150                   # Maximum response tokens
+temperature = 0.3                  # Creativity level
+timeout = 30                       # Per-call timeout (s)
 
 # OpenAI LLM Provider (GPT models)
 [llm.providers.openai]
-enabled = true                      # Enable OpenAI provider
-api_key = "${OPENAI_API_KEY}"      # API key from environment variable
+enabled = false                     # Enable OpenAI provider
+api_key = "${OPENAI_API_KEY:-}"      # API key from environment variable
 base_url = "https://api.openai.com/v1"  # API base URL
 model = "gpt-4o"                   # Model: "gpt-3.5-turbo", "gpt-4o", "gpt-4o-mini"
 max_tokens = 150                   # Maximum response tokens
@@ -257,20 +267,11 @@ presence_penalty = 0.0             # Presence penalty (-2.0-2.0)
 # Anthropic LLM Provider (Claude models)
 [llm.providers.anthropic]
 enabled = false                     # Enable Anthropic provider
-api_key = "${ANTHROPIC_API_KEY}"   # API key from environment variable
+api_key = "${ANTHROPIC_API_KEY:-}"   # API key from environment variable
 base_url = "https://api.anthropic.com"  # API base URL
 model = "claude-haiku-4-5-20251001"  # Model variant (e.g. claude-haiku-4-5-20251001, claude-sonnet-4-6, claude-opus-4-8)
 max_tokens = 150                   # Maximum response tokens
 temperature = 0.3                  # Creativity level (0.0-1.0)
-
-# VSE GPT Provider (custom endpoint)
-[llm.providers.vsegpt]
-enabled = false                     # Enable VSE GPT provider
-api_key = "${VSEGPT_API_KEY}"      # API key from environment variable
-base_url = "https://api.vsegpt.ru/v1"  # Custom API base URL
-model = "gpt-3.5-turbo"            # Model to use
-max_tokens = 150                   # Maximum response tokens
-temperature = 0.3                  # Creativity level
 
 # Console LLM Provider — the offline FLOOR (QUAL-15). Deterministic, no network, always available;
 # returns a localized "language model unavailable" message so generate_response never crashes offline

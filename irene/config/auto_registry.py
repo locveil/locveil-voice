@@ -130,7 +130,7 @@ class AutoSchemaRegistry:
                 # ASR providers
                 WhisperProviderSchema, VoskASRProviderSchema, GoogleCloudProviderSchema,
                 # LLM providers
-                OpenAIProviderSchema, AnthropicProviderSchema, VSEGPTProviderSchema,
+                OpenAIProviderSchema, AnthropicProviderSchema, DeepSeekProviderSchema, ConsoleLLMProviderSchema,
                 # Voice trigger providers
                 OpenWakeWordProviderSchema, PorcupineProviderSchema, MicroWakeWordProviderSchema,
                 # NLU providers
@@ -164,8 +164,8 @@ class AutoSchemaRegistry:
                 "llm": {
                     "openai": OpenAIProviderSchema,
                     "anthropic": AnthropicProviderSchema,
-                    "console": ConsoleProviderSchema,
-                    "vsegpt": VSEGPTProviderSchema,
+                    "deepseek": DeepSeekProviderSchema,
+                    "console": ConsoleLLMProviderSchema,
                 },
                 "voice_trigger": {
                     "openwakeword": OpenWakeWordProviderSchema,

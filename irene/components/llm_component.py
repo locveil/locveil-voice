@@ -405,7 +405,7 @@ class LLMComponent(Component, LLMPlugin, WebAPIPlugin):
         # Handle common aliases
         aliases = {
             "опенаи": "openai",
-            "всегпт": "vsegpt", 
+            "дипсик": "deepseek",
             "антропик": "anthropic",
             "клод": "anthropic"
         }

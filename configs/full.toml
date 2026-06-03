@@ -71,8 +71,8 @@ fallback_providers = ['whisper']
 
 [llm]
 enabled = true
-default_provider = "openai"
-fallback_providers = ['anthropic', 'vsegpt']
+default_provider = "deepseek"
+fallback_providers = ['console']
 
 
 [voice_trigger]
