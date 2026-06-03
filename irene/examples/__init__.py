@@ -1,12 +1,7 @@
 """
-Usage Examples - Code examples for Irene v13
+Usage Examples - Code examples for Irene
 
-Contains examples demonstrating how to use the new async architecture.
+Contains examples demonstrating how to use the async architecture.
 """
 
-# Configuration demos
-from .config_demo import main as config_demo_main
-
-__all__ = [
-    'config_demo_main'
-] 
+__all__ = []

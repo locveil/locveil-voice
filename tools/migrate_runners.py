@@ -51,15 +51,13 @@ RUNNER_MAPPINGS = {
         ]
     },
     "runva_settings_manager.py": {
-        "v13_runner": "irene.runners.settings_runner",
-        "v13_entry": "run_settings",
-        "v13_class": "SettingsManagerRunner", 
-        "description": "Web-based settings manager",
+        "v13_runner": None,  # removed in v15 — config is edited via config-ui (TOML) or directly
+        "v13_entry": None,
+        "v13_class": None,
+        "description": "Web-based settings manager (removed; use config-ui or edit the TOML config directly)",
         "migration_notes": [
-            "Modern Gradio interface",
-            "Live component status monitoring",
-            "TOML configuration support",
-            "Plugin management interface"
+            "The standalone settings runner was removed in v15",
+            "Configuration is edited via config-ui (TOML editor) or by editing the config file",
         ]
     },
     "runva_speechrecognition.py": {
@@ -85,10 +83,10 @@ RUNNER_MAPPINGS = {
         ]
     },
     "runva_plugin_installer.py": {
-        "v13_runner": "irene.runners.settings_runner",
-        "v13_entry": "run_settings",
-        "v13_class": "SettingsManagerRunner",
-        "description": "Use Settings Manager for plugin management", 
+        "v13_runner": None,  # removed in v15 — plugins are intent handlers with JSON donations
+        "v13_entry": None,
+        "v13_class": None,
+        "description": "Plugin management (settings manager removed; plugins are now intent handlers with JSON donations)",
         "migration_notes": [
             "Plugin installation integrated into settings manager",
             "Modern plugin system with interfaces",
@@ -214,7 +212,7 @@ def print_migration_report(legacy_files: List[str], show_details: bool = False):
     print("• All v13 runners support --help for detailed options")
     print("• Use --check-deps to verify component dependencies")
     print("• Configuration now uses TOML format instead of JSON")
-    print("• Run 'python -m irene.runners.settings_runner' for GUI configuration")
+    print("• Edit configuration via config-ui (TOML editor) or the config file directly")
     print("• Legacy compatibility maintained where possible")
     print()
 

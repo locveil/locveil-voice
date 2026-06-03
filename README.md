@@ -571,9 +571,6 @@ uv run python -m irene.runners.webapi_runner
 
 # Голосовой режим с VOSK
 uv run python -m irene.runners.vosk_runner
-
-# Управление настройками
-uv run python -m irene.runners.settings_runner
 ```
 
 ### Проверка состояния системы

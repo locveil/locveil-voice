@@ -513,16 +513,19 @@ See `docs/review/phase1_architecture_map.md` §5.
       exists with a **keep/fix/cut** recommendation per piece {ESP32 firmware, microWakeWord, armv7, training refs}.
 - [ ] **QUAL-20** [ESP32] (P-TBD) — Act on QUAL-19 (complete TODO11 + real feature extraction, OR cut/archive
       microWakeWord + ESP32 + residual training refs; reconcile armv7; close TODO11 accordingly).
-- [ ] **QUAL-21** (P1) — **Prod bug found via TEST-2**: `ComponentConfig` field drift not propagated to all callers.
-      The component fields are now `{asr, audio, tts, nlu, text_processor, llm, voice_trigger, intent_system,
-      monitoring, nlu_analysis, configuration}` — there is **no** `audio_output`, `microphone`, or `web_api`
-      (mic/web moved to `config.inputs.*` / `config.system.web_api_enabled`; `audio_output`→`audio`). But
-      `irene/runners/settings_runner.py` (the `irene-settings` Gradio runner) still does
-      `config.components.audio_output` (L279) and `ComponentConfig(audio_output=…, microphone=…, web_api=…)` (L305)
-      → **would crash on launch**. `irene/examples/{dependency_demo,component_demo,config_demo}.py` have the same
-      stale kwargs. Fix the runner against the real model (and inputs/system split); update/retire the examples.
-      Not done in the TEST pass because the mic/web migration is non-trivial (needs the inputs/system split, not a
-      rename). Verify `irene-settings` boots after.
+- [x] **QUAL-21** (P1) — **Prod bug (`ComponentConfig` field drift) — RESOLVED BY REMOVAL. DONE 2026-06-03.** The
+      `irene-settings` Gradio runner (`settings_runner.py`, 462 LOC) constructed `ComponentConfig(audio_output=…,
+      microphone=…, web_api=…)` — fields that no longer exist (mic/web moved to `config.inputs.*` /
+      `config.system.web_api_enabled`; `audio_output`→`audio`) → **crash on launch**; same stale kwargs in 4 demo
+      examples. **User decision:** the settings runner is obsolete — **removed** rather than fixed (config is now
+      edited via config-ui's TOML editor or the file directly). **Deleted** `settings_runner.py` + both pyproject
+      registrations (`[project.scripts] irene-settings`, the `irene.runners` `settings` entry-point) +
+      `runners/__init__.py` exports; cleaned README, `architecture.md` (usage + the "Settings Режим" diagram subgraph),
+      and `tools/migrate_runners.py`. **Retired all 4 stale demos** (`component_demo`, `dependency_demo`, `config_demo`,
+      `utilities_demo` — built around the removed optional-components model; user-confirmed) + fixed `examples/__init__.py`.
+      **Verified:** `irene.runners`/`irene.examples` import clean; the 3 remaining runner scripts (cli/webapi/vosk) resolve;
+      no stale `ComponentConfig` kwargs remain in `irene/` (the residual `audio_output`/`microphone` hits are device-cap
+      dict keys, device enumeration, and the intentional v13→v14 migration reader); 0 net suite regressions.
 
 - [x] **QUAL-22** [PEX] (P2) — **DONE 2026-06-03 (removed; resolved within QUAL-11 Stage E).** Chose *remove* over
       *finish*: the stub was dead since inception and real capability/room-aware disambiguation needs registered devices

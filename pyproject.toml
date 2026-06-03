@@ -174,7 +174,6 @@ irene-vad-recording-test = "irene.tools.vad_recording_test:cli_main"
 irene-cli = "irene.runners.cli:run_cli"
 irene-webapi = "irene.runners.webapi_runner:run_webapi"
 irene-vosk = "irene.runners.vosk_runner:run_vosk"
-irene-settings = "irene.runners.settings_runner:run_settings"
 
 # ============================================================
 # ENTRY-POINTS CATALOG - Provider Discovery System
@@ -271,7 +270,6 @@ web = "irene.inputs.web:WebInput"
 cli = "irene.runners.cli:CLIRunner"
 vosk = "irene.runners.vosk_runner:VoskRunner"
 webapi = "irene.runners.webapi_runner:WebAPIRunner"
-settings = "irene.runners.settings_runner:SettingsManagerRunner"
 
 [tool.setuptools.packages.find]
 where = ["."]

@@ -1362,14 +1362,6 @@ graph TB
         VT_INT8[INT8 optimization<br/>TODO #14 завершено]
     end
     
-    subgraph "⚙️ Settings Режим"
-        Settings_Runner[SettingsManagerRunner]
-        Settings_GUI[GUI для intent config]
-        Settings_Train[NLU model training]
-        Settings_Context[Context management]
-        Settings_Build[Build analysis<br/>TODO #3]
-    end
-    
     CLI_Runner --> CLI_Interactive
     CLI_Runner --> CLI_Single
     CLI_Runner --> CLI_Context
@@ -1390,19 +1382,12 @@ graph TB
     VT_Runner --> VT_Callback
     VT_Runner --> VT_INT8
     
-    Settings_Runner --> Settings_GUI
-    Settings_Runner --> Settings_Train
-    Settings_Runner --> Settings_Context
-    Settings_Runner --> Settings_Build
-    
     style Voice_Runner fill:#e8f5e8,stroke:#4caf50,stroke-width:3px
     style CLI_Runner fill:#e3f2fd
     style Web_Runner fill:#fff3e0
     style VT_Runner fill:#ffcdd2
-    style Settings_Runner fill:#fce4ec
     style Voice_Keyword fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
     style Web_Binary fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
-    style Settings_Build fill:#e1f5fe,stroke:#01579b,stroke-width:2px
 ```
 
 ### 8.2 Команды запуска v15.0.0
@@ -1426,11 +1411,6 @@ python -m irene.runners.webapi_runner --enable-binary-ws  # TODO #10
 # Voice Trigger сервис с INT8 optimization
 python -m irene.runners.voice_trigger
 python -m irene.runners.voice_trigger --provider microwakeword --threshold 0.8 --int8-optimized
-
-# Build analysis и management
-python -m irene.runners.settings_runner
-python -m irene.runners.settings_runner --analyze-build --config config-minimal.toml  # TODO #3
-python -m irene.runners.settings_runner --train-nlu --keyword-donation  # TODO #4
 ```
 
 ---

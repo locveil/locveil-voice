@@ -12,6 +12,18 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-03
+- **QUAL-21 DONE — settings-runner `ComponentConfig` crash-bug resolved by REMOVAL (user decision).** The
+  `irene-settings` Gradio runner constructed `ComponentConfig(audio_output=…, microphone=…, web_api=…)` — fields
+  removed in the architecture migration (mic/web → `config.inputs.*` / `config.system.web_api_enabled`,
+  `audio_output`→`audio`) → crash on launch. User judged the runner obsolete ("garbage") → **removed** rather than
+  fixed: config management is now config-ui's TOML editor / direct file edits. Deleted `settings_runner.py` (462 LOC)
+  + both pyproject registrations + `runners/__init__.py` exports; scrubbed README, `architecture.md` (usage block +
+  the "Settings Режим" Mermaid subgraph), `tools/migrate_runners.py`. **Retired all 4 stale demo examples**
+  (`component_demo`/`dependency_demo`/`config_demo`/`utilities_demo` — they demoed the removed optional-components
+  model; user picked "retire all 4" via AskUserQuestion) and fixed `examples/__init__.py` (it imported `config_demo`).
+  Verified: runners + examples import clean, the 3 remaining runner scripts resolve, no stale `ComponentConfig` kwargs
+  remain in `irene/` (the leftover `audio_output`/`microphone` hits are device-capability keys / device enumeration /
+  the intentional v13→v14 migration reader), 0 net suite regressions. Net −~900 LOC of dead runner+demo code.
 - **QUAL-37 [DFLOW] DONE — targeted no-intent clarification (offline path).** The signal
   (`_fallback_context.likely_domain`, computed by `_create_fallback_intent`) was already consumed on the ONLINE path
   (QUAL-16's `_build_fallback_context_prompt` injects the guessed topic into the LLM prompt); the gap was the OFFLINE
