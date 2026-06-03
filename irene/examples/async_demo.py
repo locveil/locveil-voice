@@ -13,6 +13,7 @@ import logging
 from pathlib import Path
 
 from ..core.engine import AsyncVACore
+from ..runners.composition import build_core
 from ..core.session_manager import SessionManager
 from ..config.models import CoreConfig, API_PROFILE
 from ..inputs.cli import CLIInput
@@ -48,7 +49,7 @@ async def async_demo():
     )
     
     # Initialize core engine
-    core = AsyncVACore(config)
+    core = build_core(config)
     
     try:
         print("📡 Starting Irene async core...")

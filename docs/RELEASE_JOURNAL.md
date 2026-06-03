@@ -12,6 +12,17 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-03
+- **ARCH-11 S3 DONE — construction inversion (edge 4 removed; all 4 edges now done).** Topology was friendly: a single
+  production instantiation (`runners/base.py:85`, inherited by every runner) plus two `examples/` demos. Added the
+  composition root `irene/runners/composition.build_core(config, config_path)` which constructs ALL 7 managers
+  (component/plugin/input/context/timer/metrics/workflow, preserving the original dependency order — input/workflow need the
+  component manager) and injects them into `AsyncVACore`. `AsyncVACore.__init__` is now keyword-only DI and constructs
+  nothing; it **no longer imports `inputs.manager`** (edge 4) **nor `plugins.manager`** (bonus: `core→plugins` gone, which
+  de-risks ARCH-13) — those two outward managers are typed `Any` in core so the edge stays out. Routed `runners/base.py` +
+  both demos through `build_core`. Verified: zero `core→{inputs,plugins}` imports remain, `build_core(CoreConfig())`
+  assembles a core with all 7 managers wired, import-linter **7/7 kept**, suite **85=85 FAILED** (0 net regression).
+  NEXT = S4 — add the import-linter contracts forbidding `core→{inputs,workflows,components}.base` and remove the ARCH-5
+  exemptions, which *locks* the whole inversion so it can't silently regress.
 - **ARCH-11 S2 DONE — Component + Workflow ports into `core/interfaces` (edges 2 & 3 removed).** Both `Component` (400 LOC)
   and `Workflow` (257 LOC) turned out to be fat *shared concrete bases* (provider switching, DI, health — `name`/`providers`/
   `initialized` are `__init__` attrs), not thin interfaces, and `core` had **no `isinstance(Component/Workflow)`** checks and

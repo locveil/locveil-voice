@@ -7,19 +7,22 @@ with optional audio/TTS components.
 
 import asyncio
 import logging
-from typing import Optional
+from typing import Optional, Any
 from dataclasses import dataclass
 from pathlib import Path
 
-from ..config.models import CoreConfig, ComponentConfig
-from ..plugins.manager import AsyncPluginManager
-from ..inputs.manager import InputManager
+from ..config.models import CoreConfig
 from ..intents.context import ContextManager
 from .timers import AsyncTimerManager
-
 from .components import ComponentManager
 from .workflow_manager import WorkflowManager
-from .metrics import get_metrics_collector  # Phase 2: Replaced AnalyticsManager
+from .metrics import MetricsCollector
+
+# NOTE (ARCH-11 / S3): the delivery-layer InputManager (inputs) and the legacy
+# AsyncPluginManager (plugins) are intentionally NOT imported here — `core` must
+# not depend outward. They are constructed by the composition root
+# (`irene/runners/composition.build_core`) and injected; typed `Any` to keep the
+# edge out of `core`.
 
 logger = logging.getLogger(__name__)
 
@@ -49,20 +52,33 @@ class AsyncVACore:
     - Concurrent request handling
     """
     
-    def __init__(self, config: CoreConfig, config_path: Optional[Path] = None):
+    def __init__(
+        self,
+        config: CoreConfig,
+        *,
+        component_manager: ComponentManager,
+        plugin_manager: Any,
+        input_manager: Any,
+        context_manager: ContextManager,
+        timer_manager: AsyncTimerManager,
+        metrics_collector: MetricsCollector,
+        workflow_manager: WorkflowManager,
+        config_path: Optional[Path] = None,
+    ):
+        """ARCH-11 / S3: managers are built by the composition root and injected.
+
+        Use `irene.runners.composition.build_core(config, config_path)` to
+        construct a fully-wired core; do not construct managers here.
+        """
         self.config = config
         self.config_path = config_path  # Store config path for component access
-        self.component_manager = ComponentManager(config)
-        self.plugin_manager = AsyncPluginManager()
-        self.input_manager = InputManager(self.component_manager, config.inputs)
-        self.context_manager = ContextManager(  # QUAL-36: seed sessions from the one canonical language source
-            default_language=config.default_language,
-            supported_languages=config.supported_languages,
-        )
-        self.timer_manager = AsyncTimerManager()
-        self.metrics_collector = get_metrics_collector()  # Phase 2: Unified metrics through MetricsCollector
-
-        self.workflow_manager = WorkflowManager(self.component_manager, config)  # NEW: Unified workflow manager
+        self.component_manager = component_manager
+        self.plugin_manager = plugin_manager
+        self.input_manager = input_manager
+        self.context_manager = context_manager
+        self.timer_manager = timer_manager
+        self.metrics_collector = metrics_collector
+        self.workflow_manager = workflow_manager
         self._running = False
         
     async def start(self) -> None:

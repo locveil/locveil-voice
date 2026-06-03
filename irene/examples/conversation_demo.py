@@ -23,6 +23,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from irene.core.engine import AsyncVACore
+from irene.runners.composition import build_core
 from irene.core.session_manager import SessionManager
 from irene.intents.context_models import UnifiedConversationContext
 # CommandResult removed - use IntentResult instead
@@ -58,7 +59,7 @@ class ConversationDemoRunner:
         config = Config()
         
         # Initialize core
-        self.core = AsyncVACore(config)
+        self.core = build_core(config)
         await self.core.start()
         
         # Load conversation handler

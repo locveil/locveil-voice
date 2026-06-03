@@ -334,8 +334,15 @@ See `docs/review/phase1_architecture_map.md` §5.
       `Workflow(WorkflowPort)`); `core/components.py` + `core/workflow_manager.py` type against the ports (incl. the runtime
       `issubclass(WorkflowPort)` discovery gate); `RequestContext` now imported inward from `intents.context_models` directly.
       **Edges 2 & 3 removed** (`core→components.base`, `core→workflows.base` — verified zero remaining core imports of either).
-      3 of 4 edges done. Verified: import-linter 7/7 kept, suite 85=85 FAILED (0 net regression). NEXT = S3 (construction
-      inversion: managers→composition/runners, AsyncVACore port-typed — edge 4). _Original below._
+      3 of 4 edges done. Verified: import-linter 7/7 kept, suite 85=85 FAILED (0 net regression). **✓ S3 DONE 2026-06-03** —
+      construction inversion. New composition root `irene/runners/composition.build_core(config, config_path)` constructs ALL
+      7 managers (component/plugin/input/context/timer/metrics/workflow) and injects them into `AsyncVACore`, whose `__init__`
+      is now keyword-only DI and constructs nothing. `engine.py` no longer imports `inputs.manager` (**edge 4 removed**) nor
+      `plugins.manager` (bonus — `core→plugins` gone, eases ARCH-13); the two outward managers are typed `Any` in core to keep
+      the edge out. Single production call site `runners/base.py` + the 2 `examples/` demos route through `build_core`.
+      **ALL 4 EDGES REMOVED.** Verified: zero `core→{inputs,plugins}` imports, `build_core` assembles a working core,
+      import-linter 7/7 kept, suite 85=85 FAILED (0 net regression). NEXT = S4 (add import-linter contracts forbidding
+      `core→{inputs,workflows,components}.base` + remove the ARCH-5 exemptions — locks the inversion). _Original below._
       (which deemed them "legitimate composition-root behavior" and
       left them unenforced; user reverses that 2026-06-02). Edges: `core.{engine,workflow_manager}→inputs.base`,
       `core.workflow_manager→workflows.base`, `core.components→components.base`. **Fix = invert via DI/ports:** the

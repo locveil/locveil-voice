@@ -17,6 +17,7 @@ from dataclasses import dataclass
 from ..config.models import CoreConfig, ComponentConfig, LogLevel
 from ..config.manager import ConfigManager
 from ..core.engine import AsyncVACore
+from .composition import build_core
 from ..utils.logging import setup_logging
 
 
@@ -82,7 +83,7 @@ class BaseRunner(ABC):
             config = await self._create_and_validate_config(parsed_args)
             
             # 7. Create and start assistant core
-            self.core = AsyncVACore(config, config_path=parsed_args.config)
+            self.core = build_core(config, config_path=parsed_args.config)
             
             if not getattr(parsed_args, 'quiet', False):
                 self._logger.info(f"Initializing Irene in {self.runner_config.name} mode...")
