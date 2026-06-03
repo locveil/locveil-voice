@@ -53,3 +53,6 @@ version: |
   🔧 Component-based architecture
 
   Built with modern Python async/await patterns.
+command_error: Sorry, there was an error executing the system command.
+language_unsupported: Only Russian and English languages are supported.
+language_changed: Language changed to English.

@@ -771,16 +771,22 @@ _Apply to every remediation task below (from the 4 review docs + QUAL-25/26). So
       no-stomp; suite at baseline parity (0 regressions). **Carve-out → QUAL-38:** processing-language defaults (number-spelling
       utils / silero TTS / ASR / text-processor) + inline bilingual handler messages (`== 'ru'` branches) are a distinct
       concern, filed separately. Refs: `RELEASE_JOURNAL.md` 2026-06-03, QUAL-16.
-- [ ] **QUAL-38** `[deferred]` [DFLOW][I18N] (P2) — **Processing-language threading + inline-bilingual purge (carved from
-      QUAL-36).** Two residuals distinct from the *session*-language source-of-truth (now done): **(a) processing-language
-      defaults** — `utils/text_processing.py` (`all_num_to_text` et al.), `utils/text_normalizers.py`, `text_processor_
-      component.convert_numbers_to_words`, `providers/tts/silero_v3|v4` (`language="ru"`), `asr_component` transcription
-      language — these take a *number-spelling / synthesis / transcription* language that should derive from the pipeline/
-      synthesis context, not a literal (TTS/ASR/text-proc subsystem threading; QUAL-13 family). **(b) inline bilingual
-      messages** — ~33 `context.language == 'ru'` branches across handlers select hardcoded RU/EN strings inline
-      (localization debt) vs provider language-conditional logic (legitimate); externalize the handler messages to
-      templates. Done when: number/synthesis language is threaded from context, and handler user-facing strings are
-      externalized (provider-internal `== 'ru'` logic may remain).
+- [x] **QUAL-38** `[deferred]` [DFLOW][I18N] (P2) — **Processing-language threading + inline-bilingual purge (carved from
+      QUAL-36). DONE 2026-06-03.** **Key correction:** the processing language is the **audio-MODEL/deployment** language
+      (which number-spelling/transcription rules to apply), NOT the session language — spelling numbers in the session
+      language but synthesizing with a different-language voice would mismatch. So the fix is **config/model-derive**, not
+      request-threading (which would introduce that bug; the QUAL-13 "request-scoped" comment was the gap). **(a) delivered:**
+      `convert_numbers_to_words` made language-required (caller threads `request.language`); `PrepareNormalizer` gets a config
+      `language` (was falling back to inline `"ru"`); `unified.py` threads the per-normalizer deployment language to both
+      number normalizers; `silero_v3|v4` derive `self.language` from model config (default model is `*_ru.pt` → `"ru"`);
+      `asr_component` transcribe endpoint resolves to `self.default_language` not a literal. (Library `utils/text_processing.py`
+      defaults + the Pydantic request-schema `"ru"` defaults left as documented API/library defaults.) **(b) delivered:**
+      externalized the genuine inline RU/EN strings — **voice_synthesis (6)** → `voice_synthesis_handler` templates,
+      **system (3)** → `system_handler` templates, **provider_control (5)** → NEW `provider_control_handler` templates + a
+      `_get_template` method; unified **random_handler (3)** error templates (added `{error}` to the ru side, dropped the
+      `== 'ru'` branch). **Kept (legitimate, per done-criteria):** `system_service_handler` Russian pluralization grammar
+      (strings already templated), and Russian command-keyword *parsing*. **Verified:** templates load + resolve ru/en; 0 net
+      suite regressions. Done: processing language derives from model/config; handler user-facing strings externalized.
 - [ ] **QUAL-37** `[deferred]` [DFLOW] (P2) — **Targeted no-intent clarification (enhancement; split from QUAL-30).**
       runtime and defeat the installation-agnostic design. **Findings:** (T1) context-ignoring hardcodes — `timer._get_
       language()` ignores `context.language` entirely (Cyrillic-sniff heuristic → `return "ru"`); `context.py:86` seeds

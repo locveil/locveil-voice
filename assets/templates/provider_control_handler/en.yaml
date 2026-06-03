@@ -1,0 +1,6 @@
+# English templates for provider_control_handler (externalized from inline bilingual strings, QUAL-38).
+all_providers_header: "All available providers:"
+provider_switched: Switched to {component_type} provider {provider_name}
+provider_unavailable: "Provider {provider_name} not available. Available: {available}"
+provider_switch_error: 'Error switching provider: {error}'
+provider_control_error: 'Provider control error: {error}'

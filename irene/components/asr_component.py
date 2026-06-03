@@ -521,11 +521,14 @@ class ASRComponent(Component, ASRPlugin, WebAPIPlugin):
         async def transcribe_audio_file(
             audio: UploadFile = File(...),
             provider: Optional[str] = None,
-            language: str = "ru",
+            language: Optional[str] = None,
             enhance: bool = False
         ):
             """Transcribe uploaded audio file - NEW CAPABILITY!"""
             provider_name = provider or self.default_provider
+            # QUAL-38: unspecified transcription language resolves to the component's configured
+            # default (set from config), not a hardcoded "ru".
+            language = language or self.default_language
             
             if provider_name not in self.providers:
                 raise HTTPException(404, f"Provider '{provider_name}' not available")

@@ -12,6 +12,23 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-03
+- **QUAL-38 [DFLOW][I18N] DONE — processing-language config-derive + inline-bilingual externalization (carved from QUAL-36).**
+  **Key correction during reconciliation:** the carve-out spec framed (a) as "thread from context", but the processing
+  language is the **audio-MODEL/deployment** language (which number-spelling/transcription rules to apply), NOT the session
+  language — spelling numbers in the session language while synthesizing with a different-language voice would mismatch.
+  So the correct (and lighter) fix is **config/model-derive**, not a request-threading refactor of the QUAL-13 pipeline
+  (which would have introduced that bug; the pipeline's "language is request-scoped in principle" comment was the gap, now
+  corrected). **(a)** `convert_numbers_to_words` → language-required (caller already threads `request.language`);
+  `PrepareNormalizer` gains a config `language` and stops falling back to inline `"ru"`; `unified.py` threads the per-normalizer
+  deployment language to both number normalizers; `silero_v3|v4` derive `self.language` from model config (default `*_ru.pt`
+  → ru); `asr_component` transcribe endpoint resolves to `self.default_language`. Left the standalone `utils/text_processing.py`
+  library defaults and the Pydantic request-schema `"ru"` defaults as documented library/API defaults. **(b)** Re-classified
+  the ~33 `== 'ru'` branches: the genuine **inline RU/EN strings** were only in 4 handlers — externalized voice_synthesis (6)
+  + system (3) + provider_control (5, NEW template dir + a `_get_template` method) to template assets, and unified
+  random_handler (3) by adding `{error}` to the ru templates so the `== 'ru'` arg-branch could go. **Kept as legitimate**
+  (done-criteria allows): `system_service_handler` Russian **pluralization grammar** (the strings were already templated; the
+  branch only computes plural suffixes) and the Russian command-keyword **parsing** in voice_synthesis. **Verified:** all new
+  templates load + resolve in ru/en; precise mine-vs-baseline diff = **0 new failures**. Closes the QUAL-36 carve-out.
 - **QUAL-36 [DFLOW][I18N] DONE — single language source-of-truth; hardcoded `"ru"` purged from the session path.**
   **Reconciliation found the spec was incomplete:** not one language source but FOUR competing declarations
   (`CoreConfig.language="en-US"` in locale form *and* actually consumed; `nlu.default_language`/`supported_languages`;

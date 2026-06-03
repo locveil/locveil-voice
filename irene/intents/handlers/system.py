@@ -138,7 +138,7 @@ class SystemIntentHandler(IntentHandler):
             logger.error(f"System intent execution failed: {e}")
             language = context.language
             return IntentResult(
-                text="Извините, произошла ошибка при выполнении системной команды." if language == "ru" else "Sorry, there was an error executing the system command.",
+                text=self._get_template("command_error", language),
                 should_speak=True,
                 success=False,
                 error=str(e)
@@ -314,8 +314,7 @@ class SystemIntentHandler(IntentHandler):
         # Validate against the canonical supported set carried on the session (QUAL-36) — no baked ["ru","en"]
         if not target_language or target_language not in context.supported_languages:
             return IntentResult(
-                text="Поддерживаются только русский и английский языки." if context.language == 'ru'
-                     else "Only Russian and English languages are supported.",
+                text=self._get_template("language_unsupported", context.language),
                 should_speak=True
             )
         
@@ -336,7 +335,8 @@ class SystemIntentHandler(IntentHandler):
             context.language = target_language
             context.user_preferences['language'] = target_language
         
-        response = "Язык изменён на русский." if target_language == 'ru' else "Language changed to English."
+        # Announce the switch IN the target language (template keyed by target_language).
+        response = self._get_template("language_changed", target_language)
         
         return IntentResult(
             text=response,

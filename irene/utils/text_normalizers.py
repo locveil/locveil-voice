@@ -72,13 +72,16 @@ class PrepareNormalizer:
     Stage logic removed - providers decide when to use this normalizer.
     """
     
-    def __init__(self, options: Optional[Dict[str, Any]] = None):
+    def __init__(self, options: Optional[Dict[str, Any]] = None, language: str = "ru"):
         """
         Initialize prepare normalizer with configurable options.
-        
+
         Args:
             options: Configuration options for normalization behavior
+            language: Deployment number-spelling language (QUAL-38) — used when this normalizer
+                does inline number conversion, so it doesn't fall back to a hardcoded "ru".
         """
+        self.language = language
         # Default options matching the original plugin
         self.options = options or {
             "changeNumbers": "process",
@@ -153,7 +156,7 @@ class PrepareNormalizer:
         if self.options['changeNumbers'].lower() == 'process':
             try:
                 from .text_processing import all_num_to_text_async
-                return await all_num_to_text_async(text)
+                return await all_num_to_text_async(text, self.language)
             except ImportError as e:
                 logger.error(f"Failed to import number conversion function: {e}")
                 return text

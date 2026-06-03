@@ -1,0 +1,6 @@
+# Russian templates for provider_control_handler (externalized from inline bilingual strings, QUAL-38).
+all_providers_header: "Все доступные провайдеры:"
+provider_switched: Переключился на {component_type} провайдер {provider_name}
+provider_unavailable: "Провайдер {provider_name} недоступен. Доступные: {available}"
+provider_switch_error: 'Ошибка переключения провайдера: {error}'
+provider_control_error: 'Ошибка управления провайдерами: {error}'

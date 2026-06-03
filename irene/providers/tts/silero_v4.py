@@ -53,6 +53,8 @@ class SileroV4TTSProvider(TTSProvider):
             
         self.model_url = config.get("model_url", "https://models.silero.ai/models/tts/ru/v4_ru.pt")
         self.model_file = self.model_path / config.get("model_file", "v4_ru.pt")
+        # QUAL-38: number-spelling language matches the loaded MODEL (default model is Russian).
+        self.language = config.get("language", "ru")
         self.default_speaker = config.get("default_speaker", "xenia")
         self.sample_rate = config.get("sample_rate", 48000)
         self.torch_device = config.get("torch_device", "cpu")
@@ -296,7 +298,7 @@ class SileroV4TTSProvider(TTSProvider):
         # Modern number-to-text conversion using migrated utilities
         try:
             from ...utils.text_processing import all_num_to_text_async
-            normalized = await all_num_to_text_async(normalized, language="ru")
+            normalized = await all_num_to_text_async(normalized, language=self.language)
             logger.debug("Applied number-to-text normalization")
         except Exception as e:
             logger.debug(f"Text normalization failed, using original: {e}")

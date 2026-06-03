@@ -175,7 +175,7 @@ class RandomIntentHandler(IntentHandler):
             )
             
         except ValueError as e:
-            error_msg = self._get_template("invalid_dice_params", language) if language == "ru" else self._get_template("invalid_dice_params", language, error=str(e))
+            error_msg = self._get_template("invalid_dice_params", language, error=str(e))
             return IntentResult(
                 text=error_msg,
                 should_speak=True,
@@ -219,7 +219,7 @@ class RandomIntentHandler(IntentHandler):
             )
             
         except ValueError as e:
-            error_msg = self._get_template("invalid_number_range", language) if language == "ru" else self._get_template("invalid_number_range", language, error=str(e))
+            error_msg = self._get_template("invalid_number_range", language, error=str(e))
             return IntentResult(
                 text=error_msg,
                 should_speak=True,
@@ -265,7 +265,7 @@ class RandomIntentHandler(IntentHandler):
             )
             
         except ValueError as e:
-            error_msg = self._get_template("choice_error", language) if language == "ru" else self._get_template("choice_error", language, error=str(e))
+            error_msg = self._get_template("choice_error", language, error=str(e))
             return IntentResult(
                 text=error_msg,
                 should_speak=True,

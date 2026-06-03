@@ -13,9 +13,9 @@ dice_results:
 - Выпало шесть
 random_number: 'Случайное число: {number}'
 random_choice: 'Выбрано: {choice}'
-invalid_dice_params: Некорректные параметры кубика
-invalid_number_range: Некорректный диапазон чисел
+invalid_dice_params: 'Некорректные параметры кубика: {error}'
+invalid_number_range: 'Некорректный диапазон чисел: {error}'
 no_options: Не указаны варианты для выбора
-choice_error: Ошибка при выборе варианта
+choice_error: 'Ошибка при выборе варианта: {error}'
 dice_multiple: 'Выпало: {rolls}'
 dice_with_total: 'Выпало: {rolls} (сумма: {total})'

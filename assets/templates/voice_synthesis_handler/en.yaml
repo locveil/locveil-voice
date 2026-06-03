@@ -10,3 +10,11 @@ provider_switch_failed: TTS provider {provider} not available
 tts_unavailable: TTS component not available
 no_text_error: No text to speak found
 synthesis_error: 'Speech synthesis error: {error}'
+
+# Parse-and-speak responses (externalized from inline bilingual strings, QUAL-38)
+spoke_with_voice: "Spoke '{text}' with voice {voice_name}"
+voice_not_available: Voice {voice_name} not available
+spoke_default_voice: "Spoke '{text}' with default voice"
+spoke_text: "Spoke '{text}'"
+command_processing_error: 'Command processing error: {error}'
+command_not_recognized: Could not recognize command

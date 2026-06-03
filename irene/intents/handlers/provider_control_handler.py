@@ -163,10 +163,7 @@ class ProviderControlIntentHandler(IntentHandler):
         # Determine language
         language = context.language
         
-        if language == "ru":
-            info_parts.append("Все доступные провайдеры:")
-        else:
-            info_parts.append("All available providers:")
+        info_parts.append(self._get_template("all_providers_header", language))
         
         info_parts.append("")
         
@@ -198,25 +195,16 @@ class ProviderControlIntentHandler(IntentHandler):
             success = component.set_default_provider(provider_name)
             
             if success:
-                if language == "ru":
-                    message = f"Переключился на {component_type} провайдер {provider_name}"
-                else:
-                    message = f"Switched to {component_type} provider {provider_name}"
+                message = self._get_template("provider_switched", language, component_type=component_type, provider_name=provider_name)
             else:
                 available = ", ".join(component.providers.keys()) if hasattr(component, 'providers') else "unknown"
-                if language == "ru":
-                    message = f"Провайдер {provider_name} недоступен. Доступные: {available}"
-                else:
-                    message = f"Provider {provider_name} not available. Available: {available}"
+                message = self._get_template("provider_unavailable", language, provider_name=provider_name, available=available)
                     
             return success, message
             
         except Exception as e:
             logger.error(f"Error switching {component_type} provider to {provider_name}: {e}")
-            if language == "ru":
-                return False, f"Ошибка переключения провайдера: {e}"
-            else:
-                return False, f"Error switching provider: {e}"
+            return False, self._get_template("provider_switch_error", language, error=e)
     
     def _get_component_providers_info(self, component, component_type: str) -> str:
         """Get provider info for specific component"""
@@ -355,12 +343,8 @@ class ProviderControlIntentHandler(IntentHandler):
     def _error_result(self, context: UnifiedConversationContext, error: str) -> IntentResult:
         """Create error result with language awareness"""
         language = context.language
-        
-        if language == "ru":
-            error_text = f"Ошибка управления провайдерами: {error}"
-        else:
-            error_text = f"Provider control error: {error}"
-        
+        error_text = self._get_template("provider_control_error", language, error=error)
+
         return IntentResult(
             text=error_text,
             should_speak=True,
@@ -370,7 +354,27 @@ class ProviderControlIntentHandler(IntentHandler):
             },
             success=False
         )
-    
+
+    def _get_template(self, template_name: str, language: str, **format_args) -> str:
+        """Get template from asset loader - raises a fatal error if not available (QUAL-38:
+        provider-control responses are externalized like every other handler's)."""
+        if not self.has_asset_loader():
+            raise RuntimeError(
+                f"ProviderControlIntentHandler: Asset loader not initialized. "
+                f"Cannot access template '{template_name}' for language '{language}'."
+            )
+        template_content = self.asset_loader.get_template("provider_control", template_name, language)
+        if template_content is None:
+            raise RuntimeError(
+                f"ProviderControlIntentHandler: Required template '{template_name}' for language "
+                f"'{language}' not found in assets/templates/provider_control_handler/{language}.yaml."
+            )
+        try:
+            return template_content.format(**format_args)
+        except (KeyError, ValueError) as e:
+            raise RuntimeError(f"ProviderControlIntentHandler: template '{template_name}' format error: {e}")
+
+
     # Build dependency methods (TODO #5 Phase 2)
     # Configuration metadata: No configuration needed
     # This handler uses component registry and asset loader for provider mappings

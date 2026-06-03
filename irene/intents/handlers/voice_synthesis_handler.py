@@ -384,40 +384,22 @@ class VoiceSynthesisIntentHandler(IntentHandler):
                         params = voice_config.get("params", {})
                         if provider in tts_component.providers:
                             await tts_component.speak(text, provider=provider, **params)
-                            if language == "ru":
-                                return True, f"Сказал '{text}' голосом {voice_name}"
-                            else:
-                                return True, f"Spoke '{text}' with voice {voice_name}"
+                            return True, self._get_template("spoke_with_voice", language, text=text, voice_name=voice_name)
                         else:
-                            if language == "ru":
-                                return False, f"Голос {voice_name} недоступен"
-                            else:
-                                return False, f"Voice {voice_name} not available"
+                            return False, self._get_template("voice_not_available", language, voice_name=voice_name)
                     else:
                         # Use default provider
                         await tts_component.speak(text)
-                        if language == "ru":
-                            return True, f"Сказал '{text}' обычным голосом"
-                        else:
-                            return True, f"Spoke '{text}' with default voice"
+                        return True, self._get_template("spoke_default_voice", language, text=text)
                 else:
                     # No voice specified, use default
                     await tts_component.speak(text)
-                    if language == "ru":
-                        return True, f"Сказал '{text}'"
-                    else:
-                        return True, f"Spoke '{text}'"
-                        
+                    return True, self._get_template("spoke_text", language, text=text)
+
             except Exception as e:
-                if language == "ru":
-                    return False, f"Ошибка обработки команды: {e}"
-                else:
-                    return False, f"Command processing error: {e}"
-        
-        if language == "ru":
-            return False, "Не удалось распознать команду"
-        else:
-            return False, "Could not recognize command"
+                return False, self._get_template("command_processing_error", language, error=e)
+
+        return False, self._get_template("command_not_recognized", language)
     
     def _parse_tts_provider_name(self, command: str) -> str:
         """Extract TTS provider name from command"""

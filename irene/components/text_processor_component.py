@@ -228,8 +228,9 @@ class TextProcessorComponent(Component, TextProcessorPlugin, WebAPIPlugin):
         """Direct access to number normalization (the unified processor's `numbers` normalizer)."""
         return await self._run_normalizer("numbers", text)
 
-    async def convert_numbers_to_words(self, text: str, language: str = "ru") -> str:
-        """Convert numbers in text to words using the shared utility (language-explicit)."""
+    async def convert_numbers_to_words(self, text: str, language: str) -> str:
+        """Convert numbers in text to words using the shared utility (language-explicit; QUAL-38 —
+        the caller threads the pipeline/request language, no hardcoded default)."""
         try:
             return await all_num_to_text_async(text, language)
         except Exception as e:

@@ -60,10 +60,14 @@ class UnifiedTextProcessor(TextProcessingProvider):
                     f"with stage map { {k: sorted(v) for k, v in self.stage_map.items()} }")
 
     def _build_one(self, name: str, nc: Dict[str, Any]):
+        # QUAL-38: a normalizer's language is the DEPLOYMENT/audio-model language (which language's
+        # number-spelling rules to apply), config-driven per normalizer — NOT the session language.
+        # (Spelling numbers in the session language but synthesizing with a different-language voice
+        # would mismatch.) The "ru" fallback is the Russian-first deployment default. The normalizer
+        # routes ru through the dependency-free pure-Python path and non-ru through ovos-number-parser.
+        norm_language = nc.get("language", "ru")
         if name == "numbers":
-            # language is request-scoped in principle (QUAL-36); the normalizer routes ru through the
-            # dependency-free pure-Python path and non-ru through ovos-number-parser.
-            return NumberNormalizer(language=nc.get("language", "ru"))
+            return NumberNormalizer(language=norm_language)
         if name == "prepare":
             opts = {
                 "changeNumbers": nc.get("change_numbers", "process"),
@@ -72,7 +76,7 @@ class UnifiedTextProcessor(TextProcessingProvider):
                 "keepSymbols": nc.get("keep_symbols", r",.?!;:() "),
                 "deleteUnknownSymbols": nc.get("delete_unknown_symbols", True),
             }
-            return PrepareNormalizer(options=opts)
+            return PrepareNormalizer(options=opts, language=norm_language)
         if name == "runorm":
             return RunormNormalizer(options={"modelSize": nc.get("model_size", "small"),
                                              "device": nc.get("device", "cpu")})
