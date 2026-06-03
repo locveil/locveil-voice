@@ -12,6 +12,17 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-03
+- **ASSET-2 DONE — liveness-checked every model download URL; fixed 2 real defects.** Swept all 33 model URLs in
+  `irene/` (range-GET each, judging on bytes-served vs stall per the fake-IP caveat — all hosts resolve into
+  `198.18.0.0/15`, normal). Hosts all healthy: silero.ai served the real 40MB `v4_ru.pt`; alphacephei/vosk, github
+  releases (openWakeWord v0.5.1), openai whisper-CDN, github/spacy-models (3.7.0) all 200/206. **Fixed:** (1) the whisper
+  `tiny` URL had a **truncated 40-char hash** → 404; restored the full 64-char canonical hash (cross-checked against the
+  installed openai-whisper `_MODELS`; the other 6 were correct). (2) silero `v4_en/de/es/fr` were declared but **404** —
+  silero's v4 line is **Russian-only** (`v4_ru` ✓, `v4_ua` exists; western langs stay at v3); trimmed the `silero_v4`
+  catalog to `v4_ru` and documented that non-RU TTS uses `silero_v3` (its en/de/es are live). **Left dead by design →
+  QUAL-19:** microWakeWord's `micro_speech.tflite` (github tflite-micro raw moved) — a TF demo model in a known-placeholder
+  provider, so it's the ESP32/wakeword keep-fix-cut call. Torch.hub hedge not needed (silero healthy). Updated the
+  `irene-stale-models` memory (URL liveness-check now closed). Providers import clean; 0 net suite regressions.
 - **QUAL-34 DONE — declared-but-unconsumed donation params triaged per-handler WITH the user, then wired-or-removed.**
   The user drove the wire-vs-remove call for each of the 19 (and asked good clarifying questions — e.g. confirmed the
   conversation handler is fundamentally raw_text→LLM so its `topic`/`query_topic`/`context_reference` slots add nothing;

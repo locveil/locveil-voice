@@ -106,13 +106,11 @@ class SileroV4TTSProvider(TTSProvider):
     
     @classmethod
     def _get_default_model_urls(cls) -> Dict[str, str]:
-        """Silero v4 model URLs for different languages"""
+        """Silero v4 model URLs. ASSET-2 (verified 2026-06-03): silero's v4 line is Russian-only —
+        v4_en/de/es/fr were declared but 404 (they never shipped; those languages stay at v3). Use the
+        silero_v3 provider for non-Russian TTS (its en/de/es models are live)."""
         return {
             "v4_ru": "https://models.silero.ai/models/tts/ru/v4_ru.pt",
-            "v4_en": "https://models.silero.ai/models/tts/en/v4_en.pt",
-            "v4_de": "https://models.silero.ai/models/tts/de/v4_de.pt",
-            "v4_es": "https://models.silero.ai/models/tts/es/v4_es.pt",
-            "v4_fr": "https://models.silero.ai/models/tts/fr/v4_fr.pt"
         }
     
     async def synthesize_to_file(self, text: str, output_path: Path, **kwargs) -> None:

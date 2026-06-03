@@ -507,7 +507,9 @@ See `docs/review/phase1_architecture_map.md` §5.
       ESP32 firmware subsystem (ESP-IDF nodes/common/tools, embedded microWakeWord model **not committed**,
       binary-WS audio streaming) — functional vs aspirational; the backend **microWakeWord provider is largely a
       placeholder** (stub feature extraction; depends on trained models but training was removed at `886d4d1`;
-      HF model download = **TODO11, still Open**); openWakeWord (works) vs microWakeWord (broken/redundant?);
+      HF model download = **TODO11, still Open**; ASSET-2 also confirmed its hardcoded `micro_speech.tflite` URL
+      (`microwakeword.py:436`, github tflite-micro raw) is **404/moved** — a TF demo model, not a real wakeword model);
+      openWakeWord (works) vs microWakeWord (broken/redundant?);
       residual training dead-code; armv7/embedded build viability (`Dockerfile.armv7`, `embedded-armv7`); ESP32
       docs accuracy. Intersects ASSET-2 (wakeword model URLs). Done when: `docs/review/esp32_wakeword_review.md`
       exists with a **keep/fix/cut** recommendation per piece {ESP32 firmware, microWakeWord, armv7, training refs}.
@@ -880,12 +882,18 @@ _Apply to every remediation task below (from the 4 review docs + QUAL-25/26). So
 
 ### Models & Assets (ASSET)
 - [x] **ASSET-1** — Refresh stale model IDs (Anthropic→Claude 4.x, Whisper large-v3, ElevenLabs multilingual_v2, spaCy 3.8, gpt-4→gpt-4o-mini). → fc85306
-- [ ] **ASSET-2** (P1) — Liveness-check all model download URLs after the pause (`models.silero.ai` → prefer
-      torch.hub as a hedge; openWakeWord v0.5.1; alphacephei vosk). **Caveat:** test **off the VPN/proxy** before
-      declaring any host dead — this network uses fake-IP mode (every host resolves into `198.18.0.0/15`), which is
-      normal; the real failure signal is a connection **stall/ERR**, not the IP. Verified 2026-06-01: silero.ai,
-      alphacephei, github, whisper-CDN and PyPI all reachable and serving real bytes (silero served the real 40MB
-      `v4_ru.pt`), so the "silero flaky/dead" reputation was at least partly the proxy stall, not the host.
+- [x] **ASSET-2** (P1) — **Liveness-checked ALL model download URLs. DONE 2026-06-03.** Swept every model URL in
+      `irene/` (33 → 29 after fixes), range-GET each. **Hosts all healthy** (silero.ai served the real 40MB `v4_ru.pt`;
+      alphacephei/vosk, github releases/openWakeWord v0.5.1, openai whisper-CDN, github/spacy-models all 200/206 serving
+      bytes). **2 real defects fixed:** (1) **whisper `tiny`** had a **truncated 40-char hash** (`whisper.py:85`) → 404;
+      restored the full 64-char canonical hash (the other 6 whisper URLs were correct). (2) **silero v4 `en/de/es/fr`**
+      were declared but **404** — silero's v4 line is **Russian-only** (`v4_ru` ✓, even `v4_ua` exists; the western langs
+      never shipped v4 and stay at v3); trimmed `silero_v4` catalog to `v4_ru` and pointed non-RU TTS at `silero_v3`
+      (its en/de/es models are live). **1 dead URL left, by design → QUAL-19:** the microWakeWord `micro_speech.tflite`
+      (`microwakeword.py:436`, github `tensorflow/tflite-micro` raw path moved) — but that provider is a known placeholder
+      (stub feature-extraction; a TF *demo* model, not a real wakeword model), so it's the ESP32/wakeword review's
+      keep-fix-cut call, not a URL patch. **Caveat honored:** network is fake-IP mode (all hosts → `198.18.0.0/15`,
+      normal); judged on bytes-served vs stall, not the IP. **Torch.hub hedge:** unneeded — `models.silero.ai` is healthy.
 - [x] **ASSET-3** (P2) — **DONE 2026-06-03 (with QUAL-13 Stage 1).** Migrated `lingua-franca` (abandoned MycroftAI git
       pin) → **`ovos-number-parser>=0.5.1`** (maintained OVOS successor, on PyPI, pure-Python → no armv7 wheel concern).
       Investigation found irene's real usage was tiny (`pronounce_number` + the stateless successor needs `lang=` per
