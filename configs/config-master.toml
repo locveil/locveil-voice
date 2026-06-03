@@ -431,7 +431,7 @@ latency_threshold_ms = 5.0          # Alert threshold for disambiguation latency
 # Intent handler configuration
 [intent_system.handlers]
 enabled = ["conversation", "greetings", "timer", "datetime", "system", "text_enhancement_handler"]  # Enabled handlers
-disabled = ["train_schedule"]       # Disabled handlers
+disabled = []                       # Disabled handlers
 auto_discover = true               # Automatically discover handlers
 discovery_paths = ["irene.intents.handlers"]  # Entry-point discovery paths
 
@@ -449,12 +449,6 @@ max_sessions = 50                  # Maximum concurrent sessions
 max_context_length = 10            # Maximum conversation context length
 default_conversation_confidence = 0.6  # Default confidence threshold
 
-[intent_system.handlers.train_schedule]
-api_key = "${YANDEX_SCHEDULES_API_KEY}"  # Yandex Schedules API key
-from_station = "s9600681"          # Default departure station ID
-to_station = "s2000002"            # Default destination station ID
-max_results = 3                    # Maximum schedule results
-request_timeout = 10               # API request timeout in seconds
 
 [intent_system.handlers.timer]
 min_seconds = 1                    # Minimum timer duration in seconds

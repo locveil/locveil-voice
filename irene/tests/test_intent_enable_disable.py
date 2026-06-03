@@ -69,10 +69,10 @@ class TestIntentHandlerConfiguration:
         # Test disabled fallback handler
         with pytest.raises(ValueError, match="Fallback intent handler .* is not enabled"):
             IntentSystemConfig(
-                fallback_intent="train_schedule.general",
+                fallback_intent="audio_playback.general",
                 handlers=IntentHandlerListConfig(
                     enabled=["conversation", "timer"],
-                    disabled=["train_schedule"]
+                    disabled=["audio_playback"]
                 )
             )
     

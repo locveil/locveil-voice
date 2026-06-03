@@ -107,37 +107,10 @@
         },
         {
           "text": "let's talk about music",
-          "parameters": {
-            "topic": "music"
-          }
+          "parameters": {}
         }
       ],
-      "parameters": [
-        {
-          "name": "topic",
-          "description": "Conversation topic",
-          "extraction_patterns": [
-            {
-              "pattern": [
-                {
-                  "LOWER": {
-                    "IN": [
-                      "about"
-                    ]
-                  }
-                },
-                {
-                  "IS_ALPHA": true
-                }
-              ],
-              "label": "TOPIC"
-            }
-          ],
-          "aliases": [
-            "subject"
-          ]
-        }
-      ]
+      "parameters": []
     },
     {
       "method_name": "_handle_end_conversation",
@@ -282,46 +255,10 @@
       "examples": [
         {
           "text": "what is artificial intelligence",
-          "parameters": {
-            "query_topic": "artificial intelligence"
-          }
+          "parameters": {}
         }
       ],
-      "parameters": [
-        {
-          "name": "query_topic",
-          "description": "Topic or subject to explain",
-          "extraction_patterns": [
-            {
-              "pattern": [
-                {
-                  "IS_ALPHA": true
-                }
-              ],
-              "label": "QUERY_TOPIC"
-            },
-            {
-              "pattern": [
-                {
-                  "TEXT": {
-                    "REGEX": "what|who"
-                  }
-                },
-                {
-                  "TEXT": "is"
-                },
-                {
-                  "IS_ALPHA": true
-                }
-              ],
-              "label": "QUERY_TOPIC"
-            }
-          ],
-          "aliases": [
-            "subject"
-          ]
-        }
-      ]
+      "parameters": []
     },
     {
       "method_name": "_handle_continue_conversation",
@@ -362,28 +299,7 @@
           "parameters": {}
         }
       ],
-      "parameters": [
-        {
-          "name": "context_reference",
-          "description": "Reference to previous conversation context",
-          "extraction_patterns": [
-            {
-              "pattern": [
-                {
-                  "LOWER": {
-                    "IN": [
-                      "that",
-                      "this"
-                    ]
-                  }
-                }
-              ],
-              "label": "CONTEXT_REF"
-            }
-          ],
-          "aliases": []
-        }
-      ]
+      "parameters": []
     }
   ],
   "global_parameters": [

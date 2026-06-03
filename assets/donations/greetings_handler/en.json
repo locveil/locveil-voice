@@ -208,31 +208,10 @@
         },
         {
           "text": "see you later",
-          "parameters": {
-            "return_time": "later"
-          }
+          "parameters": {}
         }
       ],
-      "parameters": [
-        {
-          "name": "return_time",
-          "description": "When planning to return",
-          "extraction_patterns": [
-            {
-              "pattern": [
-                {
-                  "LOWER": "until"
-                },
-                {
-                  "IS_ALPHA": true
-                }
-              ],
-              "label": "RETURN_TIME"
-            }
-          ],
-          "aliases": []
-        }
-      ]
+      "parameters": []
     },
     {
       "method_name": "_handle_welcome",

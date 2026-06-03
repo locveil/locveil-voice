@@ -127,34 +127,10 @@
         },
         {
           "text": "current time in London",
-          "parameters": {
-            "location": "London"
-          }
+          "parameters": {}
         }
       ],
       "parameters": [
-        {
-          "name": "location",
-          "description": "Specific location or timezone",
-          "extraction_patterns": [
-            {
-              "pattern": [
-                {
-                  "LOWER": {
-                    "IN": [
-                      "in"
-                    ]
-                  }
-                },
-                {
-                  "IS_ALPHA": true
-                }
-              ],
-              "label": "LOCATION"
-            }
-          ],
-          "aliases": []
-        },
         {
           "name": "format",
           "description": "Time format preference",
@@ -391,31 +367,10 @@
         },
         {
           "text": "current datetime UTC",
-          "parameters": {
-            "timezone": "UTC"
-          }
+          "parameters": {}
         }
       ],
       "parameters": [
-        {
-          "name": "timezone",
-          "description": "Specific timezone for datetime",
-          "extraction_patterns": [
-            {
-              "pattern": [
-                {
-                  "TEXT": {
-                    "REGEX": "UTC|GMT|[A-Z]{3,4}"
-                  }
-                }
-              ],
-              "label": "TIMEZONE"
-            }
-          ],
-          "aliases": [
-            "zone"
-          ]
-        },
         {
           "name": "format",
           "description": "Datetime format preference",
@@ -447,11 +402,6 @@
     }
   ],
   "global_parameters": [
-    {
-      "name": "timezone",
-      "description": "Timezone for date/time responses",
-      "default_value": "UTC"
-    },
     {
       "name": "language",
       "description": "Response language preference",

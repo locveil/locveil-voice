@@ -1452,7 +1452,7 @@ This section provides a comprehensive, MECE-structured implementation guide for 
 - Asset management integration with working spaCy model download/installation
 - Context processing with ConversationContext enhancements and entity resolution
 - NLU cascading coordination with provider ordering and confidence thresholds
-- JSON donation files for all 6 intent handlers (timer, greetings, conversation, system, datetime, train_schedule)
+- JSON donation files for the intent handlers (timer, greetings, conversation, system, datetime, …)
 - Configuration updates for all TOML files in configs/ directory
 
 **✅ All Critical Blockers Resolved:**

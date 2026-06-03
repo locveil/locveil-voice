@@ -125,38 +125,7 @@
           "parameters": {}
         }
       ],
-      "parameters": [
-        {
-          "name": "file_path",
-          "description": "Path to audio file to play",
-          "extraction_patterns": [
-            {
-              "pattern": [
-                {
-                  "IS_ALPHA": true,
-                  "OP": "+"
-                }
-              ],
-              "label": "FILE_PATH"
-            },
-            {
-              "pattern": [
-                {
-                  "TEXT": {
-                    "REGEX": "play"
-                  }
-                },
-                {
-                  "IS_ALPHA": true,
-                  "OP": "+"
-                }
-              ],
-              "label": "FILE_PATH"
-            }
-          ],
-          "aliases": []
-        }
-      ]
+      "parameters": []
     },
     {
       "method_name": "_handle_stop_audio",

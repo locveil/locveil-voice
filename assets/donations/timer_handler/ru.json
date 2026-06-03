@@ -758,11 +758,5 @@
       ]
     }
   ],
-  "global_parameters": [
-    {
-      "name": "retain",
-      "description": "Сохранять ли состояние между сессиями",
-      "default_value": false
-    }
-  ]
+  "global_parameters": []
 }

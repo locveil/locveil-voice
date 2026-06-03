@@ -699,7 +699,7 @@ class IreneBuildAnalyzer:
         
         [intents.handlers]
         enabled = ["timer", "greetings", "conversation"]
-        disabled = ["train_schedule"]
+        disabled = []
         """
         intents_config = config.get("intents", {})
         

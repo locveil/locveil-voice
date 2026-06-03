@@ -297,29 +297,7 @@
           "parameters": {}
         }
       ],
-      "parameters": [
-        {
-          "name": "return_time",
-          "description": "Когда планируется вернуться",
-          "extraction_patterns": [
-            {
-              "pattern": [
-                {
-                  "LOWER": "до"
-                },
-                {
-                  "IS_ALPHA": true
-                }
-              ],
-              "label": "RETURN_TIME"
-            }
-          ],
-          "aliases": [
-            "когда",
-            "время"
-          ]
-        }
-      ]
+      "parameters": []
     },
     {
       "method_name": "_handle_welcome",

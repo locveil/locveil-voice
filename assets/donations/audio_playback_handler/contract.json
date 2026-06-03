@@ -23,14 +23,7 @@
       "intent_suffix": "play",
       "boost": 1.3,
       "room_context": "none",
-      "parameters": [
-        {
-          "name": "file_path",
-          "type": "string",
-          "required": false,
-          "entity_type": "generic"
-        }
-      ]
+      "parameters": []
     },
     {
       "method_name": "_handle_stop_audio",

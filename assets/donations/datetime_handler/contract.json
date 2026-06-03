@@ -16,12 +16,6 @@
       "room_context": "none",
       "parameters": [
         {
-          "name": "location",
-          "type": "string",
-          "required": false,
-          "entity_type": "generic"
-        },
-        {
           "name": "format",
           "type": "choice",
           "required": false,
@@ -72,12 +66,6 @@
       "room_context": "none",
       "parameters": [
         {
-          "name": "timezone",
-          "type": "string",
-          "required": false,
-          "entity_type": "generic"
-        },
-        {
           "name": "format",
           "type": "choice",
           "required": false,
@@ -93,12 +81,6 @@
     }
   ],
   "global_parameters": [
-    {
-      "name": "timezone",
-      "type": "string",
-      "required": false,
-      "entity_type": "generic"
-    },
     {
       "name": "language",
       "type": "choice",

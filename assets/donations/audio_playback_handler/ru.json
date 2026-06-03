@@ -201,59 +201,14 @@
         },
         {
           "text": "воспроизведи файл music.mp3",
-          "parameters": {
-            "file_path": "music.mp3"
-          }
+          "parameters": {}
         },
         {
           "text": "включи аудио",
           "parameters": {}
         }
       ],
-      "parameters": [
-        {
-          "name": "file_path",
-          "description": "Путь к аудиофайлу для воспроизведения",
-          "extraction_patterns": [
-            {
-              "pattern": [
-                {
-                  "LEMMA": {
-                    "IN": [
-                      "играть",
-                      "воспроизводить"
-                    ]
-                  }
-                },
-                {
-                  "IS_ALPHA": true,
-                  "OP": "+"
-                }
-              ],
-              "label": "FILE_PATH"
-            },
-            {
-              "pattern": [
-                {
-                  "TEXT": {
-                    "REGEX": "воспроизведи"
-                  }
-                },
-                {
-                  "IS_ALPHA": true,
-                  "OP": "+"
-                }
-              ],
-              "label": "FILE_PATH"
-            }
-          ],
-          "aliases": [
-            "файл",
-            "трек",
-            "песня"
-          ]
-        }
-      ]
+      "parameters": []
     },
     {
       "method_name": "_handle_stop_audio",

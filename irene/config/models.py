@@ -533,15 +533,6 @@ class ConversationHandlerConfig(BaseModel):
     default_conversation_confidence: float = Field(default=0.6, ge=0.0, le=1.0, description="Default confidence threshold")
 
 
-class TrainScheduleHandlerConfig(BaseModel):
-    """Configuration for train schedule intent handler"""
-    api_key: str = Field(default="", description="Yandex Schedules API key")
-    from_station: str = Field(default="s9600681", description="Default departure station ID")
-    to_station: str = Field(default="s2000002", description="Default destination station ID")
-    max_results: int = Field(default=3, ge=1, le=20, description="Maximum schedule results")
-    request_timeout: int = Field(default=10, ge=1, le=60, description="API request timeout in seconds")
-
-
 class TimerHandlerConfig(BaseModel):
     """Configuration for timer intent handler"""
     min_seconds: int = Field(default=1, ge=1, description="Minimum timer duration in seconds")
@@ -716,10 +707,6 @@ class IntentSystemConfig(BaseModel):
         default_factory=ConversationHandlerConfig,
         description="Conversation handler configuration"
     )
-    train_schedule: TrainScheduleHandlerConfig = Field(
-        default_factory=TrainScheduleHandlerConfig,
-        description="Train schedule handler configuration"
-    )
     timer: TimerHandlerConfig = Field(
         default_factory=TimerHandlerConfig,
         description="Timer handler configuration"
@@ -758,7 +745,6 @@ class IntentSystemConfig(BaseModel):
         # Always define handler_config_mapping for orphaned config check
         handler_config_mapping = {
             "conversation": self.conversation,
-            "train_schedule": self.train_schedule,
             "timer": self.timer,
             "random_handler": self.random_handler,
             "datetime": self.datetime,
@@ -858,13 +844,7 @@ class IntentSystemConfig(BaseModel):
                         raise ValueError("Random handler default_max_number must be positive")
                     if handler_config.max_range_size <= 0:
                         raise ValueError("Random handler max_range_size must be positive")
-                
-                elif handler_name == "train_schedule":
-                    if handler_config.max_results <= 0:
-                        raise ValueError("Train schedule handler max_results must be positive")
-                    if handler_config.request_timeout <= 0:
-                        raise ValueError("Train schedule handler request_timeout must be positive")
-        
+
         return self
 
 

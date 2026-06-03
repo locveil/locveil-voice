@@ -24,14 +24,7 @@
       "intent_suffix": "start",
       "boost": 1.1,
       "room_context": "none",
-      "parameters": [
-        {
-          "name": "topic",
-          "type": "string",
-          "required": false,
-          "entity_type": "generic"
-        }
-      ]
+      "parameters": []
     },
     {
       "method_name": "_handle_end_conversation",
@@ -52,28 +45,14 @@
       "intent_suffix": "reference",
       "boost": 1.2,
       "room_context": "none",
-      "parameters": [
-        {
-          "name": "query_topic",
-          "type": "string",
-          "required": true,
-          "entity_type": "generic"
-        }
-      ]
+      "parameters": []
     },
     {
       "method_name": "_handle_continue_conversation",
       "intent_suffix": "general",
       "boost": 0.8,
       "room_context": "none",
-      "parameters": [
-        {
-          "name": "context_reference",
-          "type": "string",
-          "required": false,
-          "entity_type": "generic"
-        }
-      ]
+      "parameters": []
     }
   ],
   "global_parameters": [

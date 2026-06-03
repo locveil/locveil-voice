@@ -37,14 +37,7 @@
       "intent_suffix": "goodbye",
       "boost": 1.2,
       "room_context": "none",
-      "parameters": [
-        {
-          "name": "return_time",
-          "type": "string",
-          "required": false,
-          "entity_type": "generic"
-        }
-      ]
+      "parameters": []
     },
     {
       "method_name": "_handle_welcome",

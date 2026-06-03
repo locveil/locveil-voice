@@ -97,12 +97,5 @@
       "parameters": []
     }
   ],
-  "global_parameters": [
-    {
-      "name": "retain",
-      "type": "boolean",
-      "required": false,
-      "entity_type": "generic"
-    }
-  ]
+  "global_parameters": []
 }

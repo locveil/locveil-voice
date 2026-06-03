@@ -528,11 +528,5 @@
       ]
     }
   ],
-  "global_parameters": [
-    {
-      "name": "retain",
-      "description": "Whether to retain state across sessions",
-      "default_value": false
-    }
-  ]
+  "global_parameters": []
 }

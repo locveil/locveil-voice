@@ -138,38 +138,10 @@
         },
         {
           "text": "поболтаем о погоде",
-          "parameters": {
-            "topic": "погоде"
-          }
+          "parameters": {}
         }
       ],
-      "parameters": [
-        {
-          "name": "topic",
-          "description": "Тема разговора",
-          "extraction_patterns": [
-            {
-              "pattern": [
-                {
-                  "LOWER": {
-                    "IN": [
-                      "о",
-                      "про"
-                    ]
-                  }
-                },
-                {
-                  "IS_ALPHA": true
-                }
-              ],
-              "label": "TOPIC"
-            }
-          ],
-          "aliases": [
-            "тема"
-          ]
-        }
-      ]
+      "parameters": []
     },
     {
       "method_name": "_handle_end_conversation",
@@ -410,64 +382,14 @@
       "examples": [
         {
           "text": "что такое Python",
-          "parameters": {
-            "query_topic": "Python"
-          }
+          "parameters": {}
         },
         {
           "text": "расскажи о машинном обучении",
-          "parameters": {
-            "query_topic": "машинном обучении"
-          }
+          "parameters": {}
         }
       ],
-      "parameters": [
-        {
-          "name": "query_topic",
-          "description": "Тема или предмет для объяснения",
-          "extraction_patterns": [
-            {
-              "pattern": [
-                {
-                  "LEMMA": {
-                    "IN": [
-                      "что",
-                      "кто"
-                    ]
-                  }
-                },
-                {
-                  "LEMMA": "такой"
-                },
-                {
-                  "IS_ALPHA": true
-                }
-              ],
-              "label": "QUERY_TOPIC"
-            },
-            {
-              "pattern": [
-                {
-                  "TEXT": {
-                    "REGEX": ".*"
-                  }
-                },
-                {
-                  "TEXT": "is"
-                },
-                {
-                  "IS_ALPHA": true
-                }
-              ],
-              "label": "QUERY_TOPIC"
-            }
-          ],
-          "aliases": [
-            "тема",
-            "предмет"
-          ]
-        }
-      ]
+      "parameters": []
     },
     {
       "method_name": "_handle_continue_conversation",
@@ -535,31 +457,7 @@
           "parameters": {}
         }
       ],
-      "parameters": [
-        {
-          "name": "context_reference",
-          "description": "Ссылка на предыдущий контекст разговора",
-          "extraction_patterns": [
-            {
-              "pattern": [
-                {
-                  "LOWER": {
-                    "IN": [
-                      "это",
-                      "то"
-                    ]
-                  }
-                }
-              ],
-              "label": "CONTEXT_REF"
-            }
-          ],
-          "aliases": [
-            "контекст",
-            "ссылка"
-          ]
-        }
-      ]
+      "parameters": []
     }
   ],
   "global_parameters": [

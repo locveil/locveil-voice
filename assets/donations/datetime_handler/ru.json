@@ -164,39 +164,10 @@
         },
         {
           "text": "время в Москве",
-          "parameters": {
-            "location": "Москве"
-          }
+          "parameters": {}
         }
       ],
       "parameters": [
-        {
-          "name": "location",
-          "description": "Specific location or timezone",
-          "extraction_patterns": [
-            {
-              "pattern": [
-                {
-                  "LOWER": {
-                    "IN": [
-                      "в",
-                      "по"
-                    ]
-                  }
-                },
-                {
-                  "IS_ALPHA": true
-                }
-              ],
-              "label": "LOCATION"
-            }
-          ],
-          "aliases": [
-            "место",
-            "город",
-            "страна"
-          ]
-        },
         {
           "name": "format",
           "description": "Time format preference",
@@ -497,25 +468,6 @@
       ],
       "parameters": [
         {
-          "name": "timezone",
-          "description": "Specific timezone for datetime",
-          "extraction_patterns": [
-            {
-              "pattern": [
-                {
-                  "TEXT": {
-                    "REGEX": ".*"
-                  }
-                }
-              ],
-              "label": "TIMEZONE"
-            }
-          ],
-          "aliases": [
-            "зона"
-          ]
-        },
-        {
           "name": "format",
           "description": "Datetime format preference",
           "default_value": "readable",
@@ -547,11 +499,6 @@
     }
   ],
   "global_parameters": [
-    {
-      "name": "timezone",
-      "description": "Часовой пояс для ответов о дате/времени",
-      "default_value": "UTC"
-    },
     {
       "name": "language",
       "description": "Предпочтение языка ответа",
