@@ -64,50 +64,63 @@ class ContextualEntityResolver:
         for entity_name, entity_value in intent.entities.items():
             if isinstance(entity_value, str) and entity_value.strip():
                 # Try different resolution strategies
-                resolution_result = await self._resolve_single_entity(
+                resolution_result, attempted_kind = await self._resolve_single_entity(
                     entity_name, entity_value, intent, context
                 )
-                
+
                 if resolution_result:
                     resolved_entities[f"{entity_name}_resolved"] = resolution_result.resolved_value
                     resolved_entities[f"{entity_name}_confidence"] = resolution_result.confidence
                     resolved_entities[f"{entity_name}_resolution_type"] = resolution_result.resolution_type
-                    
+
                     resolution_metadata[entity_name] = resolution_result.metadata
-                    
+
                     self.logger.debug(f"Resolved entity '{entity_name}': '{entity_value}' -> "
                                     f"{resolution_result.resolved_value} ({resolution_result.resolution_type})")
-        
+                elif attempted_kind in ("device", "location"):
+                    # We classified this as a device/room reference and tried to resolve it, but found no
+                    # match. Mark it so the fail-loud / clarification boundary (QUAL-30) can distinguish
+                    # "unresolvable reference" from "never a resolvable entity". (Device/room resolution
+                    # becomes fully real once ARCH-6 registers physical devices/rooms.)
+                    resolved_entities[f"{entity_name}_resolution_failed"] = True
+                    self.logger.debug(f"Entity '{entity_name}'='{entity_value}' classified as {attempted_kind} "
+                                      f"but did not resolve — marked _resolution_failed")
+
         # Add resolution metadata
         if resolution_metadata:
             resolved_entities["_resolution_metadata"] = resolution_metadata
-        
+
         return resolved_entities
-    
-    async def _resolve_single_entity(self, entity_name: str, entity_value: str, 
-                                   intent: Intent, context: UnifiedConversationContext) -> Optional[EntityResolutionResult]:
-        """
-        Resolve a single entity using appropriate resolution strategy.
-        """
-        entity_lower = entity_value.lower().strip()
-        
+
+    async def _resolve_single_entity(self, entity_name: str, entity_value: str,
+                                   intent: Intent, context: UnifiedConversationContext) -> Tuple[Optional[EntityResolutionResult], Optional[str]]:
+        """Resolve a single entity using the appropriate strategy.
+
+        Returns ``(result, attempted_kind)`` where ``attempted_kind`` ∈
+        {device, location, temporal, quantity, None} names the resolver that ran (or None if the
+        entity matched no resolvable class) — so the caller can mark an attempted-but-unresolved
+        device/location reference (``_resolution_failed``) without flagging every plain parameter.
+
+        NOTE: dispatch is heuristic (`_is_*_entity` name/value patterns). The declarative
+        `entity_type`-driven swap is owned by ARCH-6 (it activates with real room/device registration;
+        every `entity_type` decl is `generic` today, so the swap would be inert before then)."""
         # Device entity resolution
         if self._is_device_entity(entity_name, entity_value, intent):
-            return await self.device_resolver.resolve(entity_value, context)
-        
+            return await self.device_resolver.resolve(entity_value, context), "device"
+
         # Location entity resolution
         if self._is_location_entity(entity_name, entity_value, intent):
-            return await self.location_resolver.resolve(entity_value, context)
-        
+            return await self.location_resolver.resolve(entity_value, context), "location"
+
         # Temporal entity resolution
         if self._is_temporal_entity(entity_name, entity_value, intent):
-            return await self.temporal_resolver.resolve(entity_value, context)
-        
+            return await self.temporal_resolver.resolve(entity_value, context), "temporal"
+
         # Quantity entity resolution
         if self._is_quantity_entity(entity_name, entity_value, intent):
-            return await self.quantity_resolver.resolve(entity_value, context)
-        
-        return None
+            return await self.quantity_resolver.resolve(entity_value, context), "quantity"
+
+        return None, None
     
     def _is_device_entity(self, entity_name: str, entity_value: str, intent: Intent) -> bool:
         """Check if entity is a device reference based on intent domain and generic entity name patterns"""

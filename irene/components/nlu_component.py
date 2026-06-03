@@ -84,9 +84,11 @@ class ContextAwareNLUProcessor:
             enhanced_entities["room_name"] = context.room_name
             self.logger.debug(f"Added room context: {context.room_name}")
         
-        # 2. Device Entity Resolution
-        enhanced_entities = await self._resolve_device_entities(enhanced_entities, context)
-        
+        # 2. Device entity resolution already happened in ContextualEntityResolver.resolve_entities
+        #    (asset-driven DeviceEntityResolver, reflected in `resolved_entities`). The previous
+        #    hardcoded English-only `_resolve_device_entities` duplicate was removed here (QUAL-11
+        #    Stage C) — it re-resolved with a different strategy + wrote keys nothing consumed.
+
         # 3. Intent Disambiguation Based on Available Devices
         disambiguated_intent = await self._disambiguate_with_device_context(intent, context)
         
@@ -116,45 +118,7 @@ class ContextAwareNLUProcessor:
         
         self.logger.info(f"Context-enhanced intent: {enhanced_intent.name} with {len(enhanced_entities)} entities")
         return enhanced_intent
-    
-    async def _resolve_device_entities(self, entities: Dict[str, Any], context: UnifiedConversationContext) -> Dict[str, Any]:
-        """
-        Resolve device references in entities using client context and fuzzy matching.
-        
-        This implements the device resolution described in the architecture document.
-        """
-        enhanced_entities = entities.copy()
-        
-        # Look for device-related entities that need resolution
-        device_keywords = ["device", "light", "speaker", "tv", "television", "lamp", "switch"]
-        
-        for entity_key, entity_value in entities.items():
-            if isinstance(entity_value, str):
-                # Check if this entity might be a device reference
-                entity_lower = entity_value.lower()
-                
-                # Check if it contains device keywords or looks like a device name
-                is_device_reference = any(keyword in entity_lower for keyword in device_keywords)
-                
-                if is_device_reference:
-                    # Try to resolve to actual device
-                    resolved_device = context.get_device_by_name(entity_value)
-                    if resolved_device:
-                        enhanced_entities[f"{entity_key}_resolved"] = resolved_device
-                        enhanced_entities[f"{entity_key}_device_id"] = resolved_device.get("id")
-                        enhanced_entities[f"{entity_key}_device_type"] = resolved_device.get("type")
-                        
-                        self.logger.debug(f"Resolved device '{entity_value}' to {resolved_device.get('name')}")
-                    else:
-                        # Add available devices for potential suggestions
-                        available_devices = context.get_device_capabilities()
-                        if available_devices:
-                            device_names = [d.get("name", "") for d in available_devices]
-                            enhanced_entities["available_devices"] = device_names
-                            self.logger.debug(f"Device '{entity_value}' not found, available: {device_names}")
-        
-        return enhanced_entities
-    
+
     async def _disambiguate_with_device_context(self, intent: Intent, context: UnifiedConversationContext) -> Intent:
         """
         Disambiguate intent based on available device capabilities and context.

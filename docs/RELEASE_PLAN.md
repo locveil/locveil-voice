@@ -353,8 +353,13 @@ See `docs/review/phase1_architecture_map.md` §5.
         → MOVED to ARCH-6** (activates with real room/device registration; all 66 `entity_type` decls are `generic`
         today, so the dispatch would be inert until ARCH-6 authors them). QUAL-11 keeps only the **safe, now-valuable
         cleanup**: unify the duplicate device-resolution path + add `_resolution_failed` markers.
-      **Remaining stages (lightweight scope):** Stage C — duplicate-device-path unify + `_resolution_failed` + honest
-      "patterns parked (QUAL-35)" note · Stage D — shared-extraction-base + required-param contract (P0 #3) + typed
+      **Stage C DONE (2026-06-03):** unified the duplicate device resolution (deleted the hardcoded English-only
+      `_resolve_device_entities` in `nlu_component.py` — it re-resolved with a different strategy + wrote keys nothing
+      read; the asset-driven `ContextualEntityResolver` is now the single path); added `_resolution_failed` markers
+      (scoped to attempted-but-unresolved device/location refs, for the QUAL-30 boundary); made the parked T2 patterns
+      **honest** — `spacy_provider._validate_and_store_spacy_patterns` now documents that `advanced_patterns` is
+      validated-but-not-applied (QUAL-35), killing the silent validate-then-discard footgun.
+      **Remaining stages (lightweight scope):** Stage D — shared-extraction-base + required-param contract (P0 #3) + typed
       `ParameterSpec` accessor (P1 #6) + `_create_error_result` unification (P1-t) · Stage E — QUAL-22 (P0 #5).
       _Original P0/P1 detail below (P0 #2 → QUAL-35; P0 #4 ✓ Stage B; the entity_type half of P0 #4 → ARCH-6):_
       **P0s:** (1) fix the default `provider_cascade_order`

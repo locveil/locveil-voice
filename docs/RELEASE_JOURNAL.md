@@ -29,6 +29,17 @@ newest entries near the top of each dated section.
   room/device registration; ARCH-6 now explicitly owns authoring the non-generic types + the `_is_device/location_entity`
   → `entity_type` swap). QUAL-11 keeps only the safe cleanup (dedupe device path + `_resolution_failed`) and refocuses its
   remaining energy on the universal hot-path wins: shared extraction base + required-param contract + typed accessor.
+- **QUAL-11 [PEX] Stage C — unified the duplicate device path, added `_resolution_failed`, made parked patterns honest.**
+  (1) **Duplicate device resolution removed:** `ContextAwareNLUProcessor._resolve_device_entities` (a hardcoded
+  English-only keyword path that re-resolved devices with a different strategy and wrote `{e}_device_id`/`_device_type`/
+  `available_devices` keys **no handler reads**) deleted — the asset-driven `ContextualEntityResolver.resolve_entities`
+  is now the single device/location/temporal/quantity resolution path. (2) **`_resolution_failed` markers:**
+  `_resolve_single_entity` now returns `(result, attempted_kind)`; an entity classified as device/location that fails to
+  resolve gets `{name}_resolution_failed=True` so the QUAL-30 clarification boundary can tell "unresolvable reference"
+  from "never a resolvable entity" (verified: device-ish `target` marked, plain `topic` not). (3) **Parked T2 patterns
+  made honest:** `spacy_provider._validate_and_store_spacy_patterns` now documents that `advanced_patterns` is
+  validated-but-never-applied (the live contract is T1; T2 = QUAL-35), ending the silent validate-then-discard footgun.
+  Heuristic `_is_device/location_entity` dispatch stays (the `entity_type` swap is ARCH-6). Maintained suite green (17/17).
 - **QUAL-11 [PEX] Stage B — de-fatalized the entity resolvers (P0 #4).** `DeviceEntityResolver._load_device_types`
   and `LocationEntityResolver._load_location_keywords` raised uncaught `RuntimeError` ("fatal configuration error")
   when the asset loader wasn't wired or localization data was missing/empty — and the resolver is built **asset-less**

@@ -1115,8 +1115,16 @@ class SpaCyNLUProvider(NLUProvider):
         return True
     
     def _validate_and_store_spacy_patterns(self, donation: KeywordDonation) -> None:
-        """Validate spaCy patterns at runtime (moved from donation loading)
-        
+        """Validate spaCy ``token_patterns``/``slot_patterns`` and stash them in ``advanced_patterns``.
+
+        ⚠️ PARKED — NOT YET ACTIVE AT RUNTIME (tracked as **QUAL-35**, the T2 declarative tier).
+        These patterns are authored across all handlers and validated here, but **no recognition or
+        extraction path reads ``self.advanced_patterns``** — the live extraction contract is the
+        lightweight T1 path (NER + per-param regex + CHOICE surfaces + lemmas; QUAL-11). This method is
+        kept (rather than deleted) so the authoring + the Matcher/EntityRuler slot-filling option survive
+        for QUAL-35 (must-have for smart-home/MQTT, ARCH-7/8); it is intentionally a validation-only step
+        today. Do not mistake "validated" for "applied".
+
         Args:
             donation: KeywordDonation containing spaCy patterns to validate
         """
