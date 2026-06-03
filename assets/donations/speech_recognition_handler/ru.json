@@ -341,16 +341,16 @@
           ],
           "choice_surfaces": {
             "whisper": [
-              "виспер"
+              "whisper"
             ],
             "vosk": [
-              "воск"
+              "vosk"
             ],
             "google_cloud": [
-              "гугл"
+              "google_cloud"
             ],
             "azure": [
-              "облако"
+              "azure"
             ]
           }
         }

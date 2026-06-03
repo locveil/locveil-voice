@@ -858,22 +858,22 @@
           ],
           "choice_surfaces": {
             "silero": [
-              "силеро"
+              "silero"
             ],
             "silero3": [
-              "силеро3"
+              "silero3"
             ],
             "silero4": [
-              "силеро4"
+              "silero4"
             ],
             "console": [
-              "консоль"
+              "console"
             ],
             "system": [
-              "системный"
+              "system"
             ],
             "vosk": [
-              "воск"
+              "vosk"
             ]
           }
         }

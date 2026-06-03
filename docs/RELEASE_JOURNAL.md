@@ -12,6 +12,21 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-03
+- **Donation CHOICE-surface audit + correction (user observation; QUAL-29 migration quality).** Verified Russian
+  `choice_surfaces` across all 30 CHOICE params / 14 handlers. Two findings, opposite directions:
+  **(1)** The genuinely-missing-Russian bug (the timer-class) was only `timer.unit` — fixed in QUAL-11 Stage D. All
+  other **user-facing** CHOICE params (datetime/system/quality/language-names/time-of-day) correctly carry Russian.
+  **(2)** The migration's actual systematic flaw was the **inverse — it wrongly *translated* technical identifiers**
+  (model/driver/service names, which per the user must **never** be translated; the canonical token is the spoken
+  identifier and is self-matchable). Worst case: `speech_recognition.provider` had `azure→"облако"` (literal "cloud"),
+  plus `whisper→виспер`, `vosk→воск`, `google_cloud→гугл`; `voice_synthesis.provider` had `silero→силеро`, etc.
+  **Stripped both consumed provider params' `choice_surfaces` back to canonical** (English identifier). _Left alone:_
+  the transliterations embedded in the **parked T2 `token_patterns`/`slot_patterns`** (inactive at runtime → QUAL-35
+  decides whether ASR-transliteration aids belong there); `voice_synthesis.voice` (dead → QUAL-34, and `xenia`/`aidar`
+  are real names «Ксения»/«Айдар» a Russian would actually say — a genuine nuance to decide when wiring it); the dead
+  user-facing `system_service.metric_type` / `text_enhancement.correction_type` (→ QUAL-34 wire-then-author). **Authoring
+  rule established: technical identifiers (models/drivers/services) stay canonical; only user-facing concept choices get
+  localized surfaces.** Smoke green.
 - **QUAL-9 [FAF] DONE — tail reconciled to metrics re-key + TEST-3; everything else already in QUAL-28.** Per the
   task-start reconciliation (Invariant #8), verified against current code that QUAL-28 had absorbed the entire F&F P0
   set AND most of the documented tail (timeout monitor `wait_for`, duplicate write-back processor deletion, timer-
