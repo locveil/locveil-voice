@@ -12,6 +12,17 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-04
+- **ARCH-10 PR-2 DONE (`b373633`) — Whisper-ONNX on the same `sherpa_onnx` provider.** A second offline model family
+  on one provider/runtime, selected by config `model_type`: `whisper` → `OfflineRecognizer.from_whisper`
+  (encoder/decoder/tokens — **no joiner**, whisper's own frontend; `language=""` = auto-detect), `vosk-transducer`
+  stays default. Drops torch from 64-bit ASR images that don't otherwise need it. **AssetManager pack download made
+  member-aware** (descriptor `members`: transducer=4 files / whisper=3) so `download_model_pack` + `_pick_pack_files`
+  fetch exactly the right set; whisper packs = `csukuangfj/sherpa-onnx-whisper-{tiny,base}` (verified on HF: int8
+  encoder/decoder + tokens, no joiner). config-master comments surface the option; no pyproject/lock/schema change
+  (same `asr-onnx` extra; `model_type` already in the schema). Unit tests for both member sets; **0 net suite
+  regressions**. **Flag:** `import sherpa_onnx` fails on the x86 dev box (`libonnxruntime.so` not found in the
+  uv-installed wheel) — armv7/WB7 is proven, so this is an x86-image concern for **BUILD-3**; can't exercise sherpa
+  execution locally until resolved (the from_whisper/from_transducer API is documented/stable, so code follows it).
 - **ARCH-10 PR-1 DONE (`6e1a88a`) — `sherpa_onnx` ASR provider (offline VOSK Zipformer2).** New provider behind the ASR
   port running the alphacep VOSK Zipformer2 ONNX family via `OfflineRecognizer.from_transducer`, alongside vosk/whisper.
   **numpy-free** PCM/WAV→float (stdlib `array`/`wave`) so it runs on armv7; `SherpaInferencePolicy` (platform
