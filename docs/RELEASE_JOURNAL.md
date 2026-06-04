@@ -12,6 +12,20 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-04
+- **ARCH-9 design session (in progress) → drafted `docs/design/onnx_inference_layer.md`.** Re-anchored the task on its
+  real trigger (the new **alphacep VOSK** Zipformer2-ONNX models + which Irene models have sherpa-onnx counterparts), not
+  a generic sherpa survey. **Proved armv7 feasibility on the real target (Wirenboard 7.2, A40i)** — SSH'd in, ran the
+  alphacep `vosk-model-small-ru` in an `arm32v7/python:3.11-slim` container (matching the deployment): **correct Russian
+  transcript, RTF 1.15, 110 MB RSS, 27 MB int8 model, 38 s load**. Key empirical findings baked into the doc: pin
+  **`sherpa-onnx==1.10.46`** (1.13.2 has an armv7 `libonnxruntime.so` ELF-alignment bug), **`onnxruntime` has no armv7
+  wheel** (so vosk-tts/plain-onnx can't run on the edge; sherpa works because it bundles its own ort), **`libasound2`**
+  needed, **offline + small-model only on armv7**, **WB7 is Debian/glibc** (not Alpine). **Decisions locked:** new
+  `sherpa_onnx` ASR provider running **alongside** vosk/whisper; **offline-first** (streaming later); **Whisper-ONNX in
+  scope** (drops torch); ASR-centric (TTS/wake-word not sherpa targets — silero stays torch, vosk-tts stays its own ort
+  as a config story, wake stays TFLite — no RU sherpa-KWS); **armv7 = no TTS**. Shared seam = **AssetManager extension +
+  thread/CPU policy**, NOT a shared session runtime. Per-platform **dependency functions** (PEP 508 arch markers,
+  libasound2, no torch) documented; build_analyzer marker-passthrough flagged for BUILD-5. WB7 test artifacts cleaned up
+  (base image + key kept for the VAD/wake-word benchmarks). **Open: VAD + wake-word placement** (next).
 - **QUAL-39 DONE — audited the 19 untyped REST endpoints; typed the UI-5-critical donations contract pair + `/health`
   (Option 2).** The audit immediately found what the task was filed to catch: `GET/PUT /donations/{handler}/contract`
   (UI-5's target) were untyped. Reconciliation: among the 19, config-ui/UI-5 consume **only** the contract pair — its
