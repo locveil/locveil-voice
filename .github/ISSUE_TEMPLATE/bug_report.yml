@@ -90,6 +90,14 @@ body:
       label: Logs / traceback
       description: Paste the relevant output — this renders as a code block.
       render: shell
+  - type: textarea
+    id: attachments
+    attributes:
+      label: Attachments (screenshots, log files, audio)
+      description: |
+        Drag-and-drop or paste files here — this box accepts uploads (the **Logs** box above does not, because it's a code block).
+        GitHub accepts images, video, and `txt`/`log`/`pdf`/`zip`. **Audio (`.wav`/`.mp3`) is not accepted directly — zip it first.** Max 25 MB per file.
+      placeholder: Drop files here…
   - type: input
     id: version
     attributes:
