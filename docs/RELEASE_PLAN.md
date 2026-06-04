@@ -296,7 +296,13 @@ See `docs/review/phase1_architecture_map.md` §5.
       markers; Invariant #4 via `SherpaOnnxASRProviderSchema`. (PR-4) **VAD engine seam** — `VADEngine` ABC port +
       `energy` (existing, unchanged) / `silero` (SileroVAD-ONNX via sherpa-onnx) **toml-selected, mutually exclusive**,
       64-bit only; hexagon-clean (workflows injects the asset path; utils stays core-free per ARCH-12 #9); 11 seam tests.
-      29 unit tests total; 0 net suite regressions. **Remaining:** PR-5 wake-word greenfield. **Flag:**
+      29 unit tests total; 0 net suite regressions. **Remaining: PR-5 wake-word — PARKED 2026-06-04.** Reconciliation
+      (contradicts the design's "both hallucinated" premise): **`openwakeword` is functional** (real upstream model URLs,
+      real `predict()`, English catalog) — *not* a stub; **`microwakeword` is the real stub** (`_extract_features` returns
+      `np.random`, hallucinated `*_v1.0` catalog, 404 model URL, training removed `886d4d1` — QUAL-19); **Porcupine** =
+      dead code (schema/config, no impl). **Decision pending:** microwakeword (A) implement-real+experimental / (B)
+      cut-archive per QUAL-20 / (C) thin; + openwakeword polish (extra split `wake-onnx`/`wake-tflite`, ONNX default,
+      custom `model_path` for a trained RU wake word, build-contract fix, cut Porcupine). **Flag:**
       `import sherpa_onnx` fails on the x86 dev box (uv wheel `libonnxruntime.so` not found) — armv7/WB7 proven; verify
       x86_64 at the **BUILD-3** image stage. WB7 hardware re-validation deferred to ARCH-10 completion (user).
       Build/Docker corrections = BUILD-5/3.

@@ -12,6 +12,17 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-04
+- **ARCH-10 PR-5 (wake-word) — PARKED (user) after a mapping that contradicts the design premise.** The design §11.1
+  assumed *both* voice-trigger providers were hallucinated cruft to rebuild. The code says otherwise: **`openwakeword`
+  is functional** (real `dscripka/openWakeWord` model URLs + feature models, real `predict()` detection, English
+  catalog) — polish, not rebuild; **`microwakeword` is the genuine stub** — `_extract_features()` returns
+  `np.random.random(...)` (noise), the `*_v1.0` model catalog is hallucinated, the one URL is a 404 TF demo, training
+  was removed at `886d4d1` (matches QUAL-19). **Porcupine** is dead code (schema + config block, no impl, not in
+  entry-points). **Open decision when resumed:** microwakeword (A) implement real MFCC frontend + user-trained tflite,
+  experimental/WB7-validated; (B) cut/archive per QUAL-20 → openwakeword as sole provider; (C) thin. Plus openwakeword
+  polish: split the `voice-trigger` extra → `wake-onnx` (openwakeword+onnxruntime) / `wake-tflite` (tflite-runtime),
+  default `inference_framework="onnx"`, add a custom `model_path`, fix the get_python_dependencies group-name contract,
+  cut Porcupine. No code written. ARCH-10 stands at **PR-1/2/3/4 done, PR-5 parked**.
 - **ARCH-10 PR-4 DONE (`b5dd978`) — VAD engine seam (`energy` | `silero`, toml-selected).** Promoted VAD to a small
   port per design §11.2(iii): a `VADEngine` ABC in `utils/vad.py` that both impls satisfy, selected by
   `VADConfig.vad_implementation` (mutually exclusive) — no entry-points/component (VAD has no discovery/fallback need).
