@@ -161,8 +161,18 @@ The new provider's models are **multi-file packs**, not a single URL. Extend the
 
 ## 7. Per-platform dependency functions (the build system)
 
-The build analyzer pulls only required deps per platform via each provider's `EntryPointMetadata` build methods. The new
-provider encodes the WB7 findings:
+**Design principle — invariant (user, 2026-06-04):** the **contribution mechanism stays**. Every provider/component
+**self-declares** its dependencies — Python (as pyproject extra *group names*, §7.1) and system packages (per platform)
+— through the `EntryPointMetadata` metadata methods; `build_analyzer` collects only the **enabled** providers'
+contributions for a profile; the Dockerfiles consume them. This is what builds lean, per-profile images, and it must be
+preserved. **What is mutable:** *what* a provider contributes (package names/versions) and the **platform taxonomy
+itself** (the `linux.ubuntu`/`linux.alpine`/`macos`/`windows` identifiers) — these are free to change to match real
+targets. Both current real builds are **Debian/glibc/apt → `linux.ubuntu`**; the `linux.alpine` contributions are now
+**vestigial** (the armv7 Alpine→Debian move in §4.7 is an instance of this flexibility — the *principle* is untouched,
+only the target platform changed). The taxonomy can be re-trimmed to the actual targets later without touching the
+mechanism.
+
+The new provider encodes the WB7 findings (contribution mechanism unchanged):
 
 ```python
 @classmethod
