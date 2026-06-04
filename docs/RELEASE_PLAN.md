@@ -945,16 +945,25 @@ _Apply to every remediation task below (from the 4 review docs + QUAL-25/26). So
       `== 'ru'` branch). **Kept (legitimate, per done-criteria):** `system_service_handler` Russian pluralization grammar
       (strings already templated), and Russian command-keyword *parsing*. **Verified:** templates load + resolve ru/en; 0 net
       suite regressions. Done: processing language derives from model/config; handler user-facing strings externalized.
-- [ ] **QUAL-39** [API] (P2) — **Audit the ~20% of REST endpoints that return raw `dict` (no `response_model`).**
-      Surfaced while scoping UI-5's OpenAPI type generation (2026-06-04): **104 of 123 routes carry a Pydantic
-      `response_model`** (so generation yields real TS types) — but **~19 don't**, and those generate weak/opaque types
-      (`Record<string, unknown>`), undercutting the drift-killing value of generation exactly where it's loosest.
-      Investigate each: **why** it returns a bare dict (genuinely dynamic/freeform shape · TOML/JSON passthrough ·
-      legacy/just-never-typed · component-contributed router) and **classify**: (a) **should be typed** → add a
-      `response_model` (best when the shape is stable — e.g. status/config/donation responses); (b) **legitimately
-      dynamic** → document why + give it an explicit typed envelope where possible. **Prioritize the endpoints UI-5
-      consumes** (donations contract/phrasing, config, NLU-recognize) so the generated types UI-5 adopts are strong.
-      **Gates the quality of UI-5's generated types** (cross-ref UI-5). Backend-side; no config-ui change. (Found 2026-06-04.)
+- [x] **QUAL-39** [API] (P2) — **DONE 2026-06-04 (Option 2, user-approved).** Audited the **19** routes lacking a
+      `response_model` (104/123 already typed). **Key finding (the reason this task existed):** the **donations contract
+      pair** `GET/PUT /donations/{handler}/contract` — UI-5's primary target — were the only **UI-5-consumed** untyped
+      endpoints; reconciliation showed config-ui's other status/config/NLU reads already hit typed endpoints
+      (`/intents/status`, `/configuration/config/status`, …), **not** the untyped system ones. **Done:** typed the contract
+      pair's **envelopes** — `DonationContractResponse` / `DonationContractUpdateResponse` (`api/schemas.py`) — and `/health`
+      (`HealthResponse`). **Contract/phrasing BODY stays `Dict[str, Any]` passthrough on purpose:** both have a **canonical
+      JSON Schema** (`assets/donation_contract_v1.1.json` + `assets/donation_language_v1.1.json`, both
+      `additionalProperties: true`); a strict Pydantic body would **drift from the schema AND drop fields on the editor's
+      GET→PUT round-trip**. **Symmetry analysis (the donation_language question):** the language/phrasing side already does
+      exactly this — `LanguageDonationContentResponse` with `donation_data: Dict[str, Any]` passthrough — so typing the
+      contract envelope brings it to **parity** with the phrasing endpoints; the strong **body types** for config-ui are
+      generated from the two JSON Schemas, the **envelopes** from OpenAPI (see UI-5). **Classified (b) legitimately
+      dynamic / non-JSON — documented, not typed:** `/dashboard/html`, `/`, `/asyncapi`(+`.yaml`) (HTML/YAML),
+      `/prometheus` (text exposition), `/asyncapi.json` + `/debug/asyncapi` (generated spec/debug docs), `/components`
+      (conditional keys). **Deferred general hygiene (non-UI-5, type later if wanted):** asr `/providers`/`/reset`/
+      `/transcribe`, monitoring `/contextual-commands`(+`/performance`), nlu_analysis `/capabilities`/`/statistics`,
+      `/system/status` (config-ui doesn't consume it — Overview uses `/intents/status`). Verified: models accept the real
+      GET/PUT shapes incl. passthrough extras, suite 85=85 (0 net regression). (Found 2026-06-04.)
 - [x] **QUAL-37** `[deferred]` [DFLOW] (P2) — **Targeted no-intent clarification (enhancement; split from QUAL-30).
       DONE 2026-06-03.** The online (LLM) path already consumed `_fallback_context.likely_domain` (via
       `_build_fallback_context_prompt`, QUAL-16); the gap was the **offline** path. **Delivered:** `_handle_fallback_
@@ -1169,8 +1178,12 @@ Governed by Invariant #4 (config-ui must stay functional).
       (`openapi-typescript <schema> -o src/types/openapi.gen.ts`) like `../wb-mqtt-bridge/ui`. **Transport stays the
       existing `fetch`-based `apiClient.ts`** (typed against the generated `paths`; optionally the tiny `openapi-fetch`).
       **OUT OF SCOPE (user, 2026-06-04): axios and react-query** — config-ui's job is load-edit-save, not server-cache;
-      we adopt generation only, not the bridge's full data-layer pattern. **Generated-type quality for the ~20% dict
-      endpoints is gated by QUAL-39.** DoD: `cd config-ui && npm run check` (type-check + the harmonized strict lint) **&&
+      we adopt generation only, not the bridge's full data-layer pattern. **Two-source generation (settled by QUAL-39):**
+      the donation **contract/phrasing BODY** types generate from their **canonical JSON Schemas**
+      (`assets/donation_contract_v1.1.json` + `assets/donation_language_v1.1.json`, via `json-schema-to-typescript`) — the
+      body stays a `Dict[str,Any]` passthrough in the API (the schemas allow `additionalProperties`; strict modeling would
+      drop fields on GET→PUT). The **envelopes** (and everything else) generate from **OpenAPI** (`openapi-typescript`);
+      QUAL-39 typed the previously-untyped contract envelopes so they're now strong too. DoD: `cd config-ui && npm run check` (type-check + the harmonized strict lint) **&&
       npm run build** passes + the editing page round-trips contract + phrasing.
       **This is the remaining Invariant #4 obligation deferred from QUAL-29 (user-approved 2026-06-03).**
 - [x] **UI-6** `[release]` (P1) — **DONE 2026-06-04. config-ui stack harmonization with `../wb-mqtt-bridge/ui` (precedes UI-1/2/3/5).**

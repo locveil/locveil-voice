@@ -132,7 +132,12 @@ def create_webapi_router(
         status: str
         components: Dict[str, Any]
         web_clients: int
-        
+
+    class HealthResponse(BaseModel):  # QUAL-39: type the /health envelope
+        status: str
+        version: str
+        timestamp: float
+
     class HistoryResponse(BaseModel):
         messages: list[Dict[str, Any]]
         total_count: int
@@ -377,7 +382,7 @@ def create_webapi_router(
             )
     
     # Health check endpoint
-    @router.get("/health", tags=["General"])
+    @router.get("/health", response_model=HealthResponse, tags=["General"])
     async def health_check():
         """Health check endpoint"""
         return {

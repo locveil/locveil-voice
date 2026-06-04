@@ -317,6 +317,7 @@ class IntentComponent(Component, WebAPIPlugin):
                 IntentActionCancelRequest, IntentActionResponse, IntentActiveActionsResponse,
                 IntentRegistryResponse, IntentReloadResponse,
                 # Language-aware donation management schemas (Phase 3)
+                DonationContractResponse, DonationContractUpdateResponse,
                 DonationHandlerListResponse, HandlerLanguageInfo, LanguageDonationContentResponse,
                 LanguageDonationUpdateRequest, LanguageDonationUpdateResponse,
                 LanguageDonationValidationRequest, LanguageDonationValidationResponse,
@@ -687,7 +688,7 @@ class IntentComponent(Component, WebAPIPlugin):
                 except Exception as e:
                     raise HTTPException(500, f"Failed to get handler languages: {str(e)}")
             
-            @router.get("/donations/{handler_name}/contract")
+            @router.get("/donations/{handler_name}/contract", response_model=DonationContractResponse)
             async def get_donation_contract(handler_name: str):
                 """QUAL-29 (v1.1): the language-neutral contract for a handler — param core (name/type/required/
                 canonical choices/min-max/entity_type), per-method room_context, and the method list."""
@@ -700,7 +701,7 @@ class IntentComponent(Component, WebAPIPlugin):
                 return {"success": True, "handler_name": handler_name, "contract": contract,
                         "available_languages": asset_loader.get_available_languages_for_handler(handler_name)}
 
-            @router.put("/donations/{handler_name}/contract")
+            @router.put("/donations/{handler_name}/contract", response_model=DonationContractUpdateResponse)
             async def update_donation_contract(handler_name: str, request: Dict[str, Any] = Body(...)):
                 """Validate + save the language-neutral contract, then reload the unified donation. Body:
                 {contract: {...}, validate_before_save?: bool, trigger_reload?: bool}."""

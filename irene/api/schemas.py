@@ -1591,6 +1591,30 @@ class LanguageDonationMetadata(BaseModel):
     last_modified: float = Field(description="Last modification timestamp")
 
 
+class DonationContractResponse(BaseAPIResponse):
+    """QUAL-29 v1.1 (QUAL-39): the language-neutral donation contract for a handler.
+
+    The `contract` body is a passthrough of `contract.json` — validated against the
+    canonical JSON Schema `assets/donation_contract_v1.1.json` and kept as a free dict
+    here so the editor round-trips it losslessly (the schema allows additionalProperties).
+    Parallel to `LanguageDonationContentResponse`; the strong contract *type* for
+    config-ui is generated from the JSON Schema, the envelope from this model.
+    """
+    handler_name: str = Field(description="Handler name")
+    contract: Dict[str, Any] = Field(description="Language-neutral contract (schema: donation_contract_v1.1.json)")
+    available_languages: List[str] = Field(description="Languages with phrasing files for this handler")
+
+
+class DonationContractUpdateResponse(BaseAPIResponse):
+    """QUAL-29 v1.1 (QUAL-39): result of validating + saving a handler's contract.json."""
+    handler_name: str = Field(description="Handler name")
+    validation_passed: bool = Field(description="Whether contract validation passed")
+    reload_triggered: bool = Field(description="Whether the unified donation reload was triggered")
+    backup_created: bool = Field(default=False, description="Whether a backup of contract.json was created")
+    errors: List[ValidationError] = Field(default=[], description="Validation errors")
+    warnings: List[ValidationWarning] = Field(default=[], description="Validation warnings")
+
+
 class LanguageDonationContentResponse(BaseAPIResponse):
     """Response for language-specific donation content retrieval"""
     handler_name: str = Field(description="Handler name")

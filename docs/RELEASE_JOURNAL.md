@@ -12,6 +12,21 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-04
+- **QUAL-39 DONE — audited the 19 untyped REST endpoints; typed the UI-5-critical donations contract pair + `/health`
+  (Option 2).** The audit immediately found what the task was filed to catch: `GET/PUT /donations/{handler}/contract`
+  (UI-5's target) were untyped. Reconciliation: among the 19, config-ui/UI-5 consume **only** the contract pair — its
+  status/config/NLU reads already hit typed endpoints (`/intents/status`, `/configuration/config/status`), not the
+  untyped system ones (so the "+3 system endpoints" idea was dropped; typed only `/health`). **Approach refined by a
+  discovery:** the contract body is a passthrough of `contract.json`, which has a **canonical JSON Schema**
+  (`donation_contract_v1.1.json`, `additionalProperties: true`) — a strict Pydantic body would drift from it AND drop
+  fields on the editor's GET→PUT. So typed the **envelopes** (`DonationContractResponse`/`DonationContractUpdateResponse`,
+  mirroring the language models) and left the body `Dict[str,Any]`. **Symmetry analysis (user asked how the language part
+  is delivered):** the phrasing side already does exactly this — `LanguageDonationContentResponse.donation_data:
+  Dict[str,Any]` passthrough + its own schema `donation_language_v1.1.json` — so the contract fix brings it to **parity**;
+  UI-5 generates both BODY types from the two JSON Schemas, envelopes from OpenAPI (updated UI-5's note). Classified the
+  rest: (b) legit-dynamic/non-JSON (asyncapi/html/prometheus/components/debug) documented; non-UI-5 hygiene (asr/monitoring/
+  nlu_analysis/system-status) deferred. Verified: models accept the real GET/PUT shapes incl. passthrough extras, modules
+  import, suite 85=85 (0 net regression).
 - **config-ui ↔ `../wb-mqtt-bridge/ui` stack comparison + harmonization kickoff (pre-UI-1/2/3/5).** Compared the two UI
   stacks: same foundation (React 18 / Vite 5 / TS-strict / Tailwind / react-router 6) but very different altitude — the
   bridge is a tested, lint-gated, MUI + react-query + zustand + OpenAPI-generated dashboard; config-ui is a lean,
