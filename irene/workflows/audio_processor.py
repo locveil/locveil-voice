@@ -137,8 +137,15 @@ class UniversalAudioProcessor:
         self.config = vad_config
         self.vad_state = VoiceActivityState.SILENCE
         
-        # Initialize VAD engine based on configuration
-        if vad_config.use_zero_crossing_rate or vad_config.adaptive_threshold:
+        # Initialize VAD engine based on configuration (PR-4: energy vs silero seam)
+        vad_impl = getattr(vad_config, "vad_implementation", "energy")
+        if vad_impl == "silero":
+            from ..core.assets import get_asset_manager  # workflows may import core (not utils)
+            from ..utils.vad_silero import SileroVADEngine
+            model_path = get_asset_manager().get_model_path("vad", "silero_vad.onnx")
+            self.vad_engine = SileroVADEngine(vad_config, model_path)
+            logger.info("VAD engine: silero (SileroVAD-ONNX via sherpa-onnx)")
+        elif vad_config.use_zero_crossing_rate or vad_config.adaptive_threshold:
             self.vad_engine = AdvancedVAD(
                 threshold=vad_config.energy_threshold,
                 sensitivity=vad_config.sensitivity,

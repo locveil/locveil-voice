@@ -13,6 +13,7 @@ Phase 5 Optimizations:
 
 import logging
 import time
+from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Optional, Union, Dict, List
 from functools import lru_cache
@@ -297,7 +298,32 @@ def calculate_zcr_optimized(audio_data: bytes, cache: Optional[object] = None) -
         return 0.0, cache_hit
 
 
-class SimpleVAD:
+class VADEngine(ABC):
+    """Port for voice-activity engines (PR-4 seam).
+
+    Implementations are mutually exclusive and selected by `VADConfig.vad_implementation`:
+    - `energy` → `SimpleVAD` / `AdvancedVAD` (built-in, dependency-light)
+    - `silero` → `SileroVADEngine` (SileroVAD-ONNX via sherpa-onnx; 64-bit only)
+
+    `UniversalAudioProcessor` calls `process_frame` per audio chunk and drives its own
+    onset/offset state machine off `VADResult.is_voice`, so the contract is intentionally
+    minimal.
+    """
+
+    @abstractmethod
+    def process_frame(self, audio_data: "AudioData") -> "VADResult":
+        """Classify one audio chunk as voice/silence."""
+        ...
+
+    def reset(self) -> None:
+        """Reset per-utterance state (default no-op)."""
+        return None
+
+    def get_name(self) -> str:
+        return self.__class__.__name__
+
+
+class SimpleVAD(VADEngine):
     """
     Energy-based VAD with hysteresis for stable voice detection.
     
