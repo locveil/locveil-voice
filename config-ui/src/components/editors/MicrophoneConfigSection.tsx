@@ -29,7 +29,7 @@ export const MicrophoneConfigSection: React.FC<MicrophoneConfigSectionProps> = (
   const [selectedDevice, setSelectedDevice] = useState<AudioDeviceInfo | null>(null);
 
   useEffect(() => {
-    loadAudioDevices();
+    void loadAudioDevices();
   }, []);
 
   useEffect(() => {

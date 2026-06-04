@@ -51,14 +51,16 @@ const LocalizationsPage: React.FC = () => {
 
   // Load domains on mount
   useEffect(() => {
-    loadDomains();
+    void loadDomains();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional scoped/mount load (load fns are not memoized)
   }, []);
 
   // Load localization data when domain/language changes
   useEffect(() => {
     if (selectedDomain && selectedLanguage) {
-      loadLocalizationData(selectedDomain, selectedLanguage);
+      void loadLocalizationData(selectedDomain, selectedLanguage);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional scoped/mount load (load fns are not memoized)
   }, [selectedDomain, selectedLanguage]);
 
   const loadDomains = async () => {
@@ -161,7 +163,7 @@ const LocalizationsPage: React.FC = () => {
     
     // Reload current data
     if (selectedDomain) {
-      loadLocalizationData(selectedDomain, selectedLanguage);
+      void loadLocalizationData(selectedDomain, selectedLanguage);
     }
   };
 
@@ -210,7 +212,7 @@ const LocalizationsPage: React.FC = () => {
         
         <div className="flex items-center gap-2">
           <button
-            onClick={loadDomains}
+            onClick={() => void loadDomains()}
             className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:text-gray-800 transition-colors"
           >
             <RefreshCw className="w-4 h-4" />
@@ -377,7 +379,7 @@ const LocalizationsPage: React.FC = () => {
                 Discard
               </button>
               <button
-                onClick={handleSaveChanges}
+                onClick={() => void handleSaveChanges()}
                 disabled={saving || !isValid}
                 className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 transition-colors flex items-center gap-2"
               >

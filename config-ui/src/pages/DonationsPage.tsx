@@ -641,7 +641,7 @@ const DonationsPage: React.FC = () => {
 
   const handleRefreshValidation = useCallback(() => {
     if (selectedHandler) {
-      loadCrossLanguageValidation(selectedHandler);
+      void loadCrossLanguageValidation(selectedHandler);
     }
   }, [selectedHandler]);
 
@@ -671,14 +671,16 @@ const DonationsPage: React.FC = () => {
       console.error('Failed to sync parameters:', err);
       setError(err instanceof Error ? err.message : 'Failed to sync parameters');
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional scoped/mount load (load fns are not memoized)
   }, [selectedHandler]);
 
   // Load initial data
   useEffect(() => {
-    Promise.all([
+    void Promise.all([
       loadHandlers(),
       loadSchema()
     ]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional scoped/mount load (load fns are not memoized)
   }, []);
 
   // Load selected donation when handler or language changes
@@ -686,9 +688,10 @@ const DonationsPage: React.FC = () => {
     if (selectedHandler && selectedLanguage) {
       const donationKey = `${selectedHandler}:${selectedLanguage}`;
       if (!donations[donationKey]) {
-        loadDonation(selectedHandler, selectedLanguage);
+        void loadDonation(selectedHandler, selectedLanguage);
       }
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional scoped/mount load (load fns are not memoized)
   }, [selectedHandler, selectedLanguage, donations]);
 
   // Load cross-language validation when handler changes and has multiple languages
@@ -696,7 +699,7 @@ const DonationsPage: React.FC = () => {
     if (selectedHandler) {
       const handler = handlersList.find(h => h.handler_name === selectedHandler);
       if (handler && handler.languages.length > 1) {
-        loadCrossLanguageValidation(selectedHandler);
+        void loadCrossLanguageValidation(selectedHandler);
       } else {
         // Clear validation for single-language handlers
         setValidationReport(null);
@@ -756,11 +759,11 @@ const DonationsPage: React.FC = () => {
       
       setDonations(prev => ({
         ...prev,
-        [donationKey]: response.donation_data as DonationData
+        [donationKey]: response.donation_data
       }));
       setOriginalDonations(prev => ({
         ...prev,
-        [donationKey]: JSON.parse(JSON.stringify(response.donation_data as DonationData))
+        [donationKey]: JSON.parse(JSON.stringify(response.donation_data))
       }));
     } catch (err) {
       // Handle 404 errors gracefully - some handlers might not have donation files yet
@@ -817,6 +820,7 @@ const DonationsPage: React.FC = () => {
     });
     
     return Array.from(allParams).sort();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional scoped/mount load (load fns are not memoized)
   }, [donations, selectedHandler]);
 
   const handleSave = async (): Promise<void> => {
@@ -949,7 +953,7 @@ const DonationsPage: React.FC = () => {
               <button
                 onClick={() => {
                   setError(null);
-                  loadHandlers();
+                  void loadHandlers();
                 }}
                 className="mt-3 px-3 py-1 bg-red-100 text-red-800 rounded text-sm hover:bg-red-200 transition-colors"
               >
@@ -976,8 +980,8 @@ const DonationsPage: React.FC = () => {
             setSelectedHandler(handlerName);
             setSelectedLanguage(language);
           }}
-          onCreateLanguage={handleCreateLanguage}
-          onDeleteLanguage={handleDeleteLanguage}
+          onCreateLanguage={(language, templateFrom) => void handleCreateLanguage(language, templateFrom)}
+          onDeleteLanguage={(language) => void handleDeleteLanguage(language)}
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
           filterLanguageCount={languageCountFilter}
@@ -997,15 +1001,15 @@ const DonationsPage: React.FC = () => {
               availableLanguages={getAvailableLanguagesForHandler(selectedHandler)}
               supportedLanguages={getSupportedLanguages()}
               onLanguageChange={setSelectedLanguage}
-              onCreateLanguage={handleCreateLanguage}
-              onDeleteLanguage={handleDeleteLanguage}
+              onCreateLanguage={(language, templateFrom) => void handleCreateLanguage(language, templateFrom)}
+              onDeleteLanguage={(language) => void handleDeleteLanguage(language)}
               disabled={saveStatus === 'saving'}
               // Phase 4: Cross-language validation props
               handlerName={selectedHandler}
               validationReport={validationReport}
               completenessReport={completenessReport}
               onRefreshValidation={handleRefreshValidation}
-              onSyncParameters={handleSyncParameters}
+              onSyncParameters={(sourceLanguage, targetLanguages) => void handleSyncParameters(sourceLanguage, targetLanguages)}
             />
 
             {/* Cross-Language Validation Panel */}
@@ -1018,7 +1022,7 @@ const DonationsPage: React.FC = () => {
                   validationReport={validationReport}
                   completenessReport={completenessReport}
                   onRefreshValidation={handleRefreshValidation}
-                  onSyncParameters={handleSyncParameters}
+                  onSyncParameters={(sourceLanguage, targetLanguages) => void handleSyncParameters(sourceLanguage, targetLanguages)}
                   isLoading={saveStatus === 'saving'}
                   disabled={saveStatus === 'saving'}
                 />

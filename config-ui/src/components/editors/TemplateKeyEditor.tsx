@@ -90,7 +90,7 @@ const TemplateKeyEditor: React.FC<TemplateKeyEditorProps> = ({
             </label>
             {typeof value === 'string' && value.length > 100 ? (
               <TextArea
-                value={value as string}
+                value={value}
                 onChange={handleStringChange}
                 placeholder="Enter template content..."
                 rows={4}

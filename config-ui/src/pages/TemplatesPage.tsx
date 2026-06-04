@@ -67,7 +67,7 @@ const TemplatesPage: React.FC = () => {
 
   // Load handlers on component mount
   useEffect(() => {
-    loadHandlers();
+    void loadHandlers();
   }, []);
 
   // Check for changes when template data changes
@@ -170,7 +170,7 @@ const TemplatesPage: React.FC = () => {
   // Load template data when handler or language selection changes
   useEffect(() => {
     if (selectedHandler && selectedLanguage) {
-      loadTemplateData(selectedHandler, selectedLanguage);
+      void loadTemplateData(selectedHandler, selectedLanguage);
     }
   }, [selectedHandler, selectedLanguage]);
 
@@ -453,12 +453,12 @@ const TemplatesPage: React.FC = () => {
                 supportedLanguages={currentSupportedLanguages}
                 onLanguageChange={handleLanguageChange}
                 onCreateLanguage={(lang: string, templateFrom?: string) => {
-                  handleCreateLanguage(lang, { 
+                  void handleCreateLanguage(lang, { 
                     copyFrom: templateFrom, 
                     useTemplate: !templateFrom 
                   });
                 }}
-                onDeleteLanguage={handleDeleteLanguage}
+                onDeleteLanguage={(language) => void handleDeleteLanguage(language)}
                 handlerName={selectedHandler}
               />
 

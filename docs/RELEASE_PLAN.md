@@ -34,7 +34,8 @@ The single active tracker for the road to release. Supersedes the legacy `docs/T
      editors (`ParameterSpecEditor`, `Token/SlotPatternsEditor`, `Examples/LemmasEditor`), its **AJV** validation, and `src/types/*`.
    - **Config schema** (`CoreConfig` / `config-master.toml`) → `ConfigSection` editors, `/configuration/config*` calls, `src/types/*`.
    - **REST API endpoints / parameter schemas / analysis endpoints** → `src/utils/apiClient.ts`, the analysis components.
-   - Definition-of-done addendum for such tasks: `cd config-ui && npm run type-check && npm run build` passes.
+   - Definition-of-done addendum for such tasks: `cd config-ui && npm run check && npm run build` passes
+     (`check` = type-check **+** the strict ESLint gate, harmonized with `../wb-mqtt-bridge/ui` in UI-6).
    - Directly-gated tasks: **DOC-5b, DOC-4, DOC-7, QUAL-7, QUAL-10/11, ARCH-1/2/3, BUILD-4.**
 5. **Read review docs at START; record outcomes in the ledger + journal at COMPLETION — AFFIRMATIVE &
    NON-NEGOTIABLE until release.** _(Refined 2026-06-02 to a single status home — see Invariant #6.)_
@@ -1040,9 +1041,9 @@ _Apply to every remediation task below (from the 4 review docs + QUAL-25/26). So
       footprint). Then verify the minimal x86_64 Docker build (builder feeds analyzer package names to
       `uv sync --extra`, which expects extra *names* — confirm/fix, now owned by **BUILD-5**) + container boots
       CLI/WebAPI. Gates Definition-of-release item #1. Refs: README-DOCKER, build audit.
-- [ ] **BUILD-4** (P1) — config-ui builds & type-checks clean (`npm ci && npm run type-check && npm run build`;
-      `dist` is git-ignored). Per Invariant #4 this is an **ongoing gate** — add it to CI (BUILD-2) so backend
-      contract changes that break config-ui are caught.
+- [ ] **BUILD-4** (P1) — config-ui builds, type-checks **and lints** clean (`npm ci && npm run check && npm run build`;
+      `check` = type-check + strict ESLint, harmonized with the bridge in UI-6; `dist` is git-ignored). Per Invariant #4
+      this is an **ongoing gate** — add it to CI (BUILD-2) so backend contract changes that break config-ui are caught.
 - [ ] **BUILD-5** (P2) — **Verify conditional/profile-driven build analysis (`build_analyzer`) still works vs the
       pre-pause (~Sep 2025) baseline.** The revival churned everything the analyzer reads — entry-points, providers,
       models (ASSET-1/2), and it removed surfaces (`train_schedule` handler QUAL-34, `settings` runner QUAL-21) — and
@@ -1172,19 +1173,20 @@ Governed by Invariant #4 (config-ui must stay functional).
       endpoints is gated by QUAL-39.** DoD: `cd config-ui && npm run check` (type-check + the harmonized strict lint) **&&
       npm run build** passes + the editing page round-trips contract + phrasing.
       **This is the remaining Invariant #4 obligation deferred from QUAL-29 (user-approved 2026-06-03).**
-- [ ] **UI-6** `[release]` (P1) — **config-ui stack harmonization with `../wb-mqtt-bridge/ui` (precedes UI-1/2/3/5).**
-      **LANDED 2026-06-04:** **strict linting (user-insisted, same level as the bridge)** — added a bridge-identical
+- [x] **UI-6** `[release]` (P1) — **DONE 2026-06-04. config-ui stack harmonization with `../wb-mqtt-bridge/ui` (precedes UI-1/2/3/5).**
+      **strict linting (user-insisted, same level as the bridge)** — added a bridge-identical
       `.eslintrc.cjs` (type-aware `@typescript-eslint/recommended-type-checked`; `no-floating-promises`/`no-misused-promises`
       as errors; the `any`-noise rules off), the `eslint`/`@typescript-eslint/*` + react-hooks/react-refresh devDeps, and
       `lint`/`lint:fix`/`check` scripts at `--max-warnings 0`; **fixed the runtime↔types version skew** (`@types/react`
       19→18, `@types/react-dom` 19→18, `@types/node` 24→20 to match `react@18`); added `engines: node>=18`.
-      `npm run type-check` stays green. **PENDING (open execution decision):** the strict gate surfaces **71 pre-existing
-      issues** (57 err / 14 warn) that must be resolved for `npm run lint` to pass — incl. a **real latent bug**
-      (`PromptEditor.tsx:142` duplicate `else-if`, dead branch), **51 async** (floating/misused promises → `void`/wrap;
-      low-risk, preserves today's non-awaiting behavior), **14 `exhaustive-deps`** (conservative: add deps only when clearly
-      safe, else `eslint-disable` + reason — config-ui has **no test net**), **5** redundant type-assertions (auto-fix).
-      _Decide: clean all 71 now (green gate before UI work) vs. clean as the first step of UI-5._ **ON GREEN:** fold
-      `npm run lint` into the Invariant-#4 config-ui DoD + **BUILD-4** (the bridge gates on typecheck **and** lint).
+      **Cleanup DONE (user: "clean up all 71 now"):** resolved all **71** the strict gate surfaced across 19 files so
+      `npm run lint` (`--max-warnings 0`) + `npm run check` pass — incl. a **real latent bug fixed** (`PromptEditor.tsx`
+      variable `description:` lines were shadowed by the prompt-`description:` branch and never parsed; added a
+      `currentSection !== 'variables'` guard). Approach: **51 async** → `void`/arg-aware-wrap (preserves today's
+      non-awaiting behavior); **14 `exhaustive-deps`** → `eslint-disable` + reason (mount/scoped loads; load fns aren't
+      memoized, so adding deps would loop); **5** redundant type-assertions auto-fixed. No test net → verified by
+      type-check + build (both green; `--report-unused-disable-directives` confirms every disable is needed). **ON GREEN
+      (done):** folded the strict lint into the Invariant-#4 config-ui DoD + **BUILD-4** (now `npm run check && npm run build`).
       **OUT OF SCOPE (user, 2026-06-04):** axios, react-query (config-ui is load-edit-save, not a server-cache dashboard);
       OpenAPI **type generation** was folded into **UI-5** (generation-only), not here. Refs: stack comparison
       (journal 2026-06-04), `../wb-mqtt-bridge/ui/.eslintrc.cjs`.

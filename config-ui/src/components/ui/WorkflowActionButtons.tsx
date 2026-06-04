@@ -95,7 +95,7 @@ export const WorkflowActionButtons: React.FC<WorkflowActionButtonsProps> = ({
       {/* Persist to TOML Button */}
       {status.canPersist && (
         <button
-          onClick={handlePersist}
+          onClick={() => void handlePersist()}
           disabled={persisting || loading || !status.canPersist}
           className={`
             inline-flex items-center justify-center

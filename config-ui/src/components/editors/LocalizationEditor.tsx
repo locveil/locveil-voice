@@ -181,6 +181,7 @@ const LocalizationEditor: React.FC<LocalizationEditorProps> = ({
     const errors = validateLocalizationData(value);
     setValidationErrors(errors);
     onValidationChange?.(errors.length === 0, errors);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional scoped/mount load (load fns are not memoized)
   }, [value, domain, onValidationChange]);
 
   const handleYamlChange = (newYaml: string) => {

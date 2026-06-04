@@ -32,7 +32,7 @@ const OverviewPage: React.FC = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    loadSystemStatus();
+    void loadSystemStatus();
   }, []);
 
   const loadSystemStatus = async () => {
@@ -132,7 +132,7 @@ const OverviewPage: React.FC = () => {
               <h3 className="text-red-800 font-medium">Failed to load system status</h3>
               <p className="text-red-700 text-sm mt-1">{error}</p>
               <button
-                onClick={loadSystemStatus}
+                onClick={() => void loadSystemStatus()}
                 className="mt-3 px-3 py-1 bg-red-100 text-red-800 rounded text-sm hover:bg-red-200 transition-colors"
               >
                 Retry

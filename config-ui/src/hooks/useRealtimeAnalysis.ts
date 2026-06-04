@@ -157,7 +157,7 @@ const useRealtimeAnalysis = (
     }
 
     debounceTimeoutRef.current = setTimeout(() => {
-      performAnalysis(donationData);
+      void performAnalysis(donationData);
     }, debounceMs);
   }, [performAnalysis, debounceMs]);
 

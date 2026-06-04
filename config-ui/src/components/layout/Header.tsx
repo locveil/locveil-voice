@@ -30,7 +30,7 @@ const Header = ({ connectionStatus: externalStatus, systemInfo: externalSystemIn
   // Check connection status on mount and periodically with exponential backoff
   useEffect(() => {
     if (!externalStatus) {
-      checkConnection();
+      void checkConnection();
       
       // Dynamic interval based on connection status and retry count
       const getNextInterval = () => {
@@ -46,13 +46,14 @@ const Header = ({ connectionStatus: externalStatus, systemInfo: externalSystemIn
       const scheduleNextCheck = () => {
         const interval = getNextInterval();
         return setTimeout(() => {
-          checkConnection().then(scheduleNextCheck);
+          void checkConnection().then(scheduleNextCheck);
         }, interval);
       };
 
       const timeoutId = scheduleNextCheck();
       return () => clearTimeout(timeoutId);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional scoped/mount load (load fns are not memoized)
   }, [externalStatus, connectionStatus, retryCount]);
 
   const checkConnection = async () => {
@@ -185,7 +186,7 @@ const Header = ({ connectionStatus: externalStatus, systemInfo: externalSystemIn
           {/* Refresh button */}
           {!externalStatus && (
             <button
-              onClick={checkConnection}
+              onClick={() => void checkConnection()}
               disabled={isChecking || currentStatus === 'connecting'}
               className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
               title="Refresh connection status"

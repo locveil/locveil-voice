@@ -21,7 +21,7 @@ export const AudioOutputConfigSection: React.FC<AudioOutputConfigSectionProps> =
   const [selectedDevice, setSelectedDevice] = useState<AudioDeviceInfo | null>(null);
 
   useEffect(() => {
-    loadAudioOutputDevices();
+    void loadAudioOutputDevices();
   }, []);
 
   useEffect(() => {

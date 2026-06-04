@@ -261,8 +261,9 @@ export const ProviderSelectWidget: React.FC<ConfigWidgetProps & {
   
   useEffect(() => {
     if (inferredComponent) {
-      loadProviders();
+      void loadProviders();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional scoped/mount load (load fns are not memoized)
   }, [inferredComponent]);
   
   const loadProviders = async () => {
@@ -367,7 +368,7 @@ export const MicrophoneSelectWidget: React.FC<ConfigWidgetProps & {
   const [loading, setLoading] = useState(false);
   
   useEffect(() => {
-    loadAudioDevices();
+    void loadAudioDevices();
   }, []);
   
   const loadAudioDevices = async () => {
@@ -449,7 +450,7 @@ export const AudioOutputSelectWidget: React.FC<ConfigWidgetProps & {
   const [loading, setLoading] = useState(false);
   
   useEffect(() => {
-    loadAudioOutputDevices();
+    void loadAudioOutputDevices();
   }, []);
   
   const loadAudioOutputDevices = async () => {

@@ -112,7 +112,9 @@ const PromptEditor: React.FC<PromptEditorProps> = ({
         if (!currentPrompt) continue;
 
         // Handle sections
-        if (line.match(/^\s+description:/)) {
+        // (must exclude the variables section: a variable's `description:` is handled below;
+        //  without this guard it was shadowed by this branch and never parsed.)
+        if (currentSection !== 'variables' && line.match(/^\s+description:/)) {
           currentSection = 'description';
           const value = line.split('description:')[1]?.trim().replace(/^"|"$/g, '') || '';
           prompts[currentPrompt].description = value;

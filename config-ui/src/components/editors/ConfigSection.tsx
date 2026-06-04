@@ -153,6 +153,7 @@ export const ConfigSection: React.FC<ConfigSectionProps> = ({
     // Trigger real-time validation for component sections after a short delay
     if (isComponentSection && onValidate) {
       // Clear any existing timeout to debounce validation calls
+      // eslint-disable-next-line @typescript-eslint/no-misused-promises -- fire-and-forget debounced validation
       const timeoutId = setTimeout(async () => {
         try {
           const result = await onValidate();
@@ -414,7 +415,7 @@ export const ConfigSection: React.FC<ConfigSectionProps> = ({
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    handleValidate();
+                    void handleValidate();
                   }}
                   disabled={isValidating || disabled}
                   className="p-1 text-blue-600 hover:text-blue-800 disabled:opacity-50"
@@ -428,7 +429,7 @@ export const ConfigSection: React.FC<ConfigSectionProps> = ({
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    handleApply();
+                    void handleApply();
                   }}
                   disabled={isSaving || disabled}
                   className="p-1 text-green-600 hover:text-green-800 disabled:opacity-50"

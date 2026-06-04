@@ -194,8 +194,9 @@ const ConfigurationPage: React.FC = () => {
   const [sectionTitles, setSectionTitles] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    loadConfiguration();
-    loadSectionOrderAndTitles();
+    void loadConfiguration();
+    void loadSectionOrderAndTitles();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional scoped/mount load (load fns are not memoized)
   }, []);
 
   const loadSectionOrderAndTitles = async () => {
@@ -224,8 +225,9 @@ const ConfigurationPage: React.FC = () => {
   // Update section order and titles when config changes
   useEffect(() => {
     if (state.config && sectionOrder.length === 0) {
-      loadSectionOrderAndTitles();
+      void loadSectionOrderAndTitles();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional scoped/mount load (load fns are not memoized)
   }, [state.config, sectionOrder.length]);
 
   const loadConfiguration = async () => {
@@ -820,7 +822,7 @@ const ConfigurationPage: React.FC = () => {
             </div>
           </div>
           <button
-            onClick={loadConfiguration}
+            onClick={() => void loadConfiguration()}
             className="mt-4 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 flex items-center"
           >
             <RefreshCw className="h-4 w-4 mr-2" />

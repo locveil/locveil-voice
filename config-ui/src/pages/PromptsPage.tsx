@@ -67,7 +67,8 @@ const PromptsPage: React.FC = () => {
 
   // Load handlers on component mount
   useEffect(() => {
-    loadHandlers();
+    void loadHandlers();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional scoped/mount load (load fns are not memoized)
   }, []);
 
   // Check for changes when prompt data changes
@@ -101,7 +102,7 @@ const PromptsPage: React.FC = () => {
   // Load prompt data when handler or language selection changes
   useEffect(() => {
     if (selectedHandler && selectedLanguage) {
-      loadPromptData(selectedHandler, selectedLanguage);
+      void loadPromptData(selectedHandler, selectedLanguage);
     }
   }, [selectedHandler, selectedLanguage]);
 
@@ -414,10 +415,10 @@ const PromptsPage: React.FC = () => {
                 supportedLanguages={currentHandler?.supported_languages || []}
                 onLanguageChange={handleLanguageSelect}
                 onCreateLanguage={(lang: string, templateFrom?: string) => 
-                  handleCreateLanguage(selectedHandler!, lang, templateFrom)
+                  void handleCreateLanguage(selectedHandler, lang, templateFrom)
                 }
                 onDeleteLanguage={(lang: string) => 
-                  handleDeleteLanguage(selectedHandler!, lang)
+                  void handleDeleteLanguage(selectedHandler, lang)
                 }
                 handlerName={selectedHandler}
               />

@@ -99,7 +99,7 @@ export const TomlPreview: React.FC<TomlPreviewProps> = ({
     
     // Schedule new validation after 500ms delay
     const timer = setTimeout(() => {
-      validateTomlLive(content);
+      void validateTomlLive(content);
     }, 500);
     
     setValidationDebounceTimer(timer);
@@ -147,15 +147,17 @@ export const TomlPreview: React.FC<TomlPreviewProps> = ({
   
   // Load TOML when component mounts or config changes
   useEffect(() => {
-    loadRawToml();
+    void loadRawToml();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional scoped/mount load (load fns are not memoized)
   }, [config]); // Re-load when config changes
   
   // Update display when showSensitive changes (without re-fetching)
   useEffect(() => {
     if (rawToml) {
       // Re-process the existing content for sensitive value masking
-      loadRawToml();
+      void loadRawToml();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional scoped/mount load (load fns are not memoized)
   }, [showSensitive]);
   
   // Cleanup debounce timer on unmount
@@ -182,7 +184,7 @@ export const TomlPreview: React.FC<TomlPreviewProps> = ({
   };
   
   const handleRefresh = () => {
-    loadRawToml();
+    void loadRawToml();
   };
   
   // Phase 6: New event handlers
@@ -322,7 +324,7 @@ export const TomlPreview: React.FC<TomlPreviewProps> = ({
             )}
           </button>
           <button
-            onClick={handleCopy}
+            onClick={() => void handleCopy()}
             className="flex items-center space-x-2 px-3 py-2 text-sm text-gray-700 hover:text-gray-900 rounded-md hover:bg-gray-100"
             disabled={copied || loading}
           >

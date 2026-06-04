@@ -20,8 +20,11 @@ newest entries near the top of each dated section.
   `recommended-type-checked`; `no-floating-promises`/`no-misused-promises` errors; `any`-noise rules off) + the eslint
   devDeps + `lint`/`lint:fix`/`check` scripts at `--max-warnings 0`; fixed the runtime↔types version skew
   (`@types/react` 19→18, `@types/node` 24→20 to match `react@18`); added `engines`. `npm run type-check` stays green.
-  The strict gate immediately surfaced **71 pre-existing issues** incl. a **real latent bug** (`PromptEditor.tsx:142`
-  duplicate `else-if`) — cleanup is UI-6's pending step (config-ui has no test net). (2) **Data-layer: "stop fighting
+  The strict gate immediately surfaced **71 pre-existing issues** incl. a **real latent bug** (`PromptEditor.tsx`
+  variable `description:` shadowed by the prompt-description branch — fixed). **Cleaned up all 71 (user-directed):**
+  51 async → `void`/arg-aware-wrap, 14 `exhaustive-deps` → disable+reason (mount loads, fns not memoized → adding deps
+  loops), 5 type-assertions auto-fixed; `npm run check` + build green (no test net → type-check/build are the safety net).
+  Folded the strict lint into the Invariant-#4 config-ui DoD + BUILD-4 (now `npm run check && npm run build`). **UI-6 DONE.** (2) **Data-layer: "stop fighting
   type drift" → generation-only, folded into UI-5:** rebuild UI-5's `src/types/*` by **generating** from the FastAPI
   OpenAPI schema (`openapi-typescript`), not hand-authoring — the backend is ~80% typed (104/123 routes have a
   `response_model`). Prereq: a backend script to dump `app.openapi()` to a committed `openapi.json`. **axios + react-query

@@ -149,7 +149,7 @@ export const TestConfigButton: React.FC<TestConfigButtonProps> = ({
 
   return (
     <button
-      onClick={handleClick}
+      onClick={() => void handleClick()}
       disabled={disabled || loading}
       className={`
         inline-flex items-center justify-center
