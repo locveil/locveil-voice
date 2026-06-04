@@ -1072,8 +1072,12 @@ _Apply to every remediation task below (from the 4 review docs + QUAL-25/26). So
       caveat); (5) `--docker --platform {ubuntu,alpine}` requirement sets look right. **Baseline compare:** diff today's
       per-profile output against the analyzer's behavior at the pre-pause commit (git history) and explain every delta as
       intentional (new/removed providers, model refresh) vs a regression. Consider landing a small regression test
-      (golden per-profile requirement sets) so this can't silently rot — coordinate with TEST-7. Refs: build audit,
-      README-DOCKER, BUILD-3.
+      (golden per-profile requirement sets) so this can't silently rot — coordinate with TEST-7. **(6) armv7 image base
+      Alpine→Debian (ARCH-9):** `onnx_inference_layer.md §4.7/§9` proved sherpa-onnx has no musl build, so `Dockerfile.armv7`
+      must switch `python:3.11-alpine`→`arm32v7/python:3.11-slim-bullseye` and the analyzer's armv7 path must emit the
+      `linux.ubuntu` (apt) set, not `linux.alpine` (apk) — verify the marker-driven `asr-onnx` extra + `libasound2` resolve
+      on the Debian armv7 path. (Image build/boot itself stays BUILD-3, release phase.) Refs: build audit,
+      README-DOCKER, BUILD-3, `docs/design/onnx_inference_layer.md` §4.7/§9 (ARCH-9).
 
 ### Models & Assets (ASSET)
 - [x] **ASSET-1** — Refresh stale model IDs (Anthropic→Claude 4.x, Whisper large-v3, ElevenLabs multilingual_v2, spaCy 3.8, gpt-4→gpt-4o-mini). → fc85306
