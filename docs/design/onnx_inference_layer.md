@@ -102,7 +102,11 @@ MODEL DISK : 26.7 MB int8   |   LOAD: 38.2 s
    **bundles its own onnxruntime**. This is why **vosk-tts and any plain-onnxruntime model cannot run on armv7**.
 3. **RTF ≈ 1.15 → offline only, with a latency tax** (a 3 s command ≈ 3.5 s to transcribe). Rules out streaming on this
    box and **rules out the big 6.1-WER model** (would be ~5–10× — unusable). **armv7 = small model only.**
-4. **~38 s one-time model load** (onnxruntime graph init on the A7). Optimization target (graph-opt level / cached init).
+4. **~38 s model load — per *process start*, not first-run-only.** This is the onnxruntime graph init when the
+   recognizer is constructed; it happens **every time Irene starts** (reboot, image update, container restart) — distinct
+   from the model *download*, which is first-run-only and cached on the mounted asset folder (§6). So on a reboot the WB7
+   is ~38 s from container start to ASR-ready. Optimizable by serializing onnxruntime's **optimized graph** once and
+   loading that on subsequent starts (`SessionOptions.optimized_model_filepath`) — worth a small spike (§10).
 5. Needs **`libasound2`** (sherpa links ALSA).
 6. **armv7 = no TTS** (user decision): silero needs torch (✗ armv7), vosk-tts needs pip-onnxruntime (✗ armv7), and
    sherpa-`OfflineTts` is available but out of scope per the decision. The edge does **input only**.
@@ -137,8 +141,10 @@ The new provider's models are **multi-file packs**, not a single URL. Extend the
   to a local directory, downloading/caching from HF (`alphacep/vosk-model-*`) under the existing cache root.
 - Support **per-profile model selection** (the `embedded-armv7` profile → `vosk-model-small-ru`; 64-bit → `vosk-model-ru`)
   so only the configured pack is fetched.
-- **Bake-in vs download** (open question, §10): for an offline controller, baking the small pack into the armv7 image
-  (+27 MB) is safer than first-run download; the AssetManager should support a pre-provisioned local pack.
+- **First-run download into the asset-loader folder (decided, user 2026-06-04):** models are **not baked into the
+  image**; the AssetManager downloads the configured pack on first run into its asset/cache directory — a path the
+  asset loader defines, **usually a volume mounted outside the container** so it **persists across container
+  recreation** (downloaded once, reused thereafter). The image stays lean; the WB7's `/mnt/data` is the natural mount.
 - Validate the pack (files present, non-empty) at startup (ties to QUAL-23 startup validation).
 
 ---
@@ -151,11 +157,10 @@ provider encodes the WB7 findings:
 ```python
 @classmethod
 def get_python_dependencies(cls) -> List[str]:
-    # arch-split via PEP 508 markers; NO torch (the "drop torch" win)
-    return [
-        "sherpa-onnx==1.10.46; platform_machine=='armv7l'",   # the only working armv7 build
-        "sherpa-onnx>=1.11;    platform_machine!='armv7l'",   # latest on x86_64/aarch64
-    ]
+    # CONTRACT (EntryPointMetadata): return pyproject [project.optional-dependencies] GROUP NAMES,
+    # NOT raw requirement strings — the build runs `uv sync --extra <name>`. The per-arch version
+    # split (and "no torch") lives in the extra definition below, where uv evaluates the markers.
+    return ["asr-onnx"]
 
 @classmethod
 def get_platform_dependencies(cls) -> Dict[str, List[str]]:
@@ -170,10 +175,32 @@ def _get_default_model_urls(cls) -> Dict[str, str]:
     return {"vosk-model-small-ru": "...", "vosk-model-ru": "..."}   # small + big packs
 ```
 
-**Build-system caveat (validate in BUILD-5):** the per-arch version split relies on the build_analyzer **passing PEP 508
-markers through to the per-arch `pip install`** (so `platform_machine=='armv7l'` resolves to 1.10.46 inside the armv7
-build, latest elsewhere). If the analyzer flattens deps and drops markers, it needs a small fix. To confirm during
-ARCH-10.
+```toml
+# pyproject.toml — the per-arch version split lives HERE (uv sync evaluates the markers in the
+# per-platform build context: armv7 build → 1.10.46; x86_64/aarch64 → latest). NO torch.
+[project.optional-dependencies]
+asr-onnx = [
+    "sherpa-onnx==1.10.46; platform_machine=='armv7l'",   # the only working armv7 build
+    "sherpa-onnx>=1.11;    platform_machine!='armv7l'",
+]
+```
+
+### 7.1 Build-system finding (investigated 2026-06-04) — a real correction is needed
+
+The build flow is: `build_analyzer` collects each enabled provider's `get_python_dependencies()` into
+`BuildRequirements.python_dependencies`; `Dockerfile.armv7`/`.x86_64` then run **`uv sync --extra <each value>`**.
+So the values **must be pyproject extra group names**. The `EntryPointMetadata` docstring confirms this contract
+(`["asr"]`, `["tts"]`, …).
+
+**Bug:** the *existing* providers violate it — `whisper.get_python_dependencies()` returns
+`["openai-whisper>=20230314", "torch>=1.13.0", "torchaudio>=0.13.0"]` (requirement strings), `vosk` returns
+`["vosk>=0.3.45"]`, silero returns `["torch>=1.13.0"]`, etc. Passed to `uv sync --extra "torch>=1.13.0"` these are
+**invalid extra names** → the per-profile `--extra` install is broken/latent (builds fall back to a full `uv sync`).
+This is pre-existing debt — relates to **QUAL-3** (get_python_dependencies wiring) and **BUILD-5** (build-analyzer
+audit). **Correction to fold into BUILD-5/QUAL-3:** make `get_python_dependencies()` return **extra group names**
+across all providers, and define those extras in pyproject. The new `sherpa_onnx` provider is written **correctly**
+(returns `["asr-onnx"]`) and is the reference. **The PEP 508 marker per-arch split works** *because* the markers sit in
+the pyproject extra that `uv sync` resolves in the per-arch build — not in a provider-returned string.
 
 ---
 
@@ -197,12 +224,18 @@ ARCH-10.
 
 ## 10. Open questions / next
 
+**Resolved (user 2026-06-04):**
+- **One provider** — single `sherpa_onnx` ASR provider, family chosen by TOML config `model_type`
+  (`vosk-transducer` → `OfflineRecognizer.from_transducer`; `whisper` → `OfflineRecognizer.from_whisper`). Confirmed
+  feasible — both are `OfflineRecognizer` factory methods on the same runtime.
+- **Models: first-run download** into the asset-loader folder (mounted volume), not baked into the image (§6).
+
+**Still open:**
 - **VAD + wake-word placement** (next discussion): keep energy-VAD vs move to Silero-VAD-ONNX; keep
   openWakeWord/microWakeWord (TFLite) — sherpa-KWS has no RU model; edge vs server; ESP32/QUAL-19/20 intersection.
   Also verify **`tflite-runtime` has an armv7 wheel** for the edge.
-- **Provider scope/name** — one `sherpa_onnx` provider (vosk-zipformer + whisper-onnx by config) vs separate providers.
-- **Model bake-in vs first-run download** on the offline armv7 controller.
-- **38 s load** — investigate graph-opt/cached-init optimization (one-time, but notable).
+- **38 s per-start load** — spike onnxruntime optimized-graph caching to shrink it (§4.4).
+- **Build-system fix** — `get_python_dependencies` should return extra *group names* across all providers (§7.1) → BUILD-5.
 
 ---
 
