@@ -65,8 +65,18 @@ concurrent_playback = false
 
 [asr]
 enabled = true
-default_provider = "whisper"
-fallback_providers = ['whisper']
+default_provider = "sherpa_onnx"   # the only ASR that runs on armv7 (no torch, no Kaldi)
+fallback_providers = []
+
+[asr.providers.sherpa_onnx]
+enabled = true
+model = "vosk-model-small-ru"      # small int8 pack (~27 MB) — the big model is unusable at armv7 RTF
+model_type = "vosk-transducer"
+default_language = "ru"
+sample_rate = 16000
+num_threads = 4                    # all 4 A7 cores (best RTF, proven on WB7); drop to 2 if the bridge contends
+decoding_method = "greedy_search"
+preload_models = true              # pay the ~38 s graph-init at boot, off the first-utterance path
 
 
 [llm]

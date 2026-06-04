@@ -41,6 +41,15 @@ advanced-asr = [
     "torch>=1.13.0",  # Required by Whisper
     "torchaudio>=0.13.0"  # Required by Whisper
 ]
+# sherpa-onnx ASR (ARCH-10): the alphacep VOSK Zipformer2 ONNX family. NO torch.
+# Per-arch version split lives in the PEP 508 markers — uv evaluates them in the
+# per-platform build: armv7 gets the only working build (1.10.46; newer wheels fail
+# the WB7 ELF-alignment check), x86_64/aarch64 get latest. sherpa bundles its own
+# onnxruntime (pip onnxruntime has no armv7 wheel).
+asr-onnx = [
+    "sherpa-onnx==1.10.46; platform_machine=='armv7l'",
+    "sherpa-onnx>=1.11; platform_machine!='armv7l'",
+]
 
 # Enhanced audio input with cloud providers
 audio-input-enhanced = [
@@ -167,7 +176,7 @@ headless = [
 
 # All optional components - Fixed: Re-enabled
 all = [
-    "irene-voice-assistant[voice,cloud-asr,advanced-asr,llm]"
+    "irene-voice-assistant[voice,cloud-asr,advanced-asr,asr-onnx,llm]"
 ]
 
 [project.scripts]
@@ -215,6 +224,7 @@ elevenlabs = "irene.providers.tts.elevenlabs:ElevenLabsTTSProvider"
 vosk = "irene.providers.asr.vosk:VoskASRProvider"
 whisper = "irene.providers.asr.whisper:WhisperASRProvider"
 google_cloud = "irene.providers.asr.google_cloud:GoogleCloudASRProvider"
+sherpa_onnx = "irene.providers.asr.sherpa_onnx:SherpaOnnxASRProvider"
 
 [project.entry-points."irene.providers.llm"]
 console = "irene.providers.llm.console:ConsoleLLMProvider"

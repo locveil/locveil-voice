@@ -128,7 +128,7 @@ class AutoSchemaRegistry:
                 # Audio providers  
                 SoundDeviceProviderSchema, AudioPlayerProviderSchema, SimpleAudioProviderSchema, APlayProviderSchema, ConsoleAudioProviderSchema,
                 # ASR providers
-                WhisperProviderSchema, VoskASRProviderSchema, GoogleCloudProviderSchema,
+                WhisperProviderSchema, VoskASRProviderSchema, GoogleCloudProviderSchema, SherpaOnnxASRProviderSchema,
                 # LLM providers
                 OpenAIProviderSchema, AnthropicProviderSchema, DeepSeekProviderSchema, ConsoleLLMProviderSchema,
                 # Voice trigger providers
@@ -160,6 +160,7 @@ class AutoSchemaRegistry:
                     "whisper": WhisperProviderSchema,
                     "vosk": VoskASRProviderSchema,
                     "google_cloud": GoogleCloudProviderSchema,
+                    "sherpa_onnx": SherpaOnnxASRProviderSchema,
                 },
                 "llm": {
                     "openai": OpenAIProviderSchema,

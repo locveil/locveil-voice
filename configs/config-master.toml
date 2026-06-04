@@ -229,6 +229,18 @@ default_language = "ru"            # Default language: "ru", "en"
 sample_rate = 16000                # Audio sample rate (must match ASR component configuration)
 preload_models = true              # Preload AI models during provider initialization for faster startup
 
+# sherpa-onnx ASR Provider (ONNX runtime; alphacep VOSK Zipformer2, offline)
+# The only ASR provider that runs on armv7 (Wirenboard 7) — no torch, no Kaldi.
+[asr.providers.sherpa_onnx]
+enabled = false                    # Enable sherpa-onnx provider
+model = "vosk-model-small-ru"      # Pack id: "vosk-model-small-ru" (edge) | "vosk-model-ru" (64-bit, big)
+model_type = "vosk-transducer"     # "vosk-transducer" (offline); whisper-onnx arrives in PR-2
+default_language = "ru"            # Model language (alphacep VOSK packs are Russian)
+sample_rate = 16000                # Audio sample rate (Zipformer2 frontend is 16 kHz)
+num_threads = 4                    # Inference threads (omit → platform default: armv7=2, else min(4,cores))
+decoding_method = "greedy_search"  # "greedy_search" | "modified_beam_search"
+preload_models = true              # Pay the ~38 s onnxruntime graph-init at boot, not on first utterance
+
 # Google Cloud Speech ASR Provider (cloud-based, high accuracy)
 [asr.providers.google_cloud]
 enabled = false                     # Enable Google Cloud provider

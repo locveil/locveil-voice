@@ -545,6 +545,101 @@ class AssetManager:
         
         await asyncio.to_thread(extract_sync)
     
+    async def download_model_pack(self, provider: str, model_id: str, force: bool = False) -> Dict[str, "Path"]:
+        """Resolve a multi-file model pack to local files, downloading on first run.
+
+        For sherpa-onnx transducer models (ARCH-10), a "model" is a set of files
+        (encoder/decoder/joiner/tokens), not a single URL. The pack descriptor lives in
+        the provider's ``_get_default_model_urls()`` as ``{"type": "sherpa-pack",
+        "repo": "<hf-repo>", "prefer": "int8"}``; the actual filenames are discovered via
+        the HuggingFace API (robust to repo layout) and int8 variants are preferred.
+
+        Returns a dict ``{"encoder": Path, "decoder": Path, "joiner": Path, "tokens": Path}``.
+        Files persist under the models root (a mounted volume in production) so the
+        download happens once and is reused across container recreation.
+        """
+        lock_key = f"{provider}:{model_id}:pack"
+        if lock_key not in self._download_locks:
+            self._download_locks[lock_key] = asyncio.Lock()
+        async with self._download_locks[lock_key]:
+            return await self._download_model_pack_impl(provider, model_id, force)
+
+    async def _download_model_pack_impl(self, provider: str, model_id: str, force: bool) -> Dict[str, "Path"]:
+        pack_dir = self.get_model_path(provider, model_id)
+        members = {
+            "encoder": pack_dir / "encoder.onnx",
+            "decoder": pack_dir / "decoder.onnx",
+            "joiner": pack_dir / "joiner.onnx",
+            "tokens": pack_dir / "tokens.txt",
+        }
+
+        def complete() -> bool:
+            return all(p.exists() and p.stat().st_size > 0 for p in members.values())
+
+        if not force and complete():
+            return members
+
+        info = self.get_model_info(provider, model_id)
+        repo = info.get("repo")
+        if not repo:
+            raise ValueError(f"No 'repo' configured for model pack {provider}/{model_id}")
+        prefer = info.get("prefer", "int8")
+
+        siblings = await self._hf_list_repo_files(repo)
+        picks = self._pick_pack_files(siblings, prefer)
+        missing = [m for m in members if m not in picks]
+        if missing:
+            raise ValueError(
+                f"Could not resolve pack member(s) {missing} in HF repo '{repo}' "
+                f"({len(siblings)} files listed)"
+            )
+
+        pack_dir.mkdir(parents=True, exist_ok=True)
+        for member, target in members.items():
+            if force or not (target.exists() and target.stat().st_size > 0):
+                url = f"https://huggingface.co/{repo}/resolve/main/{picks[member]}?download=true"
+                logger.info(f"Downloading model-pack file {provider}/{model_id}:{member} <- {picks[member]}")
+                await self._download_file(url, target)
+
+        if not complete():
+            raise RuntimeError(f"Model pack {provider}/{model_id} incomplete after download")
+        return members
+
+    async def _hf_list_repo_files(self, repo: str) -> List[str]:
+        """List file names in a HuggingFace model repo via its public API."""
+        try:
+            import aiohttp  # type: ignore
+        except ImportError:
+            raise RuntimeError("aiohttp required for model downloads")
+        url = f"https://huggingface.co/api/models/{repo}"
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as response:
+                response.raise_for_status()
+                data = await response.json()
+        return [s.get("rfilename", "") for s in data.get("siblings", [])]
+
+    @staticmethod
+    def _pick_pack_files(siblings: List[str], prefer: str) -> Dict[str, str]:
+        """Pick encoder/decoder/joiner (.onnx, ``prefer`` variant first) + tokens.txt."""
+        onnx = [f for f in siblings if f.lower().endswith(".onnx")]
+
+        def pick(keyword: str) -> Optional[str]:
+            cands = [f for f in onnx if keyword in f.lower()]
+            if not cands:
+                return None
+            preferred = [f for f in cands if prefer in f.lower()]
+            return (preferred or cands)[0]
+
+        picks: Dict[str, str] = {}
+        for member in ("encoder", "decoder", "joiner"):
+            chosen = pick(member)
+            if chosen:
+                picks[member] = chosen
+        tokens = next((f for f in siblings if f.lower().endswith("tokens.txt")), None)
+        if tokens:
+            picks["tokens"] = tokens
+        return picks
+
     def model_exists(self, provider: str, model_id: str) -> bool:
         """Check if model exists - supports both file-based and package-based models"""
         # Check if this provider uses Python packages for models

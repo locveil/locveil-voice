@@ -171,6 +171,17 @@ class VoskASRProviderSchema(ASRProviderSchema):
     preload_models: bool = Field(default=False, description="Preload AI models during provider initialization")
 
 
+class SherpaOnnxASRProviderSchema(ASRProviderSchema):
+    """sherpa-onnx ASR provider configuration schema (ARCH-10: ONNX VOSK Zipformer2)"""
+    model: str = Field(default="vosk-model-small-ru", description="Model pack id: vosk-model-small-ru | vosk-model-ru")
+    model_type: str = Field(default="vosk-transducer", description="Model family: vosk-transducer (whisper-onnx in PR-2)")
+    default_language: str = Field(default="ru", description="Model language (alphacep VOSK packs are Russian)")
+    sample_rate: int = Field(default=16000, description="Audio sample rate (Zipformer2 frontend is 16 kHz)")
+    num_threads: int = Field(default=4, description="Inference threads (platform default: armv7=2, else min(4,cores))")
+    decoding_method: str = Field(default="greedy_search", description="greedy_search | modified_beam_search")
+    preload_models: bool = Field(default=False, description="Preload model during init (pay graph-init at boot)")
+
+
 class VoskTTSProviderSchema(TTSProviderSchema):
     """Vosk TTS provider configuration schema"""
     default_language: str = Field(default="ru", description="Default language: ru, en, de, fr")

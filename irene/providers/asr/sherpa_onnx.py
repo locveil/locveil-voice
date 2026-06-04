@@ -1,0 +1,269 @@
+"""
+sherpa-onnx ASR provider — ONNX inference for the alphacep VOSK Zipformer2 family.
+
+Part of ARCH-10 / PR-1 (see docs/design/onnx_inference_layer.md). Runs **alongside**
+the Kaldi `vosk` and torch `whisper` providers — a config choice, not a replacement.
+
+PR-1 scope: offline VOSK Zipformer2 transducer (`OfflineRecognizer.from_transducer`).
+Whisper-ONNX on the same runtime is PR-2.
+
+Design notes baked in here:
+- **numpy-free** audio conversion (stdlib `array`) — armv7 has no numpy wheel, proven on
+  the Wirenboard 7 benchmark.
+- multi-file **model packs** (encoder/decoder/joiner/tokens) resolved + first-run
+  downloaded via the AssetManager into the mounted asset folder (§6).
+- a small **inference policy** (num_threads per platform, §5.2b).
+- the model load (~38 s onnxruntime graph init on armv7) is absorbed by `warm_up()` when
+  `preload_models=True` (the `embedded-armv7` profile sets it).
+"""
+
+import array
+import asyncio
+import io
+import logging
+import os
+import platform
+import wave
+from dataclasses import dataclass
+from typing import Any, AsyncIterator, Dict, List, Optional
+
+from .base import ASRProvider
+
+logger = logging.getLogger(__name__)
+
+
+@dataclass
+class SherpaInferencePolicy:
+    """Platform-aware inference policy (decoupled per design §5.2b).
+
+    Not a shared session — sherpa-onnx sessions stay inside each provider — just the
+    thread/CPU budget the provider reads. armv7 stays conservative so it doesn't
+    oversubscribe the 4 Cortex-A7 cores while wb-mqtt-bridge runs on the same box.
+    """
+
+    num_threads: int
+    provider: str = "cpu"  # onnxruntime execution provider
+
+    @classmethod
+    def for_platform(cls, override: Optional[int] = None) -> "SherpaInferencePolicy":
+        if override and override > 0:
+            return cls(num_threads=int(override))
+        machine = platform.machine().lower()
+        if machine.startswith("armv7") or machine.startswith("armv6"):
+            return cls(num_threads=2)  # leave headroom for the co-tenant bridge
+        return cls(num_threads=min(4, os.cpu_count() or 2))
+
+
+class SherpaOnnxASRProvider(ASRProvider):
+    """Offline ASR via sherpa-onnx (k2-fsa) running VOSK Zipformer2 ONNX models."""
+
+    def __init__(self, config: Dict[str, Any]):
+        super().__init__(config)
+
+        from ...core.assets import get_asset_manager
+        self.asset_manager = get_asset_manager()
+
+        # Model pack selection (id resolves against _get_default_model_urls()).
+        self.model_id: str = config.get("model", "vosk-model-small-ru")
+        # PR-1 supports only the VOSK transducer family; whisper-onnx lands in PR-2.
+        self.model_type: str = config.get("model_type", "vosk-transducer")
+
+        self.default_language: str = config.get("default_language", "ru")
+        self.sample_rate: int = config.get("sample_rate", 16000)
+        self.feature_dim: int = config.get("feature_dim", 80)
+        self.decoding_method: str = config.get("decoding_method", "greedy_search")
+        self.policy = SherpaInferencePolicy.for_platform(config.get("num_threads"))
+
+        self._recognizer: Any = None
+
+        preload_models = config.get("preload_models", False)
+        if preload_models:
+            # Pay the ~38 s graph-init at boot, off the first-utterance critical path.
+            asyncio.create_task(self.warm_up())
+
+    # ------------------------------------------------------------------ identity
+    def get_provider_name(self) -> str:
+        return "sherpa_onnx"
+
+    # ----------------------------------------------------------------- lifecycle
+    async def is_available(self) -> bool:
+        try:
+            import sherpa_onnx  # noqa: F401
+        except ImportError:
+            logger.warning("sherpa-onnx not installed — sherpa_onnx ASR provider unavailable")
+            return False
+        # Available if the pack is present locally or downloadable (descriptor configured).
+        pack_dir = self.asset_manager.get_model_path("sherpa_onnx", self.model_id)
+        if pack_dir.exists():
+            return True
+        return bool(self.asset_manager.get_model_info("sherpa_onnx", self.model_id))
+
+    async def _load_recognizer(self) -> None:
+        if self._recognizer is not None:
+            return
+        import sherpa_onnx
+
+        if self.model_type != "vosk-transducer":
+            raise NotImplementedError(
+                f"model_type '{self.model_type}' is not supported in PR-1 "
+                "(only 'vosk-transducer'; whisper-onnx arrives in PR-2)"
+            )
+
+        # First-run download of the multi-file pack into the mounted asset folder (§6).
+        files = await self.asset_manager.download_model_pack("sherpa_onnx", self.model_id)
+
+        def build():
+            return sherpa_onnx.OfflineRecognizer.from_transducer(
+                encoder=str(files["encoder"]),
+                decoder=str(files["decoder"]),
+                joiner=str(files["joiner"]),
+                tokens=str(files["tokens"]),
+                num_threads=self.policy.num_threads,
+                sample_rate=self.sample_rate,
+                feature_dim=self.feature_dim,
+                decoding_method=self.decoding_method,
+            )
+
+        # onnxruntime graph init is blocking (~38 s on armv7) — keep it off the loop.
+        self._recognizer = await asyncio.to_thread(build)
+        logger.info(
+            f"Loaded sherpa-onnx recognizer: model={self.model_id} "
+            f"threads={self.policy.num_threads}"
+        )
+
+    async def warm_up(self) -> None:
+        try:
+            logger.info(f"Warming up sherpa-onnx ASR model: {self.model_id}")
+            await self._load_recognizer()
+            logger.info(f"sherpa-onnx model {self.model_id} warmed up")
+        except Exception as e:
+            # Don't raise — allow lazy loading on first transcription.
+            logger.error(f"Failed to warm up sherpa-onnx model: {e}")
+
+    # ------------------------------------------------------------- transcription
+    async def transcribe_audio(self, audio_data: bytes, **kwargs) -> str:
+        try:
+            if self._recognizer is None:
+                await self._load_recognizer()
+
+            samples, rate = self._to_float_samples(
+                audio_data, kwargs.get("sample_rate", self.sample_rate)
+            )
+            if not samples:
+                return ""
+
+            text = await asyncio.to_thread(self._decode, samples, rate)
+            return text.strip()
+        except Exception as e:
+            logger.error(f"sherpa-onnx transcription error: {e}")
+            return ""
+
+    def _decode(self, samples: List[float], rate: int) -> str:
+        stream = self._recognizer.create_stream()
+        stream.accept_waveform(rate, samples)
+        self._recognizer.decode_stream(stream)
+        return stream.result.text or ""
+
+    async def transcribe_stream(self, audio_stream: AsyncIterator[bytes]) -> AsyncIterator[str]:
+        """Offline model: buffer the stream, then emit one final transcription."""
+        chunks = bytearray()
+        async for chunk in audio_stream:
+            chunks.extend(chunk)
+        text = await self.transcribe_audio(bytes(chunks))
+        if text:
+            yield text
+
+    @staticmethod
+    def _to_float_samples(data: bytes, default_rate: int):
+        """Raw 16-bit PCM (or a WAV blob) -> (float list in [-1, 1], sample_rate).
+
+        numpy-free (stdlib `array`/`wave`) so it runs on armv7 where numpy has no wheel.
+        """
+        if not data:
+            return [], default_rate
+        # Accept a WAV container too (e.g. file-upload endpoints), not just raw PCM.
+        if data[:4] == b"RIFF":
+            with wave.open(io.BytesIO(data), "rb") as w:
+                rate = w.getframerate()
+                frames = w.readframes(w.getnframes())
+        else:
+            rate = default_rate
+            frames = data
+        arr = array.array("h")
+        arr.frombytes(frames[: len(frames) // 2 * 2])  # int16 pairs; drop a trailing odd byte
+        return [s / 32768.0 for s in arr], rate
+
+    # -------------------------------------------------------------- capabilities
+    def get_supported_languages(self) -> List[str]:
+        # The alphacep VOSK packs wired here are Russian.
+        return ["ru"]
+
+    def get_supported_formats(self) -> List[str]:
+        return ["pcm16", "wav", "raw"]
+
+    def get_preferred_sample_rates(self) -> List[int]:
+        return [16000]
+
+    def supports_sample_rate(self, rate: int) -> bool:
+        return rate == 16000  # Zipformer2 feature frontend is trained at 16 kHz
+
+    def get_capabilities(self) -> Dict[str, Any]:
+        return {
+            "languages": self.get_supported_languages(),
+            "formats": self.get_supported_formats(),
+            "streaming": False,   # offline in PR-1; OnlineRecognizer is PR-3
+            "real_time": False,
+            "confidence_scores": False,
+            "offline": True,
+            "model_based": True,
+        }
+
+    # -------------------------------------------------------- asset / build meta
+    @classmethod
+    def _get_default_directory(cls) -> str:
+        return "sherpa_onnx"
+
+    @classmethod
+    def _get_default_cache_types(cls) -> List[str]:
+        return ["models", "runtime"]
+
+    @classmethod
+    def _get_default_model_urls(cls) -> Dict[str, Any]:
+        # Multi-file packs — resolved by AssetManager.download_model_pack via the HF API
+        # (picks encoder/decoder/joiner + tokens, int8 preferred). Apache-2.0.
+        return {
+            "vosk-model-small-ru": {
+                "type": "sherpa-pack",
+                "repo": "alphacep/vosk-model-small-ru",
+                "prefer": "int8",
+                "size": "~27MB int8",
+            },
+            "vosk-model-ru": {
+                "type": "sherpa-pack",
+                "repo": "alphacep/vosk-model-ru",
+                "prefer": "int8",
+                "size": "large (64-bit only)",
+            },
+        }
+
+    @classmethod
+    def get_python_dependencies(cls) -> List[str]:
+        # CONTRACT: pyproject [project.optional-dependencies] GROUP NAME, not a
+        # requirement string (build runs `uv sync --extra asr-onnx`). The per-arch
+        # version split (and "no torch") lives in the extra's PEP 508 markers.
+        return ["asr-onnx"]
+
+    @classmethod
+    def get_platform_dependencies(cls) -> Dict[str, List[str]]:
+        # sherpa-onnx links ALSA. linux.alpine kept for completeness (vestigial — both
+        # real builds are Debian/linux.ubuntu); see design §7.
+        return {
+            "linux.ubuntu": ["libasound2"],
+            "linux.alpine": ["alsa-lib"],
+            "macos": [],
+            "windows": [],
+        }
+
+    @classmethod
+    def get_platform_support(cls) -> List[str]:
+        return ["linux.ubuntu", "linux.alpine", "macos", "windows"]

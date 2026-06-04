@@ -65,8 +65,17 @@ concurrent_playback = false
 
 [asr]
 enabled = true
-default_provider = "whisper"
-fallback_providers = ['whisper']
+default_provider = "sherpa_onnx"   # ONNX VOSK Zipformer2 (offline, high-accuracy on 64-bit)
+fallback_providers = []
+
+[asr.providers.sherpa_onnx]
+enabled = true
+model = "vosk-model-ru"            # big high-accuracy pack (6.1% WER CV-ru) — 64-bit only
+model_type = "vosk-transducer"
+default_language = "ru"
+sample_rate = 16000
+decoding_method = "greedy_search"
+preload_models = true             # omit num_threads → platform default (min(4, cores))
 
 
 [llm]
