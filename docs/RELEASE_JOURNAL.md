@@ -12,6 +12,21 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-04
+- **ARCH-10 PR-1 DONE (`6e1a88a`) — `sherpa_onnx` ASR provider (offline VOSK Zipformer2).** New provider behind the ASR
+  port running the alphacep VOSK Zipformer2 ONNX family via `OfflineRecognizer.from_transducer`, alongside vosk/whisper.
+  **numpy-free** PCM/WAV→float (stdlib `array`/`wave`) so it runs on armv7; `SherpaInferencePolicy` (platform
+  num_threads); lazy load + `warm_up()` gated by `preload_models` (absorbs the ~38 s graph-init). **AssetManager**
+  gained additive **multi-file model-pack** download (`download_model_pack`: resolves encoder/decoder/joiner/tokens from
+  the HF repo, int8 preferred, into the mounted asset folder; single-file path untouched). Build contract done **right**
+  (`get_python_dependencies()->["asr-onnx"]`); `asr-onnx` pyproject extra carries the PEP 508 arch split
+  (armv7l==1.10.46 / else >=1.11, no torch) + entry-point + added to `all`. Profiles: `embedded-armv7` and `full`
+  switched off whisper (torch — can't run on armv7) to `sherpa_onnx` (small-ru edge / big vosk-model-ru 64-bit);
+  canonical block in config-master. **Invariant #4 turned out to be a real schema seam** (not just raw TOML): registered
+  `SherpaOnnxASRProviderSchema` in `config/schemas.py` + `AutoSchemaRegistry` — the master-config completeness tests
+  caught the missing schema and now pass. Unit tests (numpy-free conversion, policy, build contract). **0 net new suite
+  failures** (84 vs 85 baseline — one pre-existing config-completeness failure incidentally fixed). WB7 hardware
+  re-validation deferred to ARCH-10 completion (user). **Remaining:** PR-2 whisper-onnx · PR-3 streaming · PR-4 VAD ·
+  PR-5 wake-word.
 - **ARCH-9 DONE → `docs/design/onnx_inference_layer.md` complete.** Closing additions after the draft: (a) confirmed the
   **system-dependency** path and found the **armv7 image must move Alpine→glibc/Debian** — sherpa-onnx has no musl build
   (proven on WB7: `import sherpa_onnx` fails on Alpine, works on `arm32v7/python:3.11-slim-bullseye`); the contribution
