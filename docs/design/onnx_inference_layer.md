@@ -266,24 +266,65 @@ the pyproject extra that `uv sync` resolves in the per-arch build — not in a p
   this path. Matches `ws_esp32_transport.md` + the `/ws/audio` adapter exactly. **⇒ the WB7/armv7 Irene image needs no
   wake-word/VAD providers → the `tflite-runtime` armv7 question is MOOT; the edge image is ASR-only.** (Irene's
   server-side `microwakeword` *provider* is broken/placeholder per QUAL-19, but irrelevant to this path.)
+- **VAD + wake-word — standalone 64-bit (local-mic) — designed in §11** (user 2026-06-04): two wake-word providers
+  (`openwakeword` ONNX / `microwakeword` tflite) **mutually exclusive via toml**; two VAD impls (`energy` bug-fixed /
+  `silero` sherpa-onnx) **mutually exclusive via toml**. Today's voice-trigger providers are hallucinated cruft →
+  rebuild greenfield (QUAL-19/20).
 
 **Still open:**
-- **VAD + wake-word — the *standalone 64-bit (local-mic)* scenario** (next): the WB7/ESP32 path is resolved above; the
-  local-mic path is where Irene's *own* VAD (energy vs Silero-VAD-ONNX) and voice-trigger (openWakeWord works;
-  microWakeWord broken per QUAL-19; sherpa-KWS has no RU model) actually live. To settle next.
 - **38 s load — handled** by the existing warm-up (`preload_models=True` on armv7 → paid at boot, §4.4); optional
   later spike: onnxruntime optimized-graph caching to shrink the warm-up window.
 - **Build-system fix** — `get_python_dependencies` should return extra *group names* across all providers (§7.1) → BUILD-5.
 
 ---
 
-## 11. Implementation slices (ARCH-10)
+## 11. VAD + wake-word — standalone 64-bit (local-mic) scenario
+
+This is the **only** path where Irene runs its own VAD + voice-trigger (the WB7 path delegates both to the ESP32, §10).
+It is therefore **64-bit-only** — none of this enters the armv7 image. Today's `openwakeword`/`microwakeword`
+*providers* are hallucinated cruft (English-only model lists, stub feature extraction — QUAL-19), so this is a
+**greenfield rebuild**; the `VoiceTriggerProvider` ABC port stays.
+
+### 11.1 Wake-word — two providers, mutually exclusive via toml (decided 2026-06-04)
+Exactly **one** is active, selected by the voice-trigger component's `default_provider` (the existing single-active
+pattern — **no fallback list** for wake-word; the two are alternatives, not a chain).
+
+| Provider | Runtime | Why it's here | Russian story |
+|---|---|---|---|
+| `openwakeword` | **ONNX** (onnxruntime — stays in the no-torch ONNX-family image) | Best multilingual custom-training UX (20–30 langs via synthetic TTS / voice-conversion; LiveKit fork = single-YAML). Tiny ONNX model. | Custom-trained phrase; experimental quality (English-biased embedding). |
+| `microwakeword` | **tflite** (`tflite-runtime`) | **Unifies with the ESP32** — same training tool, one wake-word pipeline for the whole project; server-side tflite from the same trained model. | Custom-trained phrase; training is "advanced-user" difficult upstream. |
+
+- **Both rebuilt properly** (cut the hallucinated stubs). Each declares its own deps via the contribution principle (§7):
+  `openwakeword` → python extra `wake-onnx` (`openwakeword`, `onnxruntime`); `microwakeword` → `wake-tflite`
+  (`tflite-runtime`). Both **64-bit only** (`get_platform_support` excludes armv7).
+- **Future swap-in:** `sherpa-onnx KWS` is the architectural ideal (zero-training open-vocabulary via `text2token`, joins
+  the shared sherpa layer) but has **no Russian base model today** (only zh/en/zh+en) — training a Zipformer KWS is not
+  "easily trained". The ABC port lets us add it as a third provider if/when a Russian KWS base model lands.
+
+### 11.2 VAD — two impls, mutually exclusive via toml (decided 2026-06-04)
+VAD is currently a **util** (`irene/utils/vad.py`), not a selectable seam. Promote it to a small VAD provider/port with
+**two mutually-exclusive impls**, chosen by toml:
+
+| Impl | Engine | Notes |
+|---|---|---|
+| `energy` | today's `irene/utils/vad.py` | dependency-free; keep, but **bug-fix/improve** it (per user). The default. |
+| `silero` | **SileroVAD-ONNX via sherpa-onnx** | more robust in noise; **joins the shared sherpa layer** (same thread/CPU policy). Opt-in. |
+
+- Exactly one active (mutually exclusive), `energy` default. `silero` reuses the sherpa runtime already present for ASR
+  on 64-bit — no torch, no extra runtime.
+- 64-bit only (the WB7 ESP32 does VAD on-device).
+
+---
+
+## 12. Implementation slices (ARCH-10)
 
 1. **PR-1:** `sherpa_onnx` ASR provider — **vosk-zipformer, offline**; AssetManager pack support; inference policy;
    dependency functions; `embedded-armv7` + 64-bit config; config-ui surfacing. (Proven feasible on the WB7.)
 2. **PR-2:** **Whisper-ONNX** on the same provider/runtime (drops torch from 64-bit ASR images that don't need silero).
 3. **PR-3 (later):** streaming (`OnlineRecognizer` + streaming models).
-4. **PR-4 (optional):** Silero-VAD-ONNX provider on the shared runtime.
+4. **PR-4:** VAD seam (§11.2) — `energy` (bug-fixed) + `silero` (SileroVAD-ONNX on the shared runtime), toml-selectable.
+5. **PR-5:** Wake-word greenfield (§11.1) — rebuild `openwakeword` (ONNX) + `microwakeword` (tflite) as two
+   mutually-exclusive providers; cut the hallucinated stubs (QUAL-19/20). 64-bit only.
 
 ---
 
