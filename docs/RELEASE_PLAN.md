@@ -263,8 +263,9 @@ See `docs/review/phase1_architecture_map.md` §5.
       blind to wb-rules vs Home Assistant. Rejected: Irene→raw-broker, and the archived `intent_mqtt.md` fat-handler/
       runtime-method-gen design. **Agreed contract:** (A) `POST /devices/{id}/canonical {capability,action,params}`, 6-code
       structured error enum, 500 ms synchronous value-topic echo; (B) `GET /system/catalog` (dedicated, flat, all-locales
-      rooms+devices, read-only `sensor` capability, one-device-one-room [`global` = whole-house room, not an
-      "everywhere" opt-in; Irene iterates all rooms for "везде"]) + retained
+      rooms+devices, read-only `sensor` capability, one-device-one-room [`global` = room of whole-house AGGREGATE
+      devices, e.g. `all_lights`; "выключи свет везде" = Irene fires ONE command at that aggregate device, never iterates
+      rooms / synthesizes a group]) + retained
       `bridge/catalog/version` refresh nudge; (C) bridge-side native onboarding (generic `WbPassthroughDevice` driver +
       capability-adapter composition + caps `brightness`/`color`/`cover`/`climate`/`sensor`; wb-rules stays, bridge mirrors
       state). **Hexagon (Irene):** `DeviceCommand` + `ActuationPort`/`DeviceCatalogPort` (QUAL-24 ABC pattern) +
@@ -278,8 +279,9 @@ See `docs/review/phase1_architecture_map.md` §5.
       `irene.providers.outputs` group + config/schema + `GET /system/catalog` pull → `DeviceCatalog` + `bridge/catalog/
       version` subscribe; **PR-3** wire `DeviceCatalog` into `DeviceEntityResolver` (real device/room entities, ru-name
       match — ARCH-6 device-half, with QUAL-35); **PR-4** reference device handler end-to-end (`power.on` → canonical →
-      echo → spoken confirm + error-code→speech + `param_invalid`→clarify); **PR-5** sensor read (`GET /devices/{id}/state`)
-      + `global` fan-out (N calls + partial-failure speech). PR-2+ integrate as the bridge's slice comes online. Broad
+      echo → spoken confirm + error-code→speech + `param_invalid`→clarify); **PR-5** sensor read (`GET /devices/{id}/state`).
+      (No "everywhere" fan-out — "выключи свет везде" = an Actuate against the `global` `all_lights` aggregate device, on
+      PR-4's path.) PR-2+ integrate as the bridge's slice comes online. Broad
       device coverage + T2/T3 NLU = QUAL-35.
 - [x] **ARCH-9** [INFER] — **✓ DONE 2026-06-04** (design deliverable `docs/design/onnx_inference_layer.md` complete; all
       open questions resolved — sherpa one-provider ASR, WB7 armv7 feasibility proven on hardware, two build corrections,
