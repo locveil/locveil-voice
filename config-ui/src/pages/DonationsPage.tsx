@@ -31,7 +31,6 @@ import Section from '@/components/ui/Section';
 import Input from '@/components/ui/Input';
 import Badge from '@/components/ui/Badge';
 import ArrayOfStringsEditor from '@/components/editors/ArrayOfStringsEditor';
-// import ParameterListEditor from '@/components/editors/ParameterListEditor';
 import TokenPatternsEditor from '@/components/editors/TokenPatternsEditor';
 import SlotPatternsEditor from '@/components/editors/SlotPatternsEditor';
 import ExamplesEditor from '@/components/editors/ExamplesEditor';

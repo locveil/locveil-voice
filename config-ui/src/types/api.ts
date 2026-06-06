@@ -270,51 +270,15 @@ export interface CompletenessReport {
   timestamp: number;
 }
 
-export interface MissingPhraseInfo {
-  method_key: string;
-  source_phrases: string[];
-  target_phrases: string[];
-  missing_count: number;
-  coverage_ratio: number;
-}
-
-export interface TranslationSuggestions {
-  handler_name: string;
-  source_language: string;
-  target_language: string;
-  missing_phrases: MissingPhraseInfo[];
-  missing_methods: string[];
-  confidence_scores: Record<string, number>;
-  timestamp: number;
-}
-
 export interface CrossLanguageValidationResponse extends BaseApiResponse {
   validation_type: string;
   parameter_report?: ValidationReport;
   completeness_report?: CompletenessReport;
 }
 
-export interface SyncParametersRequest {
-  source_language: string;
-  target_languages: string[];
-}
-
-export interface SyncParametersResponse extends BaseApiResponse {
-  handler_name: string;
-  source_language: string;
-  sync_results: Record<string, boolean>;
-  updated_languages: string[];
-  skipped_languages: string[];
-}
-
-export interface SuggestTranslationsRequest {
-  source_language: string;
-  target_language: string;
-}
-
-export interface SuggestTranslationsResponse extends BaseApiResponse {
-  suggestions: TranslationSuggestions;
-}
+// UI-5: SyncParameters*/SuggestTranslations*/TranslationSuggestions/MissingPhraseInfo removed —
+// the parameter-sync feature is gone (params are single-source under v1.1) and rule-based
+// suggest-translations is superseded by the LLM translate service (QUAL-42).
 
 // ============================================================
 // TEMPLATE MANAGEMENT TYPES (Phase 6)

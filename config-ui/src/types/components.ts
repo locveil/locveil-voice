@@ -83,26 +83,9 @@ export interface ArrayOfStringsEditorProps {
   disabled?: boolean;
 }
 
-interface Parameter {
-  name: string;
-  type: 'string' | 'integer' | 'float' | 'duration' | 'datetime' | 'boolean' | 'choice' | 'entity';
-  required: boolean;
-  default_value?: string;
-  description?: string;
-  choices?: string[];
-  pattern?: string;
-  min_value?: number;
-  max_value?: number;
-  aliases?: string[];
-  extraction_patterns?: Array<Record<string, any>>;
-}
-
-export interface ParameterListEditorProps {
-  value: Parameter[];
-  onChange: (value: Parameter[]) => void;
-  availableParams?: string[];
-  disabled?: boolean;
-}
+// UI-5: the v1.0 monolithic `Parameter` type + `ParameterListEditorProps` removed with the
+// ParameterListEditor/ParameterSpecEditor components — structural params are now edited by ContractEditor
+// against the generated contract types.
 
 export interface TokenPatternsEditorProps {
   value: Array<Array<Record<string, any>>>;
