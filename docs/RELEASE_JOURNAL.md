@@ -12,6 +12,23 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-06
+- **QUAL-42 DONE — donation contract↔code validator + LLM translation services (user-directed, "do this validator
+  right away").** Built on the donation-validation investigation, which found that nothing reconciled a *contract*
+  against the *handler code* it drives (only contract→method existence; never params, never reverse coverage), the UI
+  was display-only, and `sync-parameters` was a dead v1.0 call. **Severity split was the key design call:** parameter
+  "wiring" can't be statically proven without false positives (params are read via `get_param` *and*
+  `intent.entities`, sometimes in helpers, and some — e.g. a `language` global — are read from `context` and never
+  named), so a literal "raise if a param isn't wired" would break boot on valid handlers. Resolution: **unwired
+  *method* = FATAL (raises at startup); unread *param* / undeclared `_handle_*` = soft warning**, with a
+  `strict_parameters` ratchet. Verified against the 14 real handlers: **0 fatal, 13 useful warnings** (boot green).
+  New `core/contract_validator.py` (AST param-reference scan), startup fail-fast in `IntentAssetLoader`, and three
+  endpoints on `intent_component` via the injected `LLMPort`: `GET /donations/validation` (startup wiring report →
+  UI), `POST …/validate-translation` (LLM meaning/consistency QA), `POST …/translate` (LLM translation *service*,
+  replacing the dead phrase-count suggester). **All LLM features degrade to `llm_available:false` + a "validate
+  manually" message when no API-keyed provider exists** (deepseek default, else any supported provider with a key).
+  Decision logged: LLM validation is on-demand (endpoint), not per-boot (token cost/fragility); structural wiring is
+  the always-on startup half. 8 schemas, 7 tests (incl. an all-real-handlers 0-fatal guard), `donation_editor_ux.md`
+  §9 updated. Gates: pyright 0, import-contracts 9/9, dep-validator 55/55, suite 84=baseline (+7 passing).
 - **UI-1 DONE — designed the human-friendly donation editor → `config-ui/docs/donation_editor_ux.md`.** Started from a
   user question — must UI-1/2/3/5 be built together? — and a user correction (the ledger's "`ParameterSpecEditor` is
   already fine" is wrong: it embeds raw `extraction_patterns` + a regex `pattern`). Traced the code + a 28-file survey

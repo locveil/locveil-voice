@@ -1127,6 +1127,27 @@ _Apply to every remediation task below (from the 4 review docs + QUAL-25/26). So
       validation error**. QUAL-4e only widened the annotation (type-clean, current behavior preserved). **Fix:** map
       `field`→`path` + supply a `type` at the boundary (or align the validator output to the schema). **Invariant #4:**
       these endpoints feed config-ui's donation editor (UI-5) — coordinate the error shape there.
+- [x] **QUAL-42** `[release]` [DVALIDATE] (P1) — **Donation contract↔code validator + LLM translation services.
+      DONE 2026-06-06 (user-directed: "do this validator right away").** Closed the real gap the donation-validation
+      investigation found: nothing reconciled a **contract** against the **handler code** it drives (only contract→method
+      existence; never params, never reverse coverage). **Delivered (backend):**
+      **(1)** `core/contract_validator.py` — `ContractWiringValidator` introspects each handler class + AST-scans the
+      module for parameter reads (`get_param`/`get_typed_param`/`intent.entities`). **Severity split (deliberate, to
+      avoid false-positive boot failures):** an **unwired contract method (no callable on the class) is FATAL** — raises
+      `DonationDiscoveryError`; **soft warnings** = a declared parameter never read (legitimately context-sourced, e.g.
+      `language`), or a `_handle_*` method no contract declares (reverse coverage). A `strict_parameters` flag promotes
+      param warnings to fatal (ratchet). **(2) Startup integration** — `IntentAssetLoader.load_all_assets` runs the
+      validator over all loaded donations, **fail-fast on unwired methods**, and caches the report. Verified: the 14
+      shipped handlers validate **0 fatal / 13 useful warnings** (boot stays green). **(3) Endpoints (intent_component,
+      via injected `LLMPort`):** `GET /donations/validation` (the startup wiring report → UI); `POST
+      /donations/{h}/validate-translation` (**LLM** meaning/consistency QA — deepseek default, else any supported
+      provider with a key; **no LLM → `llm_available:false` + "validate manually" message**); `POST /donations/{h}/translate`
+      (**LLM** translation *service*, content-aware replacement for the dead phrase-count `suggest-translations`; same
+      graceful no-LLM path). **(4)** 8 schemas in `api/schemas.py`; design doc `donation_editor_ux.md` §9 updated for the
+      UI. **Tests:** `test_contract_validator.py` (7, incl. an all-real-handlers 0-fatal guard). Gates: pyright 0,
+      import-contracts 9/9, dep-validator 55/55, suite 84=baseline (+7 passing). _Decision logged:_ LLM translation
+      validation is **on-demand (endpoint), not per-boot** — avoids per-startup token cost/fragility; structural wiring
+      validation is the always-on startup part. Refs: `parameter_extraction_review.md`, donation-validation investigation.
 - [x] **QUAL-37** `[deferred]` [DFLOW] (P2) — **Targeted no-intent clarification (enhancement; split from QUAL-30).
       DONE 2026-06-03.** The online (LLM) path already consumed `_fallback_context.likely_domain` (via
       `_build_fallback_context_prompt`, QUAL-16); the gap was the **offline** path. **Delivered:** `_handle_fallback_

@@ -19,6 +19,7 @@ from .donations import (
     HandlerDonation, DonationDiscoveryError,
     KeywordDonation, ParameterSpec, ParameterType
 )
+from .contract_validator import ContractValidationReport
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +57,8 @@ class AssetLoaderConfig:
         validate_json_schema: bool = True,
         validate_method_existence: bool = True,
         validate_spacy_patterns: bool = False,
+        validate_contract_wiring: bool = True,
+        strict_parameters: bool = False,
         strict_mode: bool = False,
         default_language: str = "ru",
         fallback_language: str = "en",
@@ -65,6 +68,10 @@ class AssetLoaderConfig:
         self.validate_json_schema = validate_json_schema
         self.validate_method_existence = validate_method_existence
         self.validate_spacy_patterns = validate_spacy_patterns
+        # QUAL-42: reconcile every contract against its handler code at startup. Unwired methods are fatal;
+        # `strict_parameters` promotes "declared-but-unread parameter" warnings to fatal errors (ratchet).
+        self.validate_contract_wiring = validate_contract_wiring
+        self.strict_parameters = strict_parameters
         self.strict_mode = strict_mode
         self.default_language = default_language
         self.fallback_language = fallback_language
@@ -89,6 +96,9 @@ class IntentAssetLoader:
         # Error tracking (reuse donation loader pattern)
         self.validation_errors: List[str] = []
         self.warnings: List[str] = []
+
+        # QUAL-42: cached contract↔code wiring report (populated at startup, served to the UI).
+        self.contract_validation_report: Optional[ContractValidationReport] = None
     
     async def load_all_assets(self, handler_names: List[str]) -> None:
         """Load all asset types for specified handlers"""
@@ -107,11 +117,16 @@ class IntentAssetLoader:
         # Check for fatal errors
         if self.validation_errors:
             self._handle_validation_errors()
-        
+
+        # QUAL-42: reconcile every loaded contract against its handler code. Unwired contract methods are a
+        # hard bug — fail fast. Soft findings (unread params, undeclared handler methods) are cached for the UI.
+        if self.config.validate_contract_wiring:
+            self._validate_contract_wiring()
+
         # Log warnings
         for warning in self.warnings:
             logger.warning(warning)
-        
+
         logger.info(f"Asset loading completed: {len(self.donations)} donations, "
                    f"{len(self.templates)} template sets, {len(self.prompts)} prompt sets, "
                    f"{len(self.localizations)} localization sets, "
@@ -1706,6 +1721,35 @@ class IntentAssetLoader:
         self.warnings.append(warning_msg)
         logger.warning(warning_msg)
     
+    def _validate_contract_wiring(self) -> None:
+        """QUAL-42: reconcile every loaded contract against its Python handler.
+
+        Builds a :class:`ContractValidationReport` over the loaded donations, caches it for the UI endpoint,
+        and **raises** ``DonationDiscoveryError`` if any contract declares a method that is not wired (no
+        callable of that name on the handler class). Soft findings (declared-but-unread parameters, handler
+        ``_handle_*`` methods absent from any contract) are logged as warnings, not fatal — unless
+        ``strict_parameters`` is set, which promotes the parameter findings to fatal errors."""
+        from .contract_validator import validate_contracts
+
+        report = validate_contracts(self.donations, strict_parameters=self.config.strict_parameters)
+        self.contract_validation_report = report
+
+        for handler_report in report.handlers:
+            for warning in handler_report.warnings:
+                logger.warning(f"Contract wiring ({handler_report.handler_name}): {warning}")
+
+        if not report.ok:
+            error_summary = (
+                f"Contract↔code wiring validation failed with {report.total_errors} unwired "
+                f"method(s):\n{report.error_summary()}"
+            )
+            raise DonationDiscoveryError(error_summary)
+
+        logger.info(
+            f"Contract wiring validated: {len(report.handlers)} handlers, "
+            f"{report.total_errors} errors, {report.total_warnings} warnings"
+        )
+
     def _handle_validation_errors(self):
         """Handle validation errors based on configuration"""
         if self.config.strict_mode:

@@ -42,7 +42,9 @@ class IntentComponent(Component, WebAPIPlugin):
         self.intent_orchestrator: Optional[IntentOrchestrator] = None
         self.intent_registry: Optional[IntentRegistry] = None
         self._config: Optional[Union[Dict[str, Any], IntentSystemConfig]] = None
-        
+        # QUAL-42: LLM capability port, injected post-init; used by the donation translation endpoints.
+        self._llm_component: Optional[Any] = None
+
     async def initialize(self, core) -> None:
         """Initialize the intent system with configuration-driven handler discovery"""
         await super().initialize(core)
@@ -255,6 +257,8 @@ class IntentComponent(Component, WebAPIPlugin):
 
             # Get available components - all should be initialized at this point
             components = component_manager.get_components()
+            # QUAL-42: keep the LLM port for the donation translation/validation endpoints (graceful if absent).
+            self._llm_component = components.get('llm')
             if self.handler_manager is None:
                 raise RuntimeError("IntentHandlerManager was not initialized")
             handlers = self.handler_manager.get_handlers()
@@ -314,7 +318,118 @@ class IntentComponent(Component, WebAPIPlugin):
     def description(self) -> str:
         """Get plugin description"""
         return "Intent recognition and handling system with dynamic handler discovery"
-    
+
+    # ============================================================
+    # QUAL-42: LLM-backed translation validation & service helpers
+    # ============================================================
+
+    async def _pick_llm_provider(self, requested: Optional[str]) -> Optional[str]:
+        """Pick a usable real (non-stub, API-key-present) LLM provider, preferring the requested one, then the
+        configured default, then deepseek. Returns None when no real LLM is available."""
+        llm = self._llm_component
+        if llm is None:
+            return None
+        try:
+            if not await llm.is_available():
+                return None
+        except Exception:
+            return None
+        real = [n for n, p in getattr(llm, 'providers', {}).items() if not getattr(p, 'is_stub', False)]
+        if not real:
+            return None
+        if requested and requested in real:
+            return requested
+        default = getattr(llm, 'default_provider', None)
+        if default in real:
+            return default
+        if 'deepseek' in real:
+            return 'deepseek'
+        return real[0]
+
+    @staticmethod
+    def _parse_json_blob(text: Optional[str]) -> Optional[dict]:
+        """Best-effort JSON extraction from an LLM reply (tolerates ```json fences / surrounding prose)."""
+        import json, re
+        if not text:
+            return None
+        t = text.strip()
+        if t.startswith('```'):
+            t = re.sub(r'^```[a-zA-Z]*\n?', '', t)
+            t = re.sub(r'\n?```$', '', t).strip()
+        start, end = t.find('{'), t.rfind('}')
+        if start == -1 or end == -1 or end < start:
+            return None
+        try:
+            return json.loads(t[start:end + 1])
+        except Exception:
+            return None
+
+    async def _llm_json(self, provider: str, system: str, user: str) -> Optional[dict]:
+        if self._llm_component is None:
+            return None
+        raw = await self._llm_component.generate_response(
+            messages=[{"role": "system", "content": system}, {"role": "user", "content": user}],
+            provider=provider,
+        )
+        return self._parse_json_blob(raw)
+
+    async def _llm_validate_translations(self, provider: str, contract: Dict[str, Any],
+                                         phrasing: Dict[str, Any]) -> List[Dict[str, str]]:
+        """Ask the LLM to find meaning/consistency problems across a handler's per-language phrasing."""
+        import json
+        methods = [f"{m['method_name']}#{m['intent_suffix']}" for m in contract.get('method_donations', [])]
+        data: Dict[str, Any] = {"methods": methods, "languages": {}}
+        for lang, doc in phrasing.items():
+            data["languages"][lang] = {
+                f"{m['method_name']}#{m['intent_suffix']}": {
+                    "phrases": m.get('phrases') or [],
+                    "choice_surfaces": {p['name']: p.get('choice_surfaces') or {}
+                                        for p in m.get('parameters', []) if p.get('choice_surfaces')},
+                } for m in doc.get('method_donations', [])
+            }
+        system = (
+            "You are a localization QA reviewer for a voice assistant. For each handler method you are given the "
+            "example phrases users say and the spoken surface forms for choice values, per language. Find problems: "
+            "(1) a phrase that does not match its method's meaning; (2) phrasings that contradict each other across "
+            "languages; (3) a choice surface that mistranslates the canonical option; (4) a language whose phrasing "
+            "is missing or clearly incomplete. Respond with ONLY JSON: "
+            '{"issues":[{"language":"..","method_key":"..","severity":"error|warning|info","message":".."}]}. '
+            "Use an empty list when everything is consistent."
+        )
+        result = await self._llm_json(provider, system, json.dumps(data, ensure_ascii=False))
+        issues: List[Dict[str, str]] = []
+        if isinstance(result, dict):
+            for it in (result.get('issues') or []):
+                if isinstance(it, dict):
+                    issues.append({
+                        "language": str(it.get('language', '')),
+                        "method_key": str(it.get('method_key', '')),
+                        "severity": str(it.get('severity', 'warning')),
+                        "message": str(it.get('message', '')),
+                    })
+        return issues
+
+    async def _llm_translate(self, provider: str, source_lang: str, target_lang: str,
+                             src_phrases: Dict[str, List[str]]) -> Dict[str, List[str]]:
+        """Ask the LLM to translate per-method example phrases from source to target language."""
+        import json
+        system = (
+            f"You translate voice-assistant example phrases from {source_lang} to {target_lang}. Keep them "
+            "natural, in the imperative, and varied (a user can phrase a command several ways); preserve any "
+            "{placeholder} tokens verbatim. Respond with ONLY JSON: "
+            '{"translations":[{"method_key":"..","suggested_phrases":["..",".."]}]}.'
+        )
+        user = json.dumps({"source_language": source_lang, "target_language": target_lang,
+                           "methods": src_phrases}, ensure_ascii=False)
+        result = await self._llm_json(provider, system, user)
+        out: Dict[str, List[str]] = {}
+        if isinstance(result, dict):
+            for t in (result.get('translations') or []):
+                if isinstance(t, dict) and t.get('method_key'):
+                    out[str(t['method_key'])] = [str(p) for p in (t.get('suggested_phrases') or [])
+                                                 if isinstance(p, str)]
+        return out
+
     def get_router(self) -> Optional[Any]:
         """Get FastAPI router for Web API integration using centralized schemas"""
         try:
@@ -336,6 +451,10 @@ class IntentComponent(Component, WebAPIPlugin):
                 CrossLanguageValidationResponse, ValidationReportSchema, CompletenessReportSchema,
                 SuggestTranslationsRequest, SuggestTranslationsResponse,
                 TranslationSuggestionsSchema, MissingPhraseInfo,
+                # QUAL-42: contract↔code wiring + LLM translation validation/service
+                ContractValidationResponse, ContractWiringReportSchema,
+                TranslationValidationRequest, TranslationValidationResponse, TranslationIssueSchema,
+                TranslateRequest, TranslateResponse, TranslatedMethodSchema,
                 # Phase 6: Template management schemas
                 TemplateContentResponse, TemplateUpdateRequest, TemplateUpdateResponse,
                 TemplateValidationRequest, TemplateValidationResponse,
@@ -674,6 +793,114 @@ class IntentComponent(Component, WebAPIPlugin):
                 except Exception as e:
                     raise HTTPException(500, f"Failed to generate translation suggestions: {str(e)}")
             
+            # ============================================================
+            # QUAL-42: contract↔code wiring report + LLM translation validation/service
+            # ============================================================
+
+            @router.get("/donations/validation", response_model=ContractValidationResponse)
+            async def get_contract_validation():
+                """The contract↔code wiring report computed at startup (every contract's methods+params
+                reconciled against the Python handler). Unwired methods fail boot, so a running system always
+                has `ok=True` for errors; this surfaces the soft warnings (unread params, undeclared handler
+                methods) to the UI."""
+                if not self.handler_manager:
+                    raise HTTPException(503, "Intent system not initialized")
+                asset_loader = self._require_asset_loader()
+                report = asset_loader.contract_validation_report
+                if report is None:
+                    # Not computed at load (e.g. wiring validation disabled) — compute on demand.
+                    from ..core.contract_validator import validate_contracts
+                    report = validate_contracts(asset_loader.donations)
+                return ContractValidationResponse(
+                    success=True,
+                    ok=report.ok,
+                    total_errors=report.total_errors,
+                    total_warnings=report.total_warnings,
+                    timestamp=report.timestamp,
+                    handlers=[ContractWiringReportSchema(
+                        handler_name=h.handler_name, handler_class=h.handler_class,
+                        errors=h.errors, warnings=h.warnings,
+                        methods_checked=h.methods_checked, params_checked=h.params_checked,
+                    ) for h in report.handlers],
+                )
+
+            @router.post("/donations/{handler_name}/validate-translation",
+                         response_model=TranslationValidationResponse)
+            async def validate_translation(handler_name: str, request: TranslationValidationRequest):
+                """LLM-validate that a handler's per-language phrasing is meaningful and non-contradicting.
+                Requires a real (non-stub) LLM with an API key; if none is configured the response reports
+                `llm_available=false` and asks the user to validate manually."""
+                if not self.handler_manager:
+                    raise HTTPException(503, "Intent system not initialized")
+                asset_loader = self._require_asset_loader()
+                contract = asset_loader.get_contract_for_editing(handler_name)
+                if contract is None:
+                    raise HTTPException(404, f"No contract.json for handler '{handler_name}'")
+
+                provider = await self._pick_llm_provider(request.provider)
+                if provider is None:
+                    return TranslationValidationResponse(
+                        success=True, handler_name=handler_name, llm_available=False, provider=None,
+                        message=("No LLM with an API key is configured (set one of DEEPSEEK_API_KEY / "
+                                 "OPENAI_API_KEY / ANTHROPIC_API_KEY in .env). Translation quality must be "
+                                 "validated manually."),
+                        issues=[])
+
+                languages = asset_loader.get_available_languages_for_handler(handler_name)
+                phrasing = {lang: asset_loader.get_language_phrasing_for_editing(handler_name, lang) or {}
+                            for lang in languages}
+                try:
+                    issues = await self._llm_validate_translations(provider, contract, phrasing)
+                except Exception as e:
+                    raise HTTPException(502, f"LLM translation validation failed: {e}")
+                return TranslationValidationResponse(
+                    success=True, handler_name=handler_name, llm_available=True, provider=provider,
+                    message=("No translation issues found" if not issues
+                             else f"{len(issues)} translation issue(s) found"),
+                    issues=[TranslationIssueSchema(**i) for i in issues])
+
+            @router.post("/donations/{handler_name}/translate", response_model=TranslateResponse)
+            async def translate_donation(handler_name: str, request: TranslateRequest):
+                """LLM translation *service*: suggest target-language phrases for a handler's methods, from the
+                source language. Requires a real LLM; otherwise reports `llm_available=false` for manual work."""
+                if not self.handler_manager:
+                    raise HTTPException(503, "Intent system not initialized")
+                asset_loader = self._require_asset_loader()
+                contract = asset_loader.get_contract_for_editing(handler_name)
+                if contract is None:
+                    raise HTTPException(404, f"No contract.json for handler '{handler_name}'")
+
+                source = asset_loader.get_language_phrasing_for_editing(handler_name, request.source_language)
+                if not source:
+                    raise HTTPException(404, f"No '{request.source_language}' phrasing for handler '{handler_name}'")
+
+                provider = await self._pick_llm_provider(request.provider)
+                if provider is None:
+                    return TranslateResponse(
+                        success=True, handler_name=handler_name, source_language=request.source_language,
+                        target_language=request.target_language, llm_available=False, provider=None,
+                        message=("No LLM with an API key is configured (set one of DEEPSEEK_API_KEY / "
+                                 "OPENAI_API_KEY / ANTHROPIC_API_KEY in .env). Translate manually."),
+                        translations=[])
+
+                # method_key -> source phrases
+                src_phrases = {f"{m['method_name']}#{m['intent_suffix']}": (m.get('phrases') or [])
+                               for m in source.get('method_donations', [])}
+                if request.method_keys:
+                    src_phrases = {k: v for k, v in src_phrases.items() if k in set(request.method_keys)}
+                try:
+                    suggestions = await self._llm_translate(
+                        provider, request.source_language, request.target_language, src_phrases)
+                except Exception as e:
+                    raise HTTPException(502, f"LLM translation failed: {e}")
+                return TranslateResponse(
+                    success=True, handler_name=handler_name, source_language=request.source_language,
+                    target_language=request.target_language, llm_available=True, provider=provider,
+                    message=f"Translated {len(suggestions)} method(s) to '{request.target_language}'",
+                    translations=[TranslatedMethodSchema(
+                        method_key=k, source_phrases=src_phrases.get(k, []), suggested_phrases=v)
+                        for k, v in suggestions.items()])
+
             @router.get("/donations/{handler_name}/languages", response_model=List[str])
             async def get_handler_languages(handler_name: str):
                 """Get available languages for a handler"""

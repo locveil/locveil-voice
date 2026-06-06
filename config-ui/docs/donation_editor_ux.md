@@ -256,13 +256,34 @@ going to be replaced. UI-5's "don't build the editor twice" constraint is satisf
 
 ---
 
-## 9. Backend touchpoints (all confirmed to exist — UI-1/2/3 add none)
+## 9. Backend touchpoints
 
+**Existing (UI-1/2/3 add none):**
 `GET /donations` · `GET|PUT /donations/{handler}/contract` · `GET|PUT /donations/{handler}/{language}` ·
 `POST /donations/{handler}/{language}/{validate,create}` · `DELETE /donations/{handler}/{language}` ·
 `GET /donations/{handler}/cross-validation` · `POST /donations/{handler}/suggest-translations` ·
 `POST /donations/{handler}/reload`. (`sync-parameters` is gone — UI-5 drops the client call.)
 Only backend prerequisite is **UI-5's** committed `openapi.json` dump (for type generation).
+
+**New — donation validation & translation services (QUAL-42, backend-built):** the editor should surface these.
+- **`GET /donations/validation`** — the **contract↔code wiring report** computed at startup. Reconciles every
+  contract's methods+parameters against the Python handler: an *unwired method* fails boot (so a running system is
+  always error-free), and soft warnings (a declared parameter the handler never reads; a `_handle_*` method no
+  contract declares) are returned per handler. The editor shows these as authoring diagnostics (this is the real
+  backing for checks 1+2, which the UI previously could not perform). Replaces the misleading "ParameterSpecEditor
+  validates params" gap.
+- **`POST /donations/{handler}/validate-translation`** — **LLM-backed** translation QA (meaning / non-contradiction
+  across languages; choice-surface mistranslations; incomplete languages). Returns `llm_available:false` + a
+  *"validate manually"* message when no LLM with an API key is configured (deepseek by default, else any supported
+  provider with a key). The editor calls this for the §3.5 choice-surfaces / phrasing review and renders the issues.
+- **`POST /donations/{handler}/translate`** — **LLM translation service**: suggests target-language phrases for a
+  handler's methods from a source language. This is the real, content-aware replacement for the dead
+  `suggest-translations` (which only counted phrase gaps). Same `llm_available:false` graceful path. The editor
+  offers it as a *"draft translations"* action in the phrasing editor; suggestions are editable before save.
+
+These three are the backend half of the editor's correctness story: §6's "does it work?" (recognizer test) plus
+**wiring validation** (structural, always-on) and **LLM translation validation/drafting** (semantic, on-demand,
+LLM-gated). All LLM features degrade to a clear manual-validation message when no key is present.
 
 ---
 

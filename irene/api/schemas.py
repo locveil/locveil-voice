@@ -1740,6 +1740,82 @@ class SuggestTranslationsResponse(BaseAPIResponse):
 
 
 # ============================================================
+# CONTRACT↔CODE WIRING VALIDATION SCHEMAS (QUAL-42)
+# ============================================================
+
+class ContractWiringReportSchema(BaseModel):
+    """Per-handler contract↔code reconciliation result."""
+    handler_name: str = Field(description="Handler (donation) name")
+    handler_class: Optional[str] = Field(default=None, description="Resolved IntentHandler class name")
+    errors: List[str] = Field(default_factory=list, description="Fatal: contract methods not wired in the handler")
+    warnings: List[str] = Field(default_factory=list, description="Soft: unread params / undeclared handler methods")
+    methods_checked: int = Field(default=0, description="Number of contract methods checked")
+    params_checked: int = Field(default=0, description="Number of contract parameters checked")
+
+
+class ContractValidationResponse(BaseAPIResponse):
+    """System-wide contract↔code wiring report (QUAL-42), as computed at startup / on demand."""
+    ok: bool = Field(description="True when no handler has a fatal (unwired) error")
+    total_errors: int = Field(description="Total fatal wiring errors across all handlers")
+    total_warnings: int = Field(description="Total soft warnings across all handlers")
+    handlers: List[ContractWiringReportSchema] = Field(default_factory=list, description="Per-handler reports")
+
+
+# ============================================================
+# LLM-BACKED TRANSLATION VALIDATION & SERVICE SCHEMAS (QUAL-42)
+# ============================================================
+
+class TranslationIssueSchema(BaseModel):
+    """A single cross-language translation problem found by the LLM."""
+    language: str = Field(description="Language the issue concerns")
+    method_key: str = Field(description="method_name#intent_suffix the issue concerns ('' if handler-wide)")
+    severity: str = Field(description="'error' | 'warning' | 'info'")
+    message: str = Field(description="Human-readable description of the inconsistency")
+
+
+class TranslationValidationRequest(BaseAPIRequest):
+    """Request to LLM-validate a handler's translations for meaning/consistency."""
+    provider: Optional[str] = Field(default=None, description="Preferred LLM provider (default: deepseek/config)")
+
+
+class TranslationValidationResponse(BaseAPIResponse):
+    """Result of LLM translation validation. When no LLM is available, `llm_available` is False and `message`
+    instructs the user to validate manually."""
+    handler_name: str = Field(description="Handler validated")
+    llm_available: bool = Field(description="Whether a real (non-stub) LLM was available to run the check")
+    provider: Optional[str] = Field(default=None, description="LLM provider used, if any")
+    message: str = Field(description="Status / manual-validation instruction when no LLM is available")
+    issues: List[TranslationIssueSchema] = Field(default_factory=list, description="Findings (empty if all good)")
+
+
+class TranslateRequest(BaseAPIRequest):
+    """Request the LLM translation *service*: translate a handler's phrasing from one language to another."""
+    source_language: str = Field(description="Language to translate from")
+    target_language: str = Field(description="Language to translate to")
+    method_keys: Optional[List[str]] = Field(default=None, description="Limit to these method keys (default: all)")
+    provider: Optional[str] = Field(default=None, description="Preferred LLM provider (default: deepseek/config)")
+
+
+class TranslatedMethodSchema(BaseModel):
+    """LLM-suggested target-language phrases for one method."""
+    method_key: str = Field(description="method_name#intent_suffix")
+    source_phrases: List[str] = Field(default_factory=list, description="Source-language phrases")
+    suggested_phrases: List[str] = Field(default_factory=list, description="LLM-suggested target-language phrases")
+
+
+class TranslateResponse(BaseAPIResponse):
+    """Result of the LLM translation service. When no LLM is available, `llm_available` is False and `message`
+    instructs the user to translate manually."""
+    handler_name: str = Field(description="Handler translated")
+    source_language: str = Field(description="Source language")
+    target_language: str = Field(description="Target language")
+    llm_available: bool = Field(description="Whether a real (non-stub) LLM was available")
+    provider: Optional[str] = Field(default=None, description="LLM provider used, if any")
+    message: str = Field(description="Status / manual instruction when no LLM is available")
+    translations: List[TranslatedMethodSchema] = Field(default_factory=list, description="Per-method suggestions")
+
+
+# ============================================================
 # TEMPLATE MANAGEMENT SCHEMAS (Phase 6)
 # ============================================================
 
