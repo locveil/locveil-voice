@@ -12,6 +12,11 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-06
+- **Filed QUAL-40 + QUAL-41 — the two real logic bugs QUAL-4e surfaced (Invariant #6: findings → ledger IDs).** QUAL-40:
+  `ConfigManager._generate_*_sections` drop all but the last section header in generated TOML (4e fixed only the type
+  error). QUAL-41: the `IntentAssetLoader` validators emit `{field,message,severity}` but `api.schemas.ValidationError`
+  needs `{type,message}` → 500 on a real template/prompt/localization validation error (4e widened the annotation only).
+  Both `[release]` P2.
 - **QUAL-4 COMPLETE — `uv run pyright` at 0 errors, full standard mode, empty suppression list (762 → 0).** 4e (the
   type-tail, 261) closed the ratchet. **`api/schemas.py` (71):** Pydantic v1-isms with clean v2 fixes — 66
   `Field(example=…)` → `json_schema_extra={"example": …}` (batched via a script, then hand-fixed one multi-line list the

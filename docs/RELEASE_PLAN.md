@@ -1084,6 +1084,22 @@ _Apply to every remediation task below (from the 4 review docs + QUAL-25/26). So
       `/transcribe`, monitoring `/contextual-commands`(+`/performance`), nlu_analysis `/capabilities`/`/statistics`,
       `/system/status` (config-ui doesn't consume it — Overview uses `/intents/status`). Verified: models accept the real
       GET/PUT shapes incl. passthrough extras, suite 85=85 (0 net regression). (Found 2026-06-04.)
+- [ ] **QUAL-40** `[release]` (P2) — **Generated-TOML section headers dropped (real bug surfaced by QUAL-4e, 2026-06-06).**
+      `ConfigManager._generate_provider_sections` / `_generate_normalizer_sections` (`config/manager.py` ~L459-495) build a
+      per-iteration `section` header string but **never append it to `sections`**; the closing `["\n".join([section] +
+      sections)]` keeps only the **last** header, so every provider/normalizer section header except the last is dropped
+      from the generated TOML. QUAL-4e fixed only the type error (init `section=""`, behavior-preserving); the logic bug
+      remains. **Fix:** accumulate each header into `sections` (or restructure the join); verify generated TOML round-trips
+      all sections. Pairs with the config-ui TOML-editor surface.
+- [ ] **QUAL-41** `[release]` (P2) — **`IntentAssetLoader` validator output doesn't match `api.schemas.ValidationError`
+      (real bug surfaced by QUAL-4e, 2026-06-06).** `validate_template_data` / `validate_prompt_data` /
+      `validate_localization_data` (`core/intent_asset_loader.py`) emit error/warning dicts keyed `{field, message,
+      severity}`, but `api.schemas.ValidationError` requires `{type, message}` (+ optional `path`/`line`). So
+      `ValidationError(**err)` in `intent_component.py`'s template/prompt/localization editing endpoints (~L1148/1210/1456/
+      1526/1761/1823) raises a pydantic error (missing required `type`) → **HTTP 500 whenever those endpoints hit a real
+      validation error**. QUAL-4e only widened the annotation (type-clean, current behavior preserved). **Fix:** map
+      `field`→`path` + supply a `type` at the boundary (or align the validator output to the schema). **Invariant #4:**
+      these endpoints feed config-ui's donation editor (UI-5) — coordinate the error shape there.
 - [x] **QUAL-37** `[deferred]` [DFLOW] (P2) — **Targeted no-intent clarification (enhancement; split from QUAL-30).
       DONE 2026-06-03.** The online (LLM) path already consumed `_fallback_context.likely_domain` (via
       `_build_fallback_context_prompt`, QUAL-16); the gap was the **offline** path. **Delivered:** `_handle_fallback_
