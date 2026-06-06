@@ -26,6 +26,18 @@ export type DonationContract = IreneIntentDonationLanguageNeutralContractV11;
 /** Per-language phrasing: phrases/lemmas/patterns/examples + per-param extraction/aliases/choice_surfaces. */
 export type DonationPhrasing = IreneIntentDonationPerLanguagePhrasingV11;
 
+/** A single contract method (method_name/intent_suffix/boost/room_context + structural parameters). */
+export type ContractMethod = DonationContract['method_donations'][number];
+
+/** A single structural parameter spec (name/type/required/choices/min-max/entity_type/pattern). */
+export type ContractParam = NonNullable<ContractMethod['parameters']>[number];
+
+/** The 8 canonical parameter types. */
+export type ParameterType = ContractParam['type'];
+
+/** room_context values for a method. */
+export type RoomContext = NonNullable<ContractMethod['room_context']>;
+
 // ----- contract get/put envelopes (from OpenAPI) -----
 
 export type DonationContractResponse = Schemas['DonationContractResponse'];
