@@ -6,12 +6,11 @@ and clear severity classifications for the NLU analysis system.
 """
 
 import time
-from typing import Dict, Any, List, Tuple, Literal
+from typing import Dict, Any, List, Literal
 from .base import ReportGenerator
 from .models import (
     IntentUnit,
     ConflictReport,
-    ScopeIssue,
     OverlapScore,
     KeywordCollision,
     CrossHit
@@ -345,8 +344,7 @@ class NLUReportGenerator(ReportGenerator):
     def _generate_scope_creep_suggestions(self, conflict_data: Dict[str, Any]) -> List[str]:
         """Generate suggestions for scope creep issues"""
         suggestions = []
-        analysis_data = conflict_data.get('analysis_data', {})
-        
+
         suggestions.append("Scope creep detected - review intent boundaries")
         suggestions.append("Consider moving misplaced phrases to appropriate domains")
         suggestions.append("Add domain-specific context to reduce cross-domain attraction")

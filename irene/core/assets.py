@@ -9,7 +9,6 @@ Enhanced in TODO #4 Phase 2 with configuration-driven asset management.
 
 import os
 import asyncio
-import hashlib
 import logging
 import pickle
 from pathlib import Path

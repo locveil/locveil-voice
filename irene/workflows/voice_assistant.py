@@ -10,7 +10,6 @@ Supports all three entry points with stage skipping:
 - WebAPI Audio: Skip voice trigger only (skip_wake_word=True)
 """
 
-import asyncio
 import logging
 import time
 import uuid
@@ -21,10 +20,9 @@ from .base import Workflow, RequestContext
 from .audio_processor import AudioProcessorInterface, VoiceSegment
 from ..core.metrics import get_metrics_collector
 from ..core.trace_context import TraceContext
-from ..intents.models import AudioData, Intent, IntentResult, WakeWordResult
+from ..intents.models import AudioData, IntentResult
 from ..intents.context_models import UnifiedConversationContext
 from ..utils.audio_helpers import test_audio_playback_capability, calculate_audio_buffer_size
-from ..utils.loader import safe_import
 from ..config.manager import ConfigValidationError
 
 logger = logging.getLogger(__name__)
@@ -335,7 +333,6 @@ class UnifiedVoiceAssistantWorkflow(Workflow):
             # Log VAD metrics for performance monitoring
             if self.audio_processor_interface:
                 metrics = self.audio_processor_interface.get_metrics()
-                state = self.audio_processor_interface.get_state()
                 self.logger.info(f"📊 Final VAD Metrics: "
                                f"chunks_processed={metrics.get('total_chunks_processed', 0)}, "
                                f"voice_segments={metrics.get('voice_segments_detected', 0)}, "

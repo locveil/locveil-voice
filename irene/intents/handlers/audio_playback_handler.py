@@ -8,7 +8,7 @@ in AudioComponent. Delegates to AudioComponent for actual functionality.
 import asyncio
 import logging
 import time
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Optional
 
 from .base import IntentHandler
 from ..models import Intent, IntentResult

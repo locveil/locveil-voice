@@ -27,8 +27,7 @@ from ..analysis.scope_analyzer import NLUScopeAnalyzer
 from ..analysis.report_generator import NLUReportGenerator
 from ..analysis.hybrid_analyzer import HybridKeywordAnalyzer
 from ..analysis.spacy_analyzer import SpacyProviderAnalyzer
-from ..core.donations import HandlerDonation
-from ..config.models import CoreConfig, NLUAnalysisConfig
+from ..config.models import NLUAnalysisConfig
 
 logger = logging.getLogger(__name__)
 
@@ -740,7 +739,7 @@ class NLUAnalysisComponent(Component, WebAPIPlugin):
     def get_router(self) -> Optional[Any]:
         """Get FastAPI router with NLU analysis endpoints"""
         try:
-            from fastapi import APIRouter, HTTPException, Depends, Query
+            from fastapi import APIRouter, HTTPException, Query
             from ..api.schemas import (
                 # Request schemas
                 AnalyzeDonationRequest,
@@ -753,8 +752,7 @@ class NLUAnalysisComponent(Component, WebAPIPlugin):
                 NLUValidationResult,
                 BatchAnalysisResponse,
                 SystemHealthResponse,
-                ConflictReport,
-                ErrorResponse
+                ConflictReport
             )
         except ImportError:
             self.logger.warning("FastAPI not available - web API endpoints disabled")

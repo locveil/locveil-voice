@@ -5,7 +5,7 @@ Speech Recognition Coordinator managing multiple ASR providers.
 Provides unified web API (/asr/*), voice commands, and multi-source audio processing.
 """
 
-from typing import Dict, Any, List, Optional, AsyncIterator, Type
+from typing import Dict, Any, List, Optional, Type
 from pathlib import Path
 import json
 import time
@@ -23,7 +23,7 @@ from ..intents.models import AudioData
 from ..intents.ports import ASRPort  # QUAL-24: domain capability port (application implements it)
 from ..core.metrics import get_metrics_collector
 from ..api.asyncapi import websocket_api, extract_websocket_specs_from_router
-from ..api.schemas import AudioChunkMessage, TranscriptionResultMessage, TranscriptionErrorMessage, BinaryAudioSessionMessage, BinaryAudioStreamMessage, BinaryWebSocketProtocol
+from ..api.schemas import AudioChunkMessage, TranscriptionResultMessage, BinaryAudioSessionMessage, BinaryWebSocketProtocol
 
 
 # Import ASR provider base class and dynamic loader
@@ -217,8 +217,7 @@ class ASRComponent(Component, ASRPlugin, WebAPIPlugin, ASRPort):
         asr_config = self.core.config.asr.model_dump() if hasattr(self.core.config, 'asr') else {}
         config_sample_rate = asr_config.get('sample_rate')
         allow_resampling = asr_config.get('allow_resampling', True)
-        resample_quality = asr_config.get('resample_quality', 'high')
-        
+
         logger.debug(f"🔧 ASR configuration: sample_rate={config_sample_rate}, allow_resampling={allow_resampling}")
         logger.debug(f"🔧 Current audio rate: {audio_data.sample_rate}Hz")
         
@@ -234,7 +233,7 @@ class ASRComponent(Component, ASRPlugin, WebAPIPlugin, ASRPort):
             
             try:
                 # Import resampling utilities
-                from ..utils.audio_helpers import AudioProcessor, ConversionMethod
+                from ..utils.audio_helpers import AudioProcessor
                 
                 # Get optimal conversion method for ASR
                 conversion_method = AudioProcessor.get_optimal_conversion_path(

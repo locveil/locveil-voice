@@ -7,9 +7,8 @@ Provides high-quality Russian neural TTS using Silero v3.1 models.
 
 import asyncio
 import logging
-import tempfile
 from pathlib import Path
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List
 
 from .base import TTSProvider
 

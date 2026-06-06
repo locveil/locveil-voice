@@ -10,7 +10,6 @@ Demonstrates the new async architecture with:
 
 import asyncio
 import logging
-from pathlib import Path
 
 from ..core.engine import AsyncVACore
 from ..runners.composition import build_core
@@ -122,7 +121,7 @@ async def demo_async_features(core: AsyncVACore):
     commands = ["version", "status", "ping"]
     
     # Process multiple commands concurrently
-    results = await asyncio.gather(*[
+    await asyncio.gather(*[
         core.workflow_manager.process_text_input(
             text=cmd,
             session_id=SessionManager.generate_session_id("async_demo_concurrent"),
@@ -180,7 +179,7 @@ async def run_performance_test():
         async_operation(0.05, 5)
     ]
     
-    results = await asyncio.gather(*tasks)
+    await asyncio.gather(*tasks)
     
     total_time = asyncio.get_event_loop().time() - start_time
     

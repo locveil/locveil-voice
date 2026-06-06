@@ -5,18 +5,15 @@ Detects scope creep and cross-domain attraction issues where intents
 accumulate phrases or patterns that belong to other domains.
 """
 
+import importlib.util
 import re
-from typing import Dict, Any, List, Set, Tuple, Optional, Literal
-from collections import defaultdict, Counter
+from typing import Dict, Any, List, Set, Optional, Literal
+from collections import defaultdict
 
 from .base import ScopeAnalyzer
 from .models import IntentUnit, ScopeIssue, BreadthAnalysis
 
-try:
-    from rapidfuzz import fuzz
-    RAPIDFUZZ_AVAILABLE = True
-except ImportError:
-    RAPIDFUZZ_AVAILABLE = False
+RAPIDFUZZ_AVAILABLE = importlib.util.find_spec("rapidfuzz") is not None
 
 
 class NLUScopeAnalyzer(ScopeAnalyzer):

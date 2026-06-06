@@ -16,7 +16,7 @@ from ..core.interfaces.webapi import WebAPIPlugin
 from ..core.interfaces.voice_trigger import VoiceTriggerPlugin
 from ..core.trace_context import TraceContext
 from ..intents.models import AudioData, WakeWordResult
-from ..utils.audio_helpers import calculate_audio_buffer_size, validate_audio_file
+from ..utils.audio_helpers import calculate_audio_buffer_size
 from ..core.metrics import get_metrics_collector
 
 # Voice trigger provider base class and dynamic loader

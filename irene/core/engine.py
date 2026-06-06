@@ -5,10 +5,8 @@ This is the heart of Irene v13, providing non-blocking command processing
 with optional audio/TTS components.
 """
 
-import asyncio
 import logging
 from typing import Optional, Any
-from dataclasses import dataclass
 from pathlib import Path
 
 from ..config.models import CoreConfig

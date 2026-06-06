@@ -13,14 +13,10 @@ import sys
 import time
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Optional, Dict, Any, List
+from typing import Optional, List
 
-from ..config.models import CoreConfig, ComponentConfig, LogLevel
-from ..config.manager import ConfigManager
-from ..core.engine import AsyncVACore
-from ..utils.loader import get_component_status
-from ..utils.logging import setup_logging
-from .base import BaseRunner, RunnerConfig, check_component_dependencies, print_dependency_status
+from ..config.models import CoreConfig
+from .base import BaseRunner, RunnerConfig
 from ..__version__ import __version__
 
 
@@ -32,8 +28,8 @@ logger = logging.getLogger(__name__)
 def check_webapi_dependencies() -> bool:
     """Check if Web API dependencies are available"""
     try:
-        import fastapi  # type: ignore
-        import uvicorn  # type: ignore
+        import fastapi  # type: ignore  # noqa: F401  # availability probe
+        import uvicorn  # type: ignore  # noqa: F401  # availability probe
         logger.info("✅ Web API dependencies available")
         return True
     except ImportError as e:
@@ -145,8 +141,8 @@ Port priority: command line > config file > default (8000)
         
         # For normal operation, check that FastAPI/uvicorn are available
         try:
-            import fastapi  # type: ignore
-            import uvicorn  # type: ignore
+            import fastapi  # type: ignore  # noqa: F401  # availability probe
+            import uvicorn  # type: ignore  # noqa: F401  # availability probe
             return True
         except ImportError:
             if not args.quiet:
@@ -455,10 +451,6 @@ monitoring = true
     async def _add_analytics_endpoints(self, app):
         """Add analytics and monitoring endpoints"""
         try:
-            from fastapi import HTTPException  # type: ignore
-            from pydantic import BaseModel  # type: ignore
-            from typing import Dict, Any
-            
             # Phase 1: Analytics endpoints removed - migrated to /monitoring/* in MonitoringComponent
             
             logger.info("Analytics endpoints removed - migrated to /monitoring/* in MonitoringComponent")

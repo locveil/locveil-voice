@@ -5,9 +5,7 @@ from abc import abstractmethod
 from typing import Dict, Any, AsyncIterator, Optional, List
 
 from ..intents.models import AudioData, IntentResult
-from ..intents.context_models import UnifiedConversationContext
 from ..core.interfaces.workflow import WorkflowPort
-from ..core.session_manager import SessionManager
 from ..core.trace_context import TraceContext
 
 logger = logging.getLogger(__name__)

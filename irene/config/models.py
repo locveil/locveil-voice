@@ -13,9 +13,8 @@ Requires: pydantic>=2.0.0, pydantic-settings>=2.0.0
 """
 
 import os
-import re
 import logging
-from typing import Optional, Any, Dict, List, Type, Union
+from typing import Optional, Any, Dict, List, Type
 from pathlib import Path
 from ..__version__ import __version__
 

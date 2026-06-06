@@ -11,7 +11,7 @@ import time
 from collections import defaultdict, deque
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Dict, Any, List, Optional, Deque, Tuple
+from typing import Dict, Any, Optional, Deque, Tuple
 import statistics
 
 logger = logging.getLogger(__name__)

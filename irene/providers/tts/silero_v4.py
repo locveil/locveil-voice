@@ -7,7 +7,6 @@ Provides high-quality multilingual neural TTS using Silero v4 models.
 
 import asyncio
 import logging
-import tempfile
 from pathlib import Path
 from typing import Dict, Any, List
 

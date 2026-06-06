@@ -12,7 +12,7 @@ These utilities provide shared functionality for audio plugins:
 import asyncio
 import logging
 from pathlib import Path
-from typing import Optional, Union, Dict, Any, List, Tuple, cast
+from typing import Optional, Union, Dict, Any, List, cast
 from enum import Enum
 from dataclasses import dataclass
 
@@ -1558,7 +1558,6 @@ async def load_audio_file_to_audiodata_from_bytes(
         RuntimeError: If audio conversion fails
     """
     import tempfile
-    import time
     
     # Determine file format from filename
     if filename:

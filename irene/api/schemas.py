@@ -22,7 +22,7 @@ Follows AsyncAPI and OpenAPI standards for documentation generation.
 # pyright: reportIncompatibleVariableOverride=false
 
 import time
-from typing import Literal, Optional, Dict, Any, List, Union
+from typing import Literal, Optional, Dict, Any, List
 from pydantic import BaseModel, Field
 
 

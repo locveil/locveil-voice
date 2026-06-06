@@ -14,7 +14,7 @@ import asyncio
 import decimal
 import logging
 import re
-from typing import Optional, Union
+from typing import Union
 
 logger = logging.getLogger(__name__)
 

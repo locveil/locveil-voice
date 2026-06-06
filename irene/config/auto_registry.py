@@ -24,7 +24,7 @@ import logging
 import inspect
 import tomllib
 from pathlib import Path
-from typing import Dict, Any, Type, Optional, Set, get_origin, get_args
+from typing import Dict, Any, Type, Optional, get_origin, get_args
 from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)

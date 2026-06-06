@@ -8,7 +8,6 @@ patterns shared across CLI, WebAPI, and VOSK runners.
 import asyncio
 import argparse
 import logging
-import sys
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Optional, Dict, Any, List

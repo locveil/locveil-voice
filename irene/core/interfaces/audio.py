@@ -5,7 +5,7 @@ Defines the interface for plugins that handle audio playback
 and audio processing operations.
 """
 
-from typing import Dict, Any, Optional, AsyncIterator
+from typing import Dict, Any
 from abc import abstractmethod
 from pathlib import Path
 

@@ -6,14 +6,11 @@ automatic fallbacks, and component lifecycle management.
 Enhanced with existing utilities from loader.py.
 """
 
-import asyncio
 import logging
 from typing import Optional, Any, Type, TypeVar, Dict, List
-from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from pathlib import Path
 
-from ..config.models import CoreConfig, ComponentConfig
+from ..config.models import CoreConfig
 from ..utils.loader import DependencyChecker, get_component_status
 from .interfaces.component import ComponentPort
 from ..intents.context import ContextManager

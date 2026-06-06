@@ -9,7 +9,6 @@ import asyncio
 import tempfile
 import os
 from typing import Dict, Any, List, AsyncIterator
-from pathlib import Path
 import logging
 
 from .base import ASRProvider
@@ -95,7 +94,7 @@ class WhisperASRProvider(ASRProvider):
     async def is_available(self) -> bool:
         """Check if Whisper dependencies are available"""
         try:
-            import whisper  # type: ignore
+            import whisper  # type: ignore  # noqa: F401  # availability probe
             return True
         except ImportError:
             logger.warning("Whisper library not available")

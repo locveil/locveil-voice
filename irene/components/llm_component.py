@@ -5,7 +5,7 @@ LLM Coordinator managing multiple LLM providers.
 Provides unified web API (/llm/*), voice commands, and text enhancement capabilities.
 """
 
-from typing import Dict, Any, List, Optional, Type
+from typing import Dict, List, Optional, Type
 import logging
 import time
 

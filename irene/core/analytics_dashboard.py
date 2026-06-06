@@ -5,7 +5,6 @@ Provides a simple web-based dashboard for monitoring fire-and-forget
 action metrics, system performance, and error analysis.
 """
 
-import asyncio
 import json
 import logging
 import time
@@ -842,8 +841,7 @@ class AnalyticsDashboard:
             # 1. Intent Recognition vs VAD Performance Correlation
             intent_success_rate = intent_analytics.get("overview", {}).get("overall_success_rate", 0.0)
             vad_processing_time = vad_metrics.get("average_processing_time_ms", 0.0)
-            vad_voice_detection = vad_metrics.get("voice_segments_detected", 0)
-            
+
             if vad_processing_time > 50.0 and intent_success_rate < 0.8:
                 insights.append({
                     "type": "warning",

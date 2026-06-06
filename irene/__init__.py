@@ -14,7 +14,7 @@ from .config.models import CoreConfig, ComponentConfig
 
 # Optional imports with graceful fallback
 try:
-    from .inputs.microphone import MicrophoneInput
+    from .inputs.microphone import MicrophoneInput  # noqa: F401  # availability probe + optional re-export
     MICROPHONE_AVAILABLE = True
 except ImportError:
     MICROPHONE_AVAILABLE = False
@@ -23,8 +23,11 @@ except ImportError:
 TTS_AVAILABLE = True  # Components handle their own availability
 
 __all__ = [
+    "__version__",
+    "__version_info__",
+    "VERSION",
     "AsyncVACore",
-    "CoreConfig", 
+    "CoreConfig",
     "ComponentConfig",
     "MICROPHONE_AVAILABLE",
     "TTS_AVAILABLE"

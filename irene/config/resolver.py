@@ -2,7 +2,7 @@
 Configuration resolution utilities for component-driven config discovery.
 """
 
-from typing import Type, Optional, Any
+from typing import Type, Optional
 from pydantic import BaseModel
 from .models import CoreConfig
 
@@ -40,7 +40,7 @@ def extract_config_by_path(config: CoreConfig, path: str, config_class: Type[Bas
             # Invalid config type
             return None
             
-    except (AttributeError, TypeError, ValueError) as e:
+    except (AttributeError, TypeError, ValueError):
         # Config path not found or invalid
         return None
 

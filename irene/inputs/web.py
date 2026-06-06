@@ -35,8 +35,8 @@ class WebInput(InputPort):
         
         # Check for required dependencies
         try:
-            import fastapi  # type: ignore
-            import uvicorn  # type: ignore
+            import fastapi  # type: ignore  # noqa: F401  # availability probe
+            import uvicorn  # type: ignore  # noqa: F401  # availability probe
             self._fastapi_available = True
         except ImportError as e:
             logger.warning(f"Web input dependencies not available: {e}")

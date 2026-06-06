@@ -9,7 +9,7 @@ input layer's composition point: it legitimately depends outward on the concrete
 
 import asyncio
 import logging
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 from ..intents.models import AudioData
 from ..core.interfaces.input import InputPort, InputData

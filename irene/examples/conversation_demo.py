@@ -14,7 +14,6 @@ with modern v13 architecture using LLM components and intent system.
 """
 
 import asyncio
-import json
 import logging
 from pathlib import Path
 import sys
@@ -22,7 +21,6 @@ import sys
 # Add project root to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from irene.core.engine import AsyncVACore
 from irene.runners.composition import build_core
 from irene.core.session_manager import SessionManager
 from irene.intents.context_models import UnifiedConversationContext
@@ -74,9 +72,6 @@ class ConversationDemoRunner:
         logger.info("🎤 VOICE COMMAND DEMO")
         logger.info("="*60)
         
-        # Create context for commands
-        context = UnifiedConversationContext(session_id=SessionManager.generate_session_id("demo"), user_id="demo_user")
-        
         # Demo commands
         commands = [
             "поболтаем как дела?",
@@ -113,8 +108,8 @@ class ConversationDemoRunner:
         logger.info("📚 SESSION MANAGEMENT DEMO")
         logger.info("="*60)
         
-        handler = self._ensure_handler()
-        
+        self._ensure_handler()
+
         # Session management now handled by UnifiedConversationContext.handler_contexts
         logger.info("Session management now handled by UnifiedConversationContext")
         

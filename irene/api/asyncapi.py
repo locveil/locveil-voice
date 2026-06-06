@@ -7,10 +7,9 @@ from WebSocket endpoints in Irene components.
 Uses AsyncAPI 2.6.0 for compatibility with @asyncapi/web-component@2.6.4 renderer.
 """
 
-import json
 import logging
 import re
-from typing import Dict, Any, Optional, Type, Union, get_type_hints, get_origin, get_args
+from typing import Dict, Any, Optional, Type
 from ..__version__ import __version__
 from functools import wraps
 from dataclasses import dataclass

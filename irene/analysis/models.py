@@ -6,7 +6,7 @@ for representing conflicts, validation results, and analysis reports.
 """
 
 import time
-from typing import Dict, Any, List, Optional, Literal
+from typing import Dict, Any, List, Literal
 from dataclasses import dataclass
 from pydantic import BaseModel, Field
 

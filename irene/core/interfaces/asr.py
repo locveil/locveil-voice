@@ -5,7 +5,6 @@ Defines the interface for plugins that convert speech to text
 using various ASR engines.
 """
 
-from typing import Dict, Any, Optional
 from abc import abstractmethod
 
 from ..metadata import EntryPointMetadata

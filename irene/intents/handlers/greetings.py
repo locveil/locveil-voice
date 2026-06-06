@@ -81,9 +81,6 @@ class GreetingsIntentHandler(IntentHandler):
     async def execute(self, intent: Intent, context: UnifiedConversationContext) -> IntentResult:
         """Execute greeting intent"""
         try:
-            # Use language from context (detected by NLU)
-            language = context.language  # Fallback to Russian if not set
-            
             if intent.action == "goodbye" or intent.name == "greeting.goodbye":
                 return await self._handle_farewell(intent, context)
             elif intent.action == "welcome" or intent.name == "greeting.welcome":

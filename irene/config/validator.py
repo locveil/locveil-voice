@@ -15,7 +15,6 @@ Features:
 """
 
 import logging
-from pathlib import Path
 from typing import Dict, List, Any, Optional, Set
 from dataclasses import dataclass
 from enum import Enum
@@ -196,8 +195,7 @@ class ConfigValidator:
         
         # Check profile consistency 
         voice_components = [components.tts, components.asr, components.audio, components.voice_trigger]
-        api_components = [components.llm, components.nlu, components.text_processor]
-        
+
         if any(voice_components) and not config.inputs.microphone and not config.inputs.web:
             self._add_result(
                 ValidationLevel.WARNING,

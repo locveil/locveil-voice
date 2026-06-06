@@ -8,8 +8,7 @@ Providers are pure implementation classes managed by Universal Plugins.
 import logging
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Dict, Any, Optional, List
-from pathlib import Path
+from typing import Dict, Any, Optional
 
 from ..core.metadata import EntryPointMetadata
 

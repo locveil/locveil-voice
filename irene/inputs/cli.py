@@ -6,7 +6,6 @@ with the voice assistant.
 """
 
 import asyncio
-import sys
 from typing import AsyncIterator, Optional, List, Dict
 import logging
 

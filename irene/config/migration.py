@@ -22,7 +22,6 @@ from .models import (
     VoiceTriggerConfig, NLUConfig, TextProcessorConfig, IntentSystemConfig,
     IntentHandlerListConfig, AssetConfig, WorkflowConfig
 )
-from .schemas import SchemaVersion, CURRENT_SCHEMA_VERSION
 
 logger = logging.getLogger(__name__)
 

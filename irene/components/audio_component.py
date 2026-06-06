@@ -5,10 +5,9 @@ Implements the fundamental component pattern for audio playback functionality.
 Manages multiple audio providers based on configuration and provides unified web APIs.
 """
 
-import asyncio
 import logging
 import time
-from typing import Dict, Any, List, Optional, AsyncIterator, Type
+from typing import Dict, Any, List, Optional, Type
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException, UploadFile, File  # type: ignore

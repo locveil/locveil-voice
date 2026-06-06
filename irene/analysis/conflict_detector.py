@@ -8,8 +8,8 @@ of actual NLU providers to identify overlaps, collisions, and cross-hits.
 import re
 import math
 import unicodedata
-from typing import Dict, Any, List, Set, Tuple
-from collections import defaultdict, Counter
+from typing import Dict, Any, List, Set
+from collections import defaultdict
 
 from .base import ConflictDetector
 from .models import (

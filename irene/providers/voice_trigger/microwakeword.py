@@ -10,8 +10,6 @@ Based on: https://github.com/kahrendt/microWakeWord
 import logging
 import numpy as np
 from typing import Dict, Any, List, Optional
-import tempfile
-import os
 from pathlib import Path
 
 from .base import VoiceTriggerProvider

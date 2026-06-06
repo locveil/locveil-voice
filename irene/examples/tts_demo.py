@@ -12,7 +12,6 @@ Showcases all 5 TTS engines with different backends:
 import asyncio
 import logging
 from pathlib import Path
-from typing import Optional
 
 from ..providers.tts import (
     ConsoleTTSProvider,

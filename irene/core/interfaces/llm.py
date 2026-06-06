@@ -5,7 +5,7 @@ Defines the interface for plugins that provide language model
 and text enhancement capabilities.
 """
 
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, List
 from abc import abstractmethod
 
 from ..metadata import EntryPointMetadata

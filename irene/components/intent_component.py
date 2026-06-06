@@ -331,10 +331,9 @@ class IntentComponent(Component, WebAPIPlugin):
                 CreateLanguageRequest, CreateLanguageResponse, DeleteLanguageResponse,
                 ReloadDonationResponse, CrossLanguageValidation, LanguageDonationMetadata,
                 # Schema-related types still needed
-                DonationSchemaResponse, DonationMetadata, ValidationError, ValidationWarning,
+                DonationSchemaResponse, ValidationError, ValidationWarning,
                 # Phase 4: Cross-language validation schemas
                 CrossLanguageValidationResponse, ValidationReportSchema, CompletenessReportSchema,
-                SyncParametersRequest, SyncParametersResponse,
                 SuggestTranslationsRequest, SuggestTranslationsResponse,
                 TranslationSuggestionsSchema, MissingPhraseInfo,
                 # Phase 6: Template management schemas
@@ -355,7 +354,6 @@ class IntentComponent(Component, WebAPIPlugin):
                 # Phase 1: Configuration response schemas
                 IntentSystemConfigureResponse
             )
-            from ..core.donations import HandlerDonation
             from ..config.models import IntentSystemConfig
             
             router = APIRouter()

@@ -6,7 +6,6 @@ Requires Google Cloud credentials and supports high-quality cloud-based recognit
 """
 
 import asyncio
-import tempfile
 import os
 from typing import Dict, Any, List, AsyncIterator
 from pathlib import Path
@@ -56,8 +55,8 @@ class GoogleCloudASRProvider(ASRProvider):
     async def is_available(self) -> bool:
         """Check if Google Cloud dependencies and credentials are available"""
         try:
-            from google.cloud import speech  # type: ignore
-            
+            from google.cloud import speech  # type: ignore  # noqa: F401  # availability probe
+
             # Check if credentials file exists
             if self.credentials_path and Path(self.credentials_path).exists():
                 return True

@@ -8,16 +8,13 @@ Voice Assistant. It works identically in both voice trigger modes.
 Phase 2 Implementation: State Machine - Universal Audio Processing
 """
 
-import asyncio
 import logging
 import time
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Optional, List, Dict, Any, AsyncIterator, Awaitable, Callable, Union
-from pathlib import Path
+from typing import Optional, List, Dict, Any, AsyncIterator, Awaitable, Callable
 
 from ..intents.models import AudioData
-from ..intents.context_models import UnifiedConversationContext
 from ..config.models import VADConfig
 from ..utils.vad import SimpleVAD, AdvancedVAD, VADResult
 from ..utils.audio_helpers import calculate_audio_energy, estimate_optimal_vad_threshold
@@ -453,7 +450,6 @@ class UniversalAudioProcessor:
         logger.debug("Forcing voice segment completion due to timeout/overflow")
         
         # Temporarily set state to VOICE_ENDED to trigger completion
-        original_state = self.vad_state
         self.vad_state = VoiceActivityState.VOICE_ENDED
         
         voice_segment = await self._handle_voice_ended()

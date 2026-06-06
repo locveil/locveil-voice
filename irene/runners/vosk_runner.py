@@ -11,16 +11,11 @@ import asyncio
 import argparse
 import logging
 import sys
-from pathlib import Path
 from typing import Optional, List
 
-from ..config.models import CoreConfig, LogLevel
-from ..config.manager import ConfigManager
-from ..core.engine import AsyncVACore
+from ..config.models import CoreConfig
 from ..core.session_manager import SessionManager
-from ..utils.loader import get_component_status
-from ..utils.logging import setup_logging
-from .base import BaseRunner, RunnerConfig, check_component_dependencies, print_dependency_status
+from .base import BaseRunner, RunnerConfig
 
 
 logger = logging.getLogger(__name__)
@@ -32,7 +27,7 @@ def check_vosk_dependencies() -> bool:
     """Check if VOSK dependencies are available"""
     try:
         import vosk  # type: ignore
-        import sounddevice as sd  # type: ignore
+        import sounddevice as sd  # type: ignore  # noqa: F401  # availability probe
         print("✅ VOSK dependencies available")
         print(f"   VOSK version: {getattr(vosk, '__version__', 'unknown')}")
         print(f"   Sounddevice available: yes")
@@ -105,8 +100,8 @@ Note: VOSK runner always uses microphone input only, regardless of config file s
         
         # For normal operation, check that VOSK is available
         try:
-            import vosk  # type: ignore
-            import sounddevice as sd  # type: ignore
+            import vosk  # type: ignore  # noqa: F401  # availability probe
+            import sounddevice as sd  # type: ignore  # noqa: F401  # availability probe
             return True
         except ImportError:
             if not args.quiet:

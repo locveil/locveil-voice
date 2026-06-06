@@ -6,7 +6,6 @@ Provides high-quality text enhancement and chat capabilities.
 """
 
 import os
-import asyncio
 from typing import Dict, Any, List
 import logging
 
@@ -79,7 +78,7 @@ class AnthropicLLMProvider(LLMProvider):
     async def is_available(self) -> bool:
         """Check if Anthropic API is available"""
         try:
-            import anthropic
+            import anthropic  # noqa: F401  # availability probe
             return self.api_key is not None
         except ImportError:
             logger.warning("Anthropic library not available")

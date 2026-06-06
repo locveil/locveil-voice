@@ -7,7 +7,7 @@ Adapted from datetime_plugin.py for the new intent architecture.
 
 import logging
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Any
 
 from .base import IntentHandler
 from ..models import Intent, IntentResult
@@ -61,9 +61,6 @@ class DateTimeIntentHandler(IntentHandler):
     async def execute(self, intent: Intent, context: UnifiedConversationContext) -> IntentResult:
         """Execute datetime intent"""
         try:
-            # Use language from context (detected by NLU)
-            language = context.language
-            
             if intent.action == "current_date" or intent.name == "datetime.current_date":
                 return await self._handle_date_request(intent, context)
             elif intent.action == "current_time" or intent.name == "datetime.current_time":

@@ -28,7 +28,7 @@ import logging
 import sys
 import tomllib
 from pathlib import Path
-from typing import Dict, Any, List, Optional, Set
+from typing import Dict, Any, List, Optional
 import re
 
 # Setup logging before imports to avoid config loading side effects

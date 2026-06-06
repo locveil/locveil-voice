@@ -8,7 +8,7 @@ entity extraction and provide better understanding of user intents.
 
 import logging
 import re
-from typing import Dict, Any, List, Optional, Tuple, Set
+from typing import Dict, Any, List, Optional, Tuple
 from dataclasses import dataclass
 from ..intents.models import Intent
 from ..intents.context_models import UnifiedConversationContext

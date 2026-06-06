@@ -6,7 +6,7 @@ in LLMComponent. Delegates to LLMComponent for actual functionality.
 """
 
 import logging
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Optional
 
 from .base import IntentHandler
 from ..models import Intent, IntentResult

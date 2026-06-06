@@ -5,8 +5,6 @@ ElevenLabs neural voice synthesis provider implementation.
 Provides high-quality text-to-speech using cloud-based AI models.
 """
 
-import asyncio
-import tempfile
 import os
 from typing import Dict, Any, List
 from pathlib import Path

@@ -9,7 +9,7 @@ import re
 import math
 import time
 import unicodedata
-from typing import Dict, Any, List, Set, Tuple, Optional
+from typing import Dict, Any, List, Set
 from collections import defaultdict
 
 from .base import BaseAnalyzer

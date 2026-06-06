@@ -15,14 +15,12 @@ import argparse
 import logging
 import sys
 from pathlib import Path
-from typing import List, Optional, Dict, Any
+from typing import List, Dict, Any
 
 import tomllib
 
-import tomli_w
 
 from ..config.migration import (
-    migrate_config, 
     create_migration_backup, 
     V13ToV14Migrator,
     ConfigurationCompatibilityChecker,

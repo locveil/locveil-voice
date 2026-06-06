@@ -6,7 +6,7 @@ semantic conflicts and language processing issues.
 """
 
 import time
-from typing import Dict, Any, List, Set, Optional, Tuple
+from typing import Dict, Any, List, Optional
 from collections import defaultdict
 
 from .base import BaseAnalyzer
@@ -16,7 +16,6 @@ from .models import IntentUnit
 try:
     import spacy
     from spacy.matcher import Matcher
-    from spacy.tokens import Doc, Token
     SPACY_AVAILABLE = True
 except ImportError:
     spacy = None

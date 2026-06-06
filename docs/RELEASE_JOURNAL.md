@@ -12,6 +12,19 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-06
+- **QUAL-5 DONE — cruft cleanup (verifiable cruft → 0; vulture pool not pursued, user decision).** Reconciled the §G
+  counts against post-QUAL-4 reality (import churn dropped them: F401 360→237, star 62→5+57 F405, F841 22→15). Cleared all
+  of it: 189 unused imports ruff-auto-fixed; the 41 unsafe-to-autofix tail classified by one verified sub-agent — pure
+  optional-dep availability probes converted to `importlib.util.find_spec` (6), side-effecting probes kept with a
+  documented `# noqa: F401  # availability probe` (~14), genuine leftover symbols deleted; the 5 star-imports in
+  `api/__init__.py`/`utils/__init__.py` replaced with explicit re-export lists (public `__all__`s now authoritative); 15
+  unused vars removed (side-effecting RHS preserved as bare calls). The `uv run pyright` gate (0) was the safety net for
+  the import removals (a wrongly-removed still-used import surfaces as an undefined name); verified ruff-clean, pyright 0,
+  package imports OK, 9/9 contracts, suite 84=baseline. **Vulture:** ran it (753 candidates @ conf 60) and confirmed it's
+  false-positive-dominated — it flags live entry-point components (`ConfigurationComponent`) and FastAPI `response_model`
+  Pydantic schemas as "unused". Per the user, NOT pursued: a bulk removal would break dynamically-loaded code, the signal
+  is near-zero, and genuine dead code was already removed in ARCH-13/QUAL-21/QUAL-24/QUAL-34. Rationale recorded in the
+  ledger.
 - **Reconciled `mqtt_integration.md` (ARCH-7) to a bridge-side contract tightening (Invariant #5/#8).** The bridge's
   `voice_integration_contract_draft.md` was updated after the AGREED snapshot, with two changes that affect Irene's side:
   **(1) one device / one room** — the catalog device shape changed from `rooms: [...]` (multi) to `room: Optional[str]`

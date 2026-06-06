@@ -7,7 +7,6 @@ Following ABC inheritance pattern for type safety and runtime validation.
 
 from abc import abstractmethod
 from typing import Dict, Any, List, AsyncIterator, Optional
-from pathlib import Path
 
 from ..base import ProviderBase
 

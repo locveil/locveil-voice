@@ -9,7 +9,6 @@ import logging
 import hashlib
 import numpy as np
 from datetime import datetime
-from pathlib import Path
 from typing import Dict, Any, List, Optional, Tuple
 
 from .base import NLUProvider
@@ -1133,8 +1132,6 @@ class SpaCyNLUProvider(NLUProvider):
                     try:
                         # Test pattern by adding it temporarily to entity ruler
                         if self.entity_ruler:
-                            # Create temporary patterns list to test
-                            test_patterns = [{"label": f"TEST_{slot_name}", "pattern": pattern}]
                             # This will raise an exception if pattern is invalid
                             # Note: We can't easily remove patterns from entity ruler, 
                             # but validation happens during add_patterns

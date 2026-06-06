@@ -8,7 +8,6 @@ Extracted from MicrophoneInput for clean separation of concerns.
 import json
 import asyncio
 from typing import Dict, Any, List, AsyncIterator, Optional
-from pathlib import Path
 import logging
 
 from .base import ASRProvider
@@ -55,7 +54,7 @@ class VoskASRProvider(ASRProvider):
     async def is_available(self) -> bool:
         """Check if VOSK dependencies and models are available"""
         try:
-            import vosk  # type: ignore
+            import vosk  # type: ignore  # noqa: F401  # availability probe
             # Check if at least one model exists or can be downloaded
             if not self.model_paths:
                 logger.warning("No VOSK model paths configured")

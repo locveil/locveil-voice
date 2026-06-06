@@ -5,13 +5,14 @@ Defines the interface for plugins that expose functionality via REST APIs
 using FastAPI routers.
 """
 
+import importlib.util
 from typing import Optional, Any, TYPE_CHECKING
 from abc import abstractmethod
 
 from ..metadata import EntryPointMetadata
 
 if TYPE_CHECKING:
-    from fastapi import APIRouter  # type: ignore
+    pass  # type: ignore
 
 
 class WebAPIPlugin(EntryPointMetadata):
@@ -72,12 +73,8 @@ class WebAPIPlugin(EntryPointMetadata):
         Returns:
             True if FastAPI dependencies are available
         """
-        try:
-            import fastapi  # type: ignore
-            return True
-        except ImportError:
-            return False
-        
+        return importlib.util.find_spec("fastapi") is not None
+
     def get_openapi_schema(self) -> Optional[dict]:
         """
         Get custom OpenAPI schema additions for this plugin.

@@ -117,8 +117,7 @@ class AplayAudioProvider(AudioProvider):
             
         try:
             device = kwargs.get('device', self.device)
-            volume = kwargs.get('volume', self._volume)
-            
+
             # Build aplay command
             cmd = ["aplay", "-D", device, str(file_path)]
             

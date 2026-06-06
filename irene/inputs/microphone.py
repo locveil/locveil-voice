@@ -15,13 +15,11 @@ import logging
 import queue
 import time
 from typing import AsyncIterator, Dict, Any, Optional, List, cast
-from pathlib import Path
 
 from .base import ComponentNotAvailable
 from ..core.interfaces.input import InputPort, InputData
 from ..intents.models import AudioData
 from ..utils.audio_helpers import get_default_audio_input_device, validate_audio_input_device, AudioFormatConverter
-from ..utils.loader import safe_import
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +55,7 @@ class MicrophoneInput(InputPort):
         
         # Check for audio dependencies only (no VOSK required)
         try:
-            import sounddevice as sd  # type: ignore
+            import sounddevice as sd  # type: ignore  # noqa: F401  # availability probe
             self._sd_available = True
         except ImportError as e:
             logger.warning(f"Audio input dependencies not available: {e}")

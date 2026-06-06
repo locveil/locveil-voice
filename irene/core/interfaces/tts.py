@@ -5,7 +5,7 @@ Defines the interface for plugins that convert text to speech
 using various TTS engines.
 """
 
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 from abc import abstractmethod
 from pathlib import Path
 

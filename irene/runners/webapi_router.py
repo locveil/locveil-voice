@@ -20,7 +20,6 @@ from typing import Dict, Any, List, Optional
 from ..core.engine import AsyncVACore
 from ..core.intent_asset_loader import IntentAssetLoader
 from ..inputs.web import WebInput
-from ..core.session_manager import SessionManager
 from fastapi import APIRouter  # type: ignore
 
 logger = logging.getLogger(__name__)

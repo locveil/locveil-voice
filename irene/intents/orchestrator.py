@@ -7,7 +7,7 @@ from typing import Dict, Any, Optional, List, Callable
 from .models import Intent, IntentResult
 from .context_models import UnifiedConversationContext
 from .registry import IntentRegistry
-from ..core.metrics import get_metrics_collector, MetricsCollector
+from ..core.metrics import get_metrics_collector
 from ..core.client_registry import resolve_physical_id  # QUAL-28: physical scope for contextual resolution
 from ..core.trace_context import TraceContext
 

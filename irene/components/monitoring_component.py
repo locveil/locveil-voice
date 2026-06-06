@@ -5,6 +5,7 @@ Integrates all Phase 3 services (notifications, metrics, memory management,
 debug tools, analytics dashboard) into the system component architecture.
 """
 
+import importlib.util
 import logging
 from typing import Dict, Any, List, Optional, Type
 
@@ -12,10 +13,10 @@ from pydantic import BaseModel
 
 from .base import Component
 from ..core.interfaces.webapi import WebAPIPlugin
-from ..core.notifications import initialize_notification_service, get_notification_service
-from ..core.metrics import initialize_metrics_system, get_metrics_collector
-from ..core.debug_tools import initialize_action_debugger, get_action_debugger
-from ..core.analytics_dashboard import initialize_analytics_dashboard, get_analytics_dashboard
+from ..core.notifications import initialize_notification_service
+from ..core.metrics import initialize_metrics_system
+from ..core.debug_tools import initialize_action_debugger
+from ..core.analytics_dashboard import initialize_analytics_dashboard
 
 logger = logging.getLogger(__name__)
 
@@ -211,8 +212,7 @@ class MonitoringComponent(Component, WebAPIPlugin):
                 IntentAnalyticsResponse, SessionAnalyticsResponse,
                 PerformanceAnalyticsResponse
             )
-            from typing import Dict, Any, List
-            
+
             router = APIRouter()
             
             # Monitoring status endpoint
@@ -575,13 +575,11 @@ class MonitoringComponent(Component, WebAPIPlugin):
     
     def is_api_available(self) -> bool:
         """Check if FastAPI dependencies are available for web API"""
-        try:
-            import fastapi
-            import pydantic
-            return True
-        except ImportError:
-            return False
-    
+        return (
+            importlib.util.find_spec("fastapi") is not None
+            and importlib.util.find_spec("pydantic") is not None
+        )
+
     # Component interface methods
     @classmethod
     def get_python_dependencies(cls) -> List[str]:

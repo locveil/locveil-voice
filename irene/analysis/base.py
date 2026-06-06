@@ -7,7 +7,7 @@ ensuring consistent API across all analyzers and detectors.
 
 import logging
 from abc import ABC, abstractmethod
-from typing import Dict, Any, List, Optional, Tuple
+from typing import Dict, Any, List
 from .models import (
     IntentUnit,
     ConflictReport,
@@ -16,9 +16,7 @@ from .models import (
     OverlapScore,
     KeywordCollision,
     CrossHit,
-    AnalysisResult,
-    ValidationResult,
-    BatchAnalysisResult
+    AnalysisResult
 )
 
 logger = logging.getLogger(__name__)

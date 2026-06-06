@@ -6,7 +6,7 @@ Defines the interface for voice trigger/wake word detection providers.
 
 import logging
 from abc import abstractmethod
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List
 
 from ..base import ProviderBase
 from ...intents.models import AudioData, WakeWordResult

@@ -5,6 +5,7 @@ This component provides intent recognition and entity extraction capabilities
 through multiple NLU providers with web API support.
 """
 
+import importlib.util
 import logging
 import time
 from typing import Dict, Any, List, Optional, Type
@@ -1254,12 +1255,10 @@ class NLUComponent(Component, NLUPlugin, WebAPIPlugin):
     
     def is_api_available(self) -> bool:
         """Check if web API is available."""
-        try:
-            import fastapi
-            import pydantic
-            return True
-        except ImportError:
-            return False
+        return (
+            importlib.util.find_spec("fastapi") is not None
+            and importlib.util.find_spec("pydantic") is not None
+        )
     
     def get_api_prefix(self) -> str:
         """Get URL prefix for NLU API endpoints"""

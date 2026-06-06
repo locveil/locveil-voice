@@ -545,13 +545,11 @@ class TTSComponent(Component, TTSPlugin, WebAPIPlugin, TTSPort):
                 ChunkMetadata, SynthesisMetadata, SynthesisStats,
                 TTSConfigureResponse
             )
-            from ..api.asyncapi import websocket_api, extract_websocket_specs_from_router
+            from ..api.asyncapi import websocket_api
             import json
             import time
-            import uuid
             import tempfile
-            import asyncio
-            
+
             router = APIRouter()
                 
             @router.post("/speak", response_model=TTSResponse)

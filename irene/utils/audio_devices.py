@@ -6,6 +6,7 @@ with their capabilities. Extracted from microphone input for use across
 the system including configuration UI.
 """
 
+import importlib.util
 import logging
 from typing import List, Dict, Any, Optional, cast
 
@@ -14,11 +15,7 @@ logger = logging.getLogger(__name__)
 
 def is_audio_available() -> bool:
     """Check if audio device detection is available"""
-    try:
-        import sounddevice as sd  # type: ignore
-        return True
-    except ImportError:
-        return False
+    return importlib.util.find_spec("sounddevice") is not None
 
 
 def list_audio_input_devices() -> List[Dict[str, Any]]:

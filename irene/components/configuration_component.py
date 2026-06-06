@@ -10,10 +10,10 @@ import logging
 import shutil
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Any, List, Optional, Type, Union
+from typing import Dict, Any, List, Optional, Type
 
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, ValidationError, Field
+from pydantic import BaseModel, ValidationError
 
 from .base import Component
 from ..core.interfaces.webapi import WebAPIPlugin
@@ -22,7 +22,6 @@ from ..config.models import CoreConfig
 from ..config.auto_registry import AutoSchemaRegistry
 from ..config.schemas import AudioDevicesResponse, AudioDeviceInfo
 from ..api.schemas import (
-    BaseAPIResponse, ErrorResponse, ValidationError as APIValidationError,
     ConfigUpdateResponse, ConfigValidationResponse, ConfigStatusResponse,
     RawTomlRequest, RawTomlResponse, RawTomlSaveResponse,
     RawTomlValidationRequest, RawTomlValidationResponse,

@@ -6,7 +6,7 @@ across multiple components. Provides unified provider management.
 """
 
 import logging
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Optional
 
 from .base import IntentHandler
 from ..models import Intent, IntentResult

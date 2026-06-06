@@ -8,7 +8,6 @@ Supports multiple wake words and custom models with asset management integration
 import logging
 import numpy as np
 from typing import Dict, Any, List, Optional
-import time
 from pathlib import Path
 
 from .base import VoiceTriggerProvider
@@ -195,7 +194,6 @@ class OpenWakeWordProvider(VoiceTriggerProvider):
             models_dir: Path to our asset-managed openwakeword models directory
         """
         try:
-            import os
             
             # Get OpenWakeWord's expected models directory
             openwakeword_module = safe_import('openwakeword')

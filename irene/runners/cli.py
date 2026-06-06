@@ -6,21 +6,16 @@ Now using BaseRunner for unified patterns.
 """
 
 import asyncio
-import logging
 import argparse
 import sys
 from pathlib import Path
 from typing import Optional, List
 
-from prompt_toolkit import prompt
 
-from ..config.models import CoreConfig, ComponentConfig, LogLevel
-from ..config.manager import ConfigManager
-from ..core.engine import AsyncVACore
+from ..config.models import CoreConfig, ComponentConfig
 from ..core.session_manager import SessionManager
 from ..utils.loader import get_component_status, suggest_installation
-from ..utils.logging import setup_logging
-from .base import BaseRunner, RunnerConfig, InteractiveRunnerMixin, check_component_dependencies, print_dependency_status
+from .base import BaseRunner, RunnerConfig, InteractiveRunnerMixin
 
 
 
