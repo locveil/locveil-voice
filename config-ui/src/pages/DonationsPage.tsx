@@ -14,6 +14,7 @@ import LanguageTabs, { LanguageInfo } from '@/components/donations/LanguageTabs'
 import CrossLanguageValidation from '@/components/donations/CrossLanguageValidation';
 import ContractEditor from '@/components/donations/ContractEditor';
 import DonationValidationPanel from '@/components/donations/DonationValidationPanel';
+import ChoiceSurfacesEditor from '@/components/donations/ChoiceSurfacesEditor';
 import ApplyChangesBar from '@/components/common/ApplyChangesBar';
 
 // Import analysis components
@@ -70,6 +71,14 @@ interface MethodDonationEditorProps {
   expandedMethods?: Record<string, Set<number>>;
   onToggleMethodExpansion?: (handlerName: string, methodIndex: number) => void;
   extractLemmasFromTokenPatterns?: (tokenPatterns: Array<Array<Record<string, any>>>) => string[];
+  contract?: DonationContract | null;
+}
+
+// Minimal typed view of a phrasing parameter (the v1.0 DonationData types params as any[]).
+interface PhrasingParam {
+  name: string;
+  choice_surfaces?: Record<string, string[]>;
+  [k: string]: unknown;
 }
 
 function MethodDonationEditor({ 
@@ -81,7 +90,8 @@ function MethodDonationEditor({
   expandedMethods,
   onToggleMethodExpansion,
   currentLanguage,
-  extractLemmasFromTokenPatterns
+  extractLemmasFromTokenPatterns,
+  contract
 }: MethodDonationEditorProps & { currentLanguage?: string }) {
   
   // Real-time analysis for conflict detection
@@ -407,6 +417,44 @@ function MethodDonationEditor({
                         globalParams={globalParamNames}
                         disabled={disabled}
                       />
+
+                      {/* UI-5: per-choice-parameter spoken surface forms (canonicals come from the contract) */}
+                      {(() => {
+                        const cMethod = contract?.method_donations.find(
+                          m => m.method_name === method.method_name && m.intent_suffix === method.intent_suffix
+                        );
+                        const choiceParams = (cMethod?.parameters ?? []).filter(
+                          p => (p.type === 'choice' || p.type === 'entity') && (p.choices?.length ?? 0) > 0
+                        );
+                        if (choiceParams.length === 0) return null;
+                        const phrasingParams = (method.parameters ?? []) as PhrasingParam[];
+                        return (
+                          <div className="space-y-3">
+                            {choiceParams.map((cp) => {
+                              const pParam = phrasingParams.find(p => p.name === cp.name);
+                              return (
+                                <div key={cp.name}>
+                                  <div className="text-sm font-medium mb-1">Parameter “{cp.name}”</div>
+                                  <ChoiceSurfacesEditor
+                                    canonicalChoices={cp.choices ?? []}
+                                    value={pParam?.choice_surfaces ?? {}}
+                                    disabled={disabled}
+                                    onChange={(surfaces) => {
+                                      const params: PhrasingParam[] = [...phrasingParams];
+                                      const pi = params.findIndex(p => p.name === cp.name);
+                                      if (pi >= 0) params[pi] = { ...params[pi], choice_surfaces: surfaces };
+                                      else params.push({ name: cp.name, choice_surfaces: surfaces });
+                                      const newMethods = [...(v.method_donations || [])];
+                                      newMethods[idx] = { ...method, parameters: params };
+                                      set('method_donations', newMethods);
+                                    }}
+                                  />
+                                </div>
+                              );
+                            })}
+                          </div>
+                        );
+                      })()}
                     </div>
                   </div>
                 )}
@@ -1136,6 +1184,7 @@ const DonationsPage: React.FC = () => {
                     onToggleMethodExpansion={toggleMethodExpansion}
                     currentLanguage={selectedLanguage}
                     extractLemmasFromTokenPatterns={extractLemmasFromTokenPatterns}
+                    contract={contract}
                   />
                 </div>
               ) : (
