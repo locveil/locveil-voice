@@ -12,6 +12,21 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-06
+- **QUAL-4 reconciled + subdivided; 4a (the standard-mode type gate) DONE.** Reconciled the §E baseline against current
+  reality (Invariant #8(b)): measured standard-mode pyright at **762 errors / 172 files** (pyright 1.1.410, venv-resolved,
+  tests excluded) — down from §E's 1,107, the ARCH/QUAL refactors having fixed ~31% incidentally. (First measured 540 with
+  the venv mis-wired — `pythonPath` is not a pyright setting; unresolved third-party imports were *masking*
+  `reportArgumentType`/`reportCallIssue`; `venvPath`+`venv` gave the true 762.) **User decisions:** subdivide **by rule**
+  with a **ratchet** (each slice enables its rule in `pyrightconfig.json` so it can't regress), target **zero at standard
+  mode** (not a numeric threshold). **4a landed:** rewrote `pyrightconfig.json` → `typeCheckingMode=standard` + venv-wired
+  + the 20 currently-erroring rules suppressed so the gate is **green at 0** (the floor every later slice ratchets up from);
+  fixed one wrong rule key (`reportPossiblyUnbound`→`reportPossiblyUnboundVariable`, was silently unrecognized); pinned
+  `pyright==1.1.410` in the `dev` extra (diagnostics are version-sensitive); removed the duplicate `[tool.pyright]` block
+  from `pyproject.toml` (the JSON config now the single source of truth — they had drifted, JSON wins when present).
+  Canonical gate = `uv run pyright` (exit 1 on any error), run in a full-extras env (`uv sync --all-extras`, else optional
+  imports like `sherpa_onnx` read as missing). Verified: 0 errors / no unrecognized settings; full suite **84 failed**
+  (≤ 85 baseline — config-only, zero runtime change). CI wiring = BUILD-2. Remaining 4b (None-safety 238) · 4c (phantom
+  attrs 164) · 4d (override-incompat 76) · 4e (tail + mypy disposition).
 - **ARCH-7 DONE — bridge contract AGREED in the bridge session; reconciled the Irene-side design.** The bridge session
   (sister repo) reconciled the contract draft I'd written into the AGREED form
   (`wb-mqtt-bridge/docs/voice_integration_contract_draft.md`, status AGREED 2026-06-06). Re-read it in full (Invariant #8)

@@ -441,8 +441,27 @@ See `docs/review/phase1_architecture_map.md` §5.
 - [x] **QUAL-2** — Review round 1: phantom-reference `NameError`s + method shadowing. → b6cd282
 - [ ] **QUAL-3** (P1) — Category D wiring: `Monitoring`/`Configuration` define `get_python_dependencies` as an
       unbound instance method; the 4 runners miss the metadata methods. Done when: `dependency_validator --validate-all` passes 58/58.
-- [ ] **QUAL-4** (P1) — Type-safety debt: re-tighten `mypy.ini`/`pyrightconfig.json` and burn down the ~1063
-      standard-mode pyright errors (subdivide after ARCH lands). Refs: §E.
+- [~] **QUAL-4** (P1) — Type-safety debt: drive **standard-mode pyright to ZERO** (the release gate) via a **by-rule
+      ratchet**, and re-tighten the config. Refs: §E. **Reconciled 2026-06-06 (Invariant #8(b), user-approved):** the §E
+      baseline of 1,107 has fallen to **762 errors / 172 files** at standard mode (accurate venv-resolved count, pyright
+      1.1.410, tests excluded) — the ARCH/QUAL refactors fixed ~31% incidentally. **Target = zero at standard** (user
+      decision; a numeric threshold invites drift). **Subdivision (by-rule, each slice ENABLES its rule in
+      `pyrightconfig.json` so it can't regress — the end state is an empty suppression list):**
+      - **4a ✓ DONE 2026-06-06** — established the gate. `pyrightconfig.json` rewritten to `typeCheckingMode=standard` +
+        venv-wired (`venvPath`/`venv`) and **the 20 currently-erroring rules suppressed → gate green at 0**; pinned
+        `pyright==1.1.410` in the `dev` extra (diagnostics vary by version); removed the duplicate `[tool.pyright]` block
+        from `pyproject.toml` (JSON config is the single source of truth). Canonical gate command = `uv run pyright`
+        (exit 1 on any error; requires a full-extras env — `uv sync --all-extras`). Verified 0 errors; suite 84=baseline
+        (config-only, no runtime change). Wiring into CI = BUILD-2.
+      - **4b** — `reportOptionalMemberAccess` (238) — None-guards on Optional access (real None-deref bugs); enable rule.
+      - **4c** — `reportAttributeAccessIssue` (164) — phantom attributes (latent bugs, the §E `.core`/`.get_capabilities`
+        class); enable rule.
+      - **4d** — `reportIncompatible{Method,Variable}Override` (34+42) — impls diverging from their ABC/base contract
+        (architecturally meaningful post-ARCH); enable rules.
+      - **4e** — the tail (`reportArgumentType` 113, `reportCallIssue` 91, `reportPossiblyUnboundVariable` 27,
+        `reportReturnType` 17, `reportGeneralTypeIssues` 14, + ~20 long-tail) → empty suppression list = full standard mode
+        on. Decide `mypy.ini` disposition here (retire vs align — pyright is the gate; running both is redundant).
+        Hotspot `intent_component.py` (97 errors, 18%) spans 4b–4e.
 - [ ] **QUAL-5** (P2) — Cruft: 360 unused imports, 62 star-imports, vulture dead-code pool. Refs: §G.
 - [ ] **QUAL-6** (P2) — Config schema gap: 9 `CoreConfig` fields without section models (import-time warning). Refs: §H.
 - [x] **QUAL-7** (P2) — **CLOSED-AS-OBSOLETE 2026-06-03 (Invariant #8, user-approved).** Premise no longer exists: the

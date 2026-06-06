@@ -5,75 +5,43 @@
   "exclude": [
     "**/node_modules",
     "**/__pycache__",
-    "**/.*"
+    "**/.*",
+    "irene/tests"
   ],
   "pythonVersion": "3.11",
   "pythonPlatform": "Linux",
-  
-  // Relaxed type checking to match mypy.ini settings
-  "typeCheckingMode": "basic",
-  
-  // Disable strict checking
-  "strictListInference": false,
-  "strictDictionaryInference": false,
-  "strictSetInference": false,
-  "strictParameterNoneValue": false,
-  
-  // Disable warnings that mypy.ini disables
-  "reportMissingTypeStubs": false,
-  "reportUnknownParameterType": false,
-  "reportUnknownArgumentType": false,
-  "reportUnknownLambdaType": false,
-  "reportUnknownVariableType": false,
-  "reportUnknownMemberType": false,
-  "reportMissingParameterType": false,
-  "reportMissingReturnType": false,
-  "reportUnusedImport": false,
-  "reportUnusedClass": false,
-  "reportUnusedFunction": false,
-  "reportUnusedVariable": false,
-  "reportDuplicateImport": false,
-  "reportOptionalSubscript": false,
-  "reportOptionalMemberAccess": false,
-  "reportOptionalCall": false,
-  "reportOptionalIterable": false,
-  "reportOptionalContextManager": false,
-  "reportOptionalOperand": false,
-  "reportTypedDictNotRequiredAccess": false,
-  "reportPrivateImportUsage": false,
-  "reportConstantRedefinition": false,
-  "reportIncompatibleMethodOverride": false,
-  "reportIncompatibleVariableOverride": false,
-  "reportOverlappingOverload": false,
-  "reportUntypedNamedTuple": false,
-  "reportUntypedClassDecorator": false,
-  "reportUntypedFunctionDecorator": false,
-  "reportUntypedBaseClass": false,
-  "reportArgumentType": false,
-  "reportAssignmentType": false,
-  "reportAttributeAccessIssue": false,
-  "reportCallIssue": false,
-  "reportGeneralTypeIssues": false,
-  "reportOperatorIssue": false,
-  "reportReturnType": false,
-  "reportIndexIssue": false,
-  
-  // Ignore missing imports for third-party libraries (matching mypy.ini)
-  "ignore": [
-    "**/anthropic/**",
-    "**/elevenlabs/**", 
-    "**/openai/**",
-    "**/sounddevice/**",
-    "**/vosk/**",
-    "**/pyttsx3/**",
-    "**/google/**",
-    "**/lingua_franca/**",
-    "**/pydantic/**",
-    "**/pydantic_settings/**",
-    "**/tensorflow/**",
-    "**/torch/**",
-    "**/librosa/**",
-    "**/matplotlib/**",
-    "**/pandas/**"
-  ]
-} 
+  "venvPath": ".",
+  "venv": ".venv",
+
+  // QUAL-4: standard mode is the release gate (Definition-of-release: pyright
+  // standard at/under the agreed threshold = ZERO). It is reached by a ratchet:
+  // every rule below is suppressed only until its QUAL-4 slice clears it, then the
+  // line is DELETED so `standard` enforces it permanently. The end state is an
+  // EMPTY suppression list = 0 errors at standard mode. Never add a new suppression.
+  // Baseline 2026-06-06 (pyright 1.1.410): 762 errors across these 20 rules.
+  "typeCheckingMode": "standard",
+
+  "reportOptionalMemberAccess": "none",          // QUAL-4b  (238)
+  "reportAttributeAccessIssue": "none",          // QUAL-4c  (164)
+  "reportIncompatibleVariableOverride": "none",  // QUAL-4d  (42)
+  "reportIncompatibleMethodOverride": "none",    // QUAL-4d  (34)
+  "reportArgumentType": "none",                  // QUAL-4e  (113)
+  "reportCallIssue": "none",                     // QUAL-4e  (91)
+  "reportPossiblyUnboundVariable": "none",       // QUAL-4e  (27)
+  "reportReturnType": "none",                    // QUAL-4e  (17)
+  "reportGeneralTypeIssues": "none",             // QUAL-4e  (14)
+  "reportInvalidTypeForm": "none",               // QUAL-4e  (6)
+  "reportOperatorIssue": "none",                 // QUAL-4e  (4)
+  "reportRedeclaration": "none",                 // QUAL-4e  (2)
+  "reportIndexIssue": "none",                    // QUAL-4e  (2)
+  "reportOptionalSubscript": "none",             // QUAL-4e  (2)
+  "reportOptionalContextManager": "none",        // QUAL-4e  (1)
+  "reportFunctionMemberAccess": "none",          // QUAL-4e  (1)
+  "reportUnboundVariable": "none",               // QUAL-4e  (1)
+  "reportUnhashable": "none",                    // QUAL-4e  (1)
+  "reportOptionalCall": "none",                  // QUAL-4e  (1)
+  "reportAssignmentType": "none",                // QUAL-4e  (1)
+
+  // stub-present-but-source-absent noise from optional native deps; not type debt
+  "reportMissingModuleSource": "none"
+}
