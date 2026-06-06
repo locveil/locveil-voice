@@ -12,6 +12,21 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-06
+- **QUAL-6 DONE — killed the startup "CoreConfig fields without section models" warning as a structural false
+  positive (Invariant #8).** Reconciled against reality: the §H "9 fields" is now 11 (QUAL-36 added
+  `default_language`/`supported_languages`), and crucially they are *all* scalar top-level settings — instance
+  identity + runtime knobs, no nested structure. The warning was guaranteed by construction: `validate_schema_coverage`
+  diffed the section-model registry against **every** `CoreConfig` field, but the registry only ever holds
+  Pydantic-model fields, so each scalar was permanently "missing." Fix is a logic correction, not a config
+  restructure: factored the "is this annotation a section model" predicate into a shared
+  `AutoSchemaRegistry._resolve_section_model()` (direct BaseModel or `Optional[BaseModel]`) used by **both**
+  `get_section_models` and the coverage check; the check now compares the registry against the actual *section*
+  fields, so a non-empty diff means a genuine registration drop worth a warning. Documented inline in `CoreConfig`
+  that the leading scalars are intentionally section-less. Chose this over grouping the scalars into a section model
+  (would break TOML layout, `IRENE_*` env paths, and dozens of `config.debug`/`config.version`/… read sites — high
+  risk for a P2 cosmetic warning). Verified: `validate_schema_coverage().warnings == []`, 16/16 sections still
+  registered, full `uv run pyright` 0, `test_config_schemas`+`test_import_contracts` 14/14, dependency validator
+  55/55, `check_scope` clean, suite 84=baseline.
 - **Corrected the "выключи свет везде" model in `mqtt_integration.md` (user correction).** My prior reconciliation
   concluded Irene fans out (iterate all rooms → N per-device canonical calls + partial-failure speech) — **wrong.** The
   actual model: the **`global` room holds whole-house AGGREGATE devices** (e.g. `all_lights`) that wb-rules maps to the

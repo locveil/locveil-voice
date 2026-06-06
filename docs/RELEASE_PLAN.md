@@ -543,7 +543,19 @@ See `docs/review/phase1_architecture_map.md` §5.
       `response_model` Pydantic schemas as "unused"); a bulk cleanup would risk breaking dynamically-loaded code, and
       genuine dead code was already removed during the refactors (ARCH-13 legacy plugins, QUAL-21 settings runner,
       QUAL-24/34 dead handlers/params). Refs: §G.
-- [ ] **QUAL-6** (P2) — Config schema gap: 9 `CoreConfig` fields without section models (import-time warning). Refs: §H.
+- [x] **QUAL-6** (P2) — **DONE 2026-06-06.** Resolved the startup "CoreConfig fields without section models"
+      warning as a **structural false positive** (Invariant #8): `validate_schema_coverage` compared the
+      section-model registry against *all* `CoreConfig` fields, but the registry — by construction — only ever
+      holds Pydantic-model fields, so every scalar top-level field (the 11 instance-identity + runtime knobs:
+      `name/version/debug/log_level/default_language/supported_languages/language/timezone/
+      max_concurrent_commands/command_timeout_seconds/context_timeout_minutes`) was *permanently* reported
+      "missing." Fix: factored the "is this annotation a section model" predicate into a shared
+      `AutoSchemaRegistry._resolve_section_model()` used by **both** `get_section_models` and the coverage check;
+      the check now compares against the actual section fields, so a non-empty diff means a real registration
+      drop (worth a warning) rather than expected scalars. Scalars are intentionally section-less (documented
+      inline in `CoreConfig`). No config-structure / TOML / env-var / read-site changes. Verified: warning gone
+      (`validate_schema_coverage().warnings == []`), 16/16 sections still registered, full pyright 0,
+      `test_config_schemas`+`test_import_contracts` 14/14, dependency validator 55/55, suite 84=baseline. Refs: §H.
 - [x] **QUAL-7** (P2) — **CLOSED-AS-OBSOLETE 2026-06-03 (Invariant #8, user-approved).** Premise no longer exists: the
       `train_schedule` handler + its config/assets were **removed in QUAL-34**, so there is no `train_schedule` config-vs-model
       mismatch to reconcile (verified: `train_schedule` absent from `config-master.toml`, `config/models.py`, and all of

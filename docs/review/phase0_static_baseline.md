@@ -140,6 +140,15 @@ Importing `irene` warns: `CoreConfig` fields without section models —
 `{debug, language, version, log_level, name, max_concurrent_commands, context_timeout_minutes,
 timezone, command_timeout_seconds}`.
 
+> **RESOLVED 2026-06-06 (QUAL-6).** Structural false positive, not a real gap. These are all scalar
+> top-level settings (instance identity + runtime knobs) with no nested structure — they legitimately
+> have no section model. The warning fired because `AutoSchemaRegistry.validate_schema_coverage`
+> diffed the section-model registry against *all* `CoreConfig` fields, but the registry only ever
+> holds Pydantic-model fields. Fixed by sharing one `_resolve_section_model()` predicate between the
+> registry and the coverage check, so the check compares against the actual section fields; a non-empty
+> diff now means a genuine registration drop. (By QUAL-6 the list was 11 — QUAL-36 added
+> `default_language`/`supported_languages`.) No config-structure change. See `RELEASE_PLAN.md` QUAL-6.
+
 ## Tests
 
 The test suite is itself partly broken — it references removed/renamed symbols

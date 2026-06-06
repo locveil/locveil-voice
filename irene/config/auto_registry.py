@@ -37,41 +37,50 @@ class AutoSchemaRegistry:
     _component_schemas_cache: Optional[Dict[str, Type[BaseModel]]] = None
     _provider_schemas_cache: Optional[Dict[str, Dict[str, Type[BaseModel]]]] = None
     
+    @staticmethod
+    def _resolve_section_model(annotation: Any) -> Optional[Type[BaseModel]]:
+        """Return the Pydantic section model a CoreConfig field annotation denotes, if any.
+
+        A *section* is a top-level CoreConfig field whose type is a Pydantic model
+        — directly, or wrapped in Optional[...] / Union[..., None]. Scalar fields
+        (str/int/bool/enum/list) are NOT sections: they are instance-identity and
+        runtime knobs that live directly on CoreConfig and legitimately have no
+        section model. Returns None for those. (QUAL-6: single predicate shared by
+        the registry and the coverage check, so the two cannot disagree.)
+        """
+        # Direct BaseModel subclass
+        if (inspect.isclass(annotation) and
+                issubclass(annotation, BaseModel) and
+                annotation != BaseModel):
+            return annotation
+
+        # Optional[BaseModel] / Union[BaseModel, None]
+        if get_origin(annotation) is not None:
+            for arg in get_args(annotation):
+                if (inspect.isclass(arg) and
+                        issubclass(arg, BaseModel) and
+                        arg != BaseModel):
+                    return arg
+
+        return None
+
     @classmethod
     def get_section_models(cls) -> Dict[str, Type[BaseModel]]:
         """Auto-generate section model registry from CoreConfig fields"""
         if cls._section_models_cache is None:
             cls._section_models_cache = {}
-            
+
             from .models import CoreConfig
-            
+
             for field_name, field_info in CoreConfig.model_fields.items():
-                if hasattr(field_info, 'annotation'):
-                    annotation = field_info.annotation
-                    model_class = None
-                    
-                    # Handle direct BaseModel subclasses
-                    if (inspect.isclass(annotation) and 
-                        issubclass(annotation, BaseModel) and 
-                        annotation != BaseModel):
-                        model_class = annotation
-                    
-                    # Handle Optional[BaseModel] (Union[BaseModel, None])
-                    elif get_origin(annotation) is not None:
-                        args = get_args(annotation)
-                        for arg in args:
-                            if (inspect.isclass(arg) and 
-                                issubclass(arg, BaseModel) and 
-                                arg != BaseModel):
-                                model_class = arg
-                                break
-                    
-                    if model_class:
-                        cls._section_models_cache[field_name] = model_class
-                        logger.debug(f"Auto-registered: {field_name} -> {model_class.__name__}")
-            
+                annotation = getattr(field_info, 'annotation', None)
+                model_class = cls._resolve_section_model(annotation)
+                if model_class:
+                    cls._section_models_cache[field_name] = model_class
+                    logger.debug(f"Auto-registered: {field_name} -> {model_class.__name__}")
+
             logger.info(f"Auto-generated {len(cls._section_models_cache)} section models")
-        
+
         return cls._section_models_cache.copy()
     
     @classmethod
@@ -422,15 +431,25 @@ class AutoSchemaRegistry:
             "recommendations": []
         }
         
-        # Validate section model coverage
+        # Validate section model coverage.
+        # QUAL-6: only fields whose type *is* a Pydantic section model are expected to
+        # appear in the registry. Scalar top-level fields (name/version/debug/log_level/
+        # language knobs/timeouts) legitimately have no section model, so comparing the
+        # registry against *all* CoreConfig fields produced a permanent false-positive
+        # warning on every startup. Compare against the actual section fields instead;
+        # a non-empty diff now means a real registration drop worth surfacing.
         section_models = cls.get_section_models()
         from .models import CoreConfig
-        core_config_fields = set(CoreConfig.model_fields.keys())
+        expected_sections = {
+            field_name
+            for field_name, field_info in CoreConfig.model_fields.items()
+            if cls._resolve_section_model(getattr(field_info, 'annotation', None)) is not None
+        }
         section_model_fields = set(section_models.keys())
-        
-        missing_sections = core_config_fields - section_model_fields
+
+        missing_sections = expected_sections - section_model_fields
         if missing_sections:
-            report["warnings"].append(f"CoreConfig fields without section models: {missing_sections}")
+            report["warnings"].append(f"Section-model fields missing from registry: {missing_sections}")
         
         # Validate component schema coverage
         component_schemas = cls.get_component_schemas()

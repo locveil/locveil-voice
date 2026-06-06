@@ -1210,7 +1210,10 @@ class ComponentLoader:
 class CoreConfig(BaseSettings):
     """Main configuration for Irene Voice Assistant v14+ with clean architecture"""
     
-    # Core settings
+    # Core settings — scalar instance-identity + runtime knobs that live directly on
+    # CoreConfig. These are intentionally NOT grouped into a section model (QUAL-6):
+    # they have no nested structure and are read as plain top-level values. The schema
+    # registry skips them by design; only Pydantic-model fields below are "sections".
     name: str = Field(default="Irene", description="Assistant name")
     version: str = Field(default=__version__, description="Version")
     debug: bool = Field(default=False, description="Enable debug mode")
