@@ -95,7 +95,7 @@ Living findings behind the tasks (Invariant #5). `[x]` = exists; others are prod
 | `declared_param_audit.md` | audit: 19 declared-but-unconsumed donation params across 11 handlers (Bucket A dead / B bypassed) | QUAL-34, QUAL-11 |
 | `streaming_api_review.md` `[x]` | AsyncAPI streaming-API tooling — Hybrid: replace renderer / keep+improve generator | QUAL-17 ✓, QUAL-18 |
 | `esp32_wakeword_review.md` | ESP32 + wakeword keep/fix/cut | QUAL-19/20 |
-| `docs/design/mqtt_integration.md` `[x]` (drafted 2026-06-06; bridge-as-authority decided, contract draft pending bridge session) | smart-home integration — bridge is the single device authority, Irene speaks canonical commands | ARCH-7/8 |
+| `docs/design/mqtt_integration.md` `[x]` (DONE 2026-06-06; bridge contract AGREED) | smart-home integration — bridge is the single device authority, Irene speaks canonical commands | ARCH-7/8 |
 | `docs/design/ws_esp32_transport.md` `[x]` | WS streaming-input driving adapter + ESP32 satellite transport | ARCH-6 |
 | `docs/design/onnx_inference_layer.md` `[x]` (complete 2026-06-04; ASR/platform/build + VAD/wake-word all resolved) | shared sherpa-onnx inference layer — ASR-centric; WB7 armv7 feasibility proven on hardware | ARCH-9/10 |
 | `config-ui/docs/donation_editor_ux.md` | human-friendly donations editor design | UI-1/2/3 |
@@ -253,31 +253,33 @@ See `docs/review/phase1_architecture_map.md` §5.
       "typed accessor IS the replacement" swap — atomic, no broken window); **(c)** the `room_context` resolve-or-clarify
       policy (with QUAL-30). QUAL-11 left the seam clean (resolvers degrade gracefully; duplicate device path unified;
       `_resolution_failed` markers). Pairs with **QUAL-35** (T2/T3 NLU for the complex device commands MQTT needs).
-- [~] **ARCH-7** [MQTT] (P-TBD) — **DESIGN DRAFTED 2026-06-06; bridge contract pending the wb-mqtt-bridge session.**
-      → `docs/design/mqtt_integration.md`. **Approach REDEFINED with the user (Invariant #8(d), approved across the
-      session):** the original "Irene owns an MQTT output adapter + topic schema + `ClientRegistry`/`DeviceEntityResolver`
-      device-topic resolution" is replaced by **bridge-as-single-authority** — the sister project **`wb-mqtt-bridge` owns
-      all device knowledge + MQTT/home-automation conventions** (native WB gear *and* its AV devices); **Irene is a pure
-      voice front-end** that pulls a device/room/capability **catalog** from the bridge on startup and sends **canonical
-      `DeviceCommand`s** (capability.action+params) to the bridge, which translates to native + transport. Irene speaks one
-      canonical vocabulary end-to-end and is blind to wb-rules vs Home Assistant. **Why:** the real deployment is one WB7
-      = broker + house; the bridge already has rooms (ru names), a catalog API, capability maps + param schemas — Irene
-      re-modeling that against the raw broker would duplicate it at two fidelity levels. **Rejected:** Irene→raw-broker;
-      and the archived `intent_mqtt.md` fat-handler + runtime-method-gen design (→ `docs/archive/intent_mqtt.md`).
-      **Two seams (named):** Flow 2 = actuation via the bridge over REST (primary; the WB7 use case; substrate for
-      **QUAL-35** T2/T3 device NLU + the relocated `entity_type`/`_is_device_entity`→declarative resolver swap); Flow 1 =
-      content-agnostic raw-MQTT output (deferred, no consumer yet). **Hexagon (Irene):** `DeviceCommand` domain type +
-      `ActuationPort`/`DeviceCatalogPort` (ABCs, the QUAL-24 pattern) + a `BridgeClient` REST adapter under a new
-      `irene.providers.outputs` group + in-memory `DeviceCatalog` (distinct from `ClientRegistry`). **Cross-project
-      dependency:** the contract (canonical action endpoint + voice catalog read surface + native-device onboarding) is
-      drafted for the bridge session in `wb-mqtt-bridge/docs/voice_integration_contract_draft.md`; ARCH-8 is BLOCKED on it.
-      Remaining to close ARCH-7: reconcile that contract in the bridge session, then finalize.
-- [ ] **ARCH-8** [MQTT] (P-TBD) — Implement per ARCH-7 (`docs/design/mqtt_integration.md` §10): PR-1 `DeviceCommand` +
-      `ActuationPort`/`DeviceCatalogPort` + application services; PR-2 `BridgeClient` REST adapter + `irene.providers.outputs`
-      group + config/schema + startup catalog pull → `DeviceCatalog`; PR-3 wire `DeviceCatalog` into `DeviceEntityResolver`
-      (real device/room entities — ARCH-6 device-half activation, with QUAL-35); PR-4 reference device handler end-to-end.
-      **BLOCKED** on the bridge-side contract (canonical action endpoint + voice catalog surface + native-device onboarding,
-      drafted in `wb-mqtt-bridge/docs/voice_integration_contract_draft.md`). Broad device coverage + T2/T3 NLU = QUAL-35.
+- [x] **ARCH-7** [MQTT] — **✓ DONE 2026-06-06** (design session; deliverable `docs/design/mqtt_integration.md`, and the
+      cross-project bridge contract AGREED with the user in the bridge session — `wb-mqtt-bridge/docs/
+      voice_integration_contract_draft.md`, status AGREED 2026-06-06). **Approach REDEFINED (Invariant #8(d), approved):**
+      replaced the original "Irene owns an MQTT output adapter + topic schema + device-topic resolution" with
+      **bridge-as-single-authority** — `wb-mqtt-bridge` owns all device knowledge + MQTT/home-automation conventions
+      (native WB gear *and* AV); **Irene is a pure voice front-end** that pulls a capability-shaped **catalog** and sends
+      **canonical `DeviceCommand`s** (capability.action+params); the bridge translates to native + transport. Irene is
+      blind to wb-rules vs Home Assistant. Rejected: Irene→raw-broker, and the archived `intent_mqtt.md` fat-handler/
+      runtime-method-gen design. **Agreed contract:** (A) `POST /devices/{id}/canonical {capability,action,params}`, 6-code
+      structured error enum, 500 ms synchronous value-topic echo; (B) `GET /system/catalog` (dedicated, flat, all-locales
+      rooms+devices, read-only `sensor` capability, multi-room, explicit-opt-in `global` room) + retained
+      `bridge/catalog/version` refresh nudge; (C) bridge-side native onboarding (generic `WbPassthroughDevice` driver +
+      capability-adapter composition + caps `brightness`/`color`/`cover`/`climate`/`sensor`; wb-rules stays, bridge mirrors
+      state). **Hexagon (Irene):** `DeviceCommand` + `ActuationPort`/`DeviceCatalogPort` (QUAL-24 ABC pattern) +
+      `BridgeClient` REST adapter under a new `irene.providers.outputs` group + in-memory `DeviceCatalog` (distinct from
+      `ClientRegistry`). Substrate for **QUAL-35** (T2/T3 device NLU + the relocated `entity_type`/`_is_device_entity`→
+      declarative resolver swap). Implementation = ARCH-8.
+- [ ] **ARCH-8** [MQTT] (P-TBD) — **UNBLOCKED 2026-06-06** (contract AGREED). Implement per
+      `docs/design/mqtt_integration.md` §10, against the agreed bridge contract, aligned to the **vertical slice**
+      ("включи свет в детской", one `wb-mr6c` channel): **PR-1** `DeviceCommand` + `ActuationPort`/`DeviceCatalogPort` +
+      application services (adapter-free, fake bridge — **can start now**); **PR-2** `BridgeClient` REST adapter +
+      `irene.providers.outputs` group + config/schema + `GET /system/catalog` pull → `DeviceCatalog` + `bridge/catalog/
+      version` subscribe; **PR-3** wire `DeviceCatalog` into `DeviceEntityResolver` (real device/room entities, ru-name
+      match — ARCH-6 device-half, with QUAL-35); **PR-4** reference device handler end-to-end (`power.on` → canonical →
+      echo → spoken confirm + error-code→speech + `param_invalid`→clarify); **PR-5** sensor read (`GET /devices/{id}/state`)
+      + `global` fan-out (N calls + partial-failure speech). PR-2+ integrate as the bridge's slice comes online. Broad
+      device coverage + T2/T3 NLU = QUAL-35.
 - [x] **ARCH-9** [INFER] — **✓ DONE 2026-06-04** (design deliverable `docs/design/onnx_inference_layer.md` complete; all
       open questions resolved — sherpa one-provider ASR, WB7 armv7 feasibility proven on hardware, two build corrections,
       AssetManager+warm-up, contribution-principle invariant, and VAD+wake-word for **both** scenarios: WB7=ESP32-satellite

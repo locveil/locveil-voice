@@ -12,6 +12,25 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-06
+- **ARCH-7 DONE — bridge contract AGREED in the bridge session; reconciled the Irene-side design.** The bridge session
+  (sister repo) reconciled the contract draft I'd written into the AGREED form
+  (`wb-mqtt-bridge/docs/voice_integration_contract_draft.md`, status AGREED 2026-06-06). Re-read it in full (Invariant #8)
+  and updated `docs/design/mqtt_integration.md` §5/§6/§8/§10/§11 to the definitive shapes. **Deltas from my draft:**
+  (A) write endpoint = `POST /devices/{id}/canonical {capability, action, params}` (not capability-in-path), a **6-code
+  structured error enum** (`device_not_found`/`capability_not_supported`/`action_not_supported`/`param_invalid`{field,
+  reason}/`device_unreachable`/`internal_error`, HTTP mirrors) — which I mapped straight to Russian spoken feedback +
+  the `param_invalid`→clarify path — and a **500 ms synchronous value-topic echo** (per-driver configurable) so Irene
+  confirms from real post-state. (B) read = dedicated **`GET /system/catalog`** (NOT the Layer-3 UI manifest): flat,
+  capability-shaped, **all locales** for rooms *and* devices (`device_name`→`names:{…}` migrated bridge-side), one
+  read-only **`sensor`** capability with `fields`, **multi-room**, and an **explicit-opt-in `global`** room; refresh via
+  retained **`bridge/catalog/version`** (content hash). (C) new canonical capability vocab `brightness`/`color`/`cover`/
+  `climate`/`sensor` (+ the AV set); bridge-side native onboarding via a generic data-driven `WbPassthroughDevice` driver
+  + a capability-adapter composition layer (RGB/HVAC), wb-rules staying on the controller with the bridge **mirroring**
+  state. **New Irene-side flows the contract surfaced:** sensor **reads** are `GET /devices/{id}/state` (catalog gives the
+  field schema, state gives the value); "everywhere" commands = Irene resolves the `global` room → **N parallel canonical
+  calls** with partial-failure speech (a batched bridge endpoint is v2). **Sequencing aligned to the agreed vertical
+  slice** — "включи свет в детской" (one `wb-mr6c` channel) end-to-end — and ARCH-8 re-sliced PR-1..5 accordingly; PR-1
+  (DeviceCommand + ports + services, fake-bridge) is adapter-free and can start now. ARCH-7 → `[x]`; **ARCH-8 UNBLOCKED**.
 - **ARCH-7 [MQTT] design session — drafted `docs/design/mqtt_integration.md`; approach REDEFINED to
   bridge-as-single-authority (Invariant #8(d), decided with the user across the session).** Started from the original
   "Irene owns an MQTT output adapter + topic schema + device-topic resolution" framing and the archived `intent_mqtt.md`

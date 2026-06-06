@@ -1,9 +1,10 @@
 # Smart-home integration design (ARCH-7 / ARCH-8)
 
-**Status:** design session, drafted 2026-06-06. Decisions locked with the user; the cross-project
-**bridge contract is a draft** pending the wb-mqtt-bridge session (see
+**Status:** design AGREED 2026-06-06. The Irene-side design and the cross-project bridge contract are
+both reconciled — see
 [`voice_integration_contract_draft.md`](../../../wb-mqtt-bridge/docs/voice_integration_contract_draft.md)
-in the sister repo). Implementation = **ARCH-8**, sliced in §10.
+(status AGREED 2026-06-06) in the sister repo for the definitive bridge shape. **ARCH-8 is
+unblocked**; implementation sliced in §10.
 
 > Supersedes `docs/archive/intent_mqtt.md` (the v13-era "MQTT intent handler with runtime method
 > generation" design — explicitly rejected, see §2).
@@ -99,46 +100,72 @@ satellite (room context for *a microphone*). DeviceCatalog = everything actuable
 intersect on **room** (both carry room names) but serve different jobs; the catalog references rooms
 the bridge defines.
 
-## 5. The Irene ↔ bridge contract
+## 5. The Irene ↔ bridge contract (AGREED)
 
-Two halves. **Transport = REST both ways** (synchronous `CommandResponse` gives Irene a result to
-*speak* — "готово" / "не получилось"; raw MQTT can't correlate a response). Optional MQTT
-**state**-subscribe for "is the light on?" queries is a later nice-to-have, not in v1.
+Three interactions, all **REST** (synchronous responses give Irene a result to *speak*). The agreed
+shapes (definitive spec in the bridge draft):
 
-### 5a. Read — catalog pull (startup, must-have)
+### 5a. Read — catalog pull (`GET /system/catalog`, startup)
 
-On boot Irene pulls and builds the DeviceCatalog:
+One dedicated, flat, capability-shaped endpoint — **not** the Layer-3 layout manifest (that's
+UI-oriented). Irene pulls it on boot and builds the DeviceCatalog:
 
-| Irene needs | Bridge surface (today, confirmed) |
-|---|---|
-| device + room + scenario lists | `GET /system` |
-| rooms with **ru names** + device membership | `GET /room/list`, `GET /room/{id}` → `{room_id, names:{ru,en,de}, devices:[…]}` |
-| per-device **capabilities** + param schemas (canonical view) | the Layer-3 capability/layout manifest (`GET /devices/{id}/layout`) — see bridge draft §B |
-
-Since actuation is **canonical**, the read side reads the **capability** view (not raw native command
-names) so read and write vocabularies match: Irene learns *"living_room_tv, in Гостиная, supports
-`volume`(0–100), `power`, `input`(hdmi1/hdmi2…)"* and speaks `volume.set` back. One vocabulary.
-
-**Refresh:** startup-pull is the must-have. For live changes the bridge already has `POST /reload`
-and could publish an MQTT nudge (e.g. `irene/catalog/dirty`) that Irene subscribes to → re-pull.
-Optional.
-
-### 5b. Write — canonical actuation (must-have, **needs a new bridge endpoint**)
-
-The gap: the bridge's action endpoint (`POST /devices/{id}/action {action, params}`) takes **native**
-command names; its capability map (canonical→native) is **internal-only** (UI/scenario rendering).
-To let Irene speak canonical, the bridge must expose its existing internal translation on the input
-path — a small addition wrapping the capability reconciler. Proposed shape (bridge session decides):
-
-```
-POST /devices/{device_id}/capability/{capability}/{action}
-  body: { params: { level: 50 } }
-  ->   { success, device_id, capability, action, state, error }
+```jsonc
+{ "version": "<content-hash>",
+  "rooms":   [ {"id":"children_room", "names":{"ru":"Детская","en":"Kids Room"}, "devices":["wb-mr6c_47"]},
+               {"id":"global",        "names":{"ru":"Весь дом"},                 "devices":[…opted-in…]} ],
+  "devices": [ {"id":"wb-mr6c_47", "names":{"ru":"Свет в детской","en":"…"}, "class":"WbPassthrough",
+                "rooms":["children_room","global"],
+                "capabilities":[ {"name":"power","actions":[{"name":"on"},{"name":"off"}]} ]},
+               {"id":"wb-msw-v3_220", "names":{…}, "rooms":["children_room"],
+                "capabilities":[ {"name":"sensor","fields":[{"name":"temperature","type":"float","unit":"°C","labels":{…}}]} ]} ] }
 ```
 
-Irene's `BridgeClient.actuate(DeviceCommand)` POSTs this and maps the response to a spoken result.
-**Full spec of the ask is in the bridge draft** (sister repo) — this doc records only the Irene-side
-expectation.
+- **All locales for both rooms and devices** — Irene knows the request language and picks the matching
+  label. (`device_name` widened string→`names:{…}` bridge-side; Irene just consumes `names`.)
+- **Capability-shaped & matches the write vocabulary**: Irene learns *"wb-mr6c_47, in Детская,
+  supports `power`"* and speaks `power.on` back. One vocabulary end to end.
+- **Sensors** = one read-only `sensor` capability with `fields` (no actions) — drives the **read**
+  flow (§6), not actuation.
+- **Devices are multi-room** (`rooms` is a list); the **`global`** room has *explicit opt-in*
+  membership (lights/dimmers/RGB only — not fridge/HVAC/sensors/AV).
+- **Refresh:** Irene subscribes to retained **`bridge/catalog/version`** (content hash, bumped on
+  bridge config change / `/reload`) and re-pulls `/system/catalog` when it changes.
+
+### 5b. Write — canonical actuation (`POST /devices/{id}/canonical`)
+
+```
+POST /devices/{device_id}/canonical
+  body: { "capability": "power", "action": "on", "params": {} }
+  200:  { "success": true,  "device_id", "capability", "action", "state": {…}, "error": null }
+  4xx:  { "success": false, "device_id", "error": { "code", "message", "field?", "reason?" } }
+```
+
+**Synchronous with a 500 ms value-topic echo** (configurable per driver; covers/curtains declare
+longer): the response carries the **post-action state**, so Irene confirms from real state, not hope.
+
+**The 6-code error enum maps straight to spoken feedback** — this is why structured errors matter for
+voice:
+
+| `error.code` | HTTP | Irene says (ru, illustrative) |
+|---|---|---|
+| `device_not_found` | 404 | "Не нашёл такого устройства" (→ clarify) |
+| `capability_not_supported` | 404 | "Это устройство так не умеет" |
+| `action_not_supported` | 404 | "Не могу это сделать с устройством" |
+| `param_invalid` (`field`,`reason`) | 400 | reason-driven (out_of_range → "Яркость от 0 до 100") → clarify/slot-fill |
+| `device_unreachable` | 503 | "Устройство не отвечает, попробуйте ещё раз" (transient) |
+| `internal_error` | 500 | "Что-то пошло не так" |
+
+Irene's `BridgeClient.actuate(DeviceCommand)` POSTs this and maps `success`/`error.code` to the result
+the workflow speaks. `param_invalid.reason ∈ {missing, out_of_range, wrong_type, unknown_choice}`
+feeds the clarification/slot-fill path (QUAL-30/31) — though Irene also validates against the catalog
+schema *before* the call, so most of these never round-trip.
+
+### 5c. Read — sensor / device state (`GET /devices/{id}/state`)
+
+"Какая температура в детской" is a **read**, not an actuation. Irene resolves room → device with a
+`sensor` capability → field → reads the value from the bridge's state cache (`GET /devices/{id}/state`)
+and speaks it. (The catalog gives the field *schema*; this gives the live *value*.)
 
 ## 6. Resolution flow (utterance → DeviceCommand)
 
@@ -163,6 +190,20 @@ ASR text ──▶ NLU (QUAL-35 T2/T3) ──▶ intent: device-control
   (deterministic single-turn) and QUAL-31 (multi-turn slot-filling) need to ask "какую яркость?" and
   validate the answer before publish.
 
+**Canonical capability vocabulary** (agreed; Irene's `DeviceCommand.capability` ∈):
+`power`(on/off) · `brightness`(set/up/down) · `color`(set rgb) · `cover`(open/close/stop/set_position) ·
+`climate`(set_mode/set_setpoint/set_fan) · `sensor`(read-only fields) · plus the AV set
+`volume`/`input`/`playback`/`menu`. Irene never needs the per-device native names — the bridge owns
+canonical→native. (The bridge aligns with HA's namespace where it fits, but its config is the truth.)
+
+**Three interaction kinds** the resolver dispatches to:
+1. **Actuate** — single device → one `POST …/canonical` (§5b).
+2. **"Everywhere" / room-wide** ("выключи свет везде") — resolve the **`global`** room (or a named
+   room) from the catalog → **N parallel `…/canonical` calls** Irene fans out client-side, then
+   reports partial failures in speech ("свет в гостиной выключен, спальня не ответила"). A batched
+   bridge endpoint is **v2** (only if N-call latency becomes a measurable voice-UX problem).
+3. **Read** ("какая температура…") — `GET /devices/{id}/state` (§5c), speak the value.
+
 ## 7. Flow 1 — content-agnostic output (deferred)
 
 A thin `OutputPort` called by the workflow beside `_handle_tts_output`, fanning an `IntentResult` to
@@ -174,9 +215,10 @@ consumer appears (an event bus, an announcement speaker), it lands as its own sm
 ## 8. Config + entry-points
 
 - New entry-point group `irene.providers.outputs` (`bridge` for Flow 2; `mqtt` for Flow 1 later).
-- `OutputConfig` / `ActuationConfig` in `config/models.py` (bridge base URL, auth, timeouts,
-  `enabled`, default sink) + a registered schema in `config/schemas.py` + `auto_registry.py`
-  (Invariant #4 — the same schema seam ARCH-10 hit). Surfaced in `config-master.toml`.
+- `OutputConfig` / `ActuationConfig` in `config/models.py` (bridge base URL, auth, request timeout,
+  `enabled`, the `bridge/catalog/version` topic) + a registered schema in `config/schemas.py` +
+  `auto_registry.py` (Invariant #4 — the same schema seam ARCH-10 hit). Surfaced in
+  `config-master.toml`.
 - No new heavy deps for Flow 2 (an async HTTP client; `aiohttp` is already in core). Flow 1's raw-MQTT
   adapter would add an MQTT client lib when built.
 
@@ -191,32 +233,45 @@ consumer appears (an event bus, an announcement speaker), it lands as its own sm
 
 ## 10. PR slicing (ARCH-8 implementation)
 
-Gated on the bridge session landing the contract (§5b) and at least a thin slice of native-device
-onboarding in the bridge.
+Aligned with the **agreed vertical slice**: prove the whole stack against one live command —
+**"включи свет в детской"** (one `wb-mr6c` channel, children's room) — before breadth. PR-1 is
+adapter-free (fake bridge) so it lands **now**, before/parallel to the bridge's vertical slice;
+PR-2+ integrate against the live `/system/catalog` + `/devices/{id}/canonical` as they come online.
 
-- **PR-1** — `DeviceCommand` domain type + `ActuationPort`/`DeviceCatalogPort` (ABCs) + the
-  application services; import-linter clean. No adapter yet (unit-tested against a fake).
-- **PR-2** — `BridgeClient` adapter (REST) + `irene.providers.outputs` group + config/schema +
-  startup catalog pull → DeviceCatalog. Validated against a recorded bridge response / live bridge.
-- **PR-3** — wire DeviceCatalog into `DeviceEntityResolver` (real `device`/`room` entities) — the
-  ARCH-6 device-half activation, done with QUAL-35.
-- **PR-4** — one reference device intent handler end-to-end (utterance → DeviceCommand → bridge →
-  spoken result), proving the seam. Broad device coverage + T2/T3 NLU = QUAL-35.
-- **(later)** — Flow 1 OutputPort + raw-MQTT adapter, if/when a consumer appears.
+- **PR-1** — `DeviceCommand` domain type (capability vocab §6) + `ActuationPort`/`DeviceCatalogPort`
+  (ABCs, QUAL-24 pattern) + the application services; import-linter clean. Unit-tested against a fake
+  bridge. **Unblocked now.**
+- **PR-2** — `BridgeClient` REST adapter + `irene.providers.outputs` group + config/schema + startup
+  pull of `GET /system/catalog` → `DeviceCatalog` + subscribe `bridge/catalog/version` → re-pull.
+  Validated against a recorded catalog, then the live bridge slice.
+- **PR-3** — wire `DeviceCatalog` into `DeviceEntityResolver` (real `device`/`room` entities, ru-name
+  room match) — the ARCH-6 device-half activation, with QUAL-35.
+- **PR-4** — reference device handler end-to-end: "включи свет в детской" → `power.on` →
+  `POST …/canonical` → 500 ms echo → spoken confirm. Includes the error-code→speech mapping (§5b) and
+  the `param_invalid`→clarify path. Broad device coverage + T2/T3 NLU = QUAL-35.
+- **PR-5** — sensor **read** flow (`sensor` capability → `GET /devices/{id}/state`) + the `global`
+  room **fan-out** (N parallel calls + partial-failure speech).
+- **(later)** — Flow 1 OutputPort + raw-MQTT adapter, if/when a consumer appears; batched room/group
+  endpoint (bridge v2) only if N-call latency hurts.
 
-## 11. Open questions for the bridge session
+## 11. Resolved in the bridge session (2026-06-06)
 
-Carried in the bridge draft; mirrored here so ARCH-8 knows its dependencies:
+All ARCH-7 open questions are now settled in the AGREED contract:
 
-1. **Canonical action endpoint** — exact path/shape; reuse of the internal capability reconciler;
-   error semantics suitable for spoken feedback.
-2. **Catalog read surface** — does the existing Layer-3 layout manifest expose enough
-   (capability + param schema + ru labels) for voice, or is a dedicated `/voice/catalog` endpoint
-   cleaner? Optional MQTT catalog-dirty nudge.
-3. **Native-device onboarding** — a generic WB-passthrough driver for relays/dimmers/curtains/HVAC
-   (the existing `WirenboardIRDevice` is IR-blaster-specific); room assignment in `rooms.json`;
-   capability maps for the new device classes. This is the bulk of the effort and is bridge-side.
-4. **Room model parity** — confirm `rooms.json` ru names are the resolution key Irene matches on.
+1. **Canonical endpoint** → `POST /devices/{id}/canonical {capability, action, params}`, thin façade
+   over the reconciler; 6-code structured error enum (§5b); 500 ms synchronous value-topic echo,
+   per-driver configurable.
+2. **Catalog read** → dedicated **`GET /system/catalog`** (not the Layer-3 manifest); flat,
+   capability-shaped, **all locales** for rooms *and* devices; one read-only `sensor` capability;
+   multi-room; explicit-opt-in `global` room. Refresh via retained **`bridge/catalog/version`**.
+3. **Native onboarding** (bridge-side) → generic data-driven `WbPassthroughDevice` driver +
+   capability-adapter composition layer (RGB/HVAC) + new caps `brightness`/`color`/`cover`/`climate`/
+   `sensor`; wb-rules stays on the controller, the bridge **mirrors** state (loop-guarded).
+4. **Rooms** → `rooms.json` bootstrapped from WB HomeUI; **ru name is the resolution key**; `global`
+   opt-in.
+
+Deferred to bridge **v2**: a batched room/group actuation endpoint (Irene does N client-side calls
+for v1).
 
 ## 12. Cross-project tracking
 
