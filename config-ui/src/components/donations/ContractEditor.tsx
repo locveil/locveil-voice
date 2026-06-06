@@ -9,6 +9,7 @@
  * contract↔code check, QUAL-42) and renaming them here would silently unwire the method.
  */
 
+import { useTranslation } from 'react-i18next';
 import { Plus, Trash2 } from 'lucide-react';
 import Section from '@/components/ui/Section';
 import Input from '@/components/ui/Input';
@@ -37,24 +38,25 @@ function ContractParamEditor({
   onRemove: () => void;
   disabled?: boolean;
 }) {
+  const { t } = useTranslation('donations');
   const set = <K extends keyof ContractParam>(k: K, v: ContractParam[K]): void => onChange({ ...param, [k]: v });
   const isNumeric = param.type === 'integer' || param.type === 'float' || param.type === 'duration';
 
   return (
     <div className="border rounded-xl p-3">
       <div className="flex items-center justify-between mb-2">
-        <div className="text-sm font-medium">Parameter</div>
+        <div className="text-sm font-medium">{t('contract.parameter')}</div>
         <button
           className="p-1 rounded-lg border hover:bg-gray-50 disabled:opacity-50"
-          onClick={onRemove} disabled={disabled} title="Remove parameter"
+          onClick={onRemove} disabled={disabled} title={t('contract.removeParameter')}
         >
           <Trash2 className="w-4 h-4" />
         </button>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <Input label="Name" value={param.name} onChange={(v) => set('name', v)} disabled={disabled} required />
+        <Input label={t('contract.name')} value={param.name} onChange={(v) => set('name', v)} disabled={disabled} required />
         <label className="block">
-          <div className="text-sm font-medium mb-1">Type</div>
+          <div className="text-sm font-medium mb-1">{t('contract.type')}</div>
           <select
             className="w-full border rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
             value={param.type}
@@ -64,10 +66,10 @@ function ContractParamEditor({
             {PARAMETER_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
           </select>
         </label>
-        <Toggle label="Required" checked={!!param.required} onChange={(v) => set('required', v)} disabled={disabled} />
+        <Toggle label={t('contract.required')} checked={!!param.required} onChange={(v) => set('required', v)} disabled={disabled} />
         {param.type === 'entity' ? (
           <label className="block">
-            <div className="text-sm font-medium mb-1">Entity type</div>
+            <div className="text-sm font-medium mb-1">{t('contract.entityType')}</div>
             <select
               className="w-full border rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
               value={param.entity_type ?? 'generic'}
@@ -81,33 +83,32 @@ function ContractParamEditor({
         {param.type === 'choice' ? (
           <div className="md:col-span-2">
             <ArrayOfStringsEditor
-              label="Canonical choices (language-neutral tokens)"
+              label={t('contract.canonicalChoices')}
               value={param.choices ?? []}
               onChange={(v) => set('choices', v)}
               disabled={disabled}
             />
             <p className="text-xs text-gray-500 mt-1">
-              Spoken forms per language are edited as “choice surfaces” in the phrasing editor — never translate
-              the canonical token here.
+              {t('contract.canonicalChoicesHelp')}
             </p>
           </div>
         ) : null}
         {isNumeric ? (
           <div className="grid grid-cols-2 gap-2">
             <Input
-              label="Min value" type="number" value={param.min_value == null ? '' : String(param.min_value)}
+              label={t('contract.minValue')} type="number" value={param.min_value == null ? '' : String(param.min_value)}
               onChange={(v) => set('min_value', v === '' ? null : Number(v))} disabled={disabled}
             />
             <Input
-              label="Max value" type="number" value={param.max_value == null ? '' : String(param.max_value)}
+              label={t('contract.maxValue')} type="number" value={param.max_value == null ? '' : String(param.max_value)}
               onChange={(v) => set('max_value', v === '' ? null : Number(v))} disabled={disabled}
             />
           </div>
         ) : null}
         {param.type === 'string' ? (
           <Input
-            label="Regex pattern (optional)" value={param.pattern ?? ''}
-            onChange={(v) => set('pattern', v || null)} disabled={disabled} placeholder="e.g. ^[a-z]+$"
+            label={t('contract.regexPattern')} value={param.pattern ?? ''}
+            onChange={(v) => set('pattern', v || null)} disabled={disabled} placeholder={t('contract.regexPlaceholder')}
           />
         ) : null}
       </div>
@@ -116,6 +117,7 @@ function ContractParamEditor({
 }
 
 export default function ContractEditor({ contract, onChange, disabled = false }: ContractEditorProps) {
+  const { t } = useTranslation('donations');
   const methods = contract.method_donations;
 
   const setMethod = (idx: number, m: ContractMethod): void => {
@@ -125,10 +127,9 @@ export default function ContractEditor({ contract, onChange, disabled = false }:
 
   return (
     <div className="space-y-6">
-      <Section title="Contract (language-neutral)" defaultCollapsed={false}>
+      <Section title={t('contract.sectionTitle')} defaultCollapsed={false}>
         <p className="text-sm text-gray-600 mb-4">
-          The structural core shared by every language: each method’s room context and parameter specs. Method
-          names map to handler code and are read-only.
+          {t('contract.sectionHelp')}
         </p>
         <div className="space-y-4">
           {methods.map((method, mi) => (
@@ -139,7 +140,7 @@ export default function ContractEditor({ contract, onChange, disabled = false }:
                   <Badge variant="info">{method.intent_suffix}</Badge>
                 </div>
                 <label className="flex items-center gap-2 text-sm">
-                  <span className="text-gray-600">Room context</span>
+                  <span className="text-gray-600">{t('contract.roomContext')}</span>
                   <select
                     className="border rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
                     value={method.room_context ?? 'none'}
@@ -176,7 +177,7 @@ export default function ContractEditor({ contract, onChange, disabled = false }:
                   })}
                   disabled={disabled}
                 >
-                  <Plus className="w-4 h-4" /> Add parameter
+                  <Plus className="w-4 h-4" /> {t('contract.addParameter')}
                 </button>
               </div>
             </div>

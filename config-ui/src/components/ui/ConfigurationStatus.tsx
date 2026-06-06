@@ -5,6 +5,7 @@
  */
 
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { CheckCircle, AlertCircle, Loader, Clock } from 'lucide-react';
 
 export type ConfigurationStatusType = 'testing' | 'applied' | 'pending' | 'error';
@@ -22,6 +23,7 @@ export const ConfigurationStatus: React.FC<ConfigurationStatusProps> = ({
   testResult,
   className = ''
 }) => {
+  const { t } = useTranslation('common');
   const getStatusConfig = () => {
     switch (status) {
       case 'testing':
@@ -74,28 +76,28 @@ export const ConfigurationStatus: React.FC<ConfigurationStatusProps> = ({
           {testResult && (
             <div className={`text-xs ${config.textColor} mt-1 opacity-75`}>
               {status === 'applied' && testResult.default_provider && (
-                <div>Default provider: {testResult.default_provider}</div>
+                <div>{t('configStatus.defaultProvider', { value: testResult.default_provider })}</div>
               )}
               {status === 'applied' && testResult.enabled_providers && (
-                <div>Enabled providers: {testResult.enabled_providers.join(', ')}</div>
+                <div>{t('configStatus.enabledProviders', { value: testResult.enabled_providers.join(', ') })}</div>
               )}
               {status === 'applied' && testResult.fallback_providers && testResult.fallback_providers.length > 0 && (
-                <div>Fallback providers: {testResult.fallback_providers.join(', ')}</div>
+                <div>{t('configStatus.fallbackProviders', { value: testResult.fallback_providers.join(', ') })}</div>
               )}
               {status === 'applied' && testResult.language && (
-                <div>Language: {testResult.language}</div>
+                <div>{t('configStatus.language', { value: testResult.language })}</div>
               )}
               {status === 'applied' && testResult.confidence_threshold !== undefined && (
-                <div>Confidence threshold: {testResult.confidence_threshold}</div>
+                <div>{t('configStatus.confidenceThreshold', { value: testResult.confidence_threshold })}</div>
               )}
               {status === 'applied' && testResult.wake_words && (
-                <div>Wake words: {testResult.wake_words.join(', ')}</div>
+                <div>{t('configStatus.wakeWords', { value: testResult.wake_words.join(', ') })}</div>
               )}
               {status === 'applied' && testResult.enabled_handlers && (
-                <div>Handlers: {testResult.enabled_handlers.length} enabled</div>
+                <div>{t('configStatus.handlers', { count: testResult.enabled_handlers.length })}</div>
               )}
               {status === 'applied' && testResult.normalizers && (
-                <div>Normalizers: {testResult.normalizers.join(', ')}</div>
+                <div>{t('configStatus.normalizers', { value: testResult.normalizers.join(', ') })}</div>
               )}
             </div>
           )}

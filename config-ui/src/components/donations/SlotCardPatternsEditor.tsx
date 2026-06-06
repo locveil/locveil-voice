@@ -5,6 +5,7 @@
  */
 
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Trash2, Plus } from 'lucide-react';
 import CardPatternsEditor from './CardPatternsEditor';
 import type { SpacyPattern } from '@/utils/patternModel';
@@ -18,6 +19,7 @@ interface SlotCardPatternsEditorProps {
 }
 
 export default function SlotCardPatternsEditor({ value, onChange, disabled = false }: SlotCardPatternsEditorProps) {
+  const { t } = useTranslation('donations');
   const slots = value ?? {};
   const [newSlot, setNewSlot] = useState('');
 
@@ -36,17 +38,17 @@ export default function SlotCardPatternsEditor({ value, onChange, disabled = fal
 
   return (
     <div className="space-y-3">
-      {Object.keys(slots).length === 0 && <div className="text-sm text-gray-500">No value slots.</div>}
+      {Object.keys(slots).length === 0 && <div className="text-sm text-gray-500">{t('slots.empty')}</div>}
       {Object.entries(slots).map(([label, patterns]) => (
         <div key={label} className="border rounded-xl p-3">
           <div className="flex items-center justify-between mb-2">
             <div className="text-sm font-medium">
-              Slot: <span className="font-mono bg-gray-50 px-2 py-0.5 rounded">{label}</span>
+              {t('slots.slotLabel')} <span className="font-mono bg-gray-50 px-2 py-0.5 rounded">{label}</span>
             </div>
             <button
               type="button"
               className="p-1 rounded-lg border hover:bg-gray-50 disabled:opacity-50"
-              onClick={() => delSlot(label)} disabled={disabled} title="Remove slot"
+              onClick={() => delSlot(label)} disabled={disabled} title={t('slots.removeSlot')}
             >
               <Trash2 className="w-4 h-4" />
             </button>
@@ -55,14 +57,14 @@ export default function SlotCardPatternsEditor({ value, onChange, disabled = fal
             value={patterns ?? []}
             onChange={(p) => setSlot(label, p)}
             disabled={disabled}
-            itemLabel="way to find the value"
+            itemLabel={t('slots.itemLabel')}
           />
         </div>
       ))}
       <div className="flex items-center gap-2">
         <input
           className="border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
-          placeholder="slot name (e.g. DURATION_VALUE)"
+          placeholder={t('slots.newSlotPlaceholder')}
           value={newSlot}
           onChange={(e) => setNewSlot(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') addSlot(); }}
@@ -73,7 +75,7 @@ export default function SlotCardPatternsEditor({ value, onChange, disabled = fal
           className="inline-flex items-center gap-2 px-3 py-2 border rounded-xl hover:bg-gray-50 disabled:opacity-50 text-sm"
           onClick={addSlot} disabled={disabled || !newSlot.trim()}
         >
-          <Plus className="w-4 h-4" /> Add slot
+          <Plus className="w-4 h-4" /> {t('slots.addSlot')}
         </button>
       </div>
     </div>

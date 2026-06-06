@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 function coerceValue(v: string): string | number | boolean {
   if (v === '') return '';
@@ -21,6 +22,7 @@ export default function KeyValueEditor({
   onChange, 
   disabled = false
 }: KeyValueEditorProps) {
+  const { t } = useTranslation(['configuration', 'common']);
   const entries = Object.entries(object ?? {});
   
   const setKV = (k: string, v: any): void => {
@@ -69,7 +71,7 @@ export default function KeyValueEditor({
               value={k}
               onChange={(e) => updateKey(k, e.target.value)}
               disabled={disabled}
-              placeholder="Key"
+              placeholder={t('keyValue.keyPlaceholder')}
             />
             <input
               className={`border rounded-xl px-3 py-2 flex-1 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
@@ -78,13 +80,13 @@ export default function KeyValueEditor({
               value={String(v)}
               onChange={(e) => setKV(k, coerceValue(e.target.value))}
               disabled={disabled}
-              placeholder="Value"
+              placeholder={t('keyValue.valuePlaceholder')}
             />
             <button
               onClick={() => del(k)}
               className="p-2 rounded-lg border hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={disabled}
-              title="Remove entry"
+              title={t('keyValue.removeEntry')}
             >
               ✕
             </button>
@@ -96,7 +98,7 @@ export default function KeyValueEditor({
           className={`border rounded-xl px-3 py-2 flex-1 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
             disabled ? 'bg-gray-100 cursor-not-allowed' : ''
           }`}
-          placeholder="Key"
+          placeholder={t('keyValue.keyPlaceholder')}
           value={newKey}
           onChange={(e) => setNewKey(e.target.value)}
           disabled={disabled}
@@ -105,7 +107,7 @@ export default function KeyValueEditor({
           className={`border rounded-xl px-3 py-2 flex-1 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
             disabled ? 'bg-gray-100 cursor-not-allowed' : ''
           }`}
-          placeholder="Value"
+          placeholder={t('keyValue.valuePlaceholder')}
           value={newVal}
           onChange={(e) => setNewVal(e.target.value)}
           disabled={disabled}
@@ -115,7 +117,7 @@ export default function KeyValueEditor({
           onClick={addEntry}
           disabled={disabled || !newKey.trim()}
         >
-          Add
+          {t('common:actions.add')}
         </button>
       </div>
     </div>

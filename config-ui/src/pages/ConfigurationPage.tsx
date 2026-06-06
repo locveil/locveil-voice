@@ -8,6 +8,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Settings, AlertCircle, CheckCircle, Loader, RefreshCw } from 'lucide-react';
 import apiClient from '@/utils/apiClient';
 import ConfigSection from '@/components/editors/ConfigSection';
@@ -56,6 +57,8 @@ interface ConfigurationPageState {
 }
 
 const ConfigurationPage: React.FC = () => {
+  const { t } = useTranslation(['configuration', 'common']);
+
   // Helper function to create initial component state
   const createInitialComponentState = (): ComponentConfigurationState => ({
     current: null,
@@ -240,8 +243,8 @@ const ConfigurationPage: React.FC = () => {
         setState(prev => ({ 
           ...prev, 
           connectionStatus: 'disconnected',
-          error: 'Cannot connect to Irene API. Please ensure the server is running.',
-          loading: false 
+          error: t('page.errors.cannotConnect'),
+          loading: false
         }));
         return;
       }
@@ -290,7 +293,7 @@ const ConfigurationPage: React.FC = () => {
       console.error('Failed to load configuration:', error);
       setState(prev => ({
         ...prev,
-        error: error instanceof Error ? error.message : 'Failed to load configuration',
+        error: error instanceof Error ? error.message : t('page.errors.loadFailed'),
         connectionStatus: 'disconnected',
         loading: false
       }));
@@ -341,7 +344,7 @@ const ConfigurationPage: React.FC = () => {
   };
 
   const validateSection = async (sectionName: string) => {
-    if (!state.config) return { valid: false, errors: [{ message: 'No configuration loaded' }] };
+    if (!state.config) return { valid: false, errors: [{ message: t('page.errors.noConfigLoaded') }] };
     
     try {
       const result = await apiClient.validateConfigSection(sectionName, (state.config as any)[sectionName]);
@@ -352,13 +355,13 @@ const ConfigurationPage: React.FC = () => {
     } catch (error) {
       return {
         valid: false,
-        errors: [{ message: error instanceof Error ? error.message : 'Validation failed' }]
+        errors: [{ message: error instanceof Error ? error.message : t('page.errors.validationFailed') }]
       };
     }
   };
 
   const applySection = async (sectionName: string) => {
-    if (!state.config) throw new Error('No configuration loaded');
+    if (!state.config) throw new Error(t('page.errors.noConfigLoaded'));
     
     try {
       // Use comment-preserving TOML save method (Phase 5 enhancement)
@@ -482,7 +485,7 @@ const ConfigurationPage: React.FC = () => {
   // Handle validating all changes
   const handleValidateAllChanges = async (): Promise<ValidationResult> => {
     if (!state.config) {
-      return { valid: false, errors: ['No configuration loaded'], warnings: [] };
+      return { valid: false, errors: [t('page.errors.noConfigLoaded')], warnings: [] };
     }
 
     try {
@@ -498,14 +501,14 @@ const ConfigurationPage: React.FC = () => {
         try {
           const result = await validateSection(sectionName);
           if (!result.valid && result.errors) {
-            allErrors.push(...result.errors.map(err => `${sectionName}: ${typeof err === 'string' ? err : (err as any).message || 'Validation error'}`));
+            allErrors.push(...result.errors.map(err => `${sectionName}: ${typeof err === 'string' ? err : (err as any).message || t('page.errors.validationError')}`));
           }
           // Note: warnings not currently supported by validateSection
           // if (result.warnings) {
           //   allWarnings.push(...result.warnings.map(warn => `${sectionName}: ${warn}`));
           // }
         } catch (error) {
-          allErrors.push(`${sectionName}: Validation failed - ${error instanceof Error ? error.message : 'Unknown error'}`);
+          allErrors.push(`${sectionName}: ${t('page.errors.validationFailedDetail', { error: error instanceof Error ? error.message : t('page.errors.unknownError') })}`);
         }
       }
 
@@ -517,7 +520,7 @@ const ConfigurationPage: React.FC = () => {
     } catch (error) {
       return {
         valid: false,
-        errors: [error instanceof Error ? error.message : 'Validation failed'],
+        errors: [error instanceof Error ? error.message : t('page.errors.validationFailed')],
         warnings: []
       };
     }
@@ -560,7 +563,7 @@ const ConfigurationPage: React.FC = () => {
     // Update test state to show testing status
     const testState: ConfigurationTestState = {
       status: 'testing',
-      message: `Testing ${component} configuration...`,
+      message: t('page.test.testing', { component }),
       timestamp: new Date()
     };
 
@@ -615,7 +618,7 @@ const ConfigurationPage: React.FC = () => {
       // Phase 4.3: Update enhanced component state with successful test
       const successTestState: ConfigurationTestState = {
         status: 'applied',
-        message: result.message || `${component} configuration applied successfully`,
+        message: result.message || t('page.test.applied', { component }),
         testResult: result,
         timestamp: new Date()
       };
@@ -650,10 +653,10 @@ const ConfigurationPage: React.FC = () => {
 
     } catch (error) {
       // Update test state to show error
-      const errorMessage = error instanceof Error ? error.message : 'Configuration test failed';
+      const errorMessage = error instanceof Error ? error.message : t('page.test.failedFallback');
       const errorTestState: ConfigurationTestState = {
         status: 'error',
-        message: `${component} test failed: ${errorMessage}`,
+        message: t('page.test.failed', { component, error: errorMessage }),
         timestamp: new Date()
       };
 
@@ -777,21 +780,21 @@ const ConfigurationPage: React.FC = () => {
         return (
           <div className="flex items-center text-gray-500">
             <Loader className="h-4 w-4 animate-spin mr-2" />
-            <span>Checking connection...</span>
+            <span>{t('page.connection.checking')}</span>
           </div>
         );
       case 'connected':
         return (
           <div className="flex items-center text-green-600">
             <CheckCircle className="h-4 w-4 mr-2" />
-            <span>Connected to Irene API</span>
+            <span>{t('page.connection.connected')}</span>
           </div>
         );
       case 'disconnected':
         return (
           <div className="flex items-center text-red-600">
             <AlertCircle className="h-4 w-4 mr-2" />
-            <span>Disconnected from API</span>
+            <span>{t('page.connection.disconnected')}</span>
           </div>
         );
     }
@@ -803,7 +806,7 @@ const ConfigurationPage: React.FC = () => {
         <div className="flex items-center justify-center h-64">
           <div className="flex items-center space-x-3">
             <Loader className="h-6 w-6 animate-spin text-blue-500" />
-            <span className="text-lg text-gray-600">Loading configuration...</span>
+            <span className="text-lg text-gray-600">{t('page.loading')}</span>
           </div>
         </div>
       </div>
@@ -817,7 +820,7 @@ const ConfigurationPage: React.FC = () => {
           <div className="flex items-center">
             <AlertCircle className="h-6 w-6 text-red-500 mr-3" />
             <div>
-              <h2 className="text-lg font-semibold text-red-900">Configuration Error</h2>
+              <h2 className="text-lg font-semibold text-red-900">{t('page.errorTitle')}</h2>
               <p className="text-red-700 mt-1">{state.error}</p>
             </div>
           </div>
@@ -826,7 +829,7 @@ const ConfigurationPage: React.FC = () => {
             className="mt-4 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 flex items-center"
           >
             <RefreshCw className="h-4 w-4 mr-2" />
-            Retry
+            {t('common:actions.retry')}
           </button>
         </div>
       </div>
@@ -841,17 +844,17 @@ const ConfigurationPage: React.FC = () => {
           <div>
             <div className="flex items-center space-x-3 mb-2">
               <h1 className="text-3xl font-bold text-gray-900">
-                System Configuration
+                {t('page.title')}
               </h1>
-              <span 
+              <span
                 className="px-3 py-1 bg-blue-100 text-blue-800 text-sm font-medium rounded-full cursor-help"
-                title={state.configStatus?.config_path || 'Configuration file'}
+                title={state.configStatus?.config_path || t('page.configFileTitle')}
               >
                 {getConfigFileName()}
               </span>
             </div>
             <p className="text-gray-600">
-              Manage TOML configuration with automatic Pydantic validation and hot-reload.
+              {t('page.subtitle')}
             </p>
           </div>
           <div className="flex items-center space-x-4">
@@ -865,7 +868,7 @@ const ConfigurationPage: React.FC = () => {
               }`}
             >
               <Settings className="h-4 w-4 mr-2" />
-              {showPreview ? 'Show Config Editor' : 'Show TOML Preview'}
+              {showPreview ? t('page.showConfigEditor') : t('page.showTomlPreview')}
             </button>
           </div>
         </div>
@@ -881,28 +884,28 @@ const ConfigurationPage: React.FC = () => {
           <div className="mb-4 p-3 bg-gray-50 border border-gray-200 rounded-lg">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
-                <span className="text-sm font-medium text-gray-700">Configuration Testing Status:</span>
+                <span className="text-sm font-medium text-gray-700">{t('page.testStatus.title')}</span>
                 {summary.testing > 0 && (
                   <div className="flex items-center text-blue-600">
                     <Loader className="h-4 w-4 animate-spin mr-1" />
-                    <span className="text-sm">{summary.testing} testing</span>
+                    <span className="text-sm">{t('page.testStatus.testing', { count: summary.testing })}</span>
                   </div>
                 )}
                 {summary.applied > 0 && (
                   <div className="flex items-center text-green-600">
                     <CheckCircle className="h-4 w-4 mr-1" />
-                    <span className="text-sm">{summary.applied} applied</span>
+                    <span className="text-sm">{t('page.testStatus.applied', { count: summary.applied })}</span>
                   </div>
                 )}
                 {summary.errors > 0 && (
                   <div className="flex items-center text-red-600">
                     <AlertCircle className="h-4 w-4 mr-1" />
-                    <span className="text-sm">{summary.errors} errors</span>
+                    <span className="text-sm">{t('page.testStatus.errors', { count: summary.errors })}</span>
                   </div>
                 )}
               </div>
               <div className="text-xs text-gray-500">
-                {summary.total} of 8 components tested
+                {t('page.testStatus.summary', { count: summary.total })}
               </div>
             </div>
           </div>

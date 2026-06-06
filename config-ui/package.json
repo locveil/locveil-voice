@@ -18,9 +18,11 @@
     "@monaco-editor/react": "^4.6.0",
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",
+    "i18next": "^23.16.8",
     "lucide-react": "^0.453.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-i18next": "^13.5.0",
     "react-router-dom": "^6.26.0",
     "react-syntax-highlighter": "^15.5.0"
   },

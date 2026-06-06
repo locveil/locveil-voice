@@ -6,6 +6,7 @@
  */
 
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Plus, Eye, Code, Layout, Globe } from 'lucide-react';
 import LocalizationKeyEditor from './LocalizationKeyEditor';
 import Section from '@/components/ui/Section';
@@ -29,6 +30,7 @@ const LocalizationEditor: React.FC<LocalizationEditorProps> = ({
   schema,
   onValidationChange
 }) => {
+  const { t } = useTranslation('localizations');
   const [viewMode, setViewMode] = useState<ViewMode>('structured');
   const [yamlContent, setYamlContent] = useState('');
   const [yamlError, setYamlError] = useState<string | null>(null);
@@ -125,7 +127,7 @@ const LocalizationEditor: React.FC<LocalizationEditorProps> = ({
 
       return result;
     } catch (error) {
-      throw new Error(`YAML parsing error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(t('editor.yamlParseError', { message: error instanceof Error ? error.message : 'Unknown error' }));
     }
   };
 
@@ -142,7 +144,7 @@ const LocalizationEditor: React.FC<LocalizationEditorProps> = ({
     
     // Basic validation
     if (!data || typeof data !== 'object') {
-      errors.push('Localization data must be an object');
+      errors.push(t('editor.validation.mustBeObject'));
       return errors;
     }
 
@@ -151,25 +153,25 @@ const LocalizationEditor: React.FC<LocalizationEditorProps> = ({
       const requiredFields = ['weekdays', 'months'];
       requiredFields.forEach(field => {
         if (!data[field]) {
-          errors.push(`Missing required field for datetime domain: ${field}`);
+          errors.push(t('editor.validation.missingDatetimeField', { field }));
         } else if (!Array.isArray(data[field])) {
-          errors.push(`Field '${field}' must be an array`);
+          errors.push(t('editor.validation.fieldMustBeArray', { field }));
         }
       });
     } else if (domain === 'components') {
       if (!data.component_mappings || typeof data.component_mappings !== 'object') {
-        errors.push('Missing or invalid component_mappings object');
+        errors.push(t('editor.validation.missingComponentMappings'));
       }
     } else if (domain === 'commands') {
       if (!data.stop_patterns || !Array.isArray(data.stop_patterns)) {
-        errors.push('Missing or invalid stop_patterns array');
+        errors.push(t('editor.validation.missingStopPatterns'));
       }
     }
 
     // Check for empty values
     Object.entries(data).forEach(([key, value]) => {
       if (value === null || value === undefined || value === '') {
-        errors.push(`Empty value for key: ${key}`);
+        errors.push(t('editor.validation.emptyValue', { key }));
       }
     });
 
@@ -192,7 +194,7 @@ const LocalizationEditor: React.FC<LocalizationEditorProps> = ({
       const parsed = yamlToObject(newYaml);
       onChange(parsed);
     } catch (error) {
-      setYamlError(error instanceof Error ? error.message : 'Parse error');
+      setYamlError(error instanceof Error ? error.message : t('editor.parseError'));
     }
   };
 
@@ -242,24 +244,24 @@ const LocalizationEditor: React.FC<LocalizationEditorProps> = ({
         <div className="p-4 bg-gray-50 rounded-lg">
           <h4 className="font-medium text-gray-700 mb-2 flex items-center gap-2">
             <Globe className="w-4 h-4" />
-            Domain: {domain || 'Unknown'}
+            {t('editor.previewDomain', { domain: domain || t('editor.unknownDomain') })}
           </h4>
           <div className="text-sm text-gray-600">
-            {schema?.domain_description || `Localization data for ${domain} domain`}
+            {schema?.domain_description || t('editor.domainDescriptionFallback', { domain })}
           </div>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <h5 className="font-medium text-gray-700 mb-2">Keys ({Object.keys(value).length})</h5>
+            <h5 className="font-medium text-gray-700 mb-2">{t('editor.keysHeading', { count: Object.keys(value).length })}</h5>
             <div className="space-y-1">
               {Object.keys(value).map(key => (
                 <div key={key} className="flex items-center gap-2">
                   <Badge variant="default">{key}</Badge>
                   <span className="text-sm text-gray-500">
-                    {Array.isArray(value[key]) ? `Array (${value[key].length})` :
-                     typeof value[key] === 'object' ? `Object (${Object.keys(value[key]).length})` :
-                     'String'}
+                    {Array.isArray(value[key]) ? t('editor.typeArray', { count: value[key].length }) :
+                     typeof value[key] === 'object' ? t('editor.typeObject', { count: Object.keys(value[key]).length }) :
+                     t('editor.typeString')}
                   </span>
                 </div>
               ))}
@@ -267,13 +269,13 @@ const LocalizationEditor: React.FC<LocalizationEditorProps> = ({
           </div>
           
           <div>
-            <h5 className="font-medium text-gray-700 mb-2">Validation</h5>
+            <h5 className="font-medium text-gray-700 mb-2">{t('editor.validationHeading')}</h5>
             {validationErrors.length === 0 ? (
-              <div className="text-green-600 text-sm">✓ No validation errors</div>
+              <div className="text-green-600 text-sm">{t('editor.noValidationErrors')}</div>
             ) : (
               <div className="space-y-1">
                 {validationErrors.map((error, index) => (
-                  <div key={index} className="text-red-600 text-sm">✗ {error}</div>
+                  <div key={index} className="text-red-600 text-sm">{t('editor.validationErrorItem', { error })}</div>
                 ))}
               </div>
             )}
@@ -287,7 +289,7 @@ const LocalizationEditor: React.FC<LocalizationEditorProps> = ({
     <div className="space-y-4">
       {/* View Mode Selector */}
       <div className="flex items-center gap-2">
-        <span className="text-sm font-medium text-gray-700">View:</span>
+        <span className="text-sm font-medium text-gray-700">{t('editor.view')}</span>
         {(['structured', 'yaml', 'preview'] as ViewMode[]).map((mode) => (
           <button
             key={mode}
@@ -299,7 +301,7 @@ const LocalizationEditor: React.FC<LocalizationEditorProps> = ({
             }`}
           >
             {getViewModeIcon(mode)}
-            {mode.charAt(0).toUpperCase() + mode.slice(1)}
+            {t(`editor.viewModes.${mode}`)}
           </button>
         ))}
       </div>
@@ -307,7 +309,7 @@ const LocalizationEditor: React.FC<LocalizationEditorProps> = ({
       {/* Validation Errors */}
       {validationErrors.length > 0 && (
         <div className="p-3 bg-red-50 border border-red-200 rounded-md">
-          <h4 className="font-medium text-red-800 mb-2">Validation Errors:</h4>
+          <h4 className="font-medium text-red-800 mb-2">{t('editor.validationErrors')}</h4>
           <ul className="text-sm text-red-700 space-y-1">
             {validationErrors.map((error, index) => (
               <li key={index}>• {error}</li>
@@ -318,17 +320,17 @@ const LocalizationEditor: React.FC<LocalizationEditorProps> = ({
 
       {/* Content based on view mode */}
       {viewMode === 'structured' && (
-        <Section title="Localization Entries" className="space-y-4">
+        <Section title={t('editor.entriesSection')} className="space-y-4">
           <div className="flex justify-between items-center">
             <div className="text-sm text-gray-600">
-              {Object.keys(value).length} entries
+              {t('editor.entriesCount', { count: Object.keys(value).length })}
             </div>
             <button
               onClick={handleAddKey}
               className="flex items-center gap-2 px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm"
             >
               <Plus className="w-4 h-4" />
-              Add Entry
+              {t('editor.addEntry')}
             </button>
           </div>
           
@@ -348,15 +350,15 @@ const LocalizationEditor: React.FC<LocalizationEditorProps> = ({
           {Object.keys(value).length === 0 && (
             <div className="text-center py-8 text-gray-500">
               <Globe className="w-12 h-12 mx-auto mb-3 opacity-50" />
-              <p>No localization entries yet</p>
-              <p className="text-sm mt-1">Click "Add Entry" to get started</p>
+              <p>{t('editor.noEntries')}</p>
+              <p className="text-sm mt-1">{t('editor.noEntriesHint')}</p>
             </div>
           )}
         </Section>
       )}
 
       {viewMode === 'yaml' && (
-        <Section title="YAML Editor">
+        <Section title={t('editor.yamlEditor')}>
           <div className="space-y-2">
             {yamlError && (
               <div className="p-2 bg-red-50 border border-red-200 rounded text-red-700 text-sm">
@@ -368,14 +370,14 @@ const LocalizationEditor: React.FC<LocalizationEditorProps> = ({
               onChange={handleYamlChange}
               rows={20}
               className="font-mono text-sm"
-              placeholder="# YAML content will appear here"
+              placeholder={t('editor.yamlPlaceholder')}
             />
           </div>
         </Section>
       )}
 
       {viewMode === 'preview' && (
-        <Section title="Preview">
+        <Section title={t('editor.preview')}>
           {renderPreview()}
         </Section>
       )}

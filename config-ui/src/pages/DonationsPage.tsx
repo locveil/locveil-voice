@@ -6,6 +6,7 @@
  */
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { AlertCircle, Trash2, FileText, ChevronDown, ChevronRight } from 'lucide-react';
 
 // Import components
@@ -94,7 +95,8 @@ function MethodDonationEditor({
   currentLanguage,
   contract
 }: MethodDonationEditorProps & { currentLanguage?: string }) {
-  
+  const { t } = useTranslation('donations');
+
   // Real-time analysis for conflict detection
   const { 
     conflicts, 
@@ -130,48 +132,48 @@ function MethodDonationEditor({
         className="mb-4"
       />
       
-      <Section title="Basic Information" defaultCollapsed={false}>
+      <Section title={t('page.basicInformation')} defaultCollapsed={false}>
         <div className="space-y-4">
           {/* Structural/Metadata fields - Read only */}
           <div className="p-4 bg-gray-50 rounded-lg border">
-            <h4 className="text-sm font-medium text-gray-700 mb-3">Structure & Metadata (Read-only)</h4>
+            <h4 className="text-sm font-medium text-gray-700 mb-3">{t('page.structureMetadata')}</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <div>
                 <Input
-                  label="Handler Domain"
+                  label={t('page.handlerDomain')}
                   value={v.handler_domain || ''}
                   onChange={() => {}} // No-op since it's readonly
                   disabled={true}
                   required
                 />
-                <p className="text-xs text-gray-500 mt-1">Defines which handler this donation belongs to</p>
+                <p className="text-xs text-gray-500 mt-1">{t('page.handlerDomainHelp')}</p>
               </div>
               <div>
                 <Input
-                  label="Language"
-                  value={currentLanguage || 'Unknown'}
+                  label={t('page.language')}
+                  value={currentLanguage || t('page.unknown')}
                   onChange={() => {}} // No-op since it's readonly
                   disabled={true}
                 />
-                <p className="text-xs text-gray-500 mt-1">Language code for this donation file</p>
+                <p className="text-xs text-gray-500 mt-1">{t('page.languageHelp')}</p>
               </div>
               <div>
                 <Input
-                  label="Schema Version"
+                  label={t('page.schemaVersion')}
                   value={v.schema_version || '1.0'}
                   onChange={() => {}} // No-op since it's readonly
                   disabled={true}
                 />
-                <p className="text-xs text-gray-500 mt-1">JSON schema version used</p>
+                <p className="text-xs text-gray-500 mt-1">{t('page.schemaVersionHelp')}</p>
               </div>
               <div>
                 <Input
-                  label="Donation Version"
+                  label={t('page.donationVersion')}
                   value={v.donation_version || '1.0'}
                   onChange={() => {}} // No-op since it's readonly
                   disabled={true}
                 />
-                <p className="text-xs text-gray-500 mt-1">Content version for caching</p>
+                <p className="text-xs text-gray-500 mt-1">{t('page.donationVersionHelp')}</p>
               </div>
             </div>
           </div>
@@ -179,23 +181,23 @@ function MethodDonationEditor({
           {/* Content fields - Editable */}
           <div>
             <Input
-              label="Description"
+              label={t('page.description')}
               value={v.description || ''}
               onChange={(val) => set('description', val)}
               disabled={disabled}
               required
             />
-            <p className="text-xs text-gray-500 mt-1">Human-readable description of this handler's functionality</p>
+            <p className="text-xs text-gray-500 mt-1">{t('page.descriptionHelp')}</p>
           </div>
         </div>
       </Section>
 
-      <Section title="Methods" badge={<Badge variant="info">{v.method_donations?.length || 0} methods</Badge>}>
+      <Section title={t('page.methods')} badge={<Badge variant="info">{t('page.methodsBadge', { count: v.method_donations?.length || 0 })}</Badge>}>
 
         <div className="space-y-4">
           {(v.method_donations?.map((method, idx) => {
             const isExpanded = isMethodExpanded(idx);
-            const methodName = method.method_name || `Method ${idx + 1}`;
+            const methodName = method.method_name || t('page.methodFallback', { index: idx + 1 });
             
             return (
               <div key={idx} className="border rounded-xl bg-white">
@@ -225,7 +227,7 @@ function MethodDonationEditor({
                     }}
                     className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
                     disabled={disabled}
-                    title="Remove method"
+                    title={t('page.removeMethod')}
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -236,26 +238,26 @@ function MethodDonationEditor({
                   <div className="p-4">
                     {/* Method Structure - Read only */}
                     <div className="p-3 bg-gray-50 rounded-lg border mb-4">
-                      <h5 className="text-xs font-medium text-gray-600 mb-2">Method Structure (Read-only)</h5>
+                      <h5 className="text-xs font-medium text-gray-600 mb-2">{t('page.methodStructure')}</h5>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <div>
                           <Input
-                            label="Method name"
+                            label={t('page.methodName')}
                             value={method.method_name || ''}
                             onChange={() => {}} // No-op since it's readonly
                             disabled={true}
                             required
                           />
-                          <p className="text-xs text-gray-500 mt-1">Python method name - must match handler code</p>
+                          <p className="text-xs text-gray-500 mt-1">{t('page.methodNameHelp')}</p>
                         </div>
                         <div>
                           <Input
-                            label="Intent suffix"
+                            label={t('page.intentSuffix')}
                             value={method.intent_suffix || ''}
                             onChange={() => {}} // No-op since it's readonly
                             disabled={true}
                           />
-                          <p className="text-xs text-gray-500 mt-1">Defines intent routing structure</p>
+                          <p className="text-xs text-gray-500 mt-1">{t('page.intentSuffixHelp')}</p>
                         </div>
                       </div>
                     </div>
@@ -263,7 +265,7 @@ function MethodDonationEditor({
                     {/* Method Content - Editable */}
                     <div className="mb-4">
                       <Input
-                        label="Description"
+                        label={t('page.methodDescription')}
                         value={method.description || ''}
                         onChange={(val) => {
                           const newMethods = [...(v.method_donations || [])];
@@ -271,15 +273,15 @@ function MethodDonationEditor({
                           set('method_donations', newMethods);
                         }}
                         disabled={disabled}
-                        placeholder="Describe what this method does"
+                        placeholder={t('page.methodDescriptionPlaceholder')}
                       />
-                      <p className="text-xs text-gray-500 mt-1">Human-readable description of method functionality</p>
+                      <p className="text-xs text-gray-500 mt-1">{t('page.methodDescriptionHelp')}</p>
                     </div>
 
                     {/* Method-specific editors */}
                     <div className="space-y-4">
                       <ArrayOfStringsEditor
-                        label="Global Parameters"
+                        label={t('page.globalParameters')}
                         value={method.global_params || []}
                         onChange={(val) => {
                           const newMethods = [...(v.method_donations || [])];
@@ -301,7 +303,7 @@ function MethodDonationEditor({
 
                       {/* UI-3: card-based "ways of saying it" (replaces the raw TokenPatternsEditor) */}
                       <div>
-                        <div className="text-sm font-medium mb-1">What might the user say?</div>
+                        <div className="text-sm font-medium mb-1">{t('page.whatMightUserSay')}</div>
                         <CardPatternsEditor
                           value={method.token_patterns || []}
                           onChange={(val) => {
@@ -310,14 +312,14 @@ function MethodDonationEditor({
                             set('method_donations', newMethods);
                           }}
                           disabled={disabled}
-                          itemLabel="way of saying it"
+                          itemLabel={t('page.wayOfSayingIt')}
                         />
                       </div>
 
                       {/* UI-3: card-based shared value slots (replaces the raw SlotPatternsEditor).
                           Per-parameter extraction reference these by label (see "How to find each value" below). */}
                       <div>
-                        <div className="text-sm font-medium mb-1">Shared value slots</div>
+                        <div className="text-sm font-medium mb-1">{t('page.sharedValueSlots')}</div>
                         <SlotCardPatternsEditor
                           value={method.slot_patterns || {}}
                           onChange={(val) => {
@@ -331,7 +333,7 @@ function MethodDonationEditor({
 
                       {/* UI-3 §6: validate a phrasing by example against the real recognizer */}
                       <div>
-                        <div className="text-sm font-medium mb-1">Does this work?</div>
+                        <div className="text-sm font-medium mb-1">{t('page.doesThisWork')}</div>
                         <PatternTester expectedIntent={`${v.handler_domain}.${method.intent_suffix}`} />
                       </div>
 
@@ -368,7 +370,7 @@ function MethodDonationEditor({
 
                         return (
                           <div>
-                            <div className="text-sm font-medium mb-1">How to find each value</div>
+                            <div className="text-sm font-medium mb-1">{t('page.howToFindEachValue')}</div>
                             <div className="space-y-3">
                               {cParams.map((cp) => {
                                 const pParam = phrasingParams.find(p => p.name === cp.name);
@@ -376,7 +378,7 @@ function MethodDonationEditor({
                                 return (
                                   <div key={cp.name} className="border rounded-xl p-3">
                                     <div className="text-sm font-medium mb-2">
-                                      Parameter “{cp.name}” <span className="text-xs text-gray-500">({cp.type})</span>
+                                      {t('page.parameterLabel', { name: cp.name })} <span className="text-xs text-gray-500">{t('page.parameterType', { type: cp.type })}</span>
                                     </div>
                                     <ExtractionFillersEditor
                                       value={pParam?.extraction_patterns ?? []}
@@ -415,7 +417,7 @@ function MethodDonationEditor({
             className="w-full p-4 border-2 border-dashed border-gray-300 rounded-xl text-gray-600 hover:border-gray-400 hover:text-gray-700 transition-colors"
             disabled={disabled}
           >
-            + Add Method
+            {t('page.addMethod')}
           </button>
         </div>
       </Section>
@@ -439,6 +441,7 @@ function MethodDonationEditor({
 }
 
 const DonationsPage: React.FC = () => {
+  const { t } = useTranslation(['donations', 'common']);
   // Helper function to extract lemmas from token patterns and slot patterns
   // Core state - Updated for language-aware architecture
   const [handlersList, setHandlersList] = useState<HandlerLanguageInfo[]>([]);
@@ -808,7 +811,7 @@ const DonationsPage: React.FC = () => {
       const donationData = donations[donationKey];
       
       if (!donationData) {
-        throw new Error('No donation data to save');
+        throw new Error(t('page.noDonationData'));
       }
 
       await apiClient.updateLanguageDonation(selectedHandler, selectedLanguage, donationData);
@@ -922,7 +925,7 @@ const DonationsPage: React.FC = () => {
           <div className="flex items-start">
             <AlertCircle className="w-5 h-5 text-red-400 mt-0.5 mr-3 flex-shrink-0" />
             <div>
-              <h3 className="text-red-800 font-medium">Failed to load donations</h3>
+              <h3 className="text-red-800 font-medium">{t('page.failedToLoad')}</h3>
               <p className="text-red-700 text-sm mt-1">{error}</p>
               <button
                 onClick={() => {
@@ -931,7 +934,7 @@ const DonationsPage: React.FC = () => {
                 }}
                 className="mt-3 px-3 py-1 bg-red-100 text-red-800 rounded text-sm hover:bg-red-200 transition-colors"
               >
-                Retry
+                {t('common:actions.retry')}
               </button>
             </div>
           </div>
@@ -1018,12 +1021,12 @@ const DonationsPage: React.FC = () => {
                   <h1 className="text-2xl font-bold text-gray-900">{selectedHandler}</h1>
                   {selectedLanguage && donations[`${selectedHandler}:${selectedLanguage}`] && (
                     <p className="text-gray-600 mt-1">
-                      {donations[`${selectedHandler}:${selectedLanguage}`].description || 'No description'}
+                      {donations[`${selectedHandler}:${selectedLanguage}`].description || t('page.noDescription')}
                     </p>
                   )}
                 </div>
                 {selectedHandler && selectedLanguage && hasChanges[`${selectedHandler}:${selectedLanguage}`] && (
-                  <Badge variant="warning">Unsaved Changes</Badge>
+                  <Badge variant="warning">{t('page.unsavedChanges')}</Badge>
                 )}
               </div>
             </div>
@@ -1044,23 +1047,23 @@ const DonationsPage: React.FC = () => {
                       disabled={!contractChanged || contractStatus === 'saving'}
                       className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
                     >
-                      {contractStatus === 'saving' ? 'Saving…' : 'Save contract'}
+                      {contractStatus === 'saving' ? t('page.savingContract') : t('page.saveContract')}
                     </button>
                     <button
                       onClick={() => setContract(JSON.parse(contractOriginal) as DonationContract)}
                       disabled={!contractChanged || contractStatus === 'saving'}
                       className="px-4 py-2 text-sm border rounded-lg hover:bg-gray-50 disabled:opacity-50"
                     >
-                      Revert
+                      {t('page.revert')}
                     </button>
-                    {contractStatus === 'saved' && <span className="text-sm text-green-700">Contract saved</span>}
-                    {contractChanged && <Badge variant="warning">Unsaved contract changes</Badge>}
+                    {contractStatus === 'saved' && <span className="text-sm text-green-700">{t('page.contractSaved')}</span>}
+                    {contractChanged && <Badge variant="warning">{t('page.unsavedContractChanges')}</Badge>}
                   </div>
                 </div>
               )}
 
               <div className="text-lg font-semibold text-gray-900 mb-3">
-                Phrasing — {selectedLanguage?.toUpperCase()}
+                {t('page.phrasing', { language: selectedLanguage?.toUpperCase() })}
               </div>
               {selectedLanguage && donations[`${selectedHandler}:${selectedLanguage}`] ? (
                 <div>
@@ -1070,9 +1073,9 @@ const DonationsPage: React.FC = () => {
                       <div className="flex items-start">
                         <AlertCircle className="w-5 h-5 text-blue-500 mt-0.5 mr-3 flex-shrink-0" />
                         <div>
-                          <h3 className="text-blue-800 font-medium">New Donation Configuration</h3>
+                          <h3 className="text-blue-800 font-medium">{t('page.newDonationTitle')}</h3>
                           <p className="text-blue-700 text-sm mt-1">
-                            This handler doesn't have a donation file yet. You can create one by adding methods below.
+                            {t('page.newDonationText')}
                           </p>
                         </div>
                       </div>
@@ -1098,7 +1101,7 @@ const DonationsPage: React.FC = () => {
               ) : (
                 <div className="flex items-center justify-center h-64">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                  <span className="ml-2 text-gray-600">Loading donation...</span>
+                  <span className="ml-2 text-gray-600">{t('page.loadingDonation')}</span>
                 </div>
               )}
             </div>
@@ -1107,9 +1110,9 @@ const DonationsPage: React.FC = () => {
           <div className="flex items-center justify-center h-full bg-gray-50">
             <div className="text-center">
               <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-xl font-medium text-gray-900 mb-2">Select a handler</h3>
+              <h3 className="text-xl font-medium text-gray-900 mb-2">{t('page.selectHandlerTitle')}</h3>
               <p className="text-gray-500">
-                Choose a handler from the list to edit its donation configuration
+                {t('page.selectHandlerText')}
               </p>
             </div>
           </div>

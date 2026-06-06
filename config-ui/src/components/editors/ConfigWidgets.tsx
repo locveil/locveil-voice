@@ -6,6 +6,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ChevronDown, Eye, EyeOff, Info } from 'lucide-react';
 import apiClient from '@/utils/apiClient';
 import type { ConfigFieldSchema } from '@/types/api';
@@ -56,9 +57,10 @@ export const BooleanWidget: React.FC<ConfigWidgetProps> = ({
   );
 };
 
-export const StringWidget: React.FC<ConfigWidgetProps> = ({ 
-  name, value, schema, onChange, disabled 
+export const StringWidget: React.FC<ConfigWidgetProps> = ({
+  name, value, schema, onChange, disabled
 }) => {
+  const { t } = useTranslation('configuration');
   return (
     <div className="space-y-1">
       <label htmlFor={name} className="block text-sm font-medium text-gray-700">
@@ -71,7 +73,7 @@ export const StringWidget: React.FC<ConfigWidgetProps> = ({
         value={value ?? schema.default ?? ''}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
-        placeholder={schema.default ? `Default: ${schema.default}` : undefined}
+        placeholder={schema.default ? t('widgets.defaultPrefix', { value: schema.default }) : undefined}
         className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:opacity-50 text-sm"
       />
       {schema.description && (
@@ -84,9 +86,10 @@ export const StringWidget: React.FC<ConfigWidgetProps> = ({
   );
 };
 
-export const NumberWidget: React.FC<ConfigWidgetProps> = ({ 
-  name, value, schema, onChange, disabled 
+export const NumberWidget: React.FC<ConfigWidgetProps> = ({
+  name, value, schema, onChange, disabled
 }) => {
+  const { t } = useTranslation('configuration');
   const isInteger = schema.type === 'integer';
   const step = isInteger ? 1 : 0.1;
   
@@ -110,7 +113,7 @@ export const NumberWidget: React.FC<ConfigWidgetProps> = ({
         }}
         step={step}
         disabled={disabled}
-        placeholder={schema.default ? `Default: ${schema.default}` : undefined}
+        placeholder={schema.default ? t('widgets.defaultPrefix', { value: schema.default }) : undefined}
         className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:opacity-50 text-sm"
       />
       {schema.description && (
@@ -123,9 +126,10 @@ export const NumberWidget: React.FC<ConfigWidgetProps> = ({
   );
 };
 
-export const ArrayWidget: React.FC<ConfigWidgetProps> = ({ 
-  name, value, schema, onChange, disabled 
+export const ArrayWidget: React.FC<ConfigWidgetProps> = ({
+  name, value, schema, onChange, disabled
 }) => {
+  const { t } = useTranslation('configuration');
   const arrayValue = Array.isArray(value) ? value : (schema.default || []);
   
   const addItem = () => {
@@ -159,7 +163,7 @@ export const ArrayWidget: React.FC<ConfigWidgetProps> = ({
               onChange={(e) => updateItem(index, e.target.value)}
               disabled={disabled}
               className="flex-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:opacity-50 text-sm"
-              placeholder={`Item ${index + 1}`}
+              placeholder={t('widgets.itemPlaceholder', { number: index + 1 })}
             />
             <button
               type="button"
@@ -178,7 +182,7 @@ export const ArrayWidget: React.FC<ConfigWidgetProps> = ({
           disabled={disabled}
           className="px-3 py-1 text-sm text-blue-600 hover:text-blue-800 disabled:opacity-50"
         >
-          + Add Item
+          {t('widgets.addItem')}
         </button>
       </div>
       
@@ -196,9 +200,10 @@ export const ArrayWidget: React.FC<ConfigWidgetProps> = ({
 // SPECIALIZED WIDGETS
 // ============================================================
 
-export const EnvironmentVariableWidget: React.FC<ConfigWidgetProps> = ({ 
-  name, value, schema, onChange, disabled 
+export const EnvironmentVariableWidget: React.FC<ConfigWidgetProps> = ({
+  name, value, schema, onChange, disabled
 }) => {
+  const { t } = useTranslation('configuration');
   const [showValue, setShowValue] = useState(false);
   const isEnvVar = typeof value === 'string' && value.startsWith('${') && value.endsWith('}');
   
@@ -209,7 +214,7 @@ export const EnvironmentVariableWidget: React.FC<ConfigWidgetProps> = ({
         {schema.required && <span className="text-red-500 ml-1">*</span>}
         {isEnvVar && (
           <span className="ml-2 px-2 py-0.5 text-xs bg-green-100 text-green-800 rounded">
-            ENV VAR
+            {t('widgets.envVar.badge')}
           </span>
         )}
       </label>
@@ -220,7 +225,7 @@ export const EnvironmentVariableWidget: React.FC<ConfigWidgetProps> = ({
           value={value ?? schema.default ?? ''}
           onChange={(e) => onChange(e.target.value)}
           disabled={disabled}
-          placeholder="${ENV_VAR_NAME} or direct value"
+          placeholder={t('widgets.envVar.placeholder')}
           className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:opacity-50 text-sm"
         />
         <button
@@ -236,7 +241,7 @@ export const EnvironmentVariableWidget: React.FC<ConfigWidgetProps> = ({
         </button>
       </div>
       <div className="text-xs text-gray-500">
-        Use ${`{VARIABLE_NAME}`} syntax for environment variables
+        {t('widgets.envVar.hint')}
       </div>
       {schema.description && (
         <div className="flex items-center">
@@ -251,8 +256,9 @@ export const EnvironmentVariableWidget: React.FC<ConfigWidgetProps> = ({
 export const ProviderSelectWidget: React.FC<ConfigWidgetProps & { 
   componentName?: string 
 }> = ({ 
-  name, value, schema, onChange, disabled, componentName, path 
+  name, value, schema, onChange, disabled, componentName, path
 }) => {
+  const { t } = useTranslation('configuration');
   const [providers, setProviders] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(false);
   
@@ -294,7 +300,7 @@ export const ProviderSelectWidget: React.FC<ConfigWidgetProps & {
           disabled={disabled || loading}
           className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:opacity-50 text-sm appearance-none"
         >
-          <option value="">Select provider...</option>
+          <option value="">{t('widgets.provider.select')}</option>
           {Object.entries(providers).map(([key, provider]) => (
             <option key={key} value={key}>
               {provider.name || key} {provider.version && `(${provider.version})`}
@@ -304,7 +310,7 @@ export const ProviderSelectWidget: React.FC<ConfigWidgetProps & {
         <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
       </div>
       {loading && (
-        <div className="text-xs text-gray-500">Loading providers...</div>
+        <div className="text-xs text-gray-500">{t('widgets.provider.loading')}</div>
       )}
       {schema.description && (
         <div className="flex items-center">
@@ -316,14 +322,15 @@ export const ProviderSelectWidget: React.FC<ConfigWidgetProps & {
   );
 };
 
-export const InputSelectWidget: React.FC<ConfigWidgetProps> = ({ 
-  name, value, schema, onChange, disabled 
+export const InputSelectWidget: React.FC<ConfigWidgetProps> = ({
+  name, value, schema, onChange, disabled
 }) => {
+  const { t } = useTranslation('configuration');
   // Define available input sources
   const inputSources = [
-    { value: 'microphone', label: 'Microphone', description: 'Voice input from microphone' },
-    { value: 'web', label: 'Web Interface', description: 'Input from web UI' },
-    { value: 'cli', label: 'Command Line', description: 'Text input from terminal' }
+    { value: 'microphone', label: t('widgets.input.microphone') },
+    { value: 'web', label: t('widgets.input.web') },
+    { value: 'cli', label: t('widgets.input.cli') }
   ];
   
   return (
@@ -340,7 +347,7 @@ export const InputSelectWidget: React.FC<ConfigWidgetProps> = ({
           disabled={disabled}
           className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:opacity-50 text-sm appearance-none"
         >
-          <option value="">Select input source...</option>
+          <option value="">{t('widgets.input.select')}</option>
           {inputSources.map((source) => (
             <option key={source.value} value={source.value}>
               {source.label}
@@ -362,11 +369,12 @@ export const InputSelectWidget: React.FC<ConfigWidgetProps> = ({
 export const MicrophoneSelectWidget: React.FC<ConfigWidgetProps & { 
   onDeviceChange?: (deviceInfo: any) => void 
 }> = ({ 
-  name, value, schema, onChange, disabled, onDeviceChange 
+  name, value, schema, onChange, disabled, onDeviceChange
 }) => {
+  const { t } = useTranslation('configuration');
   const [devices, setDevices] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  
+
   useEffect(() => {
     void loadAudioDevices();
   }, []);
@@ -416,20 +424,20 @@ export const MicrophoneSelectWidget: React.FC<ConfigWidgetProps & {
           disabled={disabled || loading}
           className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:opacity-50 text-sm appearance-none"
         >
-          <option value="">Default device</option>
+          <option value="">{t('widgets.device.default')}</option>
           {devices.map((device) => (
             <option key={device.id} value={device.id}>
-              {device.name} {device.is_default ? '(system default)' : ''} - {device.channels}ch, {device.sample_rate}Hz
+              {device.name} {device.is_default ? t('widgets.device.systemDefault') : ''} - {device.channels}ch, {device.sample_rate}Hz
             </option>
           ))}
         </select>
         <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
       </div>
       {loading && (
-        <div className="text-xs text-gray-500">Loading audio devices...</div>
+        <div className="text-xs text-gray-500">{t('widgets.device.loading')}</div>
       )}
       {!loading && devices.length === 0 && (
-        <div className="text-xs text-red-500">No audio devices found. Check audio dependencies.</div>
+        <div className="text-xs text-red-500">{t('widgets.device.none')}</div>
       )}
       {schema.description && (
         <div className="flex items-center">
@@ -444,11 +452,12 @@ export const MicrophoneSelectWidget: React.FC<ConfigWidgetProps & {
 export const AudioOutputSelectWidget: React.FC<ConfigWidgetProps & { 
   onDeviceChange?: (deviceInfo: any) => void 
 }> = ({ 
-  name, value, schema, onChange, disabled, onDeviceChange 
+  name, value, schema, onChange, disabled, onDeviceChange
 }) => {
+  const { t } = useTranslation('configuration');
   const [devices, setDevices] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  
+
   useEffect(() => {
     void loadAudioOutputDevices();
   }, []);
@@ -498,20 +507,20 @@ export const AudioOutputSelectWidget: React.FC<ConfigWidgetProps & {
           disabled={disabled || loading}
           className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:opacity-50 text-sm appearance-none"
         >
-          <option value="">Default audio output device</option>
+          <option value="">{t('widgets.device.defaultOutput')}</option>
           {devices.map((device) => (
             <option key={device.id} value={device.id}>
-              {device.name} {device.is_default ? '(system default)' : ''} - {device.channels}ch, {device.sample_rate}Hz
+              {device.name} {device.is_default ? t('widgets.device.systemDefault') : ''} - {device.channels}ch, {device.sample_rate}Hz
             </option>
           ))}
         </select>
         <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
       </div>
       {loading && (
-        <div className="text-xs text-gray-500">Loading audio output devices...</div>
+        <div className="text-xs text-gray-500">{t('widgets.device.loadingOutput')}</div>
       )}
       {!loading && devices.length === 0 && (
-        <div className="text-xs text-red-500">No audio output devices found. Check audio dependencies.</div>
+        <div className="text-xs text-red-500">{t('widgets.device.noneOutput')}</div>
       )}
       {schema.description && (
         <div className="flex items-center">
@@ -523,10 +532,11 @@ export const AudioOutputSelectWidget: React.FC<ConfigWidgetProps & {
   );
 };
 
-export const ReadOnlyWidget: React.FC<ConfigWidgetProps> = ({ 
-  name, value, schema 
+export const ReadOnlyWidget: React.FC<ConfigWidgetProps> = ({
+  name, value, schema
 }) => {
-  const displayValue = value ?? schema.default ?? 'Not set';
+  const { t } = useTranslation('configuration');
+  const displayValue = value ?? schema.default ?? t('widgets.readOnly.notSet');
   
   return (
     <div className="space-y-1">
@@ -598,6 +608,7 @@ export const RangeSliderWidget: React.FC<ConfigWidgetProps> = ({
 export const ConfigWidget: React.FC<ConfigWidgetProps & { 
   componentName?: string 
 }> = (props) => {
+  const { t } = useTranslation('configuration');
   const { name, value, schema, componentName, path } = props;
   
   // Detect specialized widget types
@@ -666,7 +677,7 @@ export const ConfigWidget: React.FC<ConfigWidgetProps & {
             {schema.required && <span className="text-red-500 ml-1">*</span>}
           </label>
           <div className="px-3 py-2 bg-yellow-50 border border-yellow-200 rounded-md text-sm text-yellow-800">
-            ⚠️ Object field should be rendered as collapsible section (ConfigSection issue)
+            {t('widgets.objectFieldWarning')}
           </div>
           {schema.description && (
             <div className="flex items-center">

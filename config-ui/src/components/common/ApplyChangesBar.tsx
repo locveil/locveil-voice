@@ -6,8 +6,9 @@
  */
 
 import { useState } from 'react';
-import { 
-  Save, 
+import { useTranslation } from 'react-i18next';
+import {
+  Save,
   CheckCircle2, 
   AlertCircle, 
   Loader2, 
@@ -30,6 +31,7 @@ const ApplyChangesBar: React.FC<ApplyChangesBarProps> = ({
   lastSaved,
   nluContext
 }) => {
+  const { t } = useTranslation('common');
   const [isApplying, setIsApplying] = useState(false);
   const [showBlockingDialog, setShowBlockingDialog] = useState(false);
   const [legacyValidationResult, setLegacyValidationResult] = useState<ValidationResult | null>(null);
@@ -91,7 +93,7 @@ const ApplyChangesBar: React.FC<ApplyChangesBarProps> = ({
         console.error('Legacy validation failed:', error);
         setLegacyValidationResult({
           valid: false,
-          errors: [error instanceof Error ? error.message : 'Validation failed'],
+          errors: [error instanceof Error ? error.message : t('validation.failed')],
           warnings: []
         });
       } finally {
@@ -129,24 +131,18 @@ const ApplyChangesBar: React.FC<ApplyChangesBarProps> = ({
 
       // Show warning dialog for warnings
       if (hasWarnings && warningConflicts.length > 0) {
-        const proceed = window.confirm(
-          `There are ${warningConflicts.length} warning${warningConflicts.length !== 1 ? 's' : ''} that should be reviewed. Do you want to proceed with saving anyway?`
-        );
+        const proceed = window.confirm(t('applyBar.confirmWarningsReview'));
         if (!proceed) return;
       }
     } else {
       // Legacy validation workflow
       if (isLegacyValidationResult(validationResult) && !validationResult.valid) {
-        const proceed = window.confirm(
-          `There are validation errors. Do you want to proceed with saving anyway?`
-        );
+        const proceed = window.confirm(t('applyBar.confirmErrors'));
         if (!proceed) return;
       }
-      
+
       if (isLegacyValidationResult(validationResult) && validationResult.warnings && validationResult.warnings.length > 0) {
-        const proceed = window.confirm(
-          `There are ${validationResult.warnings.length} warning${validationResult.warnings.length !== 1 ? 's' : ''}. Do you want to proceed with saving anyway?`
-        );
+        const proceed = window.confirm(t('applyBar.confirmWarnings'));
         if (!proceed) return;
       }
     }
@@ -203,19 +199,19 @@ const ApplyChangesBar: React.FC<ApplyChangesBarProps> = ({
             <span className="text-sm text-gray-700">
               {hasUnsavedChanges ? (
                 selectedHandler ? (
-                  <>Unsaved changes in <strong>{selectedHandler}</strong></>
+                  <>{t('applyBar.unsavedChangesIn')} <strong>{selectedHandler}</strong></>
                 ) : (
-                  <>Unsaved configuration changes</>
+                  <>{t('applyBar.unsavedConfigChanges')}</>
                 )
               ) : (
-                <>No pending changes</>
+                <>{t('applyBar.noPendingChanges')}</>
               )}
             </span>
           </div>
-          
+
           {lastSaved && (
             <span className="text-xs text-gray-500">
-              Last saved: {lastSaved.toLocaleTimeString()}
+              {t('applyBar.lastSaved', { time: lastSaved.toLocaleTimeString() })}
             </span>
           )}
         </div>
@@ -233,7 +229,7 @@ const ApplyChangesBar: React.FC<ApplyChangesBarProps> = ({
               ) : (
                 <Eye className="w-4 h-4 mr-2" />
               )}
-              {isValidating ? 'Validating...' : 'Validate'}
+              {isValidating ? t('validation.validating') : t('applyBar.validate')}
             </button>
 
           {/* Discard Button */}
@@ -243,7 +239,7 @@ const ApplyChangesBar: React.FC<ApplyChangesBarProps> = ({
             className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <X className="w-4 h-4 mr-2" />
-            Cancel
+            {t('actions.cancel')}
           </button>
 
           {/* Apply Button */}
@@ -261,7 +257,7 @@ const ApplyChangesBar: React.FC<ApplyChangesBarProps> = ({
             ) : (
               <Save className="w-4 h-4 mr-2" />
             )}
-            {isApplying ? 'Saving...' : 'Save Changes'}
+            {isApplying ? t('status.saving') : t('applyBar.saveChanges')}
           </button>
         </div>
       </div>
@@ -284,7 +280,7 @@ const ApplyChangesBar: React.FC<ApplyChangesBarProps> = ({
                   <div className="flex">
                     <AlertCircle className="w-5 h-5 text-red-400 mr-2 mt-0.5 flex-shrink-0" />
                     <div className="text-sm">
-                      <h4 className="text-red-800 font-medium mb-1">Validation Errors</h4>
+                      <h4 className="text-red-800 font-medium mb-1">{t('applyBar.validationErrors')}</h4>
                       <ul className="text-red-700 space-y-1">
                         {legacyValidationResult.errors.map((error, index) => (
                           <li key={index} className="list-disc list-inside">
@@ -303,7 +299,7 @@ const ApplyChangesBar: React.FC<ApplyChangesBarProps> = ({
                   <div className="flex">
                     <AlertTriangle className="w-5 h-5 text-yellow-400 mr-2 mt-0.5 flex-shrink-0" />
                     <div className="text-sm">
-                      <h4 className="text-yellow-800 font-medium mb-1">Validation Warnings</h4>
+                      <h4 className="text-yellow-800 font-medium mb-1">{t('applyBar.validationWarnings')}</h4>
                       <ul className="text-yellow-700 space-y-1">
                         {legacyValidationResult?.warnings?.map((warning, index) => (
                           <li key={index} className="list-disc list-inside">
@@ -322,8 +318,8 @@ const ApplyChangesBar: React.FC<ApplyChangesBarProps> = ({
                   <div className="flex">
                     <CheckCircle2 className="w-5 h-5 text-green-400 mr-2 mt-0.5 flex-shrink-0" />
                     <div className="text-sm">
-                      <p className="text-green-800 font-medium">Validation successful</p>
-                      <p className="text-green-700">No errors found. Ready to save.</p>
+                      <p className="text-green-800 font-medium">{t('applyBar.validationSuccessful')}</p>
+                      <p className="text-green-700">{t('applyBar.noErrorsReady')}</p>
                     </div>
                   </div>
                 </div>

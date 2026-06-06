@@ -6,6 +6,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Globe, Loader, AlertCircle, Filter, RefreshCw } from 'lucide-react';
 import { 
   DomainLanguageInfo, 
@@ -29,6 +30,7 @@ interface LocalizationChanges {
 }
 
 const LocalizationsPage: React.FC = () => {
+  const { t } = useTranslation(['localizations', 'common']);
   const [domains, setDomains] = useState<DomainLanguageInfo[]>([]);
   const [selectedDomain, setSelectedDomain] = useState<string | null>(null);
   const [selectedLanguage, setSelectedLanguage] = useState<string>('en');
@@ -77,7 +79,7 @@ const LocalizationsPage: React.FC = () => {
       }
     } catch (err) {
       console.error('Failed to load domains:', err);
-      setError('Failed to load localization domains');
+      setError(t('page.errors.loadDomains'));
     } finally {
       setLoading(false);
     }
@@ -98,7 +100,7 @@ const LocalizationsPage: React.FC = () => {
       
     } catch (err) {
       console.error('Failed to load localization data:', err);
-      setError(`Failed to load ${language} localization for domain ${domain}`);
+      setError(t('page.errors.loadData', { language, domain }));
     }
   };
 
@@ -152,7 +154,7 @@ const LocalizationsPage: React.FC = () => {
       
     } catch (err) {
       console.error('Failed to save changes:', err);
-      setError('Failed to save localization changes');
+      setError(t('page.errors.save'));
     } finally {
       setSaving(false);
     }
@@ -196,7 +198,7 @@ const LocalizationsPage: React.FC = () => {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader className="w-8 h-8 animate-spin text-blue-600" />
-        <span className="ml-2 text-gray-600">Loading localization domains...</span>
+        <span className="ml-2 text-gray-600">{t('page.loading')}</span>
       </div>
     );
   }
@@ -206,17 +208,17 @@ const LocalizationsPage: React.FC = () => {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Localizations</h1>
-          <p className="text-gray-600">Manage domain-based localization data for different languages</p>
+          <h1 className="text-2xl font-bold text-gray-900">{t('page.title')}</h1>
+          <p className="text-gray-600">{t('page.subtitle')}</p>
         </div>
-        
+
         <div className="flex items-center gap-2">
           <button
             onClick={() => void loadDomains()}
             className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:text-gray-800 transition-colors"
           >
             <RefreshCw className="w-4 h-4" />
-            Refresh
+            {t('common:actions.refresh')}
           </button>
         </div>
       </div>
@@ -226,7 +228,7 @@ const LocalizationsPage: React.FC = () => {
         <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
           <div className="flex items-center gap-2">
             <AlertCircle className="w-5 h-5 text-red-500" />
-            <span className="text-red-800 font-medium">Error</span>
+            <span className="text-red-800 font-medium">{t('common:status.error')}</span>
           </div>
           <p className="text-red-700 mt-1">{error}</p>
         </div>
@@ -235,7 +237,7 @@ const LocalizationsPage: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Domain List */}
         <div className="lg:col-span-1">
-          <Section title="Domains" className="h-fit">
+          <Section title={t('page.domains')} className="h-fit">
             {/* Filter Controls */}
             <div className="mb-4 flex items-center gap-2">
               <Filter className="w-4 h-4 text-gray-500" />
@@ -244,9 +246,9 @@ const LocalizationsPage: React.FC = () => {
                 onChange={(e) => setLanguageFilter(e.target.value as 'all' | 'single' | 'multiple')}
                 className="text-sm border border-gray-200 rounded px-2 py-1 bg-white"
               >
-                <option value="all">All Domains</option>
-                <option value="single">Single Language</option>
-                <option value="multiple">Multiple Languages</option>
+                <option value="all">{t('page.filterAll')}</option>
+                <option value="single">{t('page.filterSingle')}</option>
+                <option value="multiple">{t('page.filterMultiple')}</option>
               </select>
             </div>
 
@@ -311,13 +313,13 @@ const LocalizationsPage: React.FC = () => {
                   {metadata && (
                     <div className="flex items-center gap-4 text-sm text-gray-600 bg-gray-50 p-3 rounded">
                       <Badge variant="default">
-                        {metadata.entry_count} entries
+                        {t('page.metadata.entries', { count: metadata.entry_count })}
                       </Badge>
                       <span>
-                        File: {metadata.file_path}
+                        {t('page.metadata.file', { path: metadata.file_path })}
                       </span>
                       <span>
-                        Size: {(metadata.file_size / 1024).toFixed(1)} KB
+                        {t('page.metadata.size', { size: (metadata.file_size / 1024).toFixed(1) })}
                       </span>
                     </div>
                   )}
@@ -325,7 +327,7 @@ const LocalizationsPage: React.FC = () => {
                   {/* Validation Status */}
                   {!isValid && validationErrors.length > 0 && (
                     <div className="p-3 bg-yellow-50 border border-yellow-200 rounded">
-                      <h4 className="font-medium text-yellow-800 mb-2">Validation Issues:</h4>
+                      <h4 className="font-medium text-yellow-800 mb-2">{t('page.validationIssues')}</h4>
                       <ul className="text-sm text-yellow-700 space-y-1">
                         {validationErrors.map((error, index) => (
                           <li key={index}>• {error}</li>
@@ -345,11 +347,11 @@ const LocalizationsPage: React.FC = () => {
               </Section>
             </>
           ) : (
-            <Section title="Select a Domain">
+            <Section title={t('page.selectDomain')}>
               <div className="text-center py-12 text-gray-500">
                 <Globe className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                <h3 className="text-lg font-medium mb-2">No Domain Selected</h3>
-                <p>Choose a domain from the list to start editing localizations</p>
+                <h3 className="text-lg font-medium mb-2">{t('page.noDomain.title')}</h3>
+                <p>{t('page.noDomain.subtitle')}</p>
               </div>
             </Section>
           )}
@@ -362,11 +364,11 @@ const LocalizationsPage: React.FC = () => {
           <div className="max-w-7xl mx-auto flex items-center justify-between">
             <div className="flex items-center gap-4">
               <span className="text-sm text-gray-600">
-                {Object.values(changes).filter(c => c.hasChanges).length} unsaved changes
+                {t('page.unsavedChanges', { count: Object.values(changes).filter(c => c.hasChanges).length })}
               </span>
               {!isValid && (
                 <span className="text-sm text-red-600">
-                  ⚠ Validation errors present
+                  {t('page.validationErrorsPresent')}
                 </span>
               )}
             </div>
@@ -376,7 +378,7 @@ const LocalizationsPage: React.FC = () => {
                 className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
                 disabled={saving}
               >
-                Discard
+                {t('page.discard')}
               </button>
               <button
                 onClick={() => void handleSaveChanges()}
@@ -386,10 +388,10 @@ const LocalizationsPage: React.FC = () => {
                 {saving ? (
                   <>
                     <Loader className="w-4 h-4 animate-spin" />
-                    Saving...
+                    {t('common:status.saving')}
                   </>
                 ) : (
-                  'Save All Changes'
+                  t('page.saveAll')
                 )}
               </button>
             </div>

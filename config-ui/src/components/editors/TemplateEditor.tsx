@@ -6,6 +6,7 @@
  */
 
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Plus, FileText, Eye, Code, Layout } from 'lucide-react';
 import TemplateKeyEditor from './TemplateKeyEditor';
 import Section from '@/components/ui/Section';
@@ -27,6 +28,7 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({
   schema,
   onValidationChange
 }) => {
+  const { t } = useTranslation('templates');
   const [viewMode, setViewMode] = useState<ViewMode>('structured');
   const [yamlContent, setYamlContent] = useState('');
   const [yamlError, setYamlError] = useState<string | null>(null);
@@ -101,7 +103,7 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({
       
       return result;
     } catch (error) {
-      throw new Error(`YAML parsing error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(t('editor.yamlParseError', { message: error instanceof Error ? error.message : 'Unknown error' }));
     }
   };
 
@@ -118,29 +120,29 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({
     
     // Basic validation
     if (typeof value !== 'object' || value === null) {
-      errors.push('Template must be an object');
+      errors.push(t('editor.validation.mustBeObject'));
     } else {
       // Check for empty keys
       Object.keys(value).forEach(key => {
         if (!key.trim()) {
-          errors.push('Template keys cannot be empty');
+          errors.push(t('editor.validation.keysNotEmpty'));
         }
       });
-      
+
       // Check schema if provided
       if (schema && schema.expected_keys) {
         const missingKeys = schema.expected_keys.filter((key: string) => !(key in value));
         if (missingKeys.length > 0) {
-          errors.push(`Missing expected keys: ${missingKeys.join(', ')}`);
+          errors.push(t('editor.validation.missingKeys', { keys: missingKeys.join(', ') }));
         }
       }
     }
-    
+
     setValidationErrors(errors);
     if (onValidationChange) {
       onValidationChange(errors.length === 0, errors);
     }
-  }, [value, schema, onValidationChange]);
+  }, [value, schema, onValidationChange, t]);
 
   const handleYamlChange = (newYaml: string) => {
     setYamlContent(newYaml);
@@ -150,7 +152,7 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({
       const parsed = yamlToObject(newYaml);
       onChange(parsed);
     } catch (error) {
-      setYamlError(error instanceof Error ? error.message : 'YAML parsing error');
+      setYamlError(error instanceof Error ? error.message : t('editor.yamlParseErrorShort'));
     }
   };
 
@@ -176,22 +178,22 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({
   const renderStructuredView = () => (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h3 className="text-lg font-medium text-gray-900">Template Keys</h3>
+        <h3 className="text-lg font-medium text-gray-900">{t('editor.keys')}</h3>
         <button
           type="button"
           onClick={addNewKey}
           className="flex items-center space-x-2 px-3 py-1 bg-yellow-600 text-white rounded-md hover:bg-yellow-700"
-          title="Only add new keys if you're updating the code to use them"
+          title={t('editor.addKeyTitle')}
         >
           <Plus className="w-4 h-4" />
-          <span>Add Template Key</span>
+          <span>{t('editor.addKey')}</span>
         </button>
       </div>
-      
+
       {Object.keys(value).length === 0 ? (
         <div className="text-center py-8 text-gray-500">
           <FileText className="w-8 h-8 mx-auto mb-2" />
-          <p>No templates defined. Click "Add Template" to create one.</p>
+          <p>{t('editor.empty')}</p>
         </div>
       ) : (
         Object.entries(value).map(([key, val]) => (
@@ -211,12 +213,12 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({
     <div className="space-y-4">
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          YAML Content
+          {t('editor.yamlContent')}
         </label>
         <TextArea
           value={yamlContent}
           onChange={handleYamlChange}
-          placeholder="Enter YAML content..."
+          placeholder={t('editor.yamlPlaceholder')}
           rows={20}
           className={yamlError ? 'border-red-300' : ''}
         />
@@ -229,7 +231,7 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({
 
   const renderPreviewView = () => (
     <div className="space-y-4">
-      <h3 className="text-lg font-medium text-gray-900">Template Preview</h3>
+      <h3 className="text-lg font-medium text-gray-900">{t('editor.preview')}</h3>
       <div className="bg-gray-50 p-4 rounded-lg">
         <pre className="text-sm text-gray-800 whitespace-pre-wrap">
           {objectToYaml(value)}
@@ -238,17 +240,17 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <h4 className="text-sm font-medium text-gray-700 mb-2">Template Statistics</h4>
+          <h4 className="text-sm font-medium text-gray-700 mb-2">{t('editor.statistics')}</h4>
           <div className="space-y-1 text-sm text-gray-600">
-            <div>Total Keys: {Object.keys(value).length}</div>
-            <div>String Values: {Object.values(value).filter(v => typeof v === 'string').length}</div>
-            <div>Array Values: {Object.values(value).filter(v => Array.isArray(v)).length}</div>
-            <div>Object Values: {Object.values(value).filter(v => typeof v === 'object' && v !== null && !Array.isArray(v)).length}</div>
+            <div>{t('editor.totalKeys', { count: Object.keys(value).length })}</div>
+            <div>{t('editor.stringValues', { count: Object.values(value).filter(v => typeof v === 'string').length })}</div>
+            <div>{t('editor.arrayValues', { count: Object.values(value).filter(v => Array.isArray(v)).length })}</div>
+            <div>{t('editor.objectValues', { count: Object.values(value).filter(v => typeof v === 'object' && v !== null && !Array.isArray(v)).length })}</div>
           </div>
         </div>
-        
+
         <div>
-          <h4 className="text-sm font-medium text-gray-700 mb-2">Template Keys</h4>
+          <h4 className="text-sm font-medium text-gray-700 mb-2">{t('editor.keys')}</h4>
           <div className="flex flex-wrap gap-1">
             {Object.keys(value).map(key => (
               <Badge key={key} variant="info" className="text-xs">
@@ -262,7 +264,7 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({
   );
 
   return (
-    <Section title="Template Editor">
+    <Section title={t('editor.title')}>
       {/* View Mode Selector */}
       <div className="flex space-x-1 mb-6 bg-gray-100 p-1 rounded-lg">
         <button
@@ -275,7 +277,7 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({
           }`}
         >
           <Layout className="w-4 h-4" />
-          <span>Structured</span>
+          <span>{t('editor.viewModes.structured')}</span>
         </button>
         
         <button
@@ -288,7 +290,7 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({
           }`}
         >
           <Code className="w-4 h-4" />
-          <span>YAML</span>
+          <span>{t('editor.viewModes.yaml')}</span>
         </button>
         
         <button
@@ -301,14 +303,14 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({
           }`}
         >
           <Eye className="w-4 h-4" />
-          <span>Preview</span>
+          <span>{t('editor.viewModes.preview')}</span>
         </button>
       </div>
 
       {/* Validation Errors */}
       {validationErrors.length > 0 && (
         <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
-          <h4 className="text-sm font-medium text-red-800 mb-1">Validation Errors:</h4>
+          <h4 className="text-sm font-medium text-red-800 mb-1">{t('editor.validationErrors')}</h4>
           <ul className="text-sm text-red-700 list-disc list-inside">
             {validationErrors.map((error, index) => (
               <li key={index}>{error}</li>

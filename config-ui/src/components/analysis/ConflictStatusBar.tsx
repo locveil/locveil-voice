@@ -6,6 +6,7 @@
  */
 
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { AlertCircle, CheckCircle, Clock, AlertTriangle } from 'lucide-react';
 import type { ConflictReport } from '@/types';
 
@@ -20,6 +21,7 @@ const ConflictStatusBar: React.FC<ConflictStatusBarProps> = ({
   status,
   className = ''
 }) => {
+  const { t } = useTranslation('common');
   const blockers = conflicts.filter(c => c.severity === 'blocker');
   const warnings = conflicts.filter(c => c.severity === 'warning');
   const infos = conflicts.filter(c => c.severity === 'info');
@@ -46,21 +48,21 @@ const ConflictStatusBar: React.FC<ConflictStatusBarProps> = ({
   const getStatusText = () => {
     switch (status) {
       case 'analyzing':
-        return 'Analyzing...';
+        return t('conflicts.status.analyzing');
       case 'error':
-        return 'Analysis failed';
+        return t('conflicts.status.failed');
       case 'complete':
         if (blockers.length > 0) {
-          return `${blockers.length} blocking conflict${blockers.length !== 1 ? 's' : ''} detected`;
+          return t('conflicts.status.blockingDetected', { count: blockers.length });
         } else if (warnings.length > 0) {
-          return `${warnings.length} warning${warnings.length !== 1 ? 's' : ''} detected`;
+          return t('conflicts.status.warningsDetected', { count: warnings.length });
         } else if (infos.length > 0) {
-          return `${infos.length} info item${infos.length !== 1 ? 's' : ''} detected`;
+          return t('conflicts.status.infoDetected', { count: infos.length });
         } else {
-          return 'No conflicts detected';
+          return t('conflicts.status.none');
         }
       default:
-        return 'Ready for analysis';
+        return t('conflicts.status.ready');
     }
   };
 
@@ -87,19 +89,19 @@ const ConflictStatusBar: React.FC<ConflictStatusBarProps> = ({
           {blockers.length > 0 && (
             <div className="flex items-center space-x-1 text-red-600">
               <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-              <span>{blockers.length} blocker{blockers.length !== 1 ? 's' : ''}</span>
+              <span>{t('conflicts.count.blockers', { count: blockers.length })}</span>
             </div>
           )}
           {warnings.length > 0 && (
             <div className="flex items-center space-x-1 text-yellow-600">
               <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-              <span>{warnings.length} warning{warnings.length !== 1 ? 's' : ''}</span>
+              <span>{t('conflicts.count.warnings', { count: warnings.length })}</span>
             </div>
           )}
           {infos.length > 0 && (
             <div className="flex items-center space-x-1 text-blue-600">
               <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-              <span>{infos.length} info</span>
+              <span>{t('conflicts.count.info', { count: infos.length })}</span>
             </div>
           )}
         </div>

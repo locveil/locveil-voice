@@ -6,7 +6,8 @@
  */
 
 import { useNavigate, useLocation } from 'react-router-dom';
-import { 
+import { useTranslation } from 'react-i18next';
+import {
   ChevronLeft, 
   ChevronRight, 
   Home, 
@@ -23,66 +24,31 @@ import type { SidebarProps } from '@/types';
 
 interface NavigationSection {
   id: string;
-  title: string;
+  titleKey: 'sidebar.sections.overview.title' | 'sidebar.sections.donations.title'
+    | 'sidebar.sections.templates.title' | 'sidebar.sections.prompts.title'
+    | 'sidebar.sections.localizations.title' | 'sidebar.sections.monitoring.title'
+    | 'sidebar.sections.configuration.title';
+  descriptionKey: 'sidebar.sections.overview.description' | 'sidebar.sections.donations.description'
+    | 'sidebar.sections.templates.description' | 'sidebar.sections.prompts.description'
+    | 'sidebar.sections.localizations.description' | 'sidebar.sections.monitoring.description'
+    | 'sidebar.sections.configuration.description';
   icon: LucideIcon;
   path: string;
-  description: string;
 }
 
-// Navigation sections configuration
+// Navigation sections configuration — titles/descriptions are i18n keys (resolved in render).
 const navigationSections: NavigationSection[] = [
-  {
-    id: 'overview',
-    title: 'Overview',
-    icon: Home,
-    path: '/',
-    description: 'System overview and status'
-  },
-  {
-    id: 'donations',
-    title: 'Donations',
-    icon: FileText,
-    path: '/donations',
-    description: 'Edit intent handler donations'
-  },
-  {
-    id: 'templates',
-    title: 'Templates',
-    icon: Code,
-    path: '/templates',
-    description: 'Edit response templates'
-  },
-  {
-    id: 'prompts',
-    title: 'Prompts',
-    icon: MessageSquare,
-    path: '/prompts',
-    description: 'Edit LLM prompts'
-  },
-  {
-    id: 'localizations',
-    title: 'Localizations',
-    icon: Globe,
-    path: '/localizations',
-    description: 'Edit localization data'
-  },
-  {
-    id: 'monitoring',
-    title: 'Monitoring',
-    icon: Activity,
-    path: '/monitoring',
-    description: 'System monitoring and metrics'
-  },
-  {
-    id: 'configuration',
-    title: 'Configuration',
-    icon: Settings,
-    path: '/configuration',
-    description: 'System configuration management'
-  }
+  { id: 'overview', titleKey: 'sidebar.sections.overview.title', descriptionKey: 'sidebar.sections.overview.description', icon: Home, path: '/' },
+  { id: 'donations', titleKey: 'sidebar.sections.donations.title', descriptionKey: 'sidebar.sections.donations.description', icon: FileText, path: '/donations' },
+  { id: 'templates', titleKey: 'sidebar.sections.templates.title', descriptionKey: 'sidebar.sections.templates.description', icon: Code, path: '/templates' },
+  { id: 'prompts', titleKey: 'sidebar.sections.prompts.title', descriptionKey: 'sidebar.sections.prompts.description', icon: MessageSquare, path: '/prompts' },
+  { id: 'localizations', titleKey: 'sidebar.sections.localizations.title', descriptionKey: 'sidebar.sections.localizations.description', icon: Globe, path: '/localizations' },
+  { id: 'monitoring', titleKey: 'sidebar.sections.monitoring.title', descriptionKey: 'sidebar.sections.monitoring.description', icon: Activity, path: '/monitoring' },
+  { id: 'configuration', titleKey: 'sidebar.sections.configuration.title', descriptionKey: 'sidebar.sections.configuration.description', icon: Settings, path: '/configuration' },
 ];
 
 const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
+  const { t } = useTranslation('layout');
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -105,15 +71,15 @@ const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
       <div className="flex items-center justify-between p-4 border-b border-gray-700">
         {!collapsed && (
           <div>
-            <h2 className="text-lg font-semibold">Navigation</h2>
-            <p className="text-xs text-gray-300 mt-0.5">Admin Interface</p>
+            <h2 className="text-lg font-semibold">{t('sidebar.navigation')}</h2>
+            <p className="text-xs text-gray-300 mt-0.5">{t('sidebar.adminInterface')}</p>
           </div>
         )}
         <button
           onClick={() => onToggle(!collapsed)}
           className="p-2 rounded-lg hover:bg-gray-800 transition-colors"
-          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          title={collapsed ? t('sidebar.expand') : t('sidebar.collapse')}
+          aria-label={collapsed ? t('sidebar.expand') : t('sidebar.collapse')}
         >
           {collapsed ? (
             <ChevronRight className="w-4 h-4" />
@@ -139,13 +105,13 @@ const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
                     ? 'bg-gray-700 text-white'
                     : 'text-gray-300 hover:bg-gray-800 hover:text-white'
                 }`}
-                title={collapsed ? section.description : ''}
+                title={collapsed ? t(section.descriptionKey) : ''}
                 aria-current={isActive ? 'page' : undefined}
               >
                 <Icon className="w-5 h-5 flex-shrink-0" />
                 {!collapsed && (
                   <>
-                    <span className="ml-3">{section.title}</span>
+                    <span className="ml-3">{t(section.titleKey)}</span>
                     {isActive && (
                       <div 
                         className="ml-auto w-2 h-2 bg-blue-400 rounded-full"
@@ -164,8 +130,8 @@ const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
       {!collapsed && (
         <div className="p-4 border-t border-gray-700">
           <div className="text-xs text-gray-400">
-            <p className="font-medium">Irene Admin v1.0.0</p>
-            <p className="mt-1">Voice Assistant Management</p>
+            <p className="font-medium">{t('sidebar.footerTitle')}</p>
+            <p className="mt-1">{t('sidebar.footerSubtitle')}</p>
           </div>
         </div>
       )}

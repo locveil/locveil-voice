@@ -6,6 +6,7 @@
  */
 
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Trash2, Plus, ChevronDown, ChevronRight } from 'lucide-react';
 import Input from '@/components/ui/Input';
 import TextArea from '@/components/ui/TextArea';
@@ -25,6 +26,7 @@ const TemplateKeyEditor: React.FC<TemplateKeyEditorProps> = ({
   onChange,
   onDelete
 }) => {
+  const { t } = useTranslation('templates');
   const [isExpanded, setIsExpanded] = useState(false);
   // Key names are read-only since they connect to code
 
@@ -86,20 +88,20 @@ const TemplateKeyEditor: React.FC<TemplateKeyEditorProps> = ({
         return (
           <div className="space-y-2">
             <label className="block text-sm font-medium text-gray-700">
-              Template Value (String)
+              {t('keyEditor.stringLabel')}
             </label>
             {typeof value === 'string' && value.length > 100 ? (
               <TextArea
                 value={value}
                 onChange={handleStringChange}
-                placeholder="Enter template content..."
+                placeholder={t('keyEditor.stringPlaceholder')}
                 rows={4}
               />
             ) : (
               <Input
                 value={value as string}
                 onChange={handleStringChange}
-                placeholder="Enter template content..."
+                placeholder={t('keyEditor.stringPlaceholder')}
               />
             )}
           </div>
@@ -109,13 +111,13 @@ const TemplateKeyEditor: React.FC<TemplateKeyEditorProps> = ({
         return (
           <div className="space-y-2">
             <label className="block text-sm font-medium text-gray-700">
-              Template Values (Array)
+              {t('keyEditor.arrayLabel')}
             </label>
             <ArrayOfStringsEditor
               label=""
               value={value as string[]}
               onChange={handleArrayChange}
-              placeholder="Enter template option..."
+              placeholder={t('keyEditor.arrayPlaceholder')}
             />
           </div>
         );
@@ -125,7 +127,7 @@ const TemplateKeyEditor: React.FC<TemplateKeyEditorProps> = ({
           <div className="space-y-2">
             <div className="flex justify-between items-center">
               <label className="block text-sm font-medium text-gray-700">
-                Template Object
+                {t('keyEditor.objectLabel')}
               </label>
               <button
                 type="button"
@@ -133,7 +135,7 @@ const TemplateKeyEditor: React.FC<TemplateKeyEditorProps> = ({
                 className="flex items-center space-x-1 text-sm text-blue-600 hover:text-blue-500"
               >
                 <Plus className="w-4 h-4" />
-                <span>Add Key</span>
+                <span>{t('keyEditor.addKey')}</span>
               </button>
             </div>
             <div className="space-y-3 bg-gray-50 p-3 rounded-md">
@@ -143,20 +145,20 @@ const TemplateKeyEditor: React.FC<TemplateKeyEditorProps> = ({
                     <Input
                       value={objKey}
                       onChange={(newKey) => handleObjectKeyChange(objKey, newKey, objValue)}
-                      placeholder="Key name..."
+                      placeholder={t('keyEditor.keyNamePlaceholder')}
                       className="w-1/3"
                     />
                     <Input
                       value={safeDisplayValue(objValue)}
                       onChange={(newValue) => handleObjectValueChange(objKey, newValue)}
-                      placeholder="Value..."
+                      placeholder={t('keyEditor.valuePlaceholder')}
                       className="flex-1"
                     />
                     <button
                       type="button"
                       onClick={() => handleObjectKeyDelete(objKey)}
                       className="p-2 text-red-600 hover:text-red-500"
-                      title="Delete key"
+                      title={t('keyEditor.deleteKey')}
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -192,7 +194,7 @@ const TemplateKeyEditor: React.FC<TemplateKeyEditorProps> = ({
           type="button"
           onClick={() => onDelete(templateKey)}
           className="p-1 text-red-600 hover:text-red-500"
-          title="Delete template key"
+          title={t('keyEditor.deleteTemplateKey')}
         >
           <Trash2 className="w-4 h-4" />
         </button>
@@ -202,12 +204,12 @@ const TemplateKeyEditor: React.FC<TemplateKeyEditorProps> = ({
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Key Name (Read-only)
+              {t('keyEditor.keyNameReadonly')}
             </label>
             <Input
               value={templateKey}
               onChange={() => {}} // Read-only
-              placeholder="Template key identifier"
+              placeholder={t('keyEditor.keyIdentifierPlaceholder')}
               disabled={true}
               className="bg-gray-50 cursor-not-allowed"
             />
@@ -216,8 +218,8 @@ const TemplateKeyEditor: React.FC<TemplateKeyEditorProps> = ({
           {renderValueEditor()}
 
           <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded">
-            <strong>Type:</strong> {getValueType()} | 
-            <strong> Length:</strong> {
+            <strong>{t('keyEditor.typeLabel')}</strong> {getValueType()} |
+            <strong> {t('keyEditor.lengthLabel')}</strong> {
               getValueType() === 'string' 
                 ? (value as string).length
                 : getValueType() === 'array'

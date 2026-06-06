@@ -6,8 +6,10 @@
  */
 
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Wifi, WifiOff, AlertCircle, CheckCircle2 } from 'lucide-react';
 import apiClient from '@/utils/apiClient';
+import LanguageSwitcher from '@/i18n/LanguageSwitcher';
 import type { HeaderProps, ConnectionStatus } from '@/types';
 
 interface SystemInfo {
@@ -17,6 +19,7 @@ interface SystemInfo {
 }
 
 const Header = ({ connectionStatus: externalStatus, systemInfo: externalSystemInfo }: HeaderProps) => {
+  const { t } = useTranslation(['layout', 'common']);
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('connecting');
   const [systemInfo, setSystemInfo] = useState<SystemInfo | null>(null);
   const [lastCheck, setLastCheck] = useState<Date | null>(null);
@@ -118,15 +121,18 @@ const Header = ({ connectionStatus: externalStatus, systemInfo: externalSystemIn
   const getConnectionText = () => {
     switch (currentStatus) {
       case 'connected':
-        return currentSystemInfo 
-          ? `Connected • ${currentSystemInfo.handlersCount} handlers • ${currentSystemInfo.donationsCount} donations`
-          : 'Connected to Irene API';
+        return currentSystemInfo
+          ? t('layout:header.connectedDetail', {
+              handlers: currentSystemInfo.handlersCount,
+              donations: currentSystemInfo.donationsCount,
+            })
+          : t('layout:header.connected');
       case 'disconnected':
       case 'error':
-        return 'Disconnected from Irene API';
+        return t('layout:header.disconnected');
       case 'connecting':
       default:
-        return 'Checking connection...';
+        return t('layout:header.connecting');
     }
   };
 
@@ -162,15 +168,18 @@ const Header = ({ connectionStatus: externalStatus, systemInfo: externalSystemIn
         {/* Left side - Application title */}
         <div>
           <h1 className="text-xl font-semibold text-gray-900">
-            Irene Admin
+            {t('common:app.title')}
           </h1>
           <p className="text-sm text-gray-500">
-            Voice Assistant Administration Interface
+            {t('common:app.subtitle')}
           </p>
         </div>
 
         {/* Right side - Connection status */}
         <div className="flex items-center space-x-4">
+          {/* UI-language switcher (chrome language axis) */}
+          <LanguageSwitcher />
+
           {/* Connection status indicator */}
           <div className="flex items-center space-x-2">
             <div className={`px-3 py-1.5 rounded-lg border ${getConnectionBgColor()}`}>
@@ -189,17 +198,17 @@ const Header = ({ connectionStatus: externalStatus, systemInfo: externalSystemIn
               onClick={() => void checkConnection()}
               disabled={isChecking || currentStatus === 'connecting'}
               className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-              title="Refresh connection status"
+              title={t('layout:header.refreshTitle')}
             >
               <Wifi className={`w-3 h-3 mr-1 ${isChecking || currentStatus === 'connecting' ? 'animate-spin' : ''}`} />
-              {isChecking ? 'Checking...' : 'Refresh'}
+              {isChecking ? t('common:status.checking') : t('common:actions.refresh')}
             </button>
           )}
 
           {/* Last check time */}
           {lastCheck && (
             <span className="text-xs text-gray-400">
-              Last check: {lastCheck.toLocaleTimeString()}
+              {t('layout:header.lastCheck', { time: lastCheck.toLocaleTimeString() })}
             </span>
           )}
         </div>
@@ -212,10 +221,10 @@ const Header = ({ connectionStatus: externalStatus, systemInfo: externalSystemIn
             <AlertCircle className="w-5 h-5 text-red-400 mt-0.5 mr-2 flex-shrink-0" />
             <div className="text-sm">
               <p className="text-red-800 font-medium">
-                Cannot connect to Irene API
+                {t('layout:header.cannotConnectTitle')}
               </p>
               <p className="text-red-700 mt-1">
-                Make sure the Irene Voice Assistant is running and accessible at{' '}
+                {t('layout:header.cannotConnectBody')}{' '}
                 <code className="bg-red-100 px-1 rounded text-xs">
                   {apiClient['baseUrl']}
                 </code>

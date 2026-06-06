@@ -17,6 +17,7 @@ import {
   Zap
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import apiClient from '@/utils/apiClient';
 import type { IntentStatusResponse, IntentHandlersResponse } from '@/types';
 
@@ -30,9 +31,11 @@ const OverviewPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
+  const { t } = useTranslation(['overview', 'common']);
 
   useEffect(() => {
     void loadSystemStatus();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional scoped/mount load (load fns are not memoized)
   }, []);
 
   const loadSystemStatus = async () => {
@@ -51,7 +54,7 @@ const OverviewPage: React.FC = () => {
       });
     } catch (err) {
       console.error('Failed to load system status:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load system status');
+      setError(err instanceof Error ? err.message : t('page.loadError'));
     } finally {
       setLoading(false);
     }
@@ -85,22 +88,22 @@ const OverviewPage: React.FC = () => {
 
   const quickActions = [
     {
-      title: 'Manage Donations',
-      description: 'Edit intent handler donations and configurations',
+      title: t('quickActions.donations.title'),
+      description: t('quickActions.donations.description'),
       icon: FileText,
       path: '/donations',
       color: 'bg-blue-50 text-blue-700 border-blue-200'
     },
     {
-      title: 'System Monitoring',
-      description: 'View system health and performance metrics',
+      title: t('quickActions.monitoring.title'),
+      description: t('quickActions.monitoring.description'),
       icon: Activity,
       path: '/monitoring',
       color: 'bg-green-50 text-green-700 border-green-200'
     },
     {
-      title: 'Configuration',
-      description: 'System settings and configuration management',
+      title: t('quickActions.configuration.title'),
+      description: t('quickActions.configuration.description'),
       icon: Settings,
       path: '/configuration',
       color: 'bg-purple-50 text-purple-700 border-purple-200'
@@ -129,13 +132,13 @@ const OverviewPage: React.FC = () => {
           <div className="flex items-start">
             <AlertCircle className="w-5 h-5 text-red-400 mt-0.5 mr-3 flex-shrink-0" />
             <div>
-              <h3 className="text-red-800 font-medium">Failed to load system status</h3>
+              <h3 className="text-red-800 font-medium">{t('page.loadError')}</h3>
               <p className="text-red-700 text-sm mt-1">{error}</p>
               <button
                 onClick={() => void loadSystemStatus()}
                 className="mt-3 px-3 py-1 bg-red-100 text-red-800 rounded text-sm hover:bg-red-200 transition-colors"
               >
-                Retry
+                {t('common:actions.retry')}
               </button>
             </div>
           </div>
@@ -148,8 +151,8 @@ const OverviewPage: React.FC = () => {
     <div className="p-6 space-y-6">
       {/* Page Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">System Overview</h1>
-        <p className="text-gray-600 mt-1">Monitor system health and manage components</p>
+        <h1 className="text-2xl font-bold text-gray-900">{t('page.title')}</h1>
+        <p className="text-gray-600 mt-1">{t('page.subtitle')}</p>
       </div>
 
       {/* System Status Cards */}
@@ -161,9 +164,9 @@ const OverviewPage: React.FC = () => {
               {getStatusIcon(systemStatus?.intent?.status || 'unknown')}
             </div>
             <div className="ml-4">
-              <h3 className="text-lg font-medium text-gray-900">Intent System</h3>
+              <h3 className="text-lg font-medium text-gray-900">{t('cards.intentSystem')}</h3>
               <p className={`text-sm font-medium ${getStatusColor(systemStatus?.intent?.status || 'unknown')}`}>
-                {systemStatus?.intent?.status || 'Unknown'}
+                {systemStatus?.intent?.status || t('common:status.unknown')}
               </p>
             </div>
           </div>
@@ -172,13 +175,13 @@ const OverviewPage: React.FC = () => {
               <p className="text-2xl font-bold text-gray-900">
                 {systemStatus?.intent?.handlers_count || 0}
               </p>
-              <p className="text-xs text-gray-500">Handlers Loaded</p>
+              <p className="text-xs text-gray-500">{t('cards.handlersLoaded')}</p>
             </div>
             <div>
               <p className="text-2xl font-bold text-gray-900">
                 {systemStatus?.intent?.donations_count || 0}
               </p>
-              <p className="text-xs text-gray-500">Donations Loaded</p>
+              <p className="text-xs text-gray-500">{t('cards.donationsLoaded')}</p>
             </div>
           </div>
         </div>
@@ -190,15 +193,15 @@ const OverviewPage: React.FC = () => {
               <Users className="w-5 h-5 text-blue-600" />
             </div>
             <div className="ml-4">
-              <h3 className="text-lg font-medium text-gray-900">Intent Handlers</h3>
-              <p className="text-sm text-blue-600 font-medium">Active</p>
+              <h3 className="text-lg font-medium text-gray-900">{t('cards.intentHandlers')}</h3>
+              <p className="text-sm text-blue-600 font-medium">{t('status.active')}</p>
             </div>
           </div>
           <div className="mt-4">
             <p className="text-2xl font-bold text-gray-900">
               {systemStatus?.handlers?.total_count || 0}
             </p>
-            <p className="text-xs text-gray-500">Total Handlers</p>
+            <p className="text-xs text-gray-500">{t('cards.totalHandlers')}</p>
           </div>
         </div>
 
@@ -209,18 +212,18 @@ const OverviewPage: React.FC = () => {
               <Zap className="w-5 h-5 text-green-600" />
             </div>
             <div className="ml-4">
-              <h3 className="text-lg font-medium text-gray-900">System</h3>
+              <h3 className="text-lg font-medium text-gray-900">{t('cards.system')}</h3>
               <p className="text-sm text-green-600 font-medium">
-                System Running
+                {t('cards.systemRunning')}
               </p>
             </div>
           </div>
           <div className="mt-4">
             <p className="text-sm text-gray-600">
-              Status: {systemStatus?.intent?.status || 'Unknown'}
+              {t('cards.statusLine', { status: systemStatus?.intent?.status || t('common:status.unknown') })}
             </p>
             <p className="text-xs text-gray-500 mt-1">
-              {systemStatus?.intent?.donation_routing_enabled ? 'Routing enabled' : 'Routing disabled'}
+              {systemStatus?.intent?.donation_routing_enabled ? t('status.routingEnabled') : t('status.routingDisabled')}
             </p>
           </div>
         </div>
@@ -228,7 +231,7 @@ const OverviewPage: React.FC = () => {
 
       {/* Quick Actions */}
       <div>
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">Quick Actions</h2>
+        <h2 className="text-xl font-semibold text-gray-900 mb-4">{t('quickActions.title')}</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {quickActions.map((action) => {
             const Icon = action.icon;
@@ -251,19 +254,19 @@ const OverviewPage: React.FC = () => {
 
       {/* Recent Activity Placeholder */}
       <div>
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">Recent Activity</h2>
+        <h2 className="text-xl font-semibold text-gray-900 mb-4">{t('recentActivity.title')}</h2>
         <div className="bg-white rounded-lg border border-gray-200 p-6">
           <div className="text-center py-8">
             <Database className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-            <h3 className="text-gray-900 font-medium mb-1">Activity Monitoring</h3>
+            <h3 className="text-gray-900 font-medium mb-1">{t('recentActivity.monitoringTitle')}</h3>
             <p className="text-gray-500 text-sm">
-              Activity tracking will be available in the monitoring dashboard
+              {t('recentActivity.monitoringBody')}
             </p>
             <button
               onClick={() => navigate('/monitoring')}
               className="mt-3 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition-colors"
             >
-              Go to Monitoring
+              {t('recentActivity.goToMonitoring')}
             </button>
           </div>
         </div>

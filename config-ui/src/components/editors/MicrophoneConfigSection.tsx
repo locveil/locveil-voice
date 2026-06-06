@@ -6,6 +6,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ChevronDown, Mic, Info } from 'lucide-react';
 import apiClient from '@/utils/apiClient';
 import type { AudioDeviceInfo } from '@/types/api';
@@ -24,6 +25,7 @@ export const MicrophoneConfigSection: React.FC<MicrophoneConfigSectionProps> = (
   onChange,
   disabled = false
 }) => {
+  const { t } = useTranslation('configuration');
   const [devices, setDevices] = useState<AudioDeviceInfo[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedDevice, setSelectedDevice] = useState<AudioDeviceInfo | null>(null);
@@ -87,13 +89,13 @@ export const MicrophoneConfigSection: React.FC<MicrophoneConfigSectionProps> = (
     <div className="space-y-4 p-4 border rounded-lg bg-gray-50">
       <div className="flex items-center space-x-2 mb-4">
         <Mic className="h-5 w-5 text-blue-600" />
-        <h3 className="text-lg font-medium text-gray-900">Microphone Configuration</h3>
+        <h3 className="text-lg font-medium text-gray-900">{t('microphone.title')}</h3>
       </div>
 
       {/* Device Selection */}
       <div className="space-y-1">
         <label className="block text-sm font-medium text-gray-700">
-          Audio Device
+          {t('microphone.audioDevice')}
           {schema?.device_id?.required && <span className="text-red-500 ml-1">*</span>}
         </label>
         <div className="relative">
@@ -103,20 +105,20 @@ export const MicrophoneConfigSection: React.FC<MicrophoneConfigSectionProps> = (
             disabled={disabled || loading}
             className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:opacity-50 text-sm appearance-none"
           >
-            <option value="">Default device</option>
+            <option value="">{t('widgets.device.default')}</option>
             {devices.map((device) => (
               <option key={device.id} value={device.id}>
-                {device.name} {device.is_default ? '(system default)' : ''} - {device.channels}ch, {device.sample_rate}Hz
+                {device.name} {device.is_default ? t('widgets.device.systemDefault') : ''} - {device.channels}ch, {device.sample_rate}Hz
               </option>
             ))}
           </select>
           <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
         </div>
         {loading && (
-          <div className="text-xs text-gray-500">Loading audio devices...</div>
+          <div className="text-xs text-gray-500">{t('widgets.device.loading')}</div>
         )}
         {!loading && devices.length === 0 && (
-          <div className="text-xs text-red-500">No audio devices found. Check audio dependencies.</div>
+          <div className="text-xs text-red-500">{t('widgets.device.none')}</div>
         )}
         {schema?.device_id?.description && (
           <div className="flex items-center">
@@ -130,19 +132,19 @@ export const MicrophoneConfigSection: React.FC<MicrophoneConfigSectionProps> = (
       {selectedDevice && (
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1">
-            <label className="block text-sm font-medium text-gray-700">Sample Rate (Hz)</label>
+            <label className="block text-sm font-medium text-gray-700">{t('microphone.sampleRate')}</label>
             <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-600 text-sm">
               {selectedDevice.sample_rate}
             </div>
-            <div className="text-xs text-gray-500">Auto-detected from device</div>
+            <div className="text-xs text-gray-500">{t('microphone.autoDetected')}</div>
           </div>
           
           <div className="space-y-1">
-            <label className="block text-sm font-medium text-gray-700">Channels</label>
+            <label className="block text-sm font-medium text-gray-700">{t('microphone.channels')}</label>
             <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-600 text-sm">
               {selectedDevice.channels}
             </div>
-            <div className="text-xs text-gray-500">Auto-detected from device</div>
+            <div className="text-xs text-gray-500">{t('microphone.autoDetected')}</div>
           </div>
         </div>
       )}
@@ -151,7 +153,7 @@ export const MicrophoneConfigSection: React.FC<MicrophoneConfigSectionProps> = (
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-1">
           <label className="block text-sm font-medium text-gray-700">
-            Chunk Size
+            {t('microphone.chunkSize')}
             {schema?.chunk_size?.required && <span className="text-red-500 ml-1">*</span>}
           </label>
           <input
@@ -171,7 +173,7 @@ export const MicrophoneConfigSection: React.FC<MicrophoneConfigSectionProps> = (
 
         <div className="space-y-1">
           <label className="block text-sm font-medium text-gray-700">
-            Buffer Queue Size
+            {t('microphone.bufferQueueSize')}
             {schema?.buffer_queue_size?.required && <span className="text-red-500 ml-1">*</span>}
           </label>
           <input
@@ -201,7 +203,7 @@ export const MicrophoneConfigSection: React.FC<MicrophoneConfigSectionProps> = (
           className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
         />
         <label htmlFor="microphone-enabled" className="text-sm font-medium text-gray-700">
-          Enable microphone input
+          {t('microphone.enableInput')}
         </label>
       </div>
     </div>

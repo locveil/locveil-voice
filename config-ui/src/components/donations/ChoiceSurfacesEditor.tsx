@@ -7,6 +7,7 @@
  * unrecognisable when spoken in that language — the cross-language validator flags those.
  */
 
+import { useTranslation } from 'react-i18next';
 import ArrayOfStringsEditor from '@/components/editors/ArrayOfStringsEditor';
 
 interface ChoiceSurfacesEditorProps {
@@ -19,11 +20,12 @@ interface ChoiceSurfacesEditorProps {
 export default function ChoiceSurfacesEditor({
   canonicalChoices, value, onChange, disabled = false,
 }: ChoiceSurfacesEditorProps) {
+  const { t } = useTranslation('donations');
   if (canonicalChoices.length === 0) return null;
 
   return (
     <div className="border rounded-xl p-3">
-      <div className="text-sm font-medium mb-2">Choice surfaces (spoken forms per option)</div>
+      <div className="text-sm font-medium mb-2">{t('choices.title')}</div>
       <div className="space-y-3">
         {canonicalChoices.map((canonical) => (
           <div key={canonical} className="grid grid-cols-1 md:grid-cols-[140px,1fr] gap-3 items-start">
@@ -33,7 +35,7 @@ export default function ChoiceSurfacesEditor({
               value={value[canonical] ?? []}
               onChange={(forms) => onChange({ ...value, [canonical]: forms })}
               disabled={disabled}
-              placeholder="spoken form…"
+              placeholder={t('choices.spokenFormPlaceholder')}
             />
           </div>
         ))}

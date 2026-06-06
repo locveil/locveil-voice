@@ -6,6 +6,7 @@
  */
 
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { AlertCircle, AlertTriangle, Info } from 'lucide-react';
 import Badge from '@/components/ui/Badge';
 import type { ConflictReport } from '@/types';
@@ -21,6 +22,7 @@ const ConflictBadge: React.FC<ConflictBadgeProps> = ({
   className = '',
   onClick
 }) => {
+  const { t } = useTranslation('common');
   const getSeverityConfig = () => {
     switch (conflict.severity) {
       case 'blocker':
@@ -58,20 +60,20 @@ const ConflictBadge: React.FC<ConflictBadgeProps> = ({
   };
 
   const getTooltipContent = (): string => {
-    const lines = [
-      `Conflict: ${conflict.intent_a} ↔ ${conflict.intent_b}`,
-      `Type: ${formatConflictType(conflict.conflict_type)}`,
-      `Score: ${(conflict.score * 100).toFixed(1)}%`,
-      `Language: ${conflict.language.toUpperCase()}`
+    const lines: string[] = [
+      t('conflicts.tooltip.conflict', { a: conflict.intent_a, b: conflict.intent_b }),
+      t('conflicts.tooltip.type', { type: formatConflictType(conflict.conflict_type) }),
+      t('conflicts.tooltip.score', { score: (conflict.score * 100).toFixed(1) }),
+      t('conflicts.tooltip.language', { language: conflict.language.toUpperCase() })
     ];
 
     if (conflict.suggestions.length > 0) {
-      lines.push('', 'Suggestions:');
+      lines.push('', t('conflicts.suggestionsLabel'));
       conflict.suggestions.slice(0, 2).forEach(suggestion => {
         lines.push(`• ${suggestion}`);
       });
       if (conflict.suggestions.length > 2) {
-        lines.push(`• ... and ${conflict.suggestions.length - 2} more`);
+        lines.push(`• ${t('conflicts.andMore', { count: conflict.suggestions.length - 2 })}`);
       }
     }
 

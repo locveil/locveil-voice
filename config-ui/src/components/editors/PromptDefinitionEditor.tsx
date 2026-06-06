@@ -5,6 +5,7 @@
  */
 
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Trash2, Plus, ChevronDown, ChevronRight, MessageSquare } from 'lucide-react';
 import Input from '@/components/ui/Input';
 import TextArea from '@/components/ui/TextArea';
@@ -29,6 +30,7 @@ const PromptDefinitionEditor: React.FC<PromptDefinitionEditorProps> = ({
   onChange,
   onDelete
 }) => {
+  const { t } = useTranslation('prompts');
   const [isExpanded, setIsExpanded] = useState(false);
 
   const handleFieldChange = (field: keyof PromptDefinition, newValue: any) => {
@@ -61,7 +63,7 @@ const PromptDefinitionEditor: React.FC<PromptDefinitionEditorProps> = ({
   };
 
   const handleDelete = () => {
-    if (confirm(`Are you sure you want to delete the prompt "${promptName}"?`)) {
+    if (confirm(t('keyEditor.deleteConfirm', { prompt: promptName }))) {
       onDelete(promptName);
     }
   };
@@ -103,7 +105,7 @@ const PromptDefinitionEditor: React.FC<PromptDefinitionEditorProps> = ({
           type="button"
           onClick={handleDelete}
           className="text-red-600 hover:text-red-800"
-          title={`Delete prompt "${promptName}"`}
+          title={t('keyEditor.deleteTitle', { prompt: promptName })}
         >
           <Trash2 className="w-4 h-4" />
         </button>
@@ -115,45 +117,43 @@ const PromptDefinitionEditor: React.FC<PromptDefinitionEditorProps> = ({
           {/* Description */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Description *
+              {t('keyEditor.description')}
             </label>
             <Input
               value={value.description}
               onChange={(newValue) => handleFieldChange('description', newValue)}
-              placeholder="Brief description of this prompt"
+              placeholder={t('keyEditor.descriptionPlaceholder')}
             />
           </div>
 
           {/* Usage Context */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Usage Context *
+              {t('keyEditor.usageContext')}
             </label>
             <Input
               value={value.usage_context}
               onChange={(newValue) => handleFieldChange('usage_context', newValue)}
-              placeholder="When and how this prompt is used"
+              placeholder={t('keyEditor.usageContextPlaceholder')}
             />
           </div>
 
           {/* Prompt Type */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Prompt Type *
+              {t('keyEditor.promptType')}
             </label>
             <select
               value={value.prompt_type}
               onChange={(e) => handleFieldChange('prompt_type', e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="system">System</option>
-              <option value="template">Template</option>
-              <option value="user">User</option>
+              <option value="system">{t('keyEditor.types.system')}</option>
+              <option value="template">{t('keyEditor.types.template')}</option>
+              <option value="user">{t('keyEditor.types.user')}</option>
             </select>
             <p className="mt-1 text-xs text-gray-500">
-              {value.prompt_type === 'system' && 'System prompts set the AI\'s role and behavior'}
-              {value.prompt_type === 'template' && 'Template prompts are filled with variables'}
-              {value.prompt_type === 'user' && 'User prompts simulate user input'}
+              {t(`keyEditor.typeHints.${value.prompt_type}`)}
             </p>
           </div>
 
@@ -161,7 +161,7 @@ const PromptDefinitionEditor: React.FC<PromptDefinitionEditorProps> = ({
           <div>
             <div className="flex items-center justify-between mb-2">
               <label className="block text-sm font-medium text-gray-700">
-                Variables
+                {t('keyEditor.variables')}
               </label>
               <button
                 type="button"
@@ -169,14 +169,14 @@ const PromptDefinitionEditor: React.FC<PromptDefinitionEditorProps> = ({
                 className="flex items-center space-x-1 px-2 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
               >
                 <Plus className="w-3 h-3" />
-                <span>Add Variable</span>
+                <span>{t('keyEditor.addVariable')}</span>
               </button>
             </div>
-            
+
             {value.variables.length === 0 ? (
               <div className="text-center py-4 text-gray-500 border-2 border-dashed border-gray-200 rounded-md">
-                <p className="text-sm">No variables defined</p>
-                <p className="text-xs">Variables can be referenced in the prompt content using {'{variable_name}'}</p>
+                <p className="text-sm">{t('keyEditor.noVariables')}</p>
+                <p className="text-xs">{t('keyEditor.noVariablesHint')}</p>
               </div>
             ) : (
               <div className="space-y-2">
@@ -186,19 +186,19 @@ const PromptDefinitionEditor: React.FC<PromptDefinitionEditorProps> = ({
                       <Input
                         value={variable.name}
                         onChange={(newValue) => handleVariableChange(index, 'name', newValue)}
-                        placeholder="Variable name (e.g., user_input)"
+                        placeholder={t('keyEditor.variableNamePlaceholder')}
                       />
                       <Input
                         value={variable.description}
                         onChange={(newValue) => handleVariableChange(index, 'description', newValue)}
-                        placeholder="Description of this variable"
+                        placeholder={t('keyEditor.variableDescriptionPlaceholder')}
                       />
                     </div>
                     <button
                       type="button"
                       onClick={() => removeVariable(index)}
                       className="text-red-600 hover:text-red-800 mt-1"
-                      title="Remove variable"
+                      title={t('keyEditor.removeVariable')}
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -211,18 +211,18 @@ const PromptDefinitionEditor: React.FC<PromptDefinitionEditorProps> = ({
           {/* Content */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Content *
+              {t('keyEditor.content')}
             </label>
             <TextArea
               value={value.content}
               onChange={(newValue) => handleFieldChange('content', newValue)}
-              placeholder="Enter the prompt content here..."
+              placeholder={t('keyEditor.contentPlaceholder')}
               rows={6}
             />
             <div className="mt-1 text-xs text-gray-500">
-              <p>You can reference variables using curly braces: {'{variable_name}'}</p>
+              <p>{t('keyEditor.contentHint')}</p>
               {value.variables.length > 0 && (
-                <p>Available variables: {value.variables.map(v => `{${v.name}}`).join(', ')}</p>
+                <p>{t('keyEditor.availableVariables', { variables: value.variables.map(v => `{${v.name}}`).join(', ') })}</p>
               )}
             </div>
           </div>
@@ -231,7 +231,7 @@ const PromptDefinitionEditor: React.FC<PromptDefinitionEditorProps> = ({
           {value.content && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Preview
+                {t('keyEditor.preview')}
               </label>
               <div className="bg-gray-50 border rounded-md p-3">
                 <pre className="text-sm text-gray-800 whitespace-pre-wrap">{value.content}</pre>

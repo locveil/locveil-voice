@@ -6,9 +6,10 @@
  */
 
 import { useMemo } from 'react';
-import { 
-  AlertCircle, 
-  CheckCircle2, 
+import { useTranslation } from 'react-i18next';
+import {
+  AlertCircle,
+  CheckCircle2,
   Search
 } from 'lucide-react';
 import Badge from '@/components/ui/Badge';
@@ -30,6 +31,7 @@ const HandlerList: React.FC<HandlerLanguageListProps> = ({
   loading = false,
   error = null
 }) => {
+  const { t } = useTranslation('donations');
 
   // Simple filtering logic
   const filteredHandlers = useMemo(() => {
@@ -53,9 +55,9 @@ const HandlerList: React.FC<HandlerLanguageListProps> = ({
     const availableLanguages = handler.languages.length;
     
     if (availableLanguages === 0) {
-      return <Badge variant="error">No Languages</Badge>;
+      return <Badge variant="error">{t('handlerList.noLanguages')}</Badge>;
     }
-    return <Badge variant="success">Available</Badge>;
+    return <Badge variant="success">{t('handlerList.available')}</Badge>;
   };
 
   const getStatusIcon = (handler: any) => {
@@ -69,7 +71,7 @@ const HandlerList: React.FC<HandlerLanguageListProps> = ({
   if (loading) {
     return (
       <div className="w-80 bg-gray-50 border-r border-gray-200 flex items-center justify-center">
-        <div className="text-gray-500">Loading handlers...</div>
+        <div className="text-gray-500">{t('handlerList.loading')}</div>
       </div>
     );
   }
@@ -93,7 +95,7 @@ const HandlerList: React.FC<HandlerLanguageListProps> = ({
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
           <input
             type="text"
-            placeholder="Search handlers..."
+            placeholder={t('handlerList.searchPlaceholder')}
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
             className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -105,7 +107,7 @@ const HandlerList: React.FC<HandlerLanguageListProps> = ({
       <div className="flex-1 overflow-auto">
         {filteredHandlers.length === 0 ? (
           <div className="p-4 text-gray-500 text-center">
-            {searchQuery ? 'No matching handlers' : 'No handlers available'}
+            {searchQuery ? t('handlerList.noMatching') : t('handlerList.noHandlers')}
           </div>
         ) : (
           <div className="space-y-1 p-2">
@@ -143,7 +145,7 @@ const HandlerList: React.FC<HandlerLanguageListProps> = ({
       {/* Footer */}
       <div className="p-4 border-t border-gray-200 bg-white">
         <div className="text-xs text-gray-500">
-          {filteredHandlers.length} handlers
+          {t('handlerList.count', { count: filteredHandlers.length })}
         </div>
       </div>
     </div>

@@ -9,6 +9,7 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Plus, Trash2 } from 'lucide-react';
 import CardEditor from './CardEditor';
 import Input from '@/components/ui/Input';
@@ -24,6 +25,7 @@ interface ExtractionFillersEditorProps {
 }
 
 export default function ExtractionFillersEditor({ value, onChange, disabled = false }: ExtractionFillersEditorProps) {
+  const { t } = useTranslation('donations');
   const [fillers, setFillers] = useState<FillerPattern[]>(() => decompileExtractionPatterns(value ?? []));
   const lastEmitted = useRef<ExtractionPattern[]>(value ?? []);
 
@@ -53,23 +55,23 @@ export default function ExtractionFillersEditor({ value, onChange, disabled = fa
 
   return (
     <div className="space-y-2">
-      {fillers.length === 0 && <div className="text-xs text-gray-500">No extraction patterns.</div>}
+      {fillers.length === 0 && <div className="text-xs text-gray-500">{t('extraction.empty')}</div>}
       {fillers.map((filler, fi) => (
         <div key={fi} className="border rounded-lg p-2 bg-gray-50">
           <div className="flex items-center gap-2 mb-2">
-            <div className="text-xs text-gray-600">finds the value as:</div>
+            <div className="text-xs text-gray-600">{t('extraction.findsValueAs')}</div>
             <div className="flex-1" />
             <Input
               label=""
               value={filler.label ?? ''}
               onChange={(v) => setFiller(fi, { ...filler, label: v || undefined })}
-              placeholder="slot label (optional)"
+              placeholder={t('extraction.slotLabelPlaceholder')}
               disabled={disabled}
             />
             <button
               type="button"
               className="p-1 rounded-lg border bg-white hover:bg-gray-50 disabled:opacity-50"
-              onClick={() => removeFiller(fi)} disabled={disabled} title="Remove"
+              onClick={() => removeFiller(fi)} disabled={disabled} title={t('extraction.removeTitle')}
             >
               <Trash2 className="w-4 h-4" />
             </button>
@@ -84,7 +86,7 @@ export default function ExtractionFillersEditor({ value, onChange, disabled = fa
               className="inline-flex items-center gap-2 px-3 py-1.5 border rounded-lg bg-white hover:bg-gray-50 disabled:opacity-50 text-sm"
               onClick={() => addCard(fi)} disabled={disabled}
             >
-              <Plus className="w-4 h-4" /> Add word
+              <Plus className="w-4 h-4" /> {t('extraction.addWord')}
             </button>
           </div>
         </div>
@@ -94,7 +96,7 @@ export default function ExtractionFillersEditor({ value, onChange, disabled = fa
         className="inline-flex items-center gap-2 px-3 py-1.5 border rounded-lg hover:bg-gray-50 disabled:opacity-50 text-sm"
         onClick={addFiller} disabled={disabled}
       >
-        <Plus className="w-4 h-4" /> Add a way to find this value
+        <Plus className="w-4 h-4" /> {t('extraction.addWay')}
       </button>
     </div>
   );

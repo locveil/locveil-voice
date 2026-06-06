@@ -6,6 +6,7 @@
  */
 
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Lightbulb, CheckCircle, ArrowRight, X } from 'lucide-react';
 import type { ConflictReport } from '@/types';
 
@@ -22,6 +23,7 @@ const SuggestionPanel: React.FC<SuggestionPanelProps> = ({
   onDismissConflict,
   className = ''
 }) => {
+  const { t } = useTranslation('common');
   const [expandedConflicts, setExpandedConflicts] = useState<Set<string>>(new Set());
   const [appliedSuggestions, setAppliedSuggestions] = useState<Set<string>>(new Set());
 
@@ -83,7 +85,7 @@ const SuggestionPanel: React.FC<SuggestionPanelProps> = ({
       <div className="flex items-center space-x-2 p-3 border-b border-gray-200 bg-gray-50">
         <Lightbulb className="w-4 h-4 text-yellow-500" />
         <h3 className="text-sm font-medium text-gray-900">
-          Smart Suggestions ({conflictsWithSuggestions.length})
+          {t('conflicts.smartSuggestions', { count: conflictsWithSuggestions.length })}
         </h3>
       </div>
 
@@ -105,7 +107,7 @@ const SuggestionPanel: React.FC<SuggestionPanelProps> = ({
                       {conflict.intent_a} ↔ {conflict.intent_b}
                     </div>
                     <div className="text-xs text-gray-600">
-                      {conflict.conflict_type.replace(/_/g, ' ')} • {conflict.suggestions.length} suggestion{conflict.suggestions.length !== 1 ? 's' : ''}
+                      {conflict.conflict_type.replace(/_/g, ' ')} • {t('conflicts.suggestionCount', { count: conflict.suggestions.length })}
                     </div>
                   </div>
                   <ArrowRight className={`w-4 h-4 text-gray-400 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
@@ -114,7 +116,7 @@ const SuggestionPanel: React.FC<SuggestionPanelProps> = ({
                 <button
                   onClick={() => handleDismissConflict(conflict)}
                   className="p-1 text-gray-400 hover:text-gray-600 hover:bg-white hover:bg-opacity-50 rounded transition-colors"
-                  title="Dismiss conflict"
+                  title={t('conflicts.dismissConflict')}
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -135,13 +137,13 @@ const SuggestionPanel: React.FC<SuggestionPanelProps> = ({
                         
                         <div className="flex items-center justify-between">
                           <div className="text-xs text-gray-500">
-                            Suggestion {index + 1} of {conflict.suggestions.length}
+                            {t('conflicts.suggestionIndex', { index: index + 1, total: conflict.suggestions.length })}
                           </div>
-                          
+
                           {isApplied ? (
                             <div className="flex items-center space-x-1 text-green-600 text-xs">
                               <CheckCircle className="w-3 h-3" />
-                              <span>Applied</span>
+                              <span>{t('conflicts.applied')}</span>
                             </div>
                           ) : (
                             <button
@@ -149,7 +151,7 @@ const SuggestionPanel: React.FC<SuggestionPanelProps> = ({
                               className="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition-colors"
                               disabled={!onApplySuggestion}
                             >
-                              Apply
+                              {t('actions.apply')}
                             </button>
                           )}
                         </div>

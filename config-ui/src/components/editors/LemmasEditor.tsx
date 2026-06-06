@@ -1,5 +1,6 @@
 import { Plus, Trash2, AlertTriangle, RefreshCw } from 'lucide-react';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ConflictBadge } from '@/components/analysis';
 import type { ConflictReport } from '@/types';
 
@@ -24,6 +25,7 @@ export default function LemmasEditor({
   showSyncWarning = false,
   conflicts = []
 }: LemmasEditorProps) {
+  const { t } = useTranslation(['donations', 'common']);
   const [newLemma, setNewLemma] = useState('');
   
   const addLemma = (): void => {
@@ -109,13 +111,13 @@ export default function LemmasEditor({
     <div className="mb-4">
       <div className="flex items-center justify-between mb-2">
         <label className="block text-sm font-medium text-gray-700">
-          Method Lemmas
+          {t('editors.lemmas.title')}
         </label>
         <div className="flex items-center space-x-2">
           {showSyncWarning && (
             <div className="flex items-center text-amber-600 text-xs">
               <AlertTriangle className="w-3 h-3 mr-1" />
-              {suggestedLemmas.length} unsynced
+              {t('editors.lemmas.unsynced', { count: suggestedLemmas.length })}
             </div>
           )}
           {onAutoSync && suggestedLemmas.length > 0 && (
@@ -124,17 +126,17 @@ export default function LemmasEditor({
               onClick={onAutoSync}
               disabled={disabled}
               className="flex items-center text-xs px-2 py-1 bg-blue-50 text-blue-600 rounded hover:bg-blue-100 disabled:opacity-50"
-              title={`Auto-sync ${suggestedLemmas.length} lemma(s) from token patterns`}
+              title={t('editors.lemmas.syncTitle', { count: suggestedLemmas.length })}
             >
               <RefreshCw className="w-3 h-3 mr-1" />
-              Sync ({suggestedLemmas.length})
+              {t('editors.lemmas.sync', { count: suggestedLemmas.length })}
             </button>
           )}
         </div>
       </div>
       
       <p className="text-xs text-gray-500 mb-3">
-        Key lemmatized forms used for fuzzy keyword matching. Should align with token patterns.
+        {t('editors.lemmas.help')}
       </p>
 
       {/* Current lemmas */}
@@ -154,7 +156,7 @@ export default function LemmasEditor({
                   className={`w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50 ${
                     hasConflicts ? 'border-red-300 bg-red-50' : 'border-gray-300'
                   }`}
-                  placeholder="Enter lemma..."
+                  placeholder={t('editors.lemmas.placeholder')}
                 />
                 {hasConflicts && (
                   <div className="absolute right-2 top-2 flex space-x-1">
@@ -178,7 +180,7 @@ export default function LemmasEditor({
                 onClick={() => removeLemma(index)}
                 disabled={disabled}
                 className="p-2 text-red-600 hover:bg-red-50 rounded-md disabled:opacity-50"
-                title="Remove lemma"
+                title={t('editors.lemmas.removeLemma')}
               >
                 <Trash2 className="w-4 h-4" />
               </button>
@@ -196,7 +198,7 @@ export default function LemmasEditor({
           onKeyPress={handleKeyPress}
           disabled={disabled}
           className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50"
-          placeholder="Add new lemma..."
+          placeholder={t('editors.lemmas.addPlaceholder')}
         />
         <button
           type="button"
@@ -205,7 +207,7 @@ export default function LemmasEditor({
           className="flex items-center px-3 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Plus className="w-4 h-4 mr-1" />
-          Add
+          {t('common:actions.add')}
         </button>
       </div>
 
@@ -213,7 +215,7 @@ export default function LemmasEditor({
       {suggestedLemmas.length > 0 && (
         <div className="mt-3">
           <p className="text-xs text-gray-600 mb-2">
-            Suggested from token patterns:
+            {t('editors.lemmas.suggestedFrom')}
           </p>
           <div className="flex flex-wrap gap-1">
             {suggestedLemmas.map((lemma, index) => (
@@ -223,7 +225,7 @@ export default function LemmasEditor({
                 onClick={() => onChange([...value, lemma])}
                 disabled={disabled}
                 className="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200 disabled:opacity-50"
-                title={`Add "${lemma}" to lemmas`}
+                title={t('editors.lemmas.addToLemmas', { lemma })}
               >
                 + {lemma}
               </button>
@@ -234,7 +236,7 @@ export default function LemmasEditor({
 
       {/* Info about lemmas */}
       <div className="mt-2 text-xs text-gray-500">
-        <p>Lemmas are used for fuzzy keyword matching and should represent the base forms of words in your token patterns.</p>
+        <p>{t('editors.lemmas.info')}</p>
       </div>
     </div>
   );

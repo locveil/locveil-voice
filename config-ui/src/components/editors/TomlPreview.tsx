@@ -9,6 +9,7 @@
  */
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Copy, CheckCircle, Eye, EyeOff, RefreshCw, AlertCircle, GitCompare, Code, Settings } from 'lucide-react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark, oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
@@ -39,6 +40,7 @@ export const TomlPreview: React.FC<TomlPreviewProps> = ({
   className = ""
   // showDiff and originalConfig reserved for future enhancement
 }) => {
+  const { t } = useTranslation('configuration');
   // Existing state
   const [copied, setCopied] = useState(false);
   const [showSensitive, setShowSensitive] = useState(false);
@@ -81,14 +83,14 @@ export const TomlPreview: React.FC<TomlPreviewProps> = ({
       }
     } catch (error) {
       console.error('TOML validation failed:', error);
-      setTomlErrors([{ 
-        msg: 'Validation service temporarily unavailable', 
-        type: 'network_error' 
+      setTomlErrors([{
+        msg: t('toml.validationUnavailable'),
+        type: 'network_error'
       }]);
     } finally {
       setValidating(false);
     }
-  }, []);
+  }, [t]);
   
   // Debounced validation function
   const scheduleValidation = useCallback((content: string) => {
@@ -130,7 +132,7 @@ export const TomlPreview: React.FC<TomlPreviewProps> = ({
       }
     } catch (err) {
       console.error('Failed to load raw TOML:', err);
-      setError('Failed to load TOML preview. Using fallback rendering.');
+      setError(t('toml.loadFailed'));
       // Fallback to generating from config object
       const fallbackContent = generateFallbackToml(config, showSensitive);
       setRawToml(fallbackContent);
@@ -207,29 +209,29 @@ export const TomlPreview: React.FC<TomlPreviewProps> = ({
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-gray-200">
         <div className="flex items-center space-x-2">
-          <h3 className="text-lg font-medium text-gray-900">TOML Preview</h3>
+          <h3 className="text-lg font-medium text-gray-900">{t('toml.title')}</h3>
           {lastUpdated && (
             <span className="text-xs text-gray-500">
-              Updated {lastUpdated.toLocaleTimeString()}
+              {t('toml.updated', { time: lastUpdated.toLocaleTimeString() })}
             </span>
           )}
           {/* Phase 6: Validation status indicator */}
           {validating && (
             <div className="flex items-center space-x-1 text-blue-600">
               <RefreshCw className="h-3 w-3 animate-spin" />
-              <span className="text-xs">Validating...</span>
+              <span className="text-xs">{t('toml.validating')}</span>
             </div>
           )}
           {tomlErrors.length > 0 && (
-            <div className="flex items-center space-x-1 text-red-600" title={`${tomlErrors.length} validation error(s)`}>
+            <div className="flex items-center space-x-1 text-red-600" title={t('toml.validationErrorsTooltip', { count: tomlErrors.length })}>
               <AlertCircle className="h-4 w-4" />
-              <span className="text-xs">{tomlErrors.length} error(s)</span>
+              <span className="text-xs">{t('toml.errorCount', { count: tomlErrors.length })}</span>
             </div>
           )}
           {!validating && tomlErrors.length === 0 && rawToml && (
-            <div className="flex items-center space-x-1 text-green-600" title="TOML is valid">
+            <div className="flex items-center space-x-1 text-green-600" title={t('toml.validTooltip')}>
               <CheckCircle className="h-3 w-3" />
-              <span className="text-xs">Valid</span>
+              <span className="text-xs">{t('toml.valid')}</span>
             </div>
           )}
         </div>
@@ -245,7 +247,7 @@ export const TomlPreview: React.FC<TomlPreviewProps> = ({
                   ? 'bg-blue-500 text-white' 
                   : 'bg-white text-gray-700 hover:bg-gray-50'
               }`}
-              title="Preview mode"
+              title={t('toml.previewMode')}
             >
               <Code className="h-3 w-3" />
             </button>
@@ -257,7 +259,7 @@ export const TomlPreview: React.FC<TomlPreviewProps> = ({
                     ? 'bg-blue-500 text-white' 
                     : 'bg-white text-gray-700 hover:bg-gray-50'
                 }`}
-                title="Diff view"
+                title={t('toml.diffView')}
               >
                 <GitCompare className="h-3 w-3" />
               </button>
@@ -269,7 +271,7 @@ export const TomlPreview: React.FC<TomlPreviewProps> = ({
                   ? 'bg-blue-500 text-white' 
                   : 'bg-white text-gray-700 hover:bg-gray-50'
               }`}
-              title="Advanced editor"
+              title={t('toml.advancedEditor')}
             >
               <Settings className="h-3 w-3" />
             </button>
@@ -278,7 +280,7 @@ export const TomlPreview: React.FC<TomlPreviewProps> = ({
           {error && (
             <div className="flex items-center space-x-1 text-amber-600" title={error}>
               <AlertCircle className="h-4 w-4" />
-              <span className="text-xs">Fallback</span>
+              <span className="text-xs">{t('toml.fallback')}</span>
             </div>
           )}
           
@@ -286,7 +288,7 @@ export const TomlPreview: React.FC<TomlPreviewProps> = ({
           <button
             onClick={toggleTheme}
             className="p-2 text-gray-500 hover:text-gray-700 rounded-md hover:bg-gray-100"
-            title={`Switch to ${themeMode === 'light' ? 'dark' : 'light'} theme`}
+            title={themeMode === 'light' ? t('toml.switchToDark') : t('toml.switchToLight')}
           >
             {themeMode === 'light' ? '🌙' : '☀️'}
           </button>
@@ -299,7 +301,7 @@ export const TomlPreview: React.FC<TomlPreviewProps> = ({
                 ? 'text-blue-600 hover:text-blue-700' 
                 : 'text-gray-500 hover:text-gray-700'
             }`}
-            title={syntaxHighlighting ? 'Disable syntax highlighting' : 'Enable syntax highlighting'}
+            title={syntaxHighlighting ? t('toml.disableHighlighting') : t('toml.enableHighlighting')}
           >
             <Code className="h-4 w-4" />
           </button>
@@ -307,7 +309,7 @@ export const TomlPreview: React.FC<TomlPreviewProps> = ({
           <button
             onClick={handleRefresh}
             className="p-2 text-gray-500 hover:text-gray-700 rounded-md hover:bg-gray-100"
-            title="Refresh TOML content"
+            title={t('toml.refresh')}
             disabled={loading}
           >
             <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
@@ -315,7 +317,7 @@ export const TomlPreview: React.FC<TomlPreviewProps> = ({
           <button
             onClick={toggleSensitive}
             className="p-2 text-gray-500 hover:text-gray-700 rounded-md hover:bg-gray-100"
-            title={showSensitive ? "Hide sensitive values" : "Show sensitive values"}
+            title={showSensitive ? t('toml.hideSensitive') : t('toml.showSensitive')}
           >
             {showSensitive ? (
               <EyeOff className="h-4 w-4" />
@@ -331,12 +333,12 @@ export const TomlPreview: React.FC<TomlPreviewProps> = ({
             {copied ? (
               <>
                 <CheckCircle className="h-4 w-4 text-green-500" />
-                <span>Copied!</span>
+                <span>{t('toml.copied')}</span>
               </>
             ) : (
               <>
                 <Copy className="h-4 w-4" />
-                <span>Copy</span>
+                <span>{t('toml.copy')}</span>
               </>
             )}
           </button>
@@ -348,7 +350,7 @@ export const TomlPreview: React.FC<TomlPreviewProps> = ({
         {loading ? (
           <div className="flex items-center justify-center p-8 text-gray-500">
             <RefreshCw className="h-6 w-6 animate-spin mr-2" />
-            <span>Loading TOML content...</span>
+            <span>{t('toml.loading')}</span>
           </div>
         ) : (
           <>
@@ -383,7 +385,6 @@ export const TomlPreview: React.FC<TomlPreviewProps> = ({
               <DiffViewer
                 original={originalToml}
                 modified={rawToml}
-                title="Configuration Changes"
                 language="toml"
                 theme={themeMode}
                 height="500px"
@@ -393,7 +394,7 @@ export const TomlPreview: React.FC<TomlPreviewProps> = ({
             {viewMode === 'editor' && (
               <div className="space-y-4">
                 <div className="text-sm text-gray-600 mb-2">
-                  Advanced TOML editor (read-only preview)
+                  {t('toml.advancedEditorNote')}
                 </div>
                 {/* Monaco Editor for enhanced editing experience */}
                 <div 
@@ -433,7 +434,7 @@ export const TomlPreview: React.FC<TomlPreviewProps> = ({
             <div className="flex items-start space-x-2">
               <AlertCircle className="h-4 w-4 text-amber-500 mt-0.5 flex-shrink-0" />
               <div>
-                <div className="font-medium">Fallback Mode</div>
+                <div className="font-medium">{t('toml.fallbackMode')}</div>
                 <div className="mt-1">{error}</div>
               </div>
             </div>

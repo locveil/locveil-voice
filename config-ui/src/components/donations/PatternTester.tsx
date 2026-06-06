@@ -5,6 +5,7 @@
  */
 
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Play, CheckCircle2, XCircle } from 'lucide-react';
 import apiClient from '@/utils/apiClient';
 import type { RecognizeResponse } from '@/types';
@@ -16,6 +17,7 @@ interface PatternTesterProps {
 }
 
 export default function PatternTester({ expectedIntent, placeholder }: PatternTesterProps) {
+  const { t } = useTranslation(['donations', 'common']);
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<RecognizeResponse | null>(null);
@@ -28,7 +30,7 @@ export default function PatternTester({ expectedIntent, placeholder }: PatternTe
       setResult(await apiClient.recognizeText(text.trim()));
     } catch (e) {
       // 422 = nothing recognized; surface it plainly.
-      setError(e instanceof Error ? e.message : 'Recognition failed');
+      setError(e instanceof Error ? e.message : t('tester.recognitionFailed'));
     } finally {
       setBusy(false);
     }
@@ -42,7 +44,7 @@ export default function PatternTester({ expectedIntent, placeholder }: PatternTe
       <div className="flex items-center gap-2">
         <input
           className="flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          placeholder={placeholder ?? 'Type something a user might say…'}
+          placeholder={placeholder ?? t('tester.placeholder')}
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') void run(); }}
@@ -52,7 +54,7 @@ export default function PatternTester({ expectedIntent, placeholder }: PatternTe
           className="inline-flex items-center gap-1 px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
           onClick={() => void run()} disabled={busy || !text.trim()}
         >
-          <Play className="w-4 h-4" /> Test
+          <Play className="w-4 h-4" /> {t('common:actions.test')}
         </button>
       </div>
 
@@ -64,18 +66,18 @@ export default function PatternTester({ expectedIntent, placeholder }: PatternTe
             {matched === true && <CheckCircle2 className="w-4 h-4 text-green-600" />}
             {matched === false && <XCircle className="w-4 h-4 text-red-600" />}
             <span>
-              Recognized <b>{result.name}</b>
+              {t('tester.recognized')} <b>{result.name}</b>
               {typeof result.confidence === 'number' && (
                 <span className="text-gray-500"> ({Math.round(result.confidence * 100)}%)</span>
               )}
               {matched === false && expectedIntent && (
-                <span className="text-red-600"> — expected {expectedIntent}</span>
+                <span className="text-red-600"> {t('tester.expected', { intent: expectedIntent })}</span>
               )}
             </span>
           </div>
           {Object.keys(entities).length > 0 && (
             <div className="mt-1 text-gray-700">
-              Values:{' '}
+              {t('tester.values')}{' '}
               {Object.entries(entities).map(([k, v]) => (
                 <span key={k} className="inline-block mr-2">
                   <span className="font-mono text-gray-500">{k}</span>=<b>{String(v)}</b>

@@ -6,6 +6,7 @@
  */
 
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { DiffEditor } from '@monaco-editor/react';
 
 interface DiffViewerProps {
@@ -21,20 +22,21 @@ interface DiffViewerProps {
 export const DiffViewer: React.FC<DiffViewerProps> = ({
   original,
   modified,
-  title = "Configuration Changes",
+  title,
   language = "toml",
   theme = 'light',
   height = "400px",
   className = ""
 }) => {
+  const { t } = useTranslation('configuration');
   return (
     <div className={`border border-gray-200 rounded-lg ${className}`}>
       {/* Header */}
       <div className="flex items-center justify-between p-3 border-b border-gray-200 bg-gray-50">
-        <h4 className="text-sm font-medium text-gray-900">{title}</h4>
+        <h4 className="text-sm font-medium text-gray-900">{title || t('diff.title')}</h4>
         <div className="flex items-center space-x-2 text-xs text-gray-500">
-          <span className="px-2 py-1 bg-red-100 text-red-700 rounded">- Original</span>
-          <span className="px-2 py-1 bg-green-100 text-green-700 rounded">+ Modified</span>
+          <span className="px-2 py-1 bg-red-100 text-red-700 rounded">{t('diff.original')}</span>
+          <span className="px-2 py-1 bg-green-100 text-green-700 rounded">{t('diff.modified')}</span>
         </div>
       </div>
       
@@ -65,7 +67,7 @@ export const DiffViewer: React.FC<DiffViewerProps> = ({
           loading={
             <div className="flex items-center justify-center p-8 text-gray-500">
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500 mr-2"></div>
-              <span>Loading diff viewer...</span>
+              <span>{t('diff.loading')}</span>
             </div>
           }
         />

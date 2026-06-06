@@ -9,6 +9,7 @@
  */
 
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Plus, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
 import { 
   parseSpacyAttribute, 
@@ -37,9 +38,10 @@ function StructuredAttributeEditor({
   attributeName: _, // Mark as unused with underscore
   structure, 
   onChange, 
-  onRemove, 
-  disabled 
+  onRemove,
+  disabled
 }: StructuredAttributeEditorProps) {
+  const { t } = useTranslation('donations');
   const [isExpanded, setIsExpanded] = useState(true);
 
   const handleValueChange = (newValue: any) => {
@@ -87,7 +89,7 @@ function StructuredAttributeEditor({
           onClick={onRemove}
           className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
           disabled={disabled}
-          title="Remove attribute"
+          title={t('editors.spacy.removeAttribute')}
         >
           <Trash2 className="w-4 h-4" />
         </button>
@@ -99,7 +101,7 @@ function StructuredAttributeEditor({
           {/* Description/Help */}
           {structure.isComplex && (
             <div className="text-sm text-gray-600 bg-blue-50 border border-blue-200 rounded p-2">
-              <strong>{structure.attributeName}</strong> with <strong>{structure.valueType}</strong> matching
+              {t('editors.spacy.matchPrefix')}<strong>{structure.attributeName}</strong>{t('editors.spacy.matchInfix')}<strong>{structure.valueType}</strong>{t('editors.spacy.matchSuffix')}
             </div>
           )}
           
@@ -118,9 +120,10 @@ function StructuredAttributeEditor({
 // Main SpaCy Attribute Editor component
 export default function SpacyAttributeEditor({ 
   value, 
-  onChange, 
-  disabled = false 
+  onChange,
+  disabled = false
 }: SpacyAttributeEditorProps) {
+  const { t } = useTranslation(['donations', 'common']);
   const [showAddForm, setShowAddForm] = useState(false);
   const [newAttributeName, setNewAttributeName] = useState('');
 
@@ -186,8 +189,8 @@ export default function SpacyAttributeEditor({
         </div>
       ) : (
         <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg border border-gray-200">
-          <div className="text-sm font-medium mb-1">No attributes defined</div>
-          <div className="text-xs">Add SpaCy attributes to define token matching patterns</div>
+          <div className="text-sm font-medium mb-1">{t('editors.spacy.noAttributes')}</div>
+          <div className="text-xs">{t('editors.spacy.addHint')}</div>
         </div>
       )}
 
@@ -199,39 +202,39 @@ export default function SpacyAttributeEditor({
           disabled={disabled}
         >
           <Plus className="w-4 h-4" />
-          Add attribute
+          {t('editors.spacy.addAttribute')}
         </button>
       ) : (
         <div className="border border-gray-200 rounded-lg p-3 bg-gray-50">
           <div className="space-y-3">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Attribute Name
+                {t('editors.spacy.attributeName')}
               </label>
               <select
                 value={newAttributeName}
                 onChange={(e) => setNewAttributeName(e.target.value)}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
-                <option value="">Select attribute...</option>
+                <option value="">{t('editors.spacy.selectAttribute')}</option>
                 {getAttributeSuggestions().map(attr => (
                   <option key={attr} value={attr}>{attr}</option>
                 ))}
-                <option value="custom">Custom attribute...</option>
+                <option value="custom">{t('editors.spacy.customAttribute')}</option>
               </select>
             </div>
             
             {newAttributeName === 'custom' && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Custom Attribute Name
+                  {t('editors.spacy.customAttributeName')}
                 </label>
                 <input
                   type="text"
                   value=""
                   onChange={(e) => setNewAttributeName(e.target.value)}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Enter custom attribute name..."
+                  placeholder={t('editors.spacy.customAttributePlaceholder')}
                 />
               </div>
             )}
@@ -242,7 +245,7 @@ export default function SpacyAttributeEditor({
                 disabled={!newAttributeName || disabled}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors text-sm"
               >
-                Add
+                {t('common:actions.add')}
               </button>
               <button
                 onClick={() => {
@@ -252,7 +255,7 @@ export default function SpacyAttributeEditor({
                 className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors text-sm"
                 disabled={disabled}
               >
-                Cancel
+                {t('common:actions.cancel')}
               </button>
             </div>
           </div>

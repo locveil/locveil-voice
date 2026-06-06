@@ -7,6 +7,7 @@
  */
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { AlertCircle, MessageSquare, Code } from 'lucide-react';
 
 // Import reusable components from donations
@@ -37,6 +38,7 @@ interface PromptValidationResult {
 }
 
 const PromptsPage: React.FC = () => {
+  const { t } = useTranslation(['prompts', 'common']);
   // Core state management
   const [handlers, setHandlers] = useState<HandlerLanguageInfo[]>([]);
   const [selectedHandler, setSelectedHandler] = useState<string | null>(null);
@@ -104,6 +106,7 @@ const PromptsPage: React.FC = () => {
     if (selectedHandler && selectedLanguage) {
       void loadPromptData(selectedHandler, selectedLanguage);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional scoped/mount load (load fns are not memoized)
   }, [selectedHandler, selectedLanguage]);
 
   const loadHandlers = async () => {
@@ -125,7 +128,7 @@ const PromptsPage: React.FC = () => {
       }
     } catch (err) {
       console.error('Failed to load prompt handlers:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load handlers');
+      setError(err instanceof Error ? err.message : t('page.errors.loadHandlers'));
       setHandlers([]);
     } finally {
       setLoading(false);
@@ -140,7 +143,7 @@ const PromptsPage: React.FC = () => {
       setOriginalPromptData(response.prompt_data);
     } catch (err) {
       console.error('Failed to load prompt data:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load prompt data');
+      setError(err instanceof Error ? err.message : t('page.errors.loadData'));
       setPromptData({});
       setOriginalPromptData({});
     }
@@ -204,11 +207,11 @@ const PromptsPage: React.FC = () => {
           // Success feedback could go here
         }, 1000);
       } else {
-        throw new Error('Save operation failed');
+        throw new Error(t('page.errors.saveFailed'));
       }
     } catch (err) {
       console.error('Failed to save prompt data:', err);
-      setError(err instanceof Error ? err.message : 'Failed to save prompt data');
+      setError(err instanceof Error ? err.message : t('page.errors.save'));
     } finally {
       setSaving(false);
     }
@@ -218,7 +221,7 @@ const PromptsPage: React.FC = () => {
     if (!selectedHandler || !selectedLanguage) {
       return {
         valid: false,
-        errors: ['No handler or language selected'],
+        errors: [t('page.errors.noSelection')],
         warnings: []
       };
     }
@@ -235,11 +238,11 @@ const PromptsPage: React.FC = () => {
 
       const result = {
         valid: response.is_valid,
-        errors: response.errors.map(e => 
-          typeof e === 'string' ? e : (e as any).message || 'Validation error'
+        errors: response.errors.map(e =>
+          typeof e === 'string' ? e : (e as any).message || t('page.errors.validationError')
         ),
-        warnings: response.warnings.map(w => 
-          typeof w === 'string' ? w : w.message || 'Validation warning'
+        warnings: response.warnings.map(w =>
+          typeof w === 'string' ? w : w.message || t('page.errors.validationWarning')
         )
       };
 
@@ -252,10 +255,10 @@ const PromptsPage: React.FC = () => {
       return result;
     } catch (err) {
       console.error('Failed to validate prompt data:', err);
-      setError(err instanceof Error ? err.message : 'Failed to validate prompt data');
+      setError(err instanceof Error ? err.message : t('page.errors.validate'));
       return {
         valid: false,
-        errors: [err instanceof Error ? err.message : 'Failed to validate'],
+        errors: [err instanceof Error ? err.message : t('page.errors.validateShort')],
         warnings: []
       };
     } finally {
@@ -281,7 +284,7 @@ const PromptsPage: React.FC = () => {
       }
     } catch (err) {
       console.error('Failed to create language:', err);
-      setError(err instanceof Error ? err.message : 'Failed to create language');
+      setError(err instanceof Error ? err.message : t('page.errors.createLanguage'));
     }
   };
 
@@ -302,7 +305,7 @@ const PromptsPage: React.FC = () => {
       }
     } catch (err) {
       console.error('Failed to delete language:', err);
-      setError(err instanceof Error ? err.message : 'Failed to delete language');
+      setError(err instanceof Error ? err.message : t('page.errors.deleteLanguage'));
     }
   };
 
@@ -342,7 +345,7 @@ const PromptsPage: React.FC = () => {
       <div className="p-6">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-yellow-600 mx-auto"></div>
-          <p className="mt-2 text-gray-600">Loading prompt handlers...</p>
+          <p className="mt-2 text-gray-600">{t('page.loading')}</p>
         </div>
       </div>
     );
@@ -353,17 +356,17 @@ const PromptsPage: React.FC = () => {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Prompt Management</h1>
-          <p className="text-gray-600">Manage LLM prompts for intent handlers</p>
+          <h1 className="text-2xl font-bold text-gray-900">{t('page.title')}</h1>
+          <p className="text-gray-600">{t('page.subtitle')}</p>
         </div>
         <div className="flex items-center space-x-2 mt-1">
           <Badge variant="info">
             <MessageSquare className="w-3 h-3 mr-1" />
-            Prompt Editor
+            {t('page.badge')}
           </Badge>
           {hasChanges && (
             <Badge variant="warning">
-              Unsaved Changes
+              {t('page.unsavedChanges')}
             </Badge>
           )}
         </div>
@@ -375,7 +378,7 @@ const PromptsPage: React.FC = () => {
           <div className="flex">
             <AlertCircle className="h-5 w-5 text-red-400" />
             <div className="ml-3">
-              <h3 className="text-sm font-medium text-red-800">Error</h3>
+              <h3 className="text-sm font-medium text-red-800">{t('common:status.error')}</h3>
               <p className="mt-1 text-sm text-red-700">{error}</p>
             </div>
           </div>
@@ -448,16 +451,16 @@ const PromptsPage: React.FC = () => {
               ) : (
                 <div className="text-center py-12">
                   <MessageSquare className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No Language Selected</h3>
-                  <p className="text-gray-600">Select a language to edit prompts</p>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">{t('page.noLanguage.title')}</h3>
+                  <p className="text-gray-600">{t('page.noLanguage.subtitle')}</p>
                 </div>
               )}
             </div>
           ) : (
             <div className="text-center py-12">
               <Code className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No Handler Selected</h3>
-              <p className="text-gray-600">Select a handler to manage its prompts</p>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">{t('page.noHandler.title')}</h3>
+              <p className="text-gray-600">{t('page.noHandler.subtitle')}</p>
             </div>
           )}
         </div>

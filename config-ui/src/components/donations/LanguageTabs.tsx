@@ -6,6 +6,7 @@
  */
 
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Plus, X, AlertTriangle, CheckCircle, Clock, Shield } from 'lucide-react';
 import Badge from '@/components/ui/Badge';
 import type { ValidationReport, CompletenessReport } from '@/types/api';
@@ -49,6 +50,7 @@ const LanguageTabs: React.FC<LanguageTabsProps> = ({
   completenessReport,
   onRefreshValidation
 }) => {
+  const { t } = useTranslation(['donations', 'common']);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newLanguageCode, setNewLanguageCode] = useState('');
   const [templateLanguage, setTemplateLanguage] = useState('');
@@ -91,10 +93,10 @@ const LanguageTabs: React.FC<LanguageTabsProps> = ({
       return <Badge variant="warning">{language.validationErrors}</Badge>;
     }
     if (language.status === 'error') {
-      return <Badge variant="error">Error</Badge>;
+      return <Badge variant="error">{t('languageTabs.error')}</Badge>;
     }
     if (language.status === 'missing') {
-      return <Badge variant="default">Missing</Badge>;
+      return <Badge variant="default">{t('languageTabs.missing')}</Badge>;
     }
     return null;
   };
@@ -121,10 +123,10 @@ const LanguageTabs: React.FC<LanguageTabsProps> = ({
   const getValidationSummary = () => {
     const issues = [];
     if (validationReport && !validationReport.parameter_consistency) {
-      issues.push(`${validationReport.missing_parameters.length + validationReport.type_mismatches.length} parameter issues`);
+      issues.push(t('languageTabs.parameterIssuesSummary', { count: validationReport.missing_parameters.length + validationReport.type_mismatches.length }));
     }
     if (completenessReport && !completenessReport.method_completeness) {
-      issues.push(`${completenessReport.missing_methods.length + completenessReport.extra_methods.length} method issues`);
+      issues.push(t('languageTabs.methodIssuesSummary', { count: completenessReport.missing_methods.length + completenessReport.extra_methods.length }));
     }
     return issues.join(', ');
   };
@@ -165,7 +167,7 @@ const LanguageTabs: React.FC<LanguageTabsProps> = ({
                     onDeleteLanguage(language.code);
                   }}
                   className="ml-1 p-0.5 text-gray-400 hover:text-red-600 transition-colors"
-                  title={`Delete ${getLanguageLabel(language.code)}`}
+                  title={t('languageTabs.deleteLanguage', { language: getLanguageLabel(language.code) })}
                 >
                   <X className="w-3 h-3" />
                 </button>
@@ -180,10 +182,10 @@ const LanguageTabs: React.FC<LanguageTabsProps> = ({
                 <button
                   onClick={() => setShowCreateForm(true)}
                   className="flex items-center space-x-1 px-3 py-2 text-sm text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
-                  title="Add new language"
+                  title={t('languageTabs.addLanguageTitle')}
                 >
                   <Plus className="w-4 h-4" />
-                  <span>Add Language</span>
+                  <span>{t('languageTabs.addLanguage')}</span>
                 </button>
               ) : (
                 <div className="flex items-center space-x-2 p-2 bg-gray-50 rounded-md border">
@@ -192,7 +194,7 @@ const LanguageTabs: React.FC<LanguageTabsProps> = ({
                     onChange={(e) => setNewLanguageCode(e.target.value)}
                     className="text-sm border border-gray-300 rounded px-2 py-1"
                   >
-                    <option value="">Select language...</option>
+                    <option value="">{t('languageTabs.selectLanguage')}</option>
                     {missingLanguages.map(lang => (
                       <option key={lang} value={lang}>
                         {getLanguageLabel(lang)}
@@ -206,10 +208,10 @@ const LanguageTabs: React.FC<LanguageTabsProps> = ({
                       onChange={(e) => setTemplateLanguage(e.target.value)}
                       className="text-sm border border-gray-300 rounded px-2 py-1"
                     >
-                      <option value="">From scratch</option>
+                      <option value="">{t('languageTabs.fromScratch')}</option>
                       {availableLanguages.map(lang => (
                         <option key={lang.code} value={lang.code}>
-                          Copy from {getLanguageLabel(lang.code)}
+                          {t('languageTabs.copyFrom', { language: getLanguageLabel(lang.code) })}
                         </option>
                       ))}
                     </select>
@@ -220,9 +222,9 @@ const LanguageTabs: React.FC<LanguageTabsProps> = ({
                     disabled={!newLanguageCode}
                     className="px-2 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
                   >
-                    Create
+                    {t('languageTabs.create')}
                   </button>
-                  
+
                   <button
                     onClick={() => {
                       setShowCreateForm(false);
@@ -231,7 +233,7 @@ const LanguageTabs: React.FC<LanguageTabsProps> = ({
                     }}
                     className="px-2 py-1 text-sm text-gray-600 hover:text-gray-800"
                   >
-                    Cancel
+                    {t('common:actions.cancel')}
                   </button>
                 </div>
               )}
@@ -242,7 +244,7 @@ const LanguageTabs: React.FC<LanguageTabsProps> = ({
         {/* Language Info and Cross-Language Validation */}
         <div className="flex items-center space-x-4 text-sm">
           <span className="text-gray-500">
-            {availableLanguages.length} of {supportedLanguages.length} languages
+            {t('languageTabs.languageCount', { available: availableLanguages.length, total: supportedLanguages.length })}
           </span>
           
           {/* Phase 4: Cross-language validation status */}
@@ -256,15 +258,15 @@ const LanguageTabs: React.FC<LanguageTabsProps> = ({
               ) : (
                 <Badge variant="success" className="flex items-center space-x-1">
                   <CheckCircle className="w-3 h-3" />
-                  <span>Synchronized</span>
+                  <span>{t('languageTabs.synchronized')}</span>
                 </Badge>
               )}
-              
+
               {onRefreshValidation && (
                 <button
                   onClick={onRefreshValidation}
                   className="text-blue-600 hover:text-blue-800 p-1 rounded"
-                  title="Refresh validation"
+                  title={t('languageTabs.refreshValidationTitle')}
                 >
                   <Shield className="w-4 h-4" />
                 </button>
@@ -283,7 +285,7 @@ const LanguageTabs: React.FC<LanguageTabsProps> = ({
               }}
               className="text-blue-600 hover:text-blue-800"
             >
-              Compare Languages
+              {t('languageTabs.compareLanguages')}
             </button>
           )}
         </div>
@@ -295,7 +297,7 @@ const LanguageTabs: React.FC<LanguageTabsProps> = ({
           <div className="flex items-center space-x-2 text-sm text-yellow-800">
             <AlertTriangle className="w-4 h-4" />
             <span>
-              Missing languages: {missingLanguages.map(getLanguageLabel).join(', ')}
+              {t('languageTabs.missingLanguages', { languages: missingLanguages.map(getLanguageLabel).join(', ') })}
             </span>
           </div>
         </div>
@@ -306,13 +308,13 @@ const LanguageTabs: React.FC<LanguageTabsProps> = ({
         <div className="px-4 py-3 bg-red-50 border-t border-red-200">
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <h4 className="text-sm font-medium text-red-800">Cross-Language Validation Issues</h4>
+              <h4 className="text-sm font-medium text-red-800">{t('languageTabs.issuesTitle')}</h4>
               {onRefreshValidation && (
                 <button
                   onClick={onRefreshValidation}
                   className="text-xs text-red-600 hover:text-red-800"
                 >
-                  Refresh validation
+                  {t('languageTabs.refreshValidation')}
                 </button>
               )}
             </div>
@@ -320,13 +322,13 @@ const LanguageTabs: React.FC<LanguageTabsProps> = ({
             {/* Parameter Consistency Issues */}
             {validationReport && !validationReport.parameter_consistency && (
               <div className="text-sm text-red-700">
-                <div className="font-medium mb-1">Parameter Issues:</div>
+                <div className="font-medium mb-1">{t('languageTabs.parameterIssues')}</div>
                 <ul className="list-disc list-inside text-xs space-y-1">
                   {validationReport.missing_parameters.map((issue, index) => (
-                    <li key={`missing-${index}`}>Missing parameter: {issue}</li>
+                    <li key={`missing-${index}`}>{t('languageTabs.missingParameter', { issue })}</li>
                   ))}
                   {validationReport.type_mismatches.map((issue, index) => (
-                    <li key={`mismatch-${index}`}>Type mismatch: {issue}</li>
+                    <li key={`mismatch-${index}`}>{t('languageTabs.typeMismatch', { issue })}</li>
                   ))}
                 </ul>
               </div>
@@ -335,13 +337,13 @@ const LanguageTabs: React.FC<LanguageTabsProps> = ({
             {/* Method Completeness Issues */}
             {completenessReport && !completenessReport.method_completeness && (
               <div className="text-sm text-red-700">
-                <div className="font-medium mb-1">Method Issues:</div>
+                <div className="font-medium mb-1">{t('languageTabs.methodIssues')}</div>
                 <ul className="list-disc list-inside text-xs space-y-1">
                   {completenessReport.missing_methods.map((issue, index) => (
-                    <li key={`missing-method-${index}`}>Missing method: {issue}</li>
+                    <li key={`missing-method-${index}`}>{t('languageTabs.missingMethod', { issue })}</li>
                   ))}
                   {completenessReport.extra_methods.map((issue, index) => (
-                    <li key={`extra-method-${index}`}>Extra method: {issue}</li>
+                    <li key={`extra-method-${index}`}>{t('languageTabs.extraMethod', { issue })}</li>
                   ))}
                 </ul>
               </div>

@@ -8,6 +8,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ChevronDown, ChevronRight, Save, TestTube, AlertCircle, CheckCircle, Loader } from 'lucide-react';
 import { ConfigWidget } from './ConfigWidgets';
 import MicrophoneConfigSection from './MicrophoneConfigSection';
@@ -78,6 +79,7 @@ export const ConfigSection: React.FC<ConfigSectionProps> = ({
   onRollbackToPersisted,
   onRollbackToTested
 }) => {
+  const { t } = useTranslation('configuration');
   const [isExpanded, setIsExpanded] = useState(false);
   const [isValidating, setIsValidating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -208,7 +210,7 @@ export const ConfigSection: React.FC<ConfigSectionProps> = ({
           {schema && (
             <ConfigSection
               name={`${name}_general`}
-              title="General Settings"
+              title={t('section.generalSettings')}
               data={Object.fromEntries(
                 Object.entries(data).filter(([key]) => key !== 'providers')
               )}
@@ -233,7 +235,7 @@ export const ConfigSection: React.FC<ConfigSectionProps> = ({
               <ConfigSection
                 key={providerName}
                 name={`${name}_${providerName}`}
-                title={`${providerName.charAt(0).toUpperCase() + providerName.slice(1)} Provider`}
+                title={t('section.providerTitle', { name: providerName.charAt(0).toUpperCase() + providerName.slice(1) })}
                 data={providerData}
                 schema={providerSchema}
                 onChange={(newProviderData) => {
@@ -363,7 +365,7 @@ export const ConfigSection: React.FC<ConfigSectionProps> = ({
             </h3>
             {level === 1 && schema && (
               <p className="text-sm text-gray-500 mt-1">
-                {Object.keys(schema).length} settings
+                {t('section.settingsCount', { count: Object.keys(schema).length })}
               </p>
             )}
           </div>
@@ -419,7 +421,7 @@ export const ConfigSection: React.FC<ConfigSectionProps> = ({
                   }}
                   disabled={isValidating || disabled}
                   className="p-1 text-blue-600 hover:text-blue-800 disabled:opacity-50"
-                  title="Validate section"
+                  title={t('section.validateSection')}
                 >
                   <TestTube className="h-4 w-4" />
                 </button>
@@ -433,7 +435,7 @@ export const ConfigSection: React.FC<ConfigSectionProps> = ({
                   }}
                   disabled={isSaving || disabled}
                   className="p-1 text-green-600 hover:text-green-800 disabled:opacity-50"
-                  title="Apply changes"
+                  title={t('section.applyChanges')}
                 >
                   <Save className="h-4 w-4" />
                 </button>
@@ -449,7 +451,7 @@ export const ConfigSection: React.FC<ConfigSectionProps> = ({
           <div className="bg-red-50 border border-red-200 rounded-md p-3">
             <div className="flex items-center">
               <AlertCircle className="h-4 w-4 text-red-500 mr-2" />
-              <span className="text-sm font-medium text-red-800">Validation Errors</span>
+              <span className="text-sm font-medium text-red-800">{t('section.validationErrors')}</span>
             </div>
             <ul className="mt-2 text-sm text-red-700 space-y-1">
               {validationResult.errors?.map((error, index) => (

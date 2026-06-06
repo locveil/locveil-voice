@@ -6,6 +6,7 @@
  */
 
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { CheckCircle, AlertCircle, AlertTriangle, Clock } from 'lucide-react';
 import type { NLUValidationResult } from '@/types';
 
@@ -20,11 +21,12 @@ const ValidationIndicator: React.FC<ValidationIndicatorProps> = ({
   isValidating = false,
   className = ''
 }) => {
+  const { t } = useTranslation('common');
   if (isValidating) {
     return (
       <div className={`flex items-center space-x-2 ${className}`}>
         <Clock className="w-4 h-4 animate-spin text-blue-500" />
-        <span className="text-sm text-blue-600">Validating...</span>
+        <span className="text-sm text-blue-600">{t('validation.validating')}</span>
       </div>
     );
   }
@@ -33,7 +35,7 @@ const ValidationIndicator: React.FC<ValidationIndicatorProps> = ({
     return (
       <div className={`flex items-center space-x-2 text-gray-500 ${className}`}>
         <div className="w-4 h-4 border border-gray-300 rounded-full"></div>
-        <span className="text-sm">Not validated</span>
+        <span className="text-sm">{t('validation.notValidated')}</span>
       </div>
     );
   }
@@ -45,26 +47,26 @@ const ValidationIndicator: React.FC<ValidationIndicatorProps> = ({
         color: 'text-red-600',
         bgColor: 'bg-red-50',
         borderColor: 'border-red-200',
-        message: 'Validation failed'
+        message: t('validation.failed')
       };
     }
-    
+
     if (result.has_warnings) {
       return {
         icon: AlertTriangle,
         color: 'text-yellow-600',
         bgColor: 'bg-yellow-50',
         borderColor: 'border-yellow-200',
-        message: 'Validation passed with warnings'
+        message: t('validation.passedWithWarnings')
       };
     }
-    
+
     return {
       icon: CheckCircle,
       color: 'text-green-600',
       bgColor: 'bg-green-50',
       borderColor: 'border-green-200',
-      message: 'Validation passed'
+      message: t('validation.passed')
     };
   };
 
@@ -73,7 +75,7 @@ const ValidationIndicator: React.FC<ValidationIndicatorProps> = ({
 
   const getConflictSummary = () => {
     if (!result.conflicts || result.conflicts.length === 0) {
-      return 'No conflicts detected';
+      return t('conflicts.status.none');
     }
 
     const blockers = result.conflicts.filter(c => c.severity === 'blocker').length;
@@ -81,9 +83,9 @@ const ValidationIndicator: React.FC<ValidationIndicatorProps> = ({
     const infos = result.conflicts.filter(c => c.severity === 'info').length;
 
     const parts = [];
-    if (blockers > 0) parts.push(`${blockers} blocker${blockers !== 1 ? 's' : ''}`);
-    if (warnings > 0) parts.push(`${warnings} warning${warnings !== 1 ? 's' : ''}`);
-    if (infos > 0) parts.push(`${infos} info`);
+    if (blockers > 0) parts.push(t('conflicts.count.blockers', { count: blockers }));
+    if (warnings > 0) parts.push(t('conflicts.count.warnings', { count: warnings }));
+    if (infos > 0) parts.push(t('conflicts.count.info', { count: infos }));
 
     return parts.join(', ');
   };
@@ -100,7 +102,7 @@ const ValidationIndicator: React.FC<ValidationIndicatorProps> = ({
         </span>
         {result.validation_time_ms && (
           <span className="text-xs text-gray-500">
-            Validated in {result.validation_time_ms.toFixed(1)}ms
+            {t('validation.validatedIn', { ms: result.validation_time_ms.toFixed(1) })}
           </span>
         )}
       </div>

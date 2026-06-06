@@ -5,6 +5,7 @@
  */
 
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { TestTube, Loader } from 'lucide-react';
 import type { 
   TTSConfig, ASRConfig, AudioConfig, LLMConfig, NLUConfig, 
@@ -70,6 +71,7 @@ export const TestConfigButton: React.FC<TestConfigButtonProps> = ({
   showPreview = false,
   hasChanges = true
 }) => {
+  const { t } = useTranslation('common');
   const handleClick = async () => {
     if (disabled || loading) return;
     
@@ -135,16 +137,16 @@ export const TestConfigButton: React.FC<TestConfigButtonProps> = ({
     
     // Add key configuration details based on component type
     if ('enabled' in config) {
-      preview.push(`Enabled: ${config.enabled}`);
+      preview.push(t('workflow.preview.enabled', { value: String(config.enabled) }));
     }
     if ('default_provider' in config && config.default_provider) {
-      preview.push(`Provider: ${config.default_provider}`);
+      preview.push(t('workflow.preview.provider', { value: config.default_provider }));
     }
     if ('fallback_providers' in config && config.fallback_providers && config.fallback_providers.length > 0) {
-      preview.push(`Fallbacks: ${config.fallback_providers.join(', ')}`);
+      preview.push(t('workflow.preview.fallbacks', { value: config.fallback_providers.join(', ') }));
     }
-    
-    return preview.length > 0 ? `\n\nWill apply:\n${preview.join('\n')}` : '';
+
+    return preview.length > 0 ? `\n\n${t('workflow.preview.willApply')}\n${preview.join('\n')}` : '';
   };
 
   return (
@@ -159,9 +161,9 @@ export const TestConfigButton: React.FC<TestConfigButtonProps> = ({
         ${className}
       `}
       title={
-        disabled && !hasChanges 
-          ? `No changes to test for ${getComponentDisplayName()}`
-          : `Test ${getComponentDisplayName()} configuration${getPreviewText()}`
+        disabled && !hasChanges
+          ? t('workflow.noChangesToTest', { component: getComponentDisplayName() })
+          : t('workflow.testConfigTitle', { component: getComponentDisplayName(), preview: getPreviewText() })
       }
     >
       {loading ? (
@@ -169,7 +171,7 @@ export const TestConfigButton: React.FC<TestConfigButtonProps> = ({
       ) : (
         <TestTube className={`${size === 'sm' ? 'h-3 w-3' : size === 'lg' ? 'h-5 w-5' : 'h-4 w-4'} mr-2`} />
       )}
-      {loading ? 'Testing...' : disabled && !hasChanges ? 'No Changes' : 'Test Config'}
+      {loading ? t('workflow.testing') : disabled && !hasChanges ? t('workflow.noChanges') : t('workflow.testConfig')}
     </button>
   );
 };

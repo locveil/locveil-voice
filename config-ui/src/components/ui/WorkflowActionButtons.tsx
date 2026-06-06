@@ -5,6 +5,7 @@
  */
 
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Save, RotateCcw, AlertTriangle, Loader } from 'lucide-react';
 import { ComponentName } from './TestConfigButton';
 
@@ -39,6 +40,7 @@ export const WorkflowActionButtons: React.FC<WorkflowActionButtonsProps> = ({
   className = '',
   size = 'sm'
 }) => {
+  const { t } = useTranslation('common');
   const [persisting, setPersisting] = React.useState(false);
 
   const handlePersist = async () => {
@@ -106,14 +108,14 @@ export const WorkflowActionButtons: React.FC<WorkflowActionButtonsProps> = ({
               : 'bg-green-600 text-white hover:bg-green-700 active:bg-green-800'
             }
           `}
-          title={`Persist tested ${getComponentDisplayName()} configuration to TOML`}
+          title={t('workflow.persistTitle', { component: getComponentDisplayName() })}
         >
           {persisting ? (
             <Loader className={`${getIconSize()} animate-spin mr-1`} />
           ) : (
             <Save className={`${getIconSize()} mr-1`} />
           )}
-          {persisting ? 'Persisting...' : 'Persist to TOML'}
+          {persisting ? t('workflow.persisting') : t('workflow.persistToToml')}
         </button>
       )}
 
@@ -131,10 +133,10 @@ export const WorkflowActionButtons: React.FC<WorkflowActionButtonsProps> = ({
               ${getSizeClasses()}
               ${loading ? 'opacity-50 cursor-not-allowed' : ''}
             `}
-            title={`Rollback ${getComponentDisplayName()} to last tested configuration`}
+            title={t('workflow.rollbackToTestedTitle', { component: getComponentDisplayName() })}
           >
             <RotateCcw className={`${getIconSize()} mr-1`} />
-            Rollback to Tested
+            {t('workflow.rollbackToTested')}
           </button>
         )}
 
@@ -150,10 +152,10 @@ export const WorkflowActionButtons: React.FC<WorkflowActionButtonsProps> = ({
               ${getSizeClasses()}
               ${loading ? 'opacity-50 cursor-not-allowed' : ''}
             `}
-            title={`Rollback ${getComponentDisplayName()} to last persisted (TOML) configuration`}
+            title={t('workflow.rollbackToTomlTitle', { component: getComponentDisplayName() })}
           >
             <RotateCcw className={`${getIconSize()} mr-1`} />
-            Rollback to TOML
+            {t('workflow.rollbackToToml')}
           </button>
         )}
       </div>
@@ -167,10 +169,10 @@ export const WorkflowActionButtons: React.FC<WorkflowActionButtonsProps> = ({
             bg-red-50 border border-red-200 text-red-600
             ${getSizeClasses()}
           `}
-          title={`${getComponentDisplayName()} has conflicts between runtime and TOML configuration`}
+          title={t('workflow.conflictTitle', { component: getComponentDisplayName() })}
         >
           <AlertTriangle className={`${getIconSize()} mr-1`} />
-          Conflict
+          {t('workflow.conflict')}
         </div>
       )}
     </div>

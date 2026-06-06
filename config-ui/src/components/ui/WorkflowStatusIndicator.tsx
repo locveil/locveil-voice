@@ -5,6 +5,7 @@
  */
 
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { CheckCircle, TestTube, Save, AlertTriangle, Clock, FileText } from 'lucide-react';
 
 export type WorkflowStateType = 'pristine' | 'edited' | 'tested' | 'persisted' | 'conflict';
@@ -34,6 +35,7 @@ export const WorkflowStatusIndicator: React.FC<WorkflowStatusIndicatorProps> = (
   size = 'md',
   showDetails = false
 }) => {
+  const { t } = useTranslation('common');
   const getStateConfig = () => {
     switch (stateType) {
       case 'pristine':
@@ -43,8 +45,8 @@ export const WorkflowStatusIndicator: React.FC<WorkflowStatusIndicatorProps> = (
           borderColor: 'border-gray-200',
           textColor: 'text-gray-600',
           iconColor: 'text-gray-400',
-          label: 'Pristine',
-          description: 'No changes made'
+          label: t('workflow.states.pristine.label'),
+          description: t('workflow.states.pristine.description')
         };
       case 'edited':
         return {
@@ -53,8 +55,8 @@ export const WorkflowStatusIndicator: React.FC<WorkflowStatusIndicatorProps> = (
           borderColor: 'border-orange-200',
           textColor: 'text-orange-800',
           iconColor: 'text-orange-600',
-          label: 'Edited',
-          description: 'Changes pending test'
+          label: t('workflow.states.edited.label'),
+          description: t('workflow.states.edited.description')
         };
       case 'tested':
         return {
@@ -63,8 +65,8 @@ export const WorkflowStatusIndicator: React.FC<WorkflowStatusIndicatorProps> = (
           borderColor: 'border-blue-200',
           textColor: 'text-blue-800',
           iconColor: 'text-blue-600',
-          label: 'Tested',
-          description: 'Ready to persist'
+          label: t('workflow.states.tested.label'),
+          description: t('workflow.states.tested.description')
         };
       case 'persisted':
         return {
@@ -73,8 +75,8 @@ export const WorkflowStatusIndicator: React.FC<WorkflowStatusIndicatorProps> = (
           borderColor: 'border-green-200',
           textColor: 'text-green-800',
           iconColor: 'text-green-600',
-          label: 'Persisted',
-          description: 'Saved to TOML'
+          label: t('workflow.states.persisted.label'),
+          description: t('workflow.states.persisted.description')
         };
       case 'conflict':
         return {
@@ -83,8 +85,8 @@ export const WorkflowStatusIndicator: React.FC<WorkflowStatusIndicatorProps> = (
           borderColor: 'border-red-200',
           textColor: 'text-red-800',
           iconColor: 'text-red-600',
-          label: 'Conflict',
-          description: 'Runtime/TOML mismatch'
+          label: t('workflow.states.conflict.label'),
+          description: t('workflow.states.conflict.description')
         };
     }
   };
@@ -116,19 +118,22 @@ export const WorkflowStatusIndicator: React.FC<WorkflowStatusIndicatorProps> = (
   const getWorkflowSteps = () => {
     const steps = [
       {
-        name: 'Edit',
+        id: 'edit',
+        name: t('workflow.steps.edit'),
         completed: status.hasChanges,
         active: status.hasChanges && !status.isTested,
         icon: <Clock className="h-3 w-3" />
       },
       {
-        name: 'Test',
+        id: 'test',
+        name: t('workflow.steps.test'),
         completed: status.isTested,
         active: status.isTested && !status.isPersisted,
         icon: <TestTube className="h-3 w-3" />
       },
       {
-        name: 'Persist',
+        id: 'persist',
+        name: t('workflow.steps.persist'),
         completed: status.isPersisted && status.isTested,
         active: false,
         icon: <Save className="h-3 w-3" />
@@ -155,7 +160,7 @@ export const WorkflowStatusIndicator: React.FC<WorkflowStatusIndicatorProps> = (
             {/* Workflow progress steps */}
             <div className="flex items-center mt-1 space-x-1">
               {getWorkflowSteps().map((step, index) => (
-                <div key={step.name} className="flex items-center">
+                <div key={step.id} className="flex items-center">
                   <div
                     className={`
                       flex items-center justify-center w-4 h-4 rounded-full text-xs
@@ -166,7 +171,7 @@ export const WorkflowStatusIndicator: React.FC<WorkflowStatusIndicatorProps> = (
                         : 'bg-gray-100 text-gray-400 border border-gray-200'
                       }
                     `}
-                    title={`${step.name} ${step.completed ? 'completed' : step.active ? 'active' : 'pending'}`}
+                    title={t('workflow.stepTitle', { step: step.name, status: step.completed ? t('workflow.stepStatus.completed') : step.active ? t('workflow.stepStatus.active') : t('workflow.stepStatus.pending') })}
                   >
                     {step.icon}
                   </div>

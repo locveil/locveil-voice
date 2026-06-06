@@ -6,8 +6,24 @@
  */
 
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Plus, Trash2 } from 'lucide-react';
 import { SpacyAttributeStructure, getOperatorOptions } from '@/utils/spacyAttributeHelpers';
+
+type OperatorKey =
+  | 'zeroOrOne' | 'zeroOrMore' | 'oneOrMore' | 'negation'
+  | 'exactly2' | 'between2And4' | 'twoOrMore' | 'upTo4' | 'custom';
+
+const OPERATOR_KEYS: Record<string, OperatorKey> = {
+  '?': 'zeroOrOne',
+  '*': 'zeroOrMore',
+  '+': 'oneOrMore',
+  '!': 'negation',
+  '{2}': 'exactly2',
+  '{2,4}': 'between2And4',
+  '{2,}': 'twoOrMore',
+  '{,4}': 'upTo4',
+};
 
 interface SpacyValueEditorProps {
   structure: SpacyAttributeStructure;
@@ -20,6 +36,7 @@ const SpacyValueEditor: React.FC<SpacyValueEditorProps> = ({
   onChange,
   disabled = false
 }) => {
+  const { t } = useTranslation('donations');
   const { valueType, editableValue } = structure;
 
   // String input for simple text values and regex patterns
@@ -42,8 +59,8 @@ const SpacyValueEditor: React.FC<SpacyValueEditorProps> = ({
       className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
       disabled={disabled}
     >
-      <option value="true">True</option>
-      <option value="false">False</option>
+      <option value="true">{t('editors.spacyValue.true')}</option>
+      <option value="false">{t('editors.spacyValue.false')}</option>
     </select>
   );
 
@@ -69,10 +86,10 @@ const SpacyValueEditor: React.FC<SpacyValueEditorProps> = ({
         className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
         disabled={disabled}
       >
-        <option value="">Select operator...</option>
+        <option value="">{t('editors.spacyValue.selectOperator')}</option>
         {operators.map(op => (
           <option key={op} value={op}>
-            {op} - {getOperatorDescription(op)}
+            {op} - {t(`editors.spacyValue.operator.${OPERATOR_KEYS[op] ?? 'custom'}` as const)}
           </option>
         ))}
       </select>
@@ -109,7 +126,7 @@ const SpacyValueEditor: React.FC<SpacyValueEditorProps> = ({
                 value={item}
                 onChange={(e) => updateItem(index, e.target.value)}
                 className="flex-1 border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder={`Item ${index + 1}`}
+                placeholder={t('editors.spacyValue.itemPlaceholder', { index: index + 1 })}
                 disabled={disabled}
               />
               <button
@@ -117,7 +134,7 @@ const SpacyValueEditor: React.FC<SpacyValueEditorProps> = ({
                 onClick={() => removeItem(index)}
                 className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
                 disabled={disabled}
-                title="Remove item"
+                title={t('editors.spacyValue.removeItem')}
               >
                 <Trash2 className="w-4 h-4" />
               </button>
@@ -132,12 +149,12 @@ const SpacyValueEditor: React.FC<SpacyValueEditorProps> = ({
           disabled={disabled}
         >
           <Plus className="w-4 h-4" />
-          Add item
+          {t('editors.spacyValue.addItem')}
         </button>
-        
+
         {listValue.length === 0 && (
           <div className="text-sm text-gray-500 italic">
-            No items yet. Click "Add item" to get started.
+            {t('editors.spacyValue.noItems')}
           </div>
         )}
       </div>
@@ -148,14 +165,14 @@ const SpacyValueEditor: React.FC<SpacyValueEditorProps> = ({
   const renderJsonInput = () => (
     <div className="space-y-2">
       <div className="text-xs text-yellow-700 bg-yellow-50 border border-yellow-200 rounded p-2">
-        ⚠️ Custom JSON structure - edit carefully to maintain validity
+        {t('editors.spacyValue.jsonWarning')}
       </div>
       <textarea
         value={editableValue || ''}
         onChange={(e) => onChange(e.target.value)}
         className="w-full border rounded-lg px-3 py-2 text-sm font-mono focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
         rows={3}
-        placeholder="Enter valid JSON..."
+        placeholder={t('editors.spacyValue.jsonPlaceholder')}
         disabled={disabled}
       />
     </div>
@@ -167,7 +184,7 @@ const SpacyValueEditor: React.FC<SpacyValueEditorProps> = ({
       return renderStringInput();
     
     case 'regex':
-      return renderStringInput('Enter regex pattern (e.g., word1|word2)');
+      return renderStringInput(t('editors.spacyValue.regexPlaceholder'));
     
     case 'boolean':
       return renderBooleanInput();
@@ -188,21 +205,5 @@ const SpacyValueEditor: React.FC<SpacyValueEditorProps> = ({
       return renderStringInput();
   }
 };
-
-// Helper function to get operator descriptions
-function getOperatorDescription(op: string): string {
-  const descriptions: Record<string, string> = {
-    '?': 'Zero or one',
-    '*': 'Zero or more',
-    '+': 'One or more',
-    '!': 'Negation',
-    '{2}': 'Exactly 2',
-    '{2,4}': 'Between 2 and 4',
-    '{2,}': '2 or more',
-    '{,4}': 'Up to 4'
-  };
-  
-  return descriptions[op] || 'Custom quantifier';
-}
 
 export default SpacyValueEditor;

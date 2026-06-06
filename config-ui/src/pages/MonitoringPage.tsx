@@ -6,17 +6,20 @@
  */
 
 import { Activity, BarChart3, TrendingUp } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 const MonitoringPage: React.FC = () => {
+  const { t } = useTranslation('monitoring');
+
   return (
     <div className="p-6 max-w-7xl mx-auto">
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">
-          System Monitoring
+          {t('page.title')}
         </h1>
         <p className="text-gray-600">
-          Monitor system performance, component health, and real-time metrics.
+          {t('page.subtitle')}
         </p>
       </div>
 
@@ -27,27 +30,24 @@ const MonitoringPage: React.FC = () => {
           <BarChart3 className="h-12 w-12 text-gray-300" />
           <TrendingUp className="h-12 w-12 text-gray-300" />
         </div>
-        
+
         <h2 className="text-2xl font-semibold text-gray-900 mb-4">
-          Monitoring Dashboard Coming Soon
+          {t('page.comingSoonTitle')}
         </h2>
-        
+
         <p className="text-gray-600 max-w-2xl mx-auto mb-6">
-          The monitoring dashboard will provide comprehensive system metrics, 
-          component health status, performance analytics, and real-time updates 
-          via WebSocket connections. This feature is planned for Phase 2 of the 
-          admin interface development.
+          {t('page.comingSoonBody')}
         </p>
 
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 max-w-2xl mx-auto">
-          <h3 className="font-semibold text-blue-900 mb-2">Planned Features:</h3>
+          <h3 className="font-semibold text-blue-900 mb-2">{t('page.plannedFeaturesTitle')}</h3>
           <ul className="text-sm text-blue-800 text-left space-y-1">
-            <li>• Real-time system metrics and performance data</li>
-            <li>• Component health status and diagnostics</li>
-            <li>• Memory usage and cleanup recommendations</li>
-            <li>• Intent processing analytics and success rates</li>
-            <li>• Session analytics and user satisfaction metrics</li>
-            <li>• WebSocket-based live updates</li>
+            <li>• {t('features.metrics')}</li>
+            <li>• {t('features.health')}</li>
+            <li>• {t('features.memory')}</li>
+            <li>• {t('features.intent')}</li>
+            <li>• {t('features.session')}</li>
+            <li>• {t('features.websocket')}</li>
           </ul>
         </div>
       </div>

@@ -7,6 +7,7 @@
  */
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { AlertCircle, FileText, Code } from 'lucide-react';
 
 // Import reusable components from donations
@@ -37,6 +38,7 @@ interface TemplateValidationResult {
 }
 
 const TemplatesPage: React.FC = () => {
+  const { t } = useTranslation(['templates', 'common']);
   // Core state management
   const [handlers, setHandlers] = useState<HandlerLanguageInfo[]>([]);
   const [selectedHandler, setSelectedHandler] = useState<string | null>(null);
@@ -68,6 +70,7 @@ const TemplatesPage: React.FC = () => {
   // Load handlers on component mount
   useEffect(() => {
     void loadHandlers();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional scoped/mount load (load fns are not memoized)
   }, []);
 
   // Check for changes when template data changes
@@ -129,7 +132,7 @@ const TemplatesPage: React.FC = () => {
       }
     } catch (err) {
       console.error('Failed to load template handlers:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load template handlers');
+      setError(err instanceof Error ? err.message : t('page.errors.loadHandlers'));
       // Set empty array on error to prevent undefined access
       setHandlers([]);
     } finally {
@@ -157,7 +160,7 @@ const TemplatesPage: React.FC = () => {
       
     } catch (err) {
       console.error('Failed to load template data:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load template data');
+      setError(err instanceof Error ? err.message : t('page.errors.loadData'));
       
       // Reset to empty state on error
       setTemplateData({});
@@ -172,6 +175,7 @@ const TemplatesPage: React.FC = () => {
     if (selectedHandler && selectedLanguage) {
       void loadTemplateData(selectedHandler, selectedLanguage);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional scoped/mount load (load fns are not memoized)
   }, [selectedHandler, selectedLanguage]);
 
   const handleHandlerSelect = useCallback((handlerName: string) => {
@@ -238,11 +242,11 @@ const TemplatesPage: React.FC = () => {
           }));
         }
       } else {
-        setError('Failed to save template: ' + (response.errors || []).map((e: any) => e.message).join(', '));
+        setError(t('page.errors.saveWithReason', { reason: (response.errors || []).map((e: any) => e.message).join(', ') }));
       }
     } catch (err) {
       console.error('Failed to save template:', err);
-      setError(err instanceof Error ? err.message : 'Failed to save template');
+      setError(err instanceof Error ? err.message : t('page.errors.save'));
     } finally {
       setSaving(false);
     }
@@ -252,7 +256,7 @@ const TemplatesPage: React.FC = () => {
     if (!selectedHandler || !selectedLanguage) {
       return {
         valid: false,
-        errors: ['No handler or language selected'],
+        errors: [t('page.errors.noSelection')],
         warnings: [],
         details: null
       };
@@ -285,11 +289,11 @@ const TemplatesPage: React.FC = () => {
       
     } catch (err) {
       console.error('Failed to validate template:', err);
-      setError(err instanceof Error ? err.message : 'Failed to validate template');
-      
+      setError(err instanceof Error ? err.message : t('page.errors.validate'));
+
       return {
         valid: false,
-        errors: [err instanceof Error ? err.message : 'Failed to validate template'],
+        errors: [err instanceof Error ? err.message : t('page.errors.validate')],
         warnings: [],
         details: null
       };
@@ -323,7 +327,7 @@ const TemplatesPage: React.FC = () => {
       }
     } catch (err) {
       console.error('Failed to create template language:', err);
-      setError(err instanceof Error ? err.message : 'Failed to create template language');
+      setError(err instanceof Error ? err.message : t('page.errors.createLanguage'));
     }
   };
 
@@ -346,7 +350,7 @@ const TemplatesPage: React.FC = () => {
       }
     } catch (err) {
       console.error('Failed to delete template language:', err);
-      setError(err instanceof Error ? err.message : 'Failed to delete template language');
+      setError(err instanceof Error ? err.message : t('page.errors.deleteLanguage'));
     }
   };
 
@@ -395,17 +399,17 @@ const TemplatesPage: React.FC = () => {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Template Management</h1>
-          <p className="text-gray-600">Manage response templates for intent handlers</p>
+          <h1 className="text-2xl font-bold text-gray-900">{t('page.title')}</h1>
+          <p className="text-gray-600">{t('page.subtitle')}</p>
         </div>
         <div className="flex items-center space-x-2 mt-1">
           <Badge variant="info">
             <Code className="w-3 h-3 mr-1" />
-            YAML Editor
+            {t('page.badge')}
           </Badge>
           {hasChanges && (
             <Badge variant="warning">
-              Unsaved Changes
+              {t('page.unsavedChanges')}
             </Badge>
           )}
         </div>
@@ -417,7 +421,7 @@ const TemplatesPage: React.FC = () => {
           <div className="flex">
             <AlertCircle className="h-5 w-5 text-red-400" />
             <div className="ml-3">
-              <h3 className="text-sm font-medium text-red-800">Error</h3>
+              <h3 className="text-sm font-medium text-red-800">{t('common:status.error')}</h3>
               <p className="mt-1 text-sm text-red-700">{error}</p>
             </div>
           </div>
@@ -473,10 +477,10 @@ const TemplatesPage: React.FC = () => {
 
                   {/* Validation Results */}
                   {(!validationResult.isValid || validationResult.warnings.length > 0) && (
-                    <Section title="Validation Results">
+                    <Section title={t('page.validationResults')}>
                       {validationResult.errors.length > 0 && (
                         <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
-                          <h4 className="text-sm font-medium text-red-800 mb-1">Errors:</h4>
+                          <h4 className="text-sm font-medium text-red-800 mb-1">{t('page.errorsHeading')}</h4>
                           <ul className="text-sm text-red-700 list-disc list-inside">
                             {validationResult.errors.map((error, index) => (
                               <li key={index}>{error}</li>
@@ -487,7 +491,7 @@ const TemplatesPage: React.FC = () => {
                       
                       {validationResult.warnings.length > 0 && (
                         <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-md">
-                          <h4 className="text-sm font-medium text-yellow-800 mb-1">Warnings:</h4>
+                          <h4 className="text-sm font-medium text-yellow-800 mb-1">{t('page.warningsHeading')}</h4>
                           <ul className="text-sm text-yellow-700 list-disc list-inside">
                             {validationResult.warnings.map((warning, index) => (
                               <li key={index}>{warning}</li>
@@ -512,16 +516,16 @@ const TemplatesPage: React.FC = () => {
               ) : (
                 <div className="text-center py-12">
                   <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No Language Selected</h3>
-                  <p className="text-gray-600">Select a language to edit templates</p>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">{t('page.noLanguage.title')}</h3>
+                  <p className="text-gray-600">{t('page.noLanguage.subtitle')}</p>
                 </div>
               )}
             </div>
           ) : (
             <div className="text-center py-12">
               <Code className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No Handler Selected</h3>
-              <p className="text-gray-600">Select a handler to manage its templates</p>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">{t('page.noHandler.title')}</h3>
+              <p className="text-gray-600">{t('page.noHandler.subtitle')}</p>
             </div>
           )}
         </div>

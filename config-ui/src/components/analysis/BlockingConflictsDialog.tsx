@@ -6,6 +6,7 @@
  */
 
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { X, AlertCircle, ArrowRight } from 'lucide-react';
 import ConflictBadge from './ConflictBadge';
 import ConflictTooltip from './ConflictTooltip';
@@ -24,6 +25,7 @@ const BlockingConflictsDialog: React.FC<BlockingConflictsDialogProps> = ({
   onClose,
   className = ''
 }) => {
+  const { t } = useTranslation('common');
   const blockingConflicts = conflicts.filter(c => c.severity === 'blocker');
 
   if (blockingConflicts.length === 0) {
@@ -42,7 +44,7 @@ const BlockingConflictsDialog: React.FC<BlockingConflictsDialogProps> = ({
           <div className="flex items-center space-x-2">
             <AlertCircle className="w-5 h-5 text-red-500" />
             <h2 className="text-lg font-semibold text-red-900">
-              Blocking Conflicts Detected
+              {t('conflicts.blockingTitle')}
             </h2>
           </div>
           <button
@@ -57,7 +59,7 @@ const BlockingConflictsDialog: React.FC<BlockingConflictsDialogProps> = ({
         <div className="p-4">
           <div className="mb-4">
             <p className="text-sm text-gray-700">
-              The following {blockingConflicts.length} blocking conflict{blockingConflicts.length !== 1 ? 's' : ''} must be resolved before saving:
+              {t('conflicts.mustResolve', { count: blockingConflicts.length })}
             </p>
           </div>
 
@@ -72,7 +74,7 @@ const BlockingConflictsDialog: React.FC<BlockingConflictsDialogProps> = ({
                     <div className="flex-1">
                       <div className="flex items-center space-x-2 mb-2">
                         <span className="text-sm font-medium text-red-900">
-                          Conflict #{index + 1}
+                          {t('conflicts.conflictNumber', { index: index + 1 })}
                         </span>
                         <ConflictBadge conflict={conflict} />
                       </div>
@@ -98,7 +100,7 @@ const BlockingConflictsDialog: React.FC<BlockingConflictsDialogProps> = ({
                   {conflict.suggestions.length > 0 && (
                     <div className="space-y-2">
                       <div className="text-xs font-medium text-red-800 mb-2">
-                        Suggested Resolutions:
+                        {t('conflicts.suggestedResolutions')}
                       </div>
                       {conflict.suggestions.slice(0, 2).map((suggestion, suggestionIndex) => (
                         <div key={suggestionIndex} className="bg-white border rounded p-2 text-sm text-gray-700">
@@ -108,14 +110,14 @@ const BlockingConflictsDialog: React.FC<BlockingConflictsDialogProps> = ({
                               onClick={() => onResolve(conflictId)}
                               className="text-xs bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700 transition-colors"
                             >
-                              Apply This Fix
+                              {t('conflicts.applyThisFix')}
                             </button>
                           )}
                         </div>
                       ))}
                       {conflict.suggestions.length > 2 && (
                         <div className="text-xs text-gray-600 italic">
-                          ... and {conflict.suggestions.length - 2} more suggestions available
+                          {t('conflicts.andMoreSuggestionsAvailable', { count: conflict.suggestions.length - 2 })}
                         </div>
                       )}
                     </div>
@@ -129,14 +131,14 @@ const BlockingConflictsDialog: React.FC<BlockingConflictsDialogProps> = ({
         {/* Footer */}
         <div className="flex items-center justify-between p-4 border-t border-gray-200 bg-gray-50">
           <div className="text-sm text-gray-600">
-            Resolve all blocking conflicts to enable saving
+            {t('conflicts.resolveAllToSave')}
           </div>
           <div className="flex space-x-2">
             <button
               onClick={onClose}
               className="px-4 py-2 text-sm border border-gray-300 rounded hover:bg-gray-100 transition-colors"
             >
-              Close
+              {t('actions.close')}
             </button>
           </div>
         </div>

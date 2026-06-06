@@ -6,6 +6,7 @@
  */
 
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { AlertCircle, AlertTriangle, Info } from 'lucide-react';
 
 interface ValidationError {
@@ -24,6 +25,7 @@ export const ValidationErrorDisplay: React.FC<ValidationErrorDisplayProps> = ({
   errors,
   className = ""
 }) => {
+  const { t } = useTranslation('configuration');
   if (errors.length === 0) {
     return null;
   }
@@ -59,15 +61,15 @@ export const ValidationErrorDisplay: React.FC<ValidationErrorDisplayProps> = ({
   const getErrorTitle = (errorType: string) => {
     switch (errorType) {
       case 'syntax_error':
-        return 'Syntax Error';
+        return t('validation.errorTitles.syntax');
       case 'parse_error':
-        return 'Parse Error';
+        return t('validation.errorTitles.parse');
       case 'validation_error':
-        return 'Validation Error';
+        return t('validation.errorTitles.validation');
       case 'network_error':
-        return 'Network Error';
+        return t('validation.errorTitles.network');
       default:
-        return 'Error';
+        return t('validation.errorTitles.default');
     }
   };
 
@@ -75,10 +77,10 @@ export const ValidationErrorDisplay: React.FC<ValidationErrorDisplayProps> = ({
     <div className={`mt-4 space-y-2 ${className}`}>
       <div className="flex items-center space-x-2">
         <h4 className="text-sm font-medium text-red-800">
-          Validation Errors ({errors.length})
+          {t('validation.title', { count: errors.length })}
         </h4>
         <div className="text-xs text-gray-500">
-          Fix these issues before saving
+          {t('validation.fixBeforeSaving')}
         </div>
       </div>
       
@@ -94,7 +96,7 @@ export const ValidationErrorDisplay: React.FC<ValidationErrorDisplayProps> = ({
                 {getErrorTitle(error.type)}
                 {error.line && error.column && (
                   <span className="ml-2 text-xs font-normal text-gray-600">
-                    Line {error.line}, Column {error.column}
+                    {t('validation.lineColumn', { line: error.line, column: error.column })}
                   </span>
                 )}
               </div>

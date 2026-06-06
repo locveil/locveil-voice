@@ -6,7 +6,8 @@
  */
 
 import { useState } from 'react';
-import { 
+import { useTranslation } from 'react-i18next';
+import {
   AlertTriangle,
   CheckCircle,
   RefreshCw,
@@ -43,6 +44,7 @@ const CrossLanguageValidation: React.FC<CrossLanguageValidationProps> = ({
   isLoading = false,
   disabled = false
 }) => {
+  const { t } = useTranslation('donations');
   const [expanded, setExpanded] = useState(false);
   const [showParameterDetails, setShowParameterDetails] = useState(false);
   const [showMethodDetails, setShowMethodDetails] = useState(false);
@@ -65,7 +67,7 @@ const CrossLanguageValidation: React.FC<CrossLanguageValidationProps> = ({
       <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
         <div className="flex items-center space-x-2 text-sm text-gray-600">
           <Info className="w-4 h-4" />
-          <span>Single language handler - cross-language validation not applicable</span>
+          <span>{t('crossLang.notApplicable')}</span>
         </div>
       </div>
     );
@@ -89,7 +91,7 @@ const CrossLanguageValidation: React.FC<CrossLanguageValidationProps> = ({
               )}
               <div className="flex items-center space-x-2">
                 <Settings className="w-5 h-5 text-blue-600" />
-                <h3 className="text-lg font-semibold text-gray-900">Cross-Language Validation</h3>
+                <h3 className="text-lg font-semibold text-gray-900">{t('crossLang.title')}</h3>
               </div>
             </button>
             
@@ -99,12 +101,12 @@ const CrossLanguageValidation: React.FC<CrossLanguageValidationProps> = ({
                 {hasIssues ? (
                   <Badge variant="warning" className="flex items-center space-x-1">
                     <AlertTriangle className="w-3 h-3" />
-                    <span>{totalIssues} issues</span>
+                    <span>{t('crossLang.issues', { count: totalIssues })}</span>
                   </Badge>
                 ) : (
                   <Badge variant="success" className="flex items-center space-x-1">
                     <CheckCircle className="w-3 h-3" />
-                    <span>Synchronized</span>
+                    <span>{t('crossLang.synchronized')}</span>
                   </Badge>
                 )}
               </div>
@@ -123,10 +125,10 @@ const CrossLanguageValidation: React.FC<CrossLanguageValidationProps> = ({
                   : 'bg-blue-50 text-blue-700 hover:bg-blue-100'
                 }
               `}
-              title="Refresh validation status"
+              title={t('crossLang.refreshTitle')}
             >
               <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
-              <span>Refresh</span>
+              <span>{t('crossLang.refresh')}</span>
             </button>
 
           </div>
@@ -135,13 +137,18 @@ const CrossLanguageValidation: React.FC<CrossLanguageValidationProps> = ({
         {/* Summary Info */}
         <div className="mt-3 text-sm text-gray-600">
           <span>
-            Comparing {handlerInfo.languages.length} languages: {handlerInfo.languages.map(lang => lang.toUpperCase()).join(', ')}
+            {t('crossLang.comparing', {
+              count: handlerInfo.languages.length,
+              languages: handlerInfo.languages.map(lang => lang.toUpperCase()).join(', '),
+            })}
           </span>
           {hasValidationData && (
             <span className="ml-2">
-              • Last checked: {new Date(
-                (validationReport?.timestamp || completenessReport?.timestamp || 0) * 1000
-              ).toLocaleTimeString()}
+              {t('crossLang.lastChecked', {
+                time: new Date(
+                  (validationReport?.timestamp || completenessReport?.timestamp || 0) * 1000
+                ).toLocaleTimeString(),
+              })}
             </span>
           )}
         </div>
@@ -154,9 +161,9 @@ const CrossLanguageValidation: React.FC<CrossLanguageValidationProps> = ({
             <div className="flex items-center justify-center py-8 text-gray-500">
               <div className="text-center">
                 <RefreshCw className="w-8 h-8 mx-auto mb-2 text-gray-400" />
-                <p>Click "Refresh" to run cross-language validation</p>
+                <p>{t('crossLang.clickRefresh')}</p>
                 <p className="text-xs mt-2 text-gray-400">
-                  Note: This feature requires backend API support
+                  {t('crossLang.backendNote')}
                 </p>
               </div>
             </div>
@@ -176,11 +183,11 @@ const CrossLanguageValidation: React.FC<CrossLanguageValidationProps> = ({
                         <AlertTriangle className="w-5 h-5 text-yellow-500" />
                       )}
                       <div>
-                        <h4 className="font-medium text-gray-900">Parameter Consistency</h4>
+                        <h4 className="font-medium text-gray-900">{t('crossLang.parameterConsistency')}</h4>
                         <p className="text-sm text-gray-600">
-                          {validationReport.parameter_consistency 
-                            ? 'All parameters are consistent across languages'
-                            : `${parameterIssues} parameter inconsistencies found`
+                          {validationReport.parameter_consistency
+                            ? t('crossLang.parametersConsistent')
+                            : t('crossLang.parameterInconsistencies', { count: parameterIssues })
                           }
                         </p>
                       </div>
@@ -196,7 +203,7 @@ const CrossLanguageValidation: React.FC<CrossLanguageValidationProps> = ({
                     <div className="px-3 pb-3 border-t border-gray-100">
                       {validationReport.missing_parameters.length > 0 && (
                         <div className="mt-3">
-                          <h5 className="text-sm font-medium text-red-800 mb-2">Missing Parameters:</h5>
+                          <h5 className="text-sm font-medium text-red-800 mb-2">{t('crossLang.missingParameters')}</h5>
                           <ul className="space-y-1">
                             {validationReport.missing_parameters.map((issue, index) => (
                               <li key={`missing-${index}`} className="text-sm text-red-700 flex items-center space-x-1">
@@ -210,7 +217,7 @@ const CrossLanguageValidation: React.FC<CrossLanguageValidationProps> = ({
 
                       {validationReport.type_mismatches.length > 0 && (
                         <div className="mt-3">
-                          <h5 className="text-sm font-medium text-yellow-800 mb-2">Type Mismatches:</h5>
+                          <h5 className="text-sm font-medium text-yellow-800 mb-2">{t('crossLang.typeMismatches')}</h5>
                           <ul className="space-y-1">
                             {validationReport.type_mismatches.map((issue, index) => (
                               <li key={`mismatch-${index}`} className="text-sm text-yellow-700 flex items-center space-x-1">
@@ -240,11 +247,11 @@ const CrossLanguageValidation: React.FC<CrossLanguageValidationProps> = ({
                         <AlertTriangle className="w-5 h-5 text-yellow-500" />
                       )}
                       <div>
-                        <h4 className="font-medium text-gray-900">Method Completeness</h4>
+                        <h4 className="font-medium text-gray-900">{t('crossLang.methodCompleteness')}</h4>
                         <p className="text-sm text-gray-600">
-                          {completenessReport.method_completeness 
-                            ? 'All methods are present in all languages'
-                            : `${methodIssues} method inconsistencies found`
+                          {completenessReport.method_completeness
+                            ? t('crossLang.methodsComplete')
+                            : t('crossLang.methodInconsistencies', { count: methodIssues })
                           }
                         </p>
                       </div>
@@ -260,12 +267,12 @@ const CrossLanguageValidation: React.FC<CrossLanguageValidationProps> = ({
                     <div className="px-3 pb-3 border-t border-gray-100">
                       {/* Method counts by language */}
                       <div className="mt-3">
-                        <h5 className="text-sm font-medium text-gray-800 mb-2">Method Counts by Language:</h5>
+                        <h5 className="text-sm font-medium text-gray-800 mb-2">{t('crossLang.methodCountsByLanguage')}</h5>
                         <div className="grid grid-cols-2 gap-2">
                           {Object.entries(completenessReport.method_counts_by_language).map(([lang, count]) => (
                             <div key={lang} className="flex items-center justify-between text-sm">
                               <span className="text-gray-600">{lang.toUpperCase()}:</span>
-                              <Badge variant="info">{count} methods</Badge>
+                              <Badge variant="info">{t('crossLang.methodsCount', { count })}</Badge>
                             </div>
                           ))}
                         </div>
@@ -273,7 +280,7 @@ const CrossLanguageValidation: React.FC<CrossLanguageValidationProps> = ({
 
                       {completenessReport.missing_methods.length > 0 && (
                         <div className="mt-3">
-                          <h5 className="text-sm font-medium text-red-800 mb-2">Missing Methods:</h5>
+                          <h5 className="text-sm font-medium text-red-800 mb-2">{t('crossLang.missingMethods')}</h5>
                           <ul className="space-y-1">
                             {completenessReport.missing_methods.map((issue, index) => (
                               <li key={`missing-method-${index}`} className="text-sm text-red-700 flex items-center space-x-1">
@@ -287,7 +294,7 @@ const CrossLanguageValidation: React.FC<CrossLanguageValidationProps> = ({
 
                       {completenessReport.extra_methods.length > 0 && (
                         <div className="mt-3">
-                          <h5 className="text-sm font-medium text-blue-800 mb-2">Extra Methods:</h5>
+                          <h5 className="text-sm font-medium text-blue-800 mb-2">{t('crossLang.extraMethods')}</h5>
                           <ul className="space-y-1">
                             {completenessReport.extra_methods.map((issue, index) => (
                               <li key={`extra-method-${index}`} className="text-sm text-blue-700 flex items-center space-x-1">

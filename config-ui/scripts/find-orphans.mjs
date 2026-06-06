@@ -20,7 +20,8 @@ const isTest = (f) => /\.(test|spec)\.tsx?$/.test(f);
 function walk(dir) {
   return fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
     const p = path.join(dir, e.name);
-    return e.isDirectory() ? walk(p) : (/\.tsx?$/.test(e.name) ? [p] : []);
+    // Ambient declaration files (*.d.ts) are never imported by spec — they augment types globally — so exempt them.
+    return e.isDirectory() ? walk(p) : (/\.tsx?$/.test(e.name) && !/\.d\.ts$/.test(e.name) ? [p] : []);
   });
 }
 
@@ -36,11 +37,13 @@ const files = walk(SRC).map((f) => path.normalize(f));
 const edges = new Map();
 const importRe = /from\s+['"](@\/[^'"]+|\.[^'"]+)['"]/;
 const dynRe = /import\(\s*['"](@\/[^'"]+|\.[^'"]+)['"]\s*\)/;
+// Side-effect import (no binding): `import './i18n'` — has no `from`, so importRe misses it.
+const sideEffectRe = /^\s*import\s+['"](@\/[^'"]+|\.[^'"]+)['"]/;
 for (const f of files) {
   const deps = new Set();
   for (const line of fs.readFileSync(f, 'utf8').split('\n')) {
     if (/^\s*\/\//.test(line)) continue;
-    for (const re of [importRe, dynRe]) {
+    for (const re of [importRe, dynRe, sideEffectRe]) {
       const m = line.match(re);
       if (m) { const r = resolveSpec(m[1], f); if (r) deps.add(r); }
     }

@@ -196,6 +196,11 @@ fixes only that it must use the real matcher.
 
 ## 7. Bilingual editor UI (i18n) — a cross-cutting requirement
 
+> **✅ Implemented in UI-7 (2026-06-07).** `react-i18next` under `src/i18n/` with namespaced `en`/`ru` TS bundles, a
+> typed `t()` (mistyped keys = build error), a Header `LanguageSwitcher` (persisted; default `ru`, fallback `en`), and
+> the whole config-ui retrofitted. Completeness is compiler-enforced: the RU bundle is typed `DeepStringify<typeof en>`,
+> so a missing/extra RU key fails the build. Conventions: `config-ui/docs/i18n_retrofit_spec.md`. The design below stands.
+
 **Requirement (user):** the **entire config-ui** must become fully bilingual (Russian + English), with adding more
 languages later being cheap. This concerns the **editor’s own chrome** — labels, buttons, help text, validation
 messages — not the donation content.

@@ -6,6 +6,7 @@
  */
 
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Trash2, Plus, Type, List, Hash, ChevronDown, ChevronRight } from 'lucide-react';
 import Input from '@/components/ui/Input';
 import TextArea from '@/components/ui/TextArea';
@@ -29,6 +30,7 @@ const LocalizationKeyEditor: React.FC<LocalizationKeyEditorProps> = ({
   onDelete,
   domain
 }) => {
+  const { t } = useTranslation('localizations');
   const [isExpanded, setIsExpanded] = useState(true);
   const [currentKey, setCurrentKey] = useState(keyName);
 
@@ -84,16 +86,16 @@ const LocalizationKeyEditor: React.FC<LocalizationKeyEditorProps> = ({
           onChange={handleValueChange}
           rows={3}
           className="text-sm"
-          placeholder="Enter localization text..."
+          placeholder={t('keyEditor.stringPlaceholder')}
         />
       );
     }
-    
+
     return (
       <Input
         value={stringValue}
         onChange={handleValueChange}
-        placeholder="Enter localization text..."
+        placeholder={t('keyEditor.stringPlaceholder')}
         className="text-sm"
       />
     );
@@ -124,13 +126,13 @@ const LocalizationKeyEditor: React.FC<LocalizationKeyEditorProps> = ({
     return (
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <span className="text-sm text-gray-600">{arrayValue.length} items</span>
+          <span className="text-sm text-gray-600">{t('keyEditor.items', { count: arrayValue.length })}</span>
           <button
             onClick={addArrayItem}
             className="flex items-center gap-1 px-2 py-1 text-xs bg-blue-50 text-blue-600 rounded hover:bg-blue-100 transition-colors"
           >
             <Plus className="w-3 h-3" />
-            Add Item
+            {t('keyEditor.addItem')}
           </button>
         </div>
         
@@ -141,7 +143,7 @@ const LocalizationKeyEditor: React.FC<LocalizationKeyEditorProps> = ({
               <Input
                 value={safeArrayItemStringify(item)}
                 onChange={(newValue) => updateArrayItem(index, newValue)}
-                placeholder={`Item ${index + 1}`}
+                placeholder={t('keyEditor.itemPlaceholder', { index: index + 1 })}
                 className="text-sm flex-1"
               />
               <button
@@ -156,7 +158,7 @@ const LocalizationKeyEditor: React.FC<LocalizationKeyEditorProps> = ({
         
         {arrayValue.length === 0 && (
           <div className="text-center py-4 text-gray-500 text-sm">
-            No items yet. Click "Add Item" to get started.
+            {t('keyEditor.noItems')}
           </div>
         )}
       </div>
@@ -196,13 +198,13 @@ const LocalizationKeyEditor: React.FC<LocalizationKeyEditorProps> = ({
     return (
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <span className="text-sm text-gray-600">{Object.keys(objectValue).length} properties</span>
+          <span className="text-sm text-gray-600">{t('keyEditor.properties', { count: Object.keys(objectValue).length })}</span>
           <button
             onClick={addObjectKey}
             className="flex items-center gap-1 px-2 py-1 text-xs bg-blue-50 text-blue-600 rounded hover:bg-blue-100 transition-colors"
           >
             <Plus className="w-3 h-3" />
-            Add Property
+            {t('keyEditor.addProperty')}
           </button>
         </div>
         
@@ -212,14 +214,14 @@ const LocalizationKeyEditor: React.FC<LocalizationKeyEditorProps> = ({
               <Input
                 value={key}
                 onChange={(newKey) => updateObjectEntry(key, newKey, safeDisplayValue(val))}
-                placeholder="Property name"
+                placeholder={t('keyEditor.propertyName')}
                 className="text-sm"
               />
               <div className="flex items-center gap-2">
                 <Input
                   value={safeDisplayValue(val)}
                   onChange={(newValue) => updateObjectEntry(key, key, newValue)}
-                  placeholder="Property value"
+                  placeholder={t('keyEditor.propertyValue')}
                   className="text-sm flex-1"
                 />
                 <button
@@ -235,7 +237,7 @@ const LocalizationKeyEditor: React.FC<LocalizationKeyEditorProps> = ({
         
         {Object.keys(objectValue).length === 0 && (
           <div className="text-center py-4 text-gray-500 text-sm">
-            No properties yet. Click "Add Property" to get started.
+            {t('keyEditor.noProperties')}
           </div>
         )}
       </div>
@@ -253,13 +255,13 @@ const LocalizationKeyEditor: React.FC<LocalizationKeyEditorProps> = ({
 
   const getDomainHint = () => {
     if (domain === 'datetime' && keyName === 'weekdays') {
-      return 'List of weekday names in order (Monday, Tuesday, ...)';
+      return t('keyEditor.domainHints.weekdays');
     } else if (domain === 'datetime' && keyName === 'months') {
-      return 'List of month names in order (January, February, ...)';
+      return t('keyEditor.domainHints.months');
     } else if (domain === 'components' && keyName === 'component_mappings') {
-      return 'Map component aliases to their canonical names';
+      return t('keyEditor.domainHints.componentMappings');
     } else if (domain === 'commands' && keyName === 'stop_patterns') {
-      return 'List of command patterns to stop execution';
+      return t('keyEditor.domainHints.stopPatterns');
     }
     return null;
   };
@@ -282,7 +284,7 @@ const LocalizationKeyEditor: React.FC<LocalizationKeyEditorProps> = ({
             value={currentKey}
             onChange={handleKeyChange}
             className="text-sm font-medium"
-            placeholder="Key name"
+            placeholder={t('keyEditor.keyNamePlaceholder')}
           />
         </div>
         
@@ -293,14 +295,14 @@ const LocalizationKeyEditor: React.FC<LocalizationKeyEditorProps> = ({
             onChange={(e) => handleTypeChange(e.target.value as ValueType)}
             className="text-xs border border-gray-200 rounded px-2 py-1 bg-white"
           >
-            <option value="string">String</option>
-            <option value="array">Array</option>
-            <option value="object">Object</option>
+            <option value="string">{t('keyEditor.valueTypes.string')}</option>
+            <option value="array">{t('keyEditor.valueTypes.array')}</option>
+            <option value="object">{t('keyEditor.valueTypes.object')}</option>
           </select>
-          
+
           <Badge variant="default" className="text-xs">
             {getTypeIcon(valueType)}
-            {valueType}
+            {t(`keyEditor.valueTypes.${valueType}`)}
           </Badge>
           
           <button

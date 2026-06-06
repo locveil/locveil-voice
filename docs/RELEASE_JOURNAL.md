@@ -11,6 +11,23 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+### 2026-06-07
+- **UI-7 DONE — config-ui is now fully bilingual (ru + en).** Stood up `react-i18next` from scratch under `src/i18n/`
+  (the bridge only *declared* `i18next ^23`/`react-i18next ^13`, never wired them) — namespaced TS bundles
+  (`locales/{en,ru}/{common,layout,donations,configuration,prompts,templates,localizations,monitoring,overview}.ts`),
+  a typed `t()` (CustomTypeOptions off the `en` bundle → mistyped keys/namespaces are compile errors + autocomplete),
+  and a Header `LanguageSwitcher` (persists to localStorage; default `ru`, fallback `en`; keeps `<html lang>` in sync).
+  **Completeness is compiler-enforced:** the RU bundle is typed `DeepStringify<typeof en>` (a structural "same keys,
+  string leaves" map), so any missing/extra/misnested RU key fails `tsc` — the static half of "language files are
+  complete". **Two orthogonal axes preserved:** UI-chrome language (switcher) vs donation *content* language
+  (`LanguageTabs`). Retrofitted the whole UI via partitioned slices (chrome by hand; then shared/common, the donation
+  editor track incl. the §3.2 no-jargon card vocabulary, configuration, the three list pages, and monitoring/overview)
+  — disjoint files + one namespace each, so no slice collided. Card kind labels/help (`CardEditor`) moved off
+  module-scope into `t()`-driven helpers so the friendly vocabulary localizes. Hardened the orphan guard in passing
+  (now follows side-effect imports `import './i18n'`, exempts `*.d.ts`). Technical identifiers (model/service names,
+  slot labels, spaCy attrs, intent/method names, code) kept verbatim per the donation-localization rule. Conventions
+  captured in `config-ui/docs/i18n_retrofit_spec.md`. `npm run check` + `npm run build` + `npm test` 40/40 all green.
+
 ### 2026-06-06
 - **UI-3 DONE — card-based pattern editors (on UI-2) + test-against-text.** Built `CardEditor` (5 friendly card kinds
   + per-card raw-spaCy "Advanced" escape hatch via SpacyAttributeEditor + "include its forms"/optional/repeat),

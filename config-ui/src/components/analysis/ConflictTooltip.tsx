@@ -6,6 +6,7 @@
  */
 
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { AlertCircle, AlertTriangle, Info, ArrowRight } from 'lucide-react';
 import type { ConflictReport } from '@/types';
 
@@ -18,6 +19,7 @@ const ConflictTooltip: React.FC<ConflictTooltipProps> = ({
   conflict,
   className = ''
 }) => {
+  const { t } = useTranslation('common');
   const getSeverityIcon = () => {
     switch (conflict.severity) {
       case 'blocker':
@@ -37,7 +39,7 @@ const ConflictTooltip: React.FC<ConflictTooltipProps> = ({
 
   const renderSignalValue = (value: any): React.ReactNode => {
     if (Array.isArray(value)) {
-      if (value.length === 0) return <span className="text-gray-400 italic">None</span>;
+      if (value.length === 0) return <span className="text-gray-400 italic">{t('status.none')}</span>;
       return (
         <div className="space-y-1">
           {value.slice(0, 3).map((item, index) => (
@@ -47,7 +49,7 @@ const ConflictTooltip: React.FC<ConflictTooltipProps> = ({
           ))}
           {value.length > 3 && (
             <div className="text-xs text-gray-500 italic">
-              ... and {value.length - 3} more
+              {t('conflicts.andMore', { count: value.length - 3 })}
             </div>
           )}
         </div>
@@ -75,14 +77,14 @@ const ConflictTooltip: React.FC<ConflictTooltipProps> = ({
             {formatConflictType(conflict.conflict_type)}
           </div>
           <div className="text-xs text-gray-500 mt-1">
-            Score: {(conflict.score * 100).toFixed(1)}% • {conflict.language.toUpperCase()}
+            {t('conflicts.scoreLanguage', { score: (conflict.score * 100).toFixed(1), language: conflict.language.toUpperCase() })}
           </div>
         </div>
       </div>
 
       {/* Intent Conflict */}
       <div className="mb-3">
-        <div className="text-xs font-medium text-gray-700 mb-1">Conflicting Intents:</div>
+        <div className="text-xs font-medium text-gray-700 mb-1">{t('conflicts.conflictingIntents')}</div>
         <div className="flex items-center space-x-2 text-sm">
           <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">
             {conflict.intent_a}
@@ -97,7 +99,7 @@ const ConflictTooltip: React.FC<ConflictTooltipProps> = ({
       {/* Evidence/Signals */}
       {Object.keys(conflict.signals).length > 0 && (
         <div className="mb-3">
-          <div className="text-xs font-medium text-gray-700 mb-2">Evidence:</div>
+          <div className="text-xs font-medium text-gray-700 mb-2">{t('conflicts.evidence')}</div>
           <div className="space-y-2">
             {Object.entries(conflict.signals).slice(0, 3).map(([key, value]) => (
               <div key={key}>
@@ -109,7 +111,7 @@ const ConflictTooltip: React.FC<ConflictTooltipProps> = ({
             ))}
             {Object.keys(conflict.signals).length > 3 && (
               <div className="text-xs text-gray-500 italic">
-                ... and {Object.keys(conflict.signals).length - 3} more signals
+                {t('conflicts.andMoreSignals', { count: Object.keys(conflict.signals).length - 3 })}
               </div>
             )}
           </div>
@@ -119,7 +121,7 @@ const ConflictTooltip: React.FC<ConflictTooltipProps> = ({
       {/* Suggestions */}
       {conflict.suggestions.length > 0 && (
         <div>
-          <div className="text-xs font-medium text-gray-700 mb-2">Suggestions:</div>
+          <div className="text-xs font-medium text-gray-700 mb-2">{t('conflicts.suggestionsLabel')}</div>
           <div className="space-y-1">
             {conflict.suggestions.slice(0, 2).map((suggestion, index) => (
               <div key={index} className="text-xs text-gray-600 bg-gray-50 p-2 rounded">
@@ -128,7 +130,7 @@ const ConflictTooltip: React.FC<ConflictTooltipProps> = ({
             ))}
             {conflict.suggestions.length > 2 && (
               <div className="text-xs text-gray-500 italic">
-                ... and {conflict.suggestions.length - 2} more suggestions
+                {t('conflicts.andMoreSuggestions', { count: conflict.suggestions.length - 2 })}
               </div>
             )}
           </div>

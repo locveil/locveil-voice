@@ -5,10 +5,9 @@
  * input + two plain modifiers (optional, can repeat). The raw-spaCy escape hatch (§5) is a per-card "Advanced"
  * button that converts the card to its raw dict (edited via SpacyAttributeEditor); "Back to cards" decompiles it,
  * and if the raw is too advanced to represent it stays raw with a note — data is never lost.
- *
- * (Strings are literal for now; UI-7 moves them to i18n.)
  */
 
+import { useTranslation } from 'react-i18next';
 import { Trash2, Wrench } from 'lucide-react';
 import Input from '@/components/ui/Input';
 import Toggle from '@/components/ui/Toggle';
@@ -20,20 +19,7 @@ import {
 
 type FriendlyKind = 'word' | 'oneOf' | 'number' | 'anyWord' | 'rest';
 
-const KIND_LABELS: Record<FriendlyKind, string> = {
-  word: 'A word',
-  oneOf: 'One of several words',
-  number: 'A number',
-  anyWord: 'Any word',
-  rest: 'The rest of the sentence',
-};
-const KIND_HELP: Record<FriendlyKind, string> = {
-  word: 'Matches this word. Turn on “include its forms” so “set / sets / setting” all match.',
-  oneOf: 'Matches if the user says any one of these — e.g. timer / alarm / countdown.',
-  number: 'Matches a number, like 5 or 10.',
-  anyWord: 'A placeholder for a single word you’ll capture — e.g. a name or label.',
-  rest: 'Captures everything the user says after this point — e.g. a timer note.',
-};
+const FRIENDLY_KINDS: FriendlyKind[] = ['word', 'oneOf', 'number', 'anyWord', 'rest'];
 
 function freshCard(kind: FriendlyKind, prev: Card): Card {
   const mods = 'optional' in prev || 'repeat' in prev
@@ -56,6 +42,9 @@ interface CardEditorProps {
 }
 
 export default function CardEditor({ card, onChange, onRemove, disabled = false }: CardEditorProps) {
+  const { t } = useTranslation('donations');
+  const kindLabel = (k: FriendlyKind): string => t(`cards.kind.${k}.label`);
+  const kindHelp = (k: FriendlyKind): string => t(`cards.kind.${k}.help`);
   const isAdvanced = card.kind === 'advanced';
 
   const setForms = (on: boolean): void => {
@@ -69,7 +58,7 @@ export default function CardEditor({ card, onChange, onRemove, disabled = false 
       <div className="flex items-center gap-2 mb-2">
         {isAdvanced ? (
           <span className="inline-flex items-center gap-1 text-xs font-medium text-purple-700">
-            <Wrench className="w-3 h-3" /> Advanced rule
+            <Wrench className="w-3 h-3" /> {t('cards.advancedRule')}
           </span>
         ) : (
           <select
@@ -78,8 +67,8 @@ export default function CardEditor({ card, onChange, onRemove, disabled = false 
             onChange={(e) => onChange(freshCard(e.target.value as FriendlyKind, card))}
             disabled={disabled}
           >
-            {(Object.keys(KIND_LABELS) as FriendlyKind[]).map((k) => (
-              <option key={k} value={k}>{KIND_LABELS[k]}</option>
+            {FRIENDLY_KINDS.map((k) => (
+              <option key={k} value={k}>{kindLabel(k)}</option>
             ))}
           </select>
         )}
@@ -90,9 +79,9 @@ export default function CardEditor({ card, onChange, onRemove, disabled = false 
             className="text-xs px-2 py-1 border rounded-lg hover:bg-gray-50 disabled:opacity-50"
             onClick={() => onChange(decompileToken(card.raw))}
             disabled={disabled}
-            title="Try to show this as cards"
+            title={t('cards.backToCardsTitle')}
           >
-            Back to cards
+            {t('cards.backToCards')}
           </button>
         ) : (
           <button
@@ -100,15 +89,15 @@ export default function CardEditor({ card, onChange, onRemove, disabled = false 
             className="text-xs px-2 py-1 border rounded-lg hover:bg-gray-50 disabled:opacity-50"
             onClick={() => onChange({ kind: 'advanced', raw: compileToken(card) })}
             disabled={disabled}
-            title="Edit the raw spaCy token"
+            title={t('cards.advancedTitle')}
           >
-            Advanced
+            {t('cards.advanced')}
           </button>
         )}
         <button
           type="button"
           className="p-1 rounded-lg border hover:bg-gray-50 disabled:opacity-50"
-          onClick={onRemove} disabled={disabled} title="Remove"
+          onClick={onRemove} disabled={disabled} title={t('cards.removeTitle')}
         >
           <Trash2 className="w-4 h-4" />
         </button>
@@ -122,28 +111,28 @@ export default function CardEditor({ card, onChange, onRemove, disabled = false 
             disabled={disabled}
           />
           {Object.keys(card.raw).length === 0 && (
-            <p className="text-xs text-gray-500 mt-1">Empty token. Add attributes, or switch back to cards.</p>
+            <p className="text-xs text-gray-500 mt-1">{t('cards.emptyToken')}</p>
           )}
         </div>
       ) : (
         <div className="space-y-2">
-          <p className="text-xs text-gray-500">{KIND_HELP[card.kind]}</p>
+          <p className="text-xs text-gray-500">{kindHelp(card.kind)}</p>
           {card.kind === 'word' && (
             <Input label="" value={card.word} onChange={(v) => onChange({ ...card, word: v })}
-              placeholder="word…" disabled={disabled} />
+              placeholder={t('cards.wordPlaceholder')} disabled={disabled} />
           )}
           {card.kind === 'oneOf' && (
             <ArrayOfStringsEditor label="" value={card.words}
-              onChange={(words) => onChange({ ...card, words })} disabled={disabled} placeholder="word…" />
+              onChange={(words) => onChange({ ...card, words })} disabled={disabled} placeholder={t('cards.wordPlaceholder')} />
           )}
           {(card.kind === 'word' || card.kind === 'oneOf') && (
-            <Toggle label="include its forms (set / sets / setting)" checked={formsOn}
+            <Toggle label={t('cards.includeForms')} checked={formsOn}
               onChange={setForms} disabled={disabled} />
           )}
           <div className="flex items-center gap-4">
-            <Toggle label="optional" checked={!!card.optional}
+            <Toggle label={t('cards.optional')} checked={!!card.optional}
               onChange={(v) => onChange({ ...card, optional: v, repeat: v ? false : card.repeat })} disabled={disabled} />
-            <Toggle label="can repeat" checked={!!card.repeat}
+            <Toggle label={t('cards.canRepeat')} checked={!!card.repeat}
               onChange={(v) => onChange({ ...card, repeat: v, optional: v ? false : card.optional })} disabled={disabled} />
           </div>
         </div>

@@ -1,13 +1,15 @@
+import { useTranslation } from 'react-i18next';
 import { Plus, Trash2 } from 'lucide-react';
 import type { ArrayOfStringsEditorProps } from '@/types';
 
 export default function ArrayOfStringsEditor({
-  label, 
-  value, 
-  onChange, 
+  label,
+  value,
+  onChange,
   placeholder,
   disabled = false
 }: ArrayOfStringsEditorProps & { addLabel?: string }) {
+  const { t } = useTranslation(['donations', 'common']);
   const arr = value ?? [];
   
   const update = (idx: number, v: string): void => {
@@ -29,7 +31,7 @@ export default function ArrayOfStringsEditor({
     <div className="mb-4">
       <div className="font-medium mb-2">{label}</div>
       {arr.length === 0 ? (
-        <div className="text-sm text-gray-500 mb-2">No items</div>
+        <div className="text-sm text-gray-500 mb-2">{t('editors.noItems')}</div>
       ) : null}
       {arr.map((item, idx) => (
         <div key={idx} className="flex items-center gap-2 mb-2">
@@ -45,7 +47,7 @@ export default function ArrayOfStringsEditor({
           <button
             className="p-2 rounded-lg border hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={() => remove(idx)}
-            title="Remove"
+            title={t('common:actions.remove')}
             disabled={disabled}
           >
             <Trash2 className="w-4 h-4" />
@@ -57,7 +59,7 @@ export default function ArrayOfStringsEditor({
         onClick={add}
         disabled={disabled}
       >
-        <Plus className="w-4 h-4" /> Add
+        <Plus className="w-4 h-4" /> {t('common:actions.add')}
       </button>
     </div>
   );

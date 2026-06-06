@@ -10,6 +10,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { RefreshCw, AlertCircle, AlertTriangle, CheckCircle2, Languages } from 'lucide-react';
 import apiClient from '@/utils/apiClient';
 import type {
@@ -26,6 +27,7 @@ interface DonationValidationPanelProps {
 export default function DonationValidationPanel({
   handlerName, sourceLanguage, availableLanguages, disabled = false,
 }: DonationValidationPanelProps) {
+  const { t } = useTranslation('donations');
   const [wiring, setWiring] = useState<ContractWiringReport | null>(null);
   const [wiringLoading, setWiringLoading] = useState(false);
 
@@ -63,11 +65,11 @@ export default function DonationValidationPanel({
       setLlmMessage(res.message);
       setIssues(res.llm_available ? (res.issues ?? []) : null);
     } catch (e) {
-      setLlmMessage(e instanceof Error ? e.message : 'Translation validation failed');
+      setLlmMessage(e instanceof Error ? e.message : t('validation.translationValidationFailed'));
     } finally {
       setLlmBusy(false);
     }
-  }, [handlerName]);
+  }, [handlerName, t]);
 
   const runTranslate = useCallback(async () => {
     if (!target) return;
@@ -79,11 +81,11 @@ export default function DonationValidationPanel({
       setLlmMessage(res.message);
       setDrafts(res.llm_available ? (res.translations ?? []) : null);
     } catch (e) {
-      setLlmMessage(e instanceof Error ? e.message : 'Translation failed');
+      setLlmMessage(e instanceof Error ? e.message : t('validation.translationFailed'));
     } finally {
       setLlmBusy(false);
     }
-  }, [handlerName, sourceLanguage, target]);
+  }, [handlerName, sourceLanguage, target, t]);
 
   const errors = wiring?.errors ?? [];
   const warnings = wiring?.warnings ?? [];
@@ -93,17 +95,17 @@ export default function DonationValidationPanel({
       {/* Wiring (contract <-> code) */}
       <div>
         <div className="flex items-center justify-between mb-2">
-          <div className="text-sm font-semibold text-gray-900">Contract ↔ code wiring</div>
+          <div className="text-sm font-semibold text-gray-900">{t('validation.wiringTitle')}</div>
           <button
             className="inline-flex items-center gap-1 text-xs px-2 py-1 border rounded-lg hover:bg-gray-50 disabled:opacity-50"
-            onClick={() => void loadWiring()} disabled={wiringLoading} title="Refresh"
+            onClick={() => void loadWiring()} disabled={wiringLoading} title={t('validation.wiringRefreshTitle')}
           >
-            <RefreshCw className={`w-3 h-3 ${wiringLoading ? 'animate-spin' : ''}`} /> Refresh
+            <RefreshCw className={`w-3 h-3 ${wiringLoading ? 'animate-spin' : ''}`} /> {t('validation.wiringRefreshTitle')}
           </button>
         </div>
         {errors.length === 0 && warnings.length === 0 ? (
           <div className="flex items-center gap-2 text-sm text-green-700">
-            <CheckCircle2 className="w-4 h-4" /> Methods and parameters are wired to the handler.
+            <CheckCircle2 className="w-4 h-4" /> {t('validation.wiringOk')}
           </div>
         ) : (
           <div className="space-y-1">
@@ -125,8 +127,8 @@ export default function DonationValidationPanel({
       <div className="border-t pt-3">
         <div className="flex flex-wrap items-center gap-2 mb-2">
           <Languages className="w-4 h-4 text-gray-500" />
-          <span className="text-sm font-semibold text-gray-900">Translation (LLM)</span>
-          <span className="text-xs text-gray-500">from <b>{sourceLanguage}</b> to</span>
+          <span className="text-sm font-semibold text-gray-900">{t('validation.translationTitle')}</span>
+          <span className="text-xs text-gray-500">{t('validation.from')} <b>{sourceLanguage}</b> {t('validation.to')}</span>
           <select
             className="border rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
             value={target} onChange={(e) => setTarget(e.target.value)} disabled={disabled || llmBusy}
@@ -139,13 +141,13 @@ export default function DonationValidationPanel({
             className="text-xs px-3 py-1 border rounded-lg hover:bg-gray-50 disabled:opacity-50"
             onClick={() => void runValidate()} disabled={disabled || llmBusy}
           >
-            Validate quality
+            {t('validation.validateQuality')}
           </button>
           <button
             className="text-xs px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
             onClick={() => void runTranslate()} disabled={disabled || llmBusy || !target}
           >
-            Draft translations
+            {t('validation.draftTranslations')}
           </button>
           {llmBusy ? <RefreshCw className="w-4 h-4 animate-spin text-gray-400" /> : null}
         </div>
@@ -173,7 +175,7 @@ export default function DonationValidationPanel({
                 </ul>
               </div>
             ))}
-            <p className="text-xs text-gray-500">Drafts are suggestions — copy the ones you want into the phrasing editor.</p>
+            <p className="text-xs text-gray-500">{t('validation.draftsHint')}</p>
           </div>
         ) : null}
       </div>

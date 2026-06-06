@@ -1473,16 +1473,20 @@ Governed by Invariant #4 (config-ui must stay functional).
       **OUT OF SCOPE (user, 2026-06-04):** axios, react-query (config-ui is load-edit-save, not a server-cache dashboard);
       OpenAPI **type generation** was folded into **UI-5** (generation-only), not here. Refs: stack comparison
       (journal 2026-06-04), `../wb-mqtt-bridge/ui/.eslintrc.cjs`.
-- [ ] **UI-7** [DEDITOR/I18N] (P2) — **config-ui-wide bilingual UI (user-directed 2026-06-06, surfaced during UI-1).**
-      Make the **editor chrome** (labels, buttons, help text, validation messages) fully localizable — ship **ru + en**,
-      adding more languages later being cheap. **Harmonize with the bridge (UI-6 precedent):** `../wb-mqtt-bridge/ui`
-      already uses **`react-i18next`** (`i18next ^23` / `react-i18next ^13`); config-ui has none → adopt the same +
-      `en`/`ru` resource bundles + a global **UI-language switcher**. **Keep the two language axes orthogonal:** the
-      *UI language* (chrome) is independent of the *content language* (which phrasing file you edit, via `LanguageTabs`)
-      — a Russian author editing the English phrasing with a Russian UI is a normal case. Cross-cutting across all
-      config-ui pages, so it's its own task — but **foreseen now**: UI-2/3/5 author their new strings as i18n keys from
-      day one (the §3.2 donation-editor card vocabulary is the first bundle) so nothing needs retrofitting. Design:
-      `config-ui/docs/donation_editor_ux.md` §7. Refs: UI-1/2/3/5.
+- [x] **UI-7** [DEDITOR/I18N] (P2) — **DONE 2026-06-07.** config-ui is now fully bilingual (**ru + en**), adding more
+      languages cheap. Adopted **`react-i18next`** (`i18next ^23` / `react-i18next ^13`, the bridge's declared versions —
+      which only *declared* them, never wired them, so the setup is from scratch) under `src/i18n/`: namespaced TS
+      bundles (`locales/{en,ru}/{common,layout,donations,configuration,prompts,templates,localizations,monitoring,overview}.ts`),
+      a typed `t()` (CustomTypeOptions off the `en` bundle → mistyped keys are build errors + autocomplete), and a global
+      **`LanguageSwitcher`** in the Header (persisted to localStorage, default `ru` / fallback `en`, `<html lang>` synced).
+      **Completeness is compiler-enforced:** the RU bundle is typed `DeepStringify<typeof en>`, so any missing/extra/misnested
+      RU key fails the build — the "language files are complete" guarantee, statically. **The two language axes stay
+      orthogonal:** the UI-chrome language (switcher) is independent of the donation *content* language (`LanguageTabs`).
+      Retrofitted **every** config-ui page + component (chrome, donation editor track incl. the §3.2 card vocabulary, and
+      all 6 admin pages) via partitioned slices; the §3.2 card labels/help read naturally in both languages.
+      Orphan guard hardened in passing (side-effect imports `import './i18n'` + `*.d.ts` exemption). DoD met:
+      `npm run check` (type-check + lint 0-warn + orphan guard) + `npm run build` + `npm test` 40/40 all green. Conventions:
+      `config-ui/docs/i18n_retrofit_spec.md`. Design: `config-ui/docs/donation_editor_ux.md` §7. Refs: UI-1/2/3/5.
 - [x] **UI-8** (P3) — **DONE 2026-06-06.** Swept the config-ui orphans + added a guard so they can't reaccumulate.
       A reachability sweep from `src/main.tsx`/`App.tsx` (now following dynamic `import()` too) confirmed **5** modules
       unreachable with **zero** references anywhere (no dynamic/string/registry use): deleted

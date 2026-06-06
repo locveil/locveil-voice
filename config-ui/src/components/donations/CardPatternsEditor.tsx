@@ -9,6 +9,7 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Plus, Trash2 } from 'lucide-react';
 import CardEditor from './CardEditor';
 import {
@@ -25,8 +26,10 @@ interface CardPatternsEditorProps {
 }
 
 export default function CardPatternsEditor({
-  value, onChange, disabled = false, itemLabel = 'way of saying it',
+  value, onChange, disabled = false, itemLabel,
 }: CardPatternsEditorProps) {
+  const { t } = useTranslation('donations');
+  const item = itemLabel ?? t('cards.list.defaultItemLabel');
   const [patterns, setPatterns] = useState<CardPattern[]>(() => decompilePatterns(value ?? []));
   const lastEmitted = useRef<SpacyPattern[]>(value ?? []);
 
@@ -56,16 +59,16 @@ export default function CardPatternsEditor({
   return (
     <div className="space-y-3">
       {patterns.length === 0 && (
-        <div className="text-sm text-gray-500">No {itemLabel}s yet.</div>
+        <div className="text-sm text-gray-500">{t('cards.list.empty', { item })}</div>
       )}
       {patterns.map((pattern, pi) => (
         <div key={pi} className="border rounded-xl p-3 bg-gray-50">
           <div className="flex items-center justify-between mb-2">
-            <div className="text-sm font-medium capitalize">{itemLabel} {pi + 1}</div>
+            <div className="text-sm font-medium capitalize">{t('cards.list.entry', { item, index: pi + 1 })}</div>
             <button
               type="button"
               className="p-1 rounded-lg border bg-white hover:bg-gray-50 disabled:opacity-50"
-              onClick={() => removePattern(pi)} disabled={disabled} title={`Remove ${itemLabel}`}
+              onClick={() => removePattern(pi)} disabled={disabled} title={t('cards.list.removeItem', { item })}
             >
               <Trash2 className="w-4 h-4" />
             </button>
@@ -85,7 +88,7 @@ export default function CardPatternsEditor({
               className="inline-flex items-center gap-2 px-3 py-2 border rounded-lg bg-white hover:bg-gray-50 disabled:opacity-50 text-sm"
               onClick={() => addCard(pi)} disabled={disabled}
             >
-              <Plus className="w-4 h-4" /> Add word
+              <Plus className="w-4 h-4" /> {t('cards.list.addWord')}
             </button>
           </div>
         </div>
@@ -95,7 +98,7 @@ export default function CardPatternsEditor({
         className="inline-flex items-center gap-2 px-3 py-2 border rounded-xl hover:bg-gray-50 disabled:opacity-50"
         onClick={addPattern} disabled={disabled}
       >
-        <Plus className="w-4 h-4" /> Add another {itemLabel}
+        <Plus className="w-4 h-4" /> {t('cards.list.addAnother', { item })}
       </button>
     </div>
   );
