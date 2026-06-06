@@ -6,7 +6,7 @@
  */
 
 import { useState } from 'react';
-import { Plus, X, AlertTriangle, CheckCircle, Clock, Shield, RotateCw } from 'lucide-react';
+import { Plus, X, AlertTriangle, CheckCircle, Clock, Shield } from 'lucide-react';
 import Badge from '@/components/ui/Badge';
 import type { ValidationReport, CompletenessReport } from '@/types/api';
 
@@ -33,7 +33,6 @@ export interface LanguageTabsProps {
   validationReport?: ValidationReport | null;
   completenessReport?: CompletenessReport | null;
   onRefreshValidation?: () => void;
-  onSyncParameters?: (sourceLanguage: string, targetLanguages: string[]) => void;
 }
 
 const LanguageTabs: React.FC<LanguageTabsProps> = ({
@@ -48,8 +47,7 @@ const LanguageTabs: React.FC<LanguageTabsProps> = ({
   // Phase 4: Cross-language validation props
   validationReport,
   completenessReport,
-  onRefreshValidation,
-  onSyncParameters
+  onRefreshValidation
 }) => {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newLanguageCode, setNewLanguageCode] = useState('');
@@ -129,17 +127,6 @@ const LanguageTabs: React.FC<LanguageTabsProps> = ({
       issues.push(`${completenessReport.missing_methods.length + completenessReport.extra_methods.length} method issues`);
     }
     return issues.join(', ');
-  };
-
-  const handleSyncParameters = () => {
-    if (!onSyncParameters || availableLanguages.length < 2) return;
-    
-    // Use the active language as source, sync to all other languages
-    const targetLanguages = availableLanguages
-      .map(lang => lang.code)
-      .filter(code => code !== activeLanguage);
-    
-    onSyncParameters(activeLanguage, targetLanguages);
   };
 
   return (
@@ -283,15 +270,6 @@ const LanguageTabs: React.FC<LanguageTabsProps> = ({
                 </button>
               )}
               
-              {onSyncParameters && availableLanguages.length > 1 && hasValidationIssues() && (
-                <button
-                  onClick={handleSyncParameters}
-                  className="text-green-600 hover:text-green-800 p-1 rounded"
-                  title="Sync parameters from active language"
-                >
-                  <RotateCw className="w-4 h-4" />
-                </button>
-              )}
             </div>
           )}
           
@@ -368,19 +346,6 @@ const LanguageTabs: React.FC<LanguageTabsProps> = ({
                 </ul>
               </div>
             )}
-            
-            {/* Action Buttons */}
-            <div className="flex items-center space-x-2 pt-2">
-              {onSyncParameters && availableLanguages.length > 1 && (
-                <button
-                  onClick={handleSyncParameters}
-                  className="inline-flex items-center space-x-1 px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
-                >
-                  <RotateCw className="w-3 h-3" />
-                  <span>Sync from {getLanguageLabel(activeLanguage)}</span>
-                </button>
-              )}
-            </div>
           </div>
         </div>
       )}
