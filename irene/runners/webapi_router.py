@@ -12,20 +12,16 @@ import time
 import uuid
 from typing import Dict, Any, List, Optional
 
-# Type imports - actual imports deferred to function scope to avoid circular dependencies
-try:
-    from ..core.engine import AsyncVACore
-    from ..core.intent_asset_loader import IntentAssetLoader  
-    from ..inputs.web import WebInput
-    from ..core.session_manager import SessionManager
-    from fastapi import APIRouter  # type: ignore
-except ImportError:
-    # Handle import errors gracefully for type checking
-    AsyncVACore = object
-    IntentAssetLoader = object
-    WebInput = object
-    SessionManager = object
-    APIRouter = object
+# Types used in the public signatures below. This module is only ever imported
+# lazily from the WebAPI runner (after fastapi is confirmed installed) and from
+# tests, so these imports are always satisfiable at the point of use. Importing
+# them unconditionally keeps them as real types (the previous try/except fallback
+# rebound them to `object`, which makes them unusable in type annotations).
+from ..core.engine import AsyncVACore
+from ..core.intent_asset_loader import IntentAssetLoader
+from ..inputs.web import WebInput
+from ..core.session_manager import SessionManager
+from fastapi import APIRouter  # type: ignore
 
 logger = logging.getLogger(__name__)
 
@@ -120,7 +116,7 @@ def create_webapi_router(
     from pydantic import BaseModel  # type: ignore
     
     # Import centralized API schemas
-    from ..api.schemas import CommandRequest, CommandResponse, TraceCommandResponse
+    from ..api.schemas import CommandRequest, CommandResponse, TraceCommandResponse, ExecutionTrace
     from ..core.trace_context import TraceContext
     from ..core.session_manager import SessionManager
     from ..utils.loader import get_component_status
@@ -286,10 +282,11 @@ def create_webapi_router(
     @router.post("/execute/audio", response_model=CommandResponse, tags=["General"])
     async def execute_audio(audio_file: UploadFile = File(...), room_alias: Optional[str] = None, skip_asr: bool = False):
         """Execute audio processing via REST API with optional room context"""
+        session_id = "unknown"
         try:
             if not core:
                 raise HTTPException(status_code=503, detail="Assistant not initialized")
-            
+
             # NEW: Room alias validation and session_id generation
             if room_alias:
                 is_valid, session_id_or_error = await _validate_and_resolve_room_alias(
@@ -379,6 +376,7 @@ def create_webapi_router(
             return CommandResponse(
                 success=False,
                 response="Audio processing failed",
+                session_id=session_id,
                 error=str(e)
             )
     
@@ -396,10 +394,12 @@ def create_webapi_router(
     @router.post("/trace/command", response_model=TraceCommandResponse, tags=["Tracing"])
     async def trace_command_execution(request: CommandRequest):
         """Execute command with full execution trace and optional room context"""
+        trace_context: Optional[TraceContext] = None
+        session_id = "unknown"
         try:
             if not core:
                 raise HTTPException(status_code=503, detail="Assistant not initialized")
-            
+
             # NEW: Room alias validation and session_id generation (same as execute)
             if request.room_alias:
                 is_valid, session_id_or_error = await _validate_and_resolve_room_alias(
@@ -450,7 +450,7 @@ def create_webapi_router(
                     "confidence": result.confidence,
                     "timestamp": result.timestamp
                 },
-                execution_trace={
+                execution_trace=ExecutionTrace.model_validate({
                     "request_id": trace_context.request_id,
                     "pipeline_stages": [
                         {
@@ -473,12 +473,12 @@ def create_webapi_router(
                             stage.get("processing_time_ms", 0) for stage in trace_context.stages
                         ),
                         "stage_breakdown": {
-                            stage.get("stage", "unknown"): stage.get("processing_time_ms", 0) 
+                            stage.get("stage", "unknown"): stage.get("processing_time_ms", 0)
                             for stage in trace_context.stages
                         },
                         "total_stages": len(trace_context.stages)
                     }
-                },
+                }),
                 session_id=session_id,
                 room_alias=request.room_alias,  # NEW: Include room alias in trace response
                 metadata={
@@ -491,11 +491,11 @@ def create_webapi_router(
             
         except Exception as e:
             logger.error(f"Trace command execution error: {e}")
-            trace_request_id = trace_context.request_id if 'trace_context' in locals() else "unknown"
+            trace_request_id = trace_context.request_id if trace_context is not None else "unknown"
             return TraceCommandResponse(
                 success=False,
                 final_result={},
-                execution_trace={
+                execution_trace=ExecutionTrace.model_validate({
                     "request_id": trace_request_id,
                     "pipeline_stages": [],
                     "context_evolution": {
@@ -509,7 +509,8 @@ def create_webapi_router(
                         "total_stages": 0
                     },
                     "error": str(e)
-                },
+                }),
+                session_id=session_id,
                 timestamp=time.time(),
                 error=str(e)
             )
@@ -517,10 +518,12 @@ def create_webapi_router(
     @router.post("/trace/audio", response_model=TraceCommandResponse, tags=["Tracing"])
     async def trace_audio_execution(audio_file: UploadFile = File(...), room_alias: Optional[str] = None, skip_asr: bool = False):
         """Execute audio processing with full execution trace and optional room context"""
+        trace_context: Optional[TraceContext] = None
+        session_id = "unknown"
         try:
             if not core:
                 raise HTTPException(status_code=503, detail="Assistant not initialized")
-            
+
             # NEW: Room alias validation and session_id generation (same as execute/audio)
             if room_alias:
                 is_valid, session_id_or_error = await _validate_and_resolve_room_alias(
@@ -565,8 +568,7 @@ def create_webapi_router(
             
             # Convert uploaded audio bytes to AudioData object with tracing
             from ..utils.audio_helpers import load_audio_file_to_audiodata_from_bytes
-            import time
-            
+
             # Record audio file loading stage for tracing
             stage_start = time.time()
             
@@ -626,7 +628,7 @@ def create_webapi_router(
                     "confidence": result.confidence,
                     "timestamp": result.timestamp
                 },
-                execution_trace={
+                execution_trace=ExecutionTrace.model_validate({
                     "request_id": trace_context.request_id,
                     "pipeline_stages": [
                         {
@@ -649,12 +651,12 @@ def create_webapi_router(
                             stage.get("processing_time_ms", 0) for stage in trace_context.stages
                         ),
                         "stage_breakdown": {
-                            stage.get("stage", "unknown"): stage.get("processing_time_ms", 0) 
+                            stage.get("stage", "unknown"): stage.get("processing_time_ms", 0)
                             for stage in trace_context.stages
                         },
                         "total_stages": len(trace_context.stages)
                     }
-                },
+                }),
                 session_id=session_id,
                 room_alias=room_alias,  # NEW: Include room alias in trace response
                 metadata={
@@ -674,30 +676,31 @@ def create_webapi_router(
             
         except Exception as e:
             logger.error(f"Trace audio execution error: {e}")
-            trace_request_id = trace_context.request_id if 'trace_context' in locals() else "unknown"
+            trace_request_id = trace_context.request_id if trace_context is not None else "unknown"
             return TraceCommandResponse(
                 success=False,
                 final_result={},
-                execution_trace={
+                execution_trace=ExecutionTrace.model_validate({
                     "request_id": trace_request_id,
-                    "pipeline_stages": trace_context.stages if 'trace_context' in locals() else [],
+                    "pipeline_stages": trace_context.stages if trace_context is not None else [],
                     "context_evolution": {
-                        "before": trace_context.context_snapshots.get("before") if 'trace_context' in locals() else None,
-                        "after": trace_context.context_snapshots.get("after") if 'trace_context' in locals() else None,
-                        "changes": trace_context._calculate_context_changes() if 'trace_context' in locals() else {}
+                        "before": trace_context.context_snapshots.get("before") if trace_context is not None else None,
+                        "after": trace_context.context_snapshots.get("after") if trace_context is not None else None,
+                        "changes": trace_context._calculate_context_changes() if trace_context is not None else {}
                     },
                     "performance_metrics": {
                         "total_processing_time_ms": sum(
                             stage.get("processing_time_ms", 0) for stage in trace_context.stages
-                        ) if 'trace_context' in locals() else 0.0,
+                        ) if trace_context is not None else 0.0,
                         "stage_breakdown": {
-                            stage.get("stage", "unknown"): stage.get("processing_time_ms", 0) 
+                            stage.get("stage", "unknown"): stage.get("processing_time_ms", 0)
                             for stage in trace_context.stages
-                        } if 'trace_context' in locals() else {},
-                        "total_stages": len(trace_context.stages) if 'trace_context' in locals() else 0
+                        } if trace_context is not None else {},
+                        "total_stages": len(trace_context.stages) if trace_context is not None else 0
                     },
                     "error": str(e)
-                },
+                }),
+                session_id=session_id,
                 timestamp=time.time(),
                 error=str(e)
             )
@@ -739,7 +742,7 @@ def create_webapi_router(
             # Get component status if available
             if core and hasattr(core, 'component_manager'):
                 try:
-                    component_status = await core.component_manager.get_available_components()
+                    component_status = core.component_manager.get_available_components()
                     capabilities["components"] = {
                         name: {"available": True, "type": type(comp).__name__}
                         for name, comp in component_status.items()

@@ -186,7 +186,10 @@ class ActionDebugger:
             return {"error": f"Test action {test_id} not found"}
         
         config = self._test_actions[test_id]
-        
+
+        # Record test execution start (bound before try so it is available in except)
+        start_time = time.time()
+
         try:
             # Create a mock action function
             async def mock_action():
@@ -199,10 +202,7 @@ class ActionDebugger:
                     raise RuntimeError(config.error_message or "Simulated test failure")
                 
                 return f"Test action {config.action_name} completed successfully"
-            
-            # Record test execution start
-            start_time = time.time()
-            
+
             # Execute with timeout if specified
             if config.timeout:
                 result = await asyncio.wait_for(mock_action(), timeout=config.timeout)

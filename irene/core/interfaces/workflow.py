@@ -15,6 +15,7 @@ from typing import Any, AsyncIterator, Dict, Optional
 from abc import ABC, abstractmethod
 
 from ..metadata import EntryPointMetadata
+from ..trace_context import TraceContext
 from ...intents.models import AudioData, IntentResult
 from ...intents.context_models import RequestContext
 
@@ -57,7 +58,8 @@ class WorkflowPort(EntryPointMetadata, ABC):
         yield
 
     @abstractmethod
-    async def process_text_input(self, text: str, context: RequestContext) -> IntentResult:
+    async def process_text_input(self, text: str, context: RequestContext,
+                                 trace_context: Optional[TraceContext] = None) -> IntentResult:
         """Process a single text command end-to-end."""
         ...
 

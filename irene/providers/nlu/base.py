@@ -35,7 +35,7 @@ class NLUProvider(ProviderBase):
         self.parameter_specs: Dict[str, List[ParameterSpec]] = {}  # intent_name -> parameter specs
     
     @abstractmethod
-    async def recognize(self, text: str, context: UnifiedConversationContext) -> Intent:
+    async def recognize(self, text: str, context: UnifiedConversationContext) -> Optional[Intent]:
         """Recognize intent from text
         
         Args:
@@ -83,7 +83,7 @@ class NLUProvider(ProviderBase):
         """
         pass
     
-    async def recognize_with_parameters(self, text: str, context: UnifiedConversationContext) -> Intent:
+    async def recognize_with_parameters(self, text: str, context: UnifiedConversationContext) -> Optional[Intent]:
         """Recognize intent and extract parameters in one operation
         
         Args:

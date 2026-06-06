@@ -19,6 +19,7 @@ try:
     from rapidfuzz import fuzz
     RAPIDFUZZ_AVAILABLE = True
 except ImportError:
+    fuzz = None
     RAPIDFUZZ_AVAILABLE = False
 
 
@@ -553,7 +554,7 @@ class HybridKeywordAnalyzer(BaseAnalyzer):
                 return self.pattern_confidence * self.flexible_match_boost
         
         # Check fuzzy matches if enabled
-        if self.fuzzy_enabled and RAPIDFUZZ_AVAILABLE:
+        if self.fuzzy_enabled and fuzz is not None:
             keywords = self._extract_keywords_like_hybrid(unit)
             for keyword in keywords[:self.max_fuzzy_keywords_per_intent]:
                 similarity = fuzz.ratio(phrase_normalized, self._normalize_text_like_hybrid(keyword)) / 100.0

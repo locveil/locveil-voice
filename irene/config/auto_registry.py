@@ -234,7 +234,7 @@ class AutoSchemaRegistry:
                 description = ""
                 if hasattr(field_info, 'description') and field_info.description:
                     description = field_info.description
-                elif hasattr(field_info, 'json_schema_extra') and field_info.json_schema_extra:
+                elif hasattr(field_info, 'json_schema_extra') and isinstance(field_info.json_schema_extra, dict):
                     description = field_info.json_schema_extra.get('description', '')
                 
                 # For Pydantic v2, check if field is required by looking at default value
@@ -269,7 +269,7 @@ class AutoSchemaRegistry:
                         field_schema["properties"] = nested_schema
                 
                 # Add constraints if available (from field annotations)
-                if hasattr(field_info, 'json_schema_extra') and field_info.json_schema_extra:
+                if hasattr(field_info, 'json_schema_extra') and isinstance(field_info.json_schema_extra, dict):
                     field_schema.update(field_info.json_schema_extra)
                 
                 schema["fields"][field_name] = field_schema

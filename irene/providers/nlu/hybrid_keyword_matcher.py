@@ -13,7 +13,7 @@ import logging
 import time
 import math
 import unicodedata
-from typing import Dict, Any, List, Pattern, Optional, Tuple, Set
+from typing import Dict, Any, List, Pattern, Optional, Tuple, Set, cast
 from dataclasses import dataclass
 
 from .base import NLUProvider
@@ -350,7 +350,7 @@ class HybridKeywordMatcherProvider(NLUProvider):
             return 'ru'
         return 'en'
     
-    def _check_partial_match(self, input_tokens: List[str], phrase_tokens: List[str]) -> bool:
+    def _check_partial_match(self, input_tokens: Set[str], phrase_tokens: List[str]) -> bool:
         """Token-based partial matching (replace regex explosion)"""
         if not phrase_tokens:
             return False
@@ -402,7 +402,7 @@ class HybridKeywordMatcherProvider(NLUProvider):
         keyword_scores.sort(key=lambda x: x[1], reverse=True)
         return [kw for kw, _ in keyword_scores[:self.max_fuzzy_keywords_per_intent]]
     
-    async def recognize(self, text: str, context: UnifiedConversationContext) -> Intent:
+    async def recognize(self, text: str, context: UnifiedConversationContext) -> Optional[Intent]:
         """
         Hybrid recognition: patterns first, then fuzzy matching.
         
@@ -646,10 +646,12 @@ class HybridKeywordMatcherProvider(NLUProvider):
                 continue
             
             # Handle both Set[str] (new collision-free) and str (legacy) mappings
-            intent_names = keyword_map.get(keyword, set())
-            if isinstance(intent_names, str):
-                intent_names = {intent_names}
-            elif not intent_names:
+            raw_intent_names = cast(object, keyword_map.get(keyword, set()))
+            if isinstance(raw_intent_names, str):
+                intent_names = {raw_intent_names}
+            elif isinstance(raw_intent_names, set) and raw_intent_names:
+                intent_names = raw_intent_names
+            else:
                 continue
                 
             for intent_name in intent_names:
@@ -1079,6 +1081,8 @@ class HybridKeywordMatcherProvider(NLUProvider):
     def _extract_with_regex(self, text: str, param_spec: ParameterSpec) -> Optional[Any]:
         """Extract parameter value using regex pattern"""
         import re
+        if param_spec.pattern is None:
+            return None
         try:
             match = re.search(param_spec.pattern, text, re.IGNORECASE)
             if match:

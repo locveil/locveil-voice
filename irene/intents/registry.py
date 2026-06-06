@@ -362,7 +362,7 @@ class IntentRegistry:
         """
         return self.contextual_capabilities.copy()
     
-    def can_handle_contextual_command(self, command: str, domain: str = None) -> bool:
+    def can_handle_contextual_command(self, command: str, domain: Optional[str] = None) -> bool:
         """
         Check if a contextual command can be handled, optionally by a specific domain.
         

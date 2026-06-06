@@ -8,6 +8,7 @@ from ..intents.models import AudioData, IntentResult
 from ..intents.context_models import UnifiedConversationContext
 from ..core.interfaces.workflow import WorkflowPort
 from ..core.session_manager import SessionManager
+from ..core.trace_context import TraceContext
 
 logger = logging.getLogger(__name__)
 
@@ -75,7 +76,8 @@ class Workflow(WorkflowPort):
         return
         yield
     
-    async def process_text_input(self, text: str, context: RequestContext) -> IntentResult:
+    async def process_text_input(self, text: str, context: RequestContext,
+                                 trace_context: Optional[TraceContext] = None) -> IntentResult:
         """
         Process text input through the workflow.
         

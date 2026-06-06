@@ -60,7 +60,7 @@ class AssetLoaderConfig:
         strict_mode: bool = False,
         default_language: str = "ru",
         fallback_language: str = "en",
-        supported_languages: List[str] = None,
+        supported_languages: Optional[List[str]] = None,
         enable_language_filtering: bool = True
     ):
         self.validate_json_schema = validate_json_schema
@@ -83,7 +83,7 @@ class IntentAssetLoader:
         # Asset caches
         self.donations: Dict[str, HandlerDonation] = {}
         self.templates: Dict[str, Dict[str, Any]] = {}
-        self.prompts: Dict[str, Dict[str, str]] = {}
+        self.prompts: Dict[str, Dict[str, Any]] = {}
         self.localizations: Dict[str, Dict[str, Any]] = {}
         self.web_templates: Dict[str, str] = {}  # NEW: Web template cache
         
@@ -201,7 +201,7 @@ class IntentAssetLoader:
             self._add_error(error_msg)
             return False
     
-    def _create_backup(self, file_path: Path, backup_type: str, identifier: str, language: str = None) -> bool:
+    def _create_backup(self, file_path: Path, backup_type: str, identifier: str, language: Optional[str] = None) -> bool:
         """
         Create a backup of an existing file before modification.
         
@@ -367,7 +367,7 @@ class IntentAssetLoader:
         
         return donations_list
     
-    def get_template(self, handler_name: str, template_name: str, language: str = None) -> Optional[str]:
+    def get_template(self, handler_name: str, template_name: str, language: Optional[str] = None) -> Optional[str]:
         """Get response template with i18n fallback"""
         language = language or self.config.default_language
         
@@ -388,7 +388,7 @@ class IntentAssetLoader:
         
         return None
     
-    def get_prompt(self, handler_name: str, prompt_type: str, language: str = None) -> Optional[str]:
+    def get_prompt(self, handler_name: str, prompt_type: str, language: Optional[str] = None) -> Optional[str]:
         """Get LLM prompt with language fallback"""
         language = language or self.config.default_language
         
@@ -406,7 +406,7 @@ class IntentAssetLoader:
         
         return None
     
-    def get_prompt_metadata(self, handler_name: str, prompt_type: str, language: str = None) -> Optional[Dict[str, Any]]:
+    def get_prompt_metadata(self, handler_name: str, prompt_type: str, language: Optional[str] = None) -> Optional[Dict[str, Any]]:
         """Get LLM prompt metadata for assets editor"""
         language = language or self.config.default_language
         
@@ -424,7 +424,7 @@ class IntentAssetLoader:
         
         return None
     
-    def get_localization(self, domain: str, language: str = None) -> Optional[Dict[str, Any]]:
+    def get_localization(self, domain: str, language: Optional[str] = None) -> Optional[Dict[str, Any]]:
         """Get localization data (arrays, mappings) with language fallback"""
         language = language or self.config.default_language
         
@@ -934,7 +934,7 @@ class IntentAssetLoader:
         
         return handlers_languages
     
-    async def validate_template_data(self, handler_name: str, template_data: Dict[str, Any]) -> tuple[bool, List[Dict[str, str]], List[Dict[str, str]]]:
+    async def validate_template_data(self, handler_name: str, template_data: Dict[str, Any]) -> tuple[bool, List[Dict[str, Any]], List[Dict[str, Any]]]:
         """Validate template data structure"""
         errors = []
         warnings = []
@@ -1190,7 +1190,7 @@ class IntentAssetLoader:
         
         return domains_languages
     
-    async def validate_localization_data(self, domain: str, localization_data: Dict[str, Any]) -> tuple[bool, List[Dict[str, str]], List[Dict[str, str]]]:
+    async def validate_localization_data(self, domain: str, localization_data: Dict[str, Any]) -> tuple[bool, List[Dict[str, Any]], List[Dict[str, Any]]]:
         """Validate localization data structure"""
         errors = []
         warnings = []
@@ -1275,7 +1275,7 @@ class IntentAssetLoader:
                     "severity": "warning"
                 })
     
-    async def validate_prompt_data(self, handler_name: str, prompt_data: Dict[str, Any]) -> tuple[bool, List[Dict[str, str]], List[Dict[str, str]]]:
+    async def validate_prompt_data(self, handler_name: str, prompt_data: Dict[str, Any]) -> tuple[bool, List[Dict[str, Any]], List[Dict[str, Any]]]:
         """Validate prompt data structure"""
         errors = []
         warnings = []
@@ -1736,7 +1736,7 @@ class EnhancedHandlerManager:
         
         self.handlers: Dict[str, Any] = {}  # Will contain IntentHandler instances
     
-    async def initialize(self, handler_dir: Path = None) -> None:
+    async def initialize(self, handler_dir: Optional[Path] = None) -> None:
         """Initialize handlers with unified asset loading"""
         
         # Discover Python handler files

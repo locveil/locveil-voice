@@ -8,7 +8,7 @@ Supports text enhancement, chat completion, and various language tasks.
 import os
 import asyncio
 import time
-from typing import Dict, Any, List
+from typing import Dict, Any, List, cast
 import logging
 
 from .base import LLMProvider
@@ -163,14 +163,16 @@ class OpenAILLMProvider(LLMProvider):
         
         try:
             from openai import AsyncOpenAI  # type: ignore
+            from openai.types.chat import ChatCompletionMessageParam
             client = AsyncOpenAI(api_key=self.api_key, base_url=self.base_url, timeout=self.timeout)
-            
+            typed_messages = cast(List[ChatCompletionMessageParam], messages)
+
             # Smart routing: use appropriate API for the model
             if model in self._get_chat_compatible_models():
                 logger.debug("Using Chat Completions API for model: %s", model)
                 response = await client.chat.completions.create(
                     model=model,
-                    messages=messages,
+                    messages=typed_messages,
                     max_tokens=max_tokens,
                     temperature=temperature
                 )
@@ -197,12 +199,12 @@ class OpenAILLMProvider(LLMProvider):
                 logger.warning("Unknown model '%s', attempting Chat Completions API", model)
                 response = await client.chat.completions.create(
                     model=model,
-                    messages=messages,
+                    messages=typed_messages,
                     max_tokens=max_tokens,
                     temperature=temperature
                 )
                 return (response.choices[0].message.content or "").strip()
-            
+
         except Exception as e:
             logger.error("OpenAI chat completion failed for model '%s' at %s: %s", model, self.base_url, e)
             raise  # QUAL-15: signal failure so the component falls through to the next provider / console

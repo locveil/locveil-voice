@@ -23,6 +23,7 @@ try:
     from rapidfuzz import fuzz
     RAPIDFUZZ_AVAILABLE = True
 except ImportError:
+    fuzz = None
     RAPIDFUZZ_AVAILABLE = False
 
 
@@ -240,9 +241,9 @@ class NLUConflictDetector(ConflictDetector):
         Returns:
             List of fuzzy keyword collisions
         """
-        if not RAPIDFUZZ_AVAILABLE:
+        if fuzz is None:
             return []
-        
+
         collisions = []
         
         # Group keywords by language

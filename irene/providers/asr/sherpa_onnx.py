@@ -28,7 +28,7 @@ import os
 import platform
 import wave
 from dataclasses import dataclass
-from typing import Any, AsyncIterator, Dict, List, Optional
+from typing import Any, AsyncIterator, Callable, Dict, List, Optional
 
 from .base import ASRProvider
 
@@ -111,8 +111,9 @@ class SherpaOnnxASRProvider(ASRProvider):
         # The descriptor declares its member set (transducer=4 files, whisper=3).
         files = await self.asset_manager.download_model_pack("sherpa_onnx", self.model_id)
 
+        build: Callable[[], Any]
         if self.model_type == "vosk-transducer":
-            def build():
+            def build_transducer():
                 return sherpa_onnx.OfflineRecognizer.from_transducer(
                     encoder=str(files["encoder"]),
                     decoder=str(files["decoder"]),
@@ -123,12 +124,13 @@ class SherpaOnnxASRProvider(ASRProvider):
                     feature_dim=self.feature_dim,
                     decoding_method=self.decoding_method,
                 )
+            build = build_transducer
         elif self.model_type in ("whisper", "whisper-onnx"):
             # Whisper has no joiner and its own fixed frontend (no sample_rate/feature_dim
             # here). "" language → whisper's own language detection.
             language = "" if self.default_language in (None, "", "auto") else self.default_language
 
-            def build():
+            def build_whisper():
                 return sherpa_onnx.OfflineRecognizer.from_whisper(
                     encoder=str(files["encoder"]),
                     decoder=str(files["decoder"]),
@@ -138,10 +140,11 @@ class SherpaOnnxASRProvider(ASRProvider):
                     language=language,
                     task="transcribe",
                 )
+            build = build_whisper
         elif self._is_streaming:
             # Online/streaming transducer (chunk-wise encoder). Endpoint detection on so
             # transcribe_stream can segment utterances live.
-            def build():
+            def build_streaming():
                 return sherpa_onnx.OnlineRecognizer.from_transducer(
                     tokens=str(files["tokens"]),
                     encoder=str(files["encoder"]),
@@ -153,6 +156,7 @@ class SherpaOnnxASRProvider(ASRProvider):
                     decoding_method=self.decoding_method,
                     enable_endpoint_detection=True,
                 )
+            build = build_streaming
         else:
             raise NotImplementedError(
                 f"model_type '{self.model_type}' not supported "

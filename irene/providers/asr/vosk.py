@@ -7,7 +7,7 @@ Extracted from MicrophoneInput for clean separation of concerns.
 
 import json
 import asyncio
-from typing import Dict, Any, List, AsyncIterator
+from typing import Dict, Any, List, AsyncIterator, Optional
 from pathlib import Path
 import logging
 
@@ -241,7 +241,7 @@ class VoskASRProvider(ASRProvider):
             except Exception as e:
                 logger.error(f"VOSK streaming error: {e}")
     
-    def reset(self, language: str = None) -> bool:
+    def reset(self, language: Optional[str] = None) -> bool:
         """
         Reset VOSK recognizer state for specified language or all languages.
         

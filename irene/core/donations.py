@@ -159,7 +159,7 @@ class MethodDonation(BaseModel):
     description: Optional[str] = Field("", description="Method description")
     
     # Recognition patterns
-    phrases: List[str] = Field(..., min_items=1, description="Trigger phrases")
+    phrases: List[str] = Field(..., min_length=1, description="Trigger phrases")
     lemmas: List[str] = Field(default_factory=list, description="Key lemmas")
     
     # Parameter specifications
@@ -204,7 +204,7 @@ class HandlerDonation(BaseModel):
     train_keywords: Optional[List[str]] = Field(default_factory=list, description="Train-specific keywords")
     
     # Method donations
-    method_donations: List[MethodDonation] = Field(..., min_items=1, description="Method-specific donations")
+    method_donations: List[MethodDonation] = Field(..., min_length=1, description="Method-specific donations")
     
     # Global configuration
     global_parameters: List[ParameterSpec] = Field(default_factory=list, description="Shared parameters")
@@ -250,7 +250,7 @@ class HandlerDonation(BaseModel):
 class KeywordDonation(BaseModel):
     """Converted donation format for keyword matching providers"""
     intent: str = Field(..., description="Full intent name (domain.suffix)")
-    phrases: List[str] = Field(..., min_items=1, description="Trigger phrases")
+    phrases: List[str] = Field(..., min_length=1, description="Trigger phrases")
     lemmas: List[str] = Field(default_factory=list, description="Key lemmas")
     parameters: List[ParameterSpec] = Field(default_factory=list, description="Parameter specifications")
     token_patterns: List[List[Dict[str, Any]]] = Field(default_factory=list, description="spaCy token patterns")

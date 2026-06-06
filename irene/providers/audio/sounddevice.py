@@ -8,7 +8,7 @@ Provides high-quality audio playback using sounddevice and soundfile libraries.
 import asyncio
 import logging
 from pathlib import Path
-from typing import Dict, Any, List, AsyncIterator, Union
+from typing import Dict, Any, List, AsyncIterator, Union, cast
 import uuid
 
 from .base import AudioProvider
@@ -286,7 +286,7 @@ class SoundDeviceAudioProvider(AudioProvider):
         
         try:
             devices = []
-            device_list = self._sd.query_devices()  # type: ignore
+            device_list = cast("List[Dict[str, Any]]", self._sd.query_devices())
             
             for i, device in enumerate(device_list):
                 if device['max_output_channels'] > 0:  # Output device

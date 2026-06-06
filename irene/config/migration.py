@@ -20,7 +20,7 @@ from .models import (
     CoreConfig, SystemConfig, InputConfig, ComponentConfig, 
     TTSConfig, AudioConfig, ASRConfig, LLMConfig, 
     VoiceTriggerConfig, NLUConfig, TextProcessorConfig, IntentSystemConfig,
-    AssetConfig, WorkflowConfig
+    IntentHandlerListConfig, AssetConfig, WorkflowConfig
 )
 from .schemas import SchemaVersion, CURRENT_SCHEMA_VERSION
 
@@ -218,7 +218,7 @@ class V13ToV14Migrator:
         disabled_components = v13_components.get("disabled", [])
         
         # Helper function to check if component is enabled
-        def is_component_enabled(component_name: str, alt_names: list = None) -> bool:
+        def is_component_enabled(component_name: str, alt_names: Optional[list] = None) -> bool:
             """Check if a component is enabled, with alternative name checking"""
             if alt_names is None:
                 alt_names = []
@@ -429,7 +429,7 @@ class V13ToV14Migrator:
             enabled=v13_intents.get("enabled", True),
             confidence_threshold=v13_intents.get("confidence_threshold", 0.7),
             fallback_intent=v13_intents.get("fallback_handler", "conversation.general"),
-            handlers=self._migrate_intent_handlers(v13_intents)
+            handlers=IntentHandlerListConfig.model_validate(self._migrate_intent_handlers(v13_intents))
         )
         
         self._log("Migrated Intent System configuration")

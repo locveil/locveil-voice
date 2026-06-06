@@ -2,7 +2,7 @@
 
 import logging
 import time
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, Callable
 
 from .models import Intent, IntentResult
 from .context_models import UnifiedConversationContext
@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 class IntentOrchestrator:
     """Central intent coordinator that routes intents to appropriate handlers with donation-driven execution."""
     
-    def __init__(self, registry: IntentRegistry, context_manager=None, domain_priorities: Dict[str, int] = None):
+    def __init__(self, registry: IntentRegistry, context_manager=None, domain_priorities: Optional[Dict[str, int]] = None):
         """
         Initialize the intent orchestrator.
         
@@ -28,7 +28,7 @@ class IntentOrchestrator:
         """
         self.registry = registry
         self.middleware: list = []
-        self.error_handlers: Dict[str, callable] = {}
+        self.error_handlers: Dict[str, Callable] = {}
         self._use_donation_routing = True  # Phase 6: Enable donation-driven routing
         self.metrics_collector = get_metrics_collector()  # Phase 2: Intent analytics integration
         
@@ -41,12 +41,12 @@ class IntentOrchestrator:
         self._capabilities_cache_time = 0
         self._capabilities_cache_duration = 30  # 30 seconds cache for capabilities
     
-    def add_middleware(self, middleware_func: callable):
+    def add_middleware(self, middleware_func: Callable):
         """Add middleware function to process intents before execution."""
         self.middleware.append(middleware_func)
         logger.info(f"Added middleware: {middleware_func.__name__}")
     
-    def add_error_handler(self, error_type: str, handler: callable):
+    def add_error_handler(self, error_type: str, handler: Callable):
         """Add error handler for specific error types."""
         self.error_handlers[error_type] = handler
         logger.info(f"Added error handler for: {error_type}")
@@ -146,6 +146,13 @@ class IntentOrchestrator:
             # Phase 2 TODO16: Central disambiguation - handlers never see ambiguous commands
             if processed_intent.domain == "contextual":
                 # STEP 1: Check if this is a contextual intent from NLU cascade
+                contextual_command = processed_intent.action
+                if contextual_command is None:
+                    return self._create_error_result(
+                        "No contextual command specified.",
+                        "no_contextual_command",
+                        intent
+                    )
                 # STEP 2: Analyze active fire-and-forget actions for disambiguation
                 active_actions = context.active_actions
                 if not active_actions:
@@ -157,7 +164,7 @@ class IntentOrchestrator:
                 
                 # STEP 3: Central disambiguation using existing sophisticated logic
                 # Phase 3 TODO16: Enhanced disambiguation with capability checking
-                available_domains = self.registry.get_handlers_for_contextual_command(processed_intent.action)
+                available_domains = self.registry.get_handlers_for_contextual_command(contextual_command)
                 
                 # Filter active actions to only those with handlers that support this command
                 filtered_active_actions = {}
@@ -176,7 +183,7 @@ class IntentOrchestrator:
                 
                 # Determine if confirmation is needed based on ambiguity
                 require_confirmation = len(filtered_active_actions) > 1 and self._should_require_confirmation(
-                    filtered_active_actions, processed_intent.action
+                    filtered_active_actions, contextual_command
                 )
                 
                 resolution = self.context_manager.resolve_contextual_command_ambiguity(

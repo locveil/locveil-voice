@@ -12,6 +12,25 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-06
+- **QUAL-4 COMPLETE — `uv run pyright` at 0 errors, full standard mode, empty suppression list (762 → 0).** 4e (the
+  type-tail, 261) closed the ratchet. **`api/schemas.py` (71):** Pydantic v1-isms with clean v2 fixes — 66
+  `Field(example=…)` → `json_schema_extra={"example": …}` (batched via a script, then hand-fixed one multi-line list the
+  regex mangled + 2 inline ones); a `default_factory=PerformanceMetrics` that would crash (`PerformanceMetrics()` needs
+  required fields) → made the field required; 4 subclass `timestamp` overrides given the base `default_factory=time.time`.
+  **The 190-file tail** was cleared by 6 parallel sub-agents (grouped runners/utils/core/components/intents/analysis-providers-config)
+  under a strict spec (no `type:ignore`/`assert`/`TYPE_CHECKING`, no new cross-layer imports, don't break the enforced
+  4b/4c/4d, flag real bugs) + central verification. Most were `param: T = None` → `Optional[T]`, untyped-third-party
+  `cast`s (sounddevice `DeviceList|dict`, pyttsx3, spaCy), and possibly-unbound inits. **Genuine bugs found & fixed:** a
+  microWakeWord `WakeWordResult(metadata=…)` TypeError swallowed by `except` as not-detected (added the `metadata` field);
+  `await core.component_manager.get_available_components()` on a SYNC method (would TypeError on `/system/capabilities`);
+  `min_items`→`min_length` (invalid v2 kwarg); `callable` used as a type annotation ×3 in `orchestrator`; a `WorkflowPort`
+  missing the `trace_context` param (contract drift). **Flagged for follow-up (type-fixed, deeper logic bug deferred):**
+  `config/manager.py` `_generate_provider_sections`/`_generate_normalizer_sections` drop all but the last section header in
+  generated TOML; the `intent_asset_loader` validators emit `{field,message,severity}` dicts but `api.schemas.ValidationError`
+  requires `{type,message,path}` → would 500 on a real template/prompt/localization validation error. **Verified:**
+  `uv run pyright` 0 (full standard, all rules enforced) · 9/9 import contracts (new imports all inward) · validator 55/55 ·
+  suite 84=baseline. **QUAL-4 done across 4a–4e: 762 type errors eliminated, ~25+ latent bugs fixed along the way; the
+  release "pyright standard under threshold" exit-criterion is met (threshold = 0).**
 - **QUAL-4d DONE — Cluster A port-hierarchy harmonization; all 87 override-incompat errors cleared, rules enabled.**
   Per the user's decisions: **`is_available` → async everywhere** (capability ports + inputs web/cli/microphone +
   `tts_component` made `async` to match the already-async `Component.base`; the `await` cascade propagated through

@@ -7,7 +7,7 @@ the system including configuration UI.
 """
 
 import logging
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, cast
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +39,7 @@ def list_audio_input_devices() -> List[Dict[str, Any]]:
         
     try:
         import sounddevice as sd  # type: ignore
-        devices = sd.query_devices()
+        devices = cast("List[Dict[str, Any]]", sd.query_devices())
         input_devices = []
         
         # Get default input device
@@ -84,7 +84,7 @@ def list_audio_output_devices() -> List[Dict[str, Any]]:
         
     try:
         import sounddevice as sd  # type: ignore
-        devices = sd.query_devices()
+        devices = cast("List[Dict[str, Any]]", sd.query_devices())
         output_devices = []
         
         # Get default output device

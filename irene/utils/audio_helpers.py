@@ -311,8 +311,8 @@ async def get_audio_devices() -> List[Dict[str, Any]]:
     try:
         # Try sounddevice for comprehensive device info
         import sounddevice as sd  # type: ignore
-        device_list = await asyncio.to_thread(sd.query_devices)
-        
+        device_list = cast(List[Dict[str, Any]], await asyncio.to_thread(sd.query_devices))
+
         for i, device in enumerate(device_list):
             devices.append({
                 'id': i,
@@ -462,8 +462,8 @@ async def validate_audio_input_device(device_id: int) -> Optional[Dict[str, Any]
             # If direct query fails, fall back to enumerating all devices
             logger.debug(f"Direct device query failed for device {device_id}: {direct_query_error}")
             
-            device_list = await asyncio.to_thread(sd.query_devices)
-            
+            device_list = cast(List[Dict[str, Any]], await asyncio.to_thread(sd.query_devices))
+
             if 0 <= device_id < len(device_list):
                 device = device_list[device_id]
                 input_channels = device.get('max_input_channels', 0)
@@ -1585,6 +1585,7 @@ async def load_audio_file_to_audiodata_from_bytes(
     
     # Create temporary file for processing
     temp_file = None
+    temp_path = None
     try:
         with tempfile.NamedTemporaryFile(suffix=f'.{file_format}', delete=False) as temp_file:
             temp_file.write(audio_bytes)

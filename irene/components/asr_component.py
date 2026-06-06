@@ -423,7 +423,7 @@ class ASRComponent(Component, ASRPlugin, WebAPIPlugin, ASRPort):
         # TODO: Implement language switching logic
         return False, "Переключение языка пока не реализовано"
     
-    def reset_provider_state(self, provider_name: str = None, language: str = None) -> bool:
+    def reset_provider_state(self, provider_name: Optional[str] = None, language: Optional[str] = None) -> bool:
         """
         Reset ASR provider state to prevent contamination between utterances.
         

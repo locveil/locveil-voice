@@ -765,6 +765,7 @@ class NLUComponent(Component, NLUPlugin, WebAPIPlugin):
             Intent object with recognized intent and entities
         """
         # Check cache if enabled
+        cache_key = ""
         if self.cache_recognition_results:
             cache_key = self._get_cache_key(text, context)
             cached_entry = self._recognition_cache.get(cache_key)
@@ -969,7 +970,7 @@ class NLUComponent(Component, NLUPlugin, WebAPIPlugin):
     
     def _create_fallback_intent(self, text: str, failed_context: Optional[Dict[str, Any]] = None) -> Intent:
         """Create a fallback conversation intent when NLU fails or has low confidence."""
-        entities = {"original_text": text}
+        entities: Dict[str, Any] = {"original_text": text}
 
         # Add enhanced fallback context if available
         if failed_context:
@@ -1113,7 +1114,10 @@ class NLUComponent(Component, NLUPlugin, WebAPIPlugin):
                     else:
                         intent = await self.recognize(request.text, context)
                         provider_name = self.default_provider or "fallback"
-                    
+
+                    if intent is None:
+                        raise HTTPException(status_code=422, detail="No intent could be recognized for the provided text")
+
                     return IntentResponse(
                         success=True,
                         name=intent.name,

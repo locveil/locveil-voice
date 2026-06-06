@@ -25,6 +25,7 @@ class WakeWordResult:
     word: Optional[str] = None
     timestamp: float = field(default_factory=time.time)
     audio_data: Optional[bytes] = None
+    metadata: Optional[Dict[str, Any]] = None
 
 
 @dataclass

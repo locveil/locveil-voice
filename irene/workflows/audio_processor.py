@@ -13,7 +13,7 @@ import logging
 import time
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Optional, List, Dict, Any, AsyncIterator, Callable, Union
+from typing import Optional, List, Dict, Any, AsyncIterator, Awaitable, Callable, Union
 from pathlib import Path
 
 from ..intents.models import AudioData
@@ -374,7 +374,7 @@ class UniversalAudioProcessor:
             duration = time.time() - self.voice_segment_start_time if self.voice_segment_start_time else 0
             logger.debug(f"Voice segment active: {len(self.voice_buffer)} chunks, {duration:.1f}s duration")
     
-    async def _handle_voice_ended(self) -> VoiceSegment:
+    async def _handle_voice_ended(self) -> Optional[VoiceSegment]:
         """
         Handle voice end - create complete voice segment.
         
@@ -621,7 +621,7 @@ class UniversalAudioProcessor:
     # Phase 4: reset_advanced_metrics() removed - use MetricsCollector.reset_metrics() for unified metrics reset
     
     async def calibrate_threshold(self, calibration_audio: List[AudioData], 
-                                noise_percentile: int = None) -> float:
+                                noise_percentile: Optional[int] = None) -> float:
         """
         Calibrate VAD threshold based on environment audio samples.
         
@@ -689,7 +689,7 @@ class AudioProcessorInterface:
     async def process_audio_pipeline(self, 
                                    audio_stream: AsyncIterator[AudioData],
                                    context: Any,  # RequestContext
-                                   voice_segment_handler: Callable[[VoiceSegment, Any], None]) -> AsyncIterator[VoiceSegment]:
+                                   voice_segment_handler: Callable[[VoiceSegment, Any], Awaitable[None]]) -> AsyncIterator[VoiceSegment]:
         """
         Process audio pipeline with VAD integration.
         

@@ -584,7 +584,7 @@ class LLMComponent(Component, LLMPlugin, WebAPIPlugin, LLMPort):
             return LLMProvidersResponse(
                 success=True,
                 providers=result,
-                default=self.default_provider
+                default=self.default_provider or "openai"
             )
         
         @router.post("/configure", response_model=LLMConfigureResponse)

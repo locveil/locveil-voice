@@ -13,30 +13,13 @@
   "venvPath": ".",
   "venv": ".venv",
 
-  // QUAL-4: standard mode is the release gate (Definition-of-release: pyright
-  // standard at/under the agreed threshold = ZERO). It is reached by a ratchet:
-  // every rule below is suppressed only until its QUAL-4 slice clears it, then the
-  // line is DELETED so `standard` enforces it permanently. The end state is an
-  // EMPTY suppression list = 0 errors at standard mode. Never add a new suppression.
-  // Baseline 2026-06-06 (pyright 1.1.410): 762 errors across these 20 rules.
+  // QUAL-4 (DONE 2026-06-06): the release type gate. Standard mode is enforced with
+  // an EMPTY suppression list — the ratchet is complete (4a gate · 4b None-safety ·
+  // 4c phantom-attrs · 4d override-compat · 4e type-tail; 762 baseline errors → 0).
+  // `uv run pyright` must stay at 0 errors. NEVER add a rule suppression here; fix the
+  // code instead. (The one scoped exception is the documented file-level directive in
+  // irene/api/schemas.py for Pydantic field/Config narrowing — see that file.)
   "typeCheckingMode": "standard",
-
-  "reportArgumentType": "none",                  // QUAL-4e  (113)
-  "reportCallIssue": "none",                     // QUAL-4e  (91)
-  "reportPossiblyUnboundVariable": "none",       // QUAL-4e  (27)
-  "reportReturnType": "none",                    // QUAL-4e  (17)
-  "reportGeneralTypeIssues": "none",             // QUAL-4e  (14)
-  "reportInvalidTypeForm": "none",               // QUAL-4e  (6)
-  "reportOperatorIssue": "none",                 // QUAL-4e  (4)
-  "reportRedeclaration": "none",                 // QUAL-4e  (2)
-  "reportIndexIssue": "none",                    // QUAL-4e  (2)
-  "reportOptionalSubscript": "none",             // QUAL-4e  (2)
-  "reportOptionalContextManager": "none",        // QUAL-4e  (1)
-  "reportFunctionMemberAccess": "none",          // QUAL-4e  (1)
-  "reportUnboundVariable": "none",               // QUAL-4e  (1)
-  "reportUnhashable": "none",                    // QUAL-4e  (1)
-  "reportOptionalCall": "none",                  // QUAL-4e  (1)
-  "reportAssignmentType": "none",                // QUAL-4e  (1)
 
   // stub-present-but-source-absent noise from optional native deps; not type debt
   "reportMissingModuleSource": "none"

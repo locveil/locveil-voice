@@ -661,7 +661,7 @@ class AudioConfigurationValidator:
     def __init__(self):
         self.logger = logging.getLogger(__name__)
     
-    def validate_startup_configuration(self, config: CoreConfig, providers: Dict[str, Any] = None) -> ValidationSummary:
+    def validate_startup_configuration(self, config: CoreConfig, providers: Optional[Dict[str, Any]] = None) -> ValidationSummary:
         """
         Perform startup validation with fatal error detection
         
@@ -937,7 +937,7 @@ class AudioConfigurationValidator:
         return results
 
 
-def validate_startup_audio_configuration(config: CoreConfig, providers: Dict[str, Any] = None) -> ValidationSummary:
+def validate_startup_audio_configuration(config: CoreConfig, providers: Optional[Dict[str, Any]] = None) -> ValidationSummary:
     """
     Convenience function for startup audio configuration validation
     

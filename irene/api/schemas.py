@@ -105,37 +105,31 @@ class AudioChunkMessage(BaseAPIMessage):
     )
     data: str = Field(
         description="Base64-encoded audio data (PCM, 16kHz, 16-bit, mono recommended)",
-        example="UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqF..."
-    )
+        json_schema_extra={"example": "UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqF..."}    )
     language: Optional[str] = Field(
         default="ru",
         description="Language code for transcription (ISO 639-1 format)",
-        example="ru"
-    )
+        json_schema_extra={"example": "ru"}    )
     provider: Optional[str] = Field(
         default=None,
         description="Specific ASR provider to use (optional, uses default if not specified)",
-        example="whisper"
-    )
+        json_schema_extra={"example": "whisper"}    )
     sample_rate: Optional[int] = Field(
         default=16000,
         description="Audio sample rate in Hz (optional, defaults to 16000Hz)",
-        example=16000,
-        ge=8000,
+        json_schema_extra={"example": 16000},        ge=8000,
         le=192000
     )
     channels: Optional[int] = Field(
         default=1,
         description="Number of audio channels (optional, defaults to 1=mono)",
-        example=1,
-        ge=1,
+        json_schema_extra={"example": 1},        ge=1,
         le=8
     )
     format: Optional[str] = Field(
         default="pcm16",
         description="Audio format specification (optional, defaults to pcm16)",
-        example="pcm16"
-    )
+        json_schema_extra={"example": "pcm16"}    )
     
     class Config:
         json_schema_extra = {
@@ -175,23 +169,19 @@ class TranscriptionResultMessage(BaseAPIMessage):
     )
     text: str = Field(
         description="Transcribed text from the audio chunk",
-        example="привет как дела"
-    )
+        json_schema_extra={"example": "привет как дела"}    )
     provider: str = Field(
         description="ASR provider that performed the transcription",
-        example="whisper"
-    )
+        json_schema_extra={"example": "whisper"}    )
     language: str = Field(
         description="Language code used for transcription",
-        example="ru"
-    )
+        json_schema_extra={"example": "ru"}    )
     confidence: Optional[float] = Field(
         default=None,
         description="Confidence score for the transcription (0.0-1.0, if available)",
         ge=0.0,
         le=1.0,
-        example=0.95
-    )
+        json_schema_extra={"example": 0.95}    )
     
     class Config:
         json_schema_extra = {
@@ -227,18 +217,15 @@ class TranscriptionErrorMessage(BaseAPIMessage):
     )
     error: str = Field(
         description="Error message describing what went wrong",
-        example="Audio format not supported"
-    )
+        json_schema_extra={"example": "Audio format not supported"}    )
     provider: Optional[str] = Field(
         default=None,
         description="ASR provider that encountered the error (if known)",
-        example="whisper"
-    )
+        json_schema_extra={"example": "whisper"}    )
     recoverable: bool = Field(
         default=True,
         description="Whether the client can retry the request",
-        example=True
-    )
+        json_schema_extra={"example": True}    )
     
     class Config:
         json_schema_extra = {
@@ -274,32 +261,27 @@ class BinaryAudioSessionMessage(BaseAPIMessage):
     sample_rate: int = Field(
         default=16000,
         description="Audio sample rate in Hz (16000 recommended for ASR)",
-        example=16000,
-        ge=8000,
+        json_schema_extra={"example": 16000},        ge=8000,
         le=48000
     )
     channels: int = Field(
         default=1,
         description="Number of audio channels (1=mono, 2=stereo)",
-        example=1,
-        ge=1,
+        json_schema_extra={"example": 1},        ge=1,
         le=2
     )
     format: str = Field(
         default="pcm_s16le",
         description="Audio format specification (pcm_s16le = 16-bit signed little-endian PCM)",
-        example="pcm_s16le"
-    )
+        json_schema_extra={"example": "pcm_s16le"}    )
     language: Optional[str] = Field(
         default="ru",
         description="Language code for transcription (ISO 639-1 format)",
-        example="ru"
-    )
+        json_schema_extra={"example": "ru"}    )
     provider: Optional[str] = Field(
         default=None,
         description="Specific ASR provider to use (optional, uses default if not specified)",
-        example="whisper"
-    )
+        json_schema_extra={"example": "whisper"}    )
     
     class Config:
         json_schema_extra = {
@@ -491,20 +473,17 @@ class AudioConfigRequest(BaseModel):
         description="Output sample rate in Hz",
         ge=8000,
         le=192000,
-        example=16000
-    )
+        json_schema_extra={"example": 16000}    )
     channels: int = Field(
         default=1,
         description="Number of audio channels (1=mono, 2=stereo)",
         ge=1,
         le=2,
-        example=1
-    )
+        json_schema_extra={"example": 1}    )
     format: str = Field(
         default="pcm16",
         description="Audio format specification",
-        example="pcm16"
-    )
+        json_schema_extra={"example": "pcm16"}    )
 
 
 class TTSRequest(BaseAPIRequest):
@@ -520,8 +499,7 @@ class TTSRequest(BaseAPIRequest):
     )
     language: str = Field(
         description="Language code for synthesis (ISO 639-1 format)",
-        example="en"
-    )
+        json_schema_extra={"example": "en"}    )
     audio_config: Optional[AudioConfigRequest] = Field(
         default=None,
         description="Audio output configuration (optional, uses defaults if not specified)"
@@ -594,22 +572,18 @@ class TTSStreamRequest(BaseAPIMessage):
     )
     text: str = Field(
         description="Text to synthesize into speech",
-        example="Hello, how are you doing today?"
-    )
+        json_schema_extra={"example": "Hello, how are you doing today?"}    )
     language: str = Field(
         description="Language code for synthesis (ISO 639-1 format)",
-        example="en"
-    )
+        json_schema_extra={"example": "en"}    )
     provider: Optional[str] = Field(
         default=None,
         description="Specific TTS provider to use (optional, uses default if not specified)",
-        example="silero_v4"
-    )
+        json_schema_extra={"example": "silero_v4"}    )
     speaker: Optional[str] = Field(
         default=None,
         description="Speaker voice to use (optional, provider-specific)",
-        example="natasha"
-    )
+        json_schema_extra={"example": "natasha"}    )
     audio_config: AudioConfigRequest = Field(
         default_factory=AudioConfigRequest,
         description="Audio output configuration"
@@ -659,12 +633,10 @@ class TTSAudioChunk(BaseAPIMessage):
     )
     data: str = Field(
         description="Base64-encoded PCM audio data",
-        example="UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqF..."
-    )
+        json_schema_extra={"example": "UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqF..."}    )
     sequence: int = Field(
         description="Chunk sequence number starting from 1",
-        example=1,
-        ge=1
+        json_schema_extra={"example": 1},        ge=1
     )
     chunk_info: ChunkMetadata = Field(
         description="Audio chunk metadata"
@@ -674,8 +646,7 @@ class TTSAudioChunk(BaseAPIMessage):
     )
     is_final_chunk: bool = Field(
         description="Whether this is the last chunk for current synthesis",
-        example=False
-    )
+        json_schema_extra={"example": False}    )
     
     class Config:
         json_schema_extra = {
@@ -716,13 +687,11 @@ class TTSSynthesisComplete(BaseAPIMessage):
     )
     total_chunks: int = Field(
         description="Total number of audio chunks sent",
-        example=12,
-        ge=0
+        json_schema_extra={"example": 12},        ge=0
     )
     total_duration_ms: float = Field(
         description="Total audio duration in milliseconds",
-        example=1250.0,
-        ge=0.0
+        json_schema_extra={"example": 1250.0},        ge=0.0
     )
     synthesis_stats: SynthesisStats = Field(
         description="Synthesis performance statistics"
@@ -758,23 +727,19 @@ class TTSErrorMessage(BaseAPIMessage):
     )
     error: str = Field(
         description="Error message describing what went wrong",
-        example="Provider temporarily unavailable"
-    )
+        json_schema_extra={"example": "Provider temporarily unavailable"}    )
     error_code: Optional[str] = Field(
         default=None,
         description="Machine-readable error code",
-        example="PROVIDER_UNAVAILABLE"
-    )
+        json_schema_extra={"example": "PROVIDER_UNAVAILABLE"}    )
     provider: Optional[str] = Field(
         default=None,
         description="TTS provider that encountered the error (if known)",
-        example="silero_v4"
-    )
+        json_schema_extra={"example": "silero_v4"}    )
     recoverable: bool = Field(
         default=True,
         description="Whether the client can retry the request",
-        example=True
-    )
+        json_schema_extra={"example": True}    )
     
     class Config:
         json_schema_extra = {
@@ -805,41 +770,34 @@ class TTSSessionConfig(BaseModel):
     sample_rate: int = Field(
         default=16000,
         description="Output sample rate in Hz (16000 recommended for voice)",
-        example=16000,
-        ge=8000,
+        json_schema_extra={"example": 16000},        ge=8000,
         le=48000
     )
     channels: int = Field(
         default=1,
         description="Number of audio channels (1=mono, 2=stereo)",
-        example=1,
-        ge=1,
+        json_schema_extra={"example": 1},        ge=1,
         le=2
     )
     format: str = Field(
         default="pcm_s16le",
         description="Audio format specification (pcm_s16le = 16-bit signed little-endian PCM)",
-        example="pcm_s16le"
-    )
+        json_schema_extra={"example": "pcm_s16le"}    )
     language: str = Field(
         description="Language code for synthesis (ISO 639-1 format)",
-        example="en"
-    )
+        json_schema_extra={"example": "en"}    )
     provider: Optional[str] = Field(
         default=None,
         description="Specific TTS provider to use (optional, uses default if not specified)",
-        example="silero_v4"
-    )
+        json_schema_extra={"example": "silero_v4"}    )
     speaker: Optional[str] = Field(
         default=None,
         description="Speaker voice to use (optional, provider-specific)",
-        example="natasha"
-    )
+        json_schema_extra={"example": "natasha"}    )
     chunk_size_ms: int = Field(
         default=100,
         description="Audio chunk size in milliseconds",
-        example=100,
-        ge=50,
+        json_schema_extra={"example": 100},        ge=50,
         le=1000
     )
 
@@ -902,12 +860,10 @@ class TTSTextRequest(BaseAPIMessage):
     )
     text: str = Field(
         description="Text to synthesize into speech",
-        example="Hello, how are you doing today?"
-    )
+        json_schema_extra={"example": "Hello, how are you doing today?"}    )
     request_id: str = Field(
         description="Unique request identifier for tracking",
-        example="req_001"
-    )
+        json_schema_extra={"example": "req_001"}    )
     
     class Config:
         json_schema_extra = {
@@ -940,17 +896,14 @@ class TTSSynthesisStarted(BaseAPIMessage):
     )
     request_id: str = Field(
         description="Request ID from the text_request",
-        example="req_001"
-    )
+        json_schema_extra={"example": "req_001"}    )
     estimated_chunks: int = Field(
         description="Estimated number of audio chunks",
-        example=12,
-        ge=0
+        json_schema_extra={"example": 12},        ge=0
     )
     estimated_duration_ms: float = Field(
         description="Estimated audio duration in milliseconds",
-        example=1250.0,
-        ge=0.0
+        json_schema_extra={"example": 1250.0},        ge=0.0
     )
     
     class Config:
@@ -979,22 +932,18 @@ class TTSBinarySynthesisComplete(BaseAPIMessage):
     )
     request_id: str = Field(
         description="Request ID from the text_request",
-        example="req_001"
-    )
+        json_schema_extra={"example": "req_001"}    )
     total_chunks: int = Field(
         description="Total number of binary audio chunks sent",
-        example=12,
-        ge=0
+        json_schema_extra={"example": 12},        ge=0
     )
     total_bytes: int = Field(
         description="Total bytes of binary audio sent",
-        example=38400,
-        ge=0
+        json_schema_extra={"example": 38400},        ge=0
     )
     synthesis_time_ms: float = Field(
         description="Time taken for synthesis in milliseconds",
-        example=234.5,
-        ge=0.0
+        json_schema_extra={"example": 234.5},        ge=0.0
     )
     
     class Config:
@@ -1183,6 +1132,14 @@ class IntentResponse(BaseAPIResponse):
         default=None,
         description="Intent action"
     )
+    session_id: Optional[str] = Field(
+        default=None,
+        description="Session identifier from the conversation context"
+    )
+    room_context: bool = Field(
+        default=False,
+        description="Whether the request carried room/client context"
+    )
 
 
 class NLUConfigResponse(BaseAPIResponse):
@@ -1317,7 +1274,7 @@ class PipelineStageTrace(BaseModel):
     output_data: Any = Field(description="Output data from this stage")
     metadata: Dict[str, Any] = Field(description="Stage-specific metadata and processing details")
     processing_time_ms: float = Field(description="Processing time for this stage in milliseconds")
-    timestamp: float = Field(description="Unix timestamp when stage was executed")
+    timestamp: float = Field(default_factory=time.time, description="Unix timestamp when stage was executed")
 
 
 class ContextEvolution(BaseModel):
@@ -1358,7 +1315,6 @@ class ExecutionTrace(BaseModel):
         description="How conversation context changed during execution"
     )
     performance_metrics: PerformanceMetrics = Field(
-        default_factory=PerformanceMetrics,
         description="Performance timing and metrics"
     )
     error: Optional[str] = Field(
@@ -1434,30 +1390,25 @@ class ChatMessage(BaseModel):
     """Individual message in a chat conversation"""
     role: Literal["user", "assistant", "system"] = Field(
         description="Role of the message sender",
-        example="user"
-    )
+        json_schema_extra={"example": "user"}    )
     content: str = Field(
         description="Content of the message",
-        example="Hello, how can you help me today?"
-    )
+        json_schema_extra={"example": "Hello, how can you help me today?"}    )
 
 
 class LLMEnhanceRequest(BaseAPIRequest):
     """HTTP request for text enhancement using LLM"""
     text: str = Field(
         description="Text to enhance or improve",
-        example="The weather is very good today"
-    )
+        json_schema_extra={"example": "The weather is very good today"}    )
     task: str = Field(
         default="improve",
         description="Enhancement task type",
-        example="improve"
-    )
+        json_schema_extra={"example": "improve"}    )
     provider: Optional[str] = Field(
         default=None,
         description="Specific LLM provider to use",
-        example="openai"
-    )
+        json_schema_extra={"example": "openai"}    )
     parameters: Optional[Dict[str, Any]] = Field(
         default=None,
         description="Additional provider-specific parameters"
@@ -1476,15 +1427,14 @@ class LLMChatRequest(BaseAPIRequest):
     """HTTP request for chat completion"""
     messages: List[ChatMessage] = Field(
         description="List of chat messages in conversation",
-        example=[
+        json_schema_extra={"example": [
             {"role": "user", "content": "What is artificial intelligence?"}
-        ]
+        ]}
     )
     provider: Optional[str] = Field(
         default=None,
         description="Specific LLM provider to use",
-        example="openai"
-    )
+        json_schema_extra={"example": "openai"}    )
     parameters: Optional[Dict[str, Any]] = Field(
         default=None,
         description="Additional provider-specific parameters like temperature, max_tokens"
@@ -1707,7 +1657,7 @@ class ValidationReportSchema(BaseModel):
     extra_parameters: List[str] = Field(description="Extra parameters in some languages")
     type_mismatches: List[str] = Field(description="Parameter type mismatches across languages")
     warnings: List[str] = Field(description="Validation warnings")
-    timestamp: float = Field(description="Validation timestamp")
+    timestamp: float = Field(default_factory=time.time, description="Validation timestamp")
 
 
 class CompletenessReportSchema(BaseModel):
@@ -1720,7 +1670,7 @@ class CompletenessReportSchema(BaseModel):
     all_methods: List[str] = Field(description="All unique method keys across languages")
     method_counts_by_language: Dict[str, int] = Field(description="Method count per language")
     warnings: List[str] = Field(description="Validation warnings")
-    timestamp: float = Field(description="Validation timestamp")
+    timestamp: float = Field(default_factory=time.time, description="Validation timestamp")
 
 
 class MissingPhraseInfo(BaseModel):
@@ -1740,15 +1690,14 @@ class TranslationSuggestionsSchema(BaseModel):
     missing_phrases: List[MissingPhraseInfo] = Field(description="Information about missing phrases")
     missing_methods: List[str] = Field(description="Method keys completely missing in target language")
     confidence_scores: Dict[str, float] = Field(description="Confidence scores for suggestions")
-    timestamp: float = Field(description="Suggestion generation timestamp")
+    timestamp: float = Field(default_factory=time.time, description="Suggestion generation timestamp")
 
 
 class CrossLanguageValidationRequest(BaseAPIRequest):
     """Request for cross-language validation"""
     validation_type: str = Field(
         description="Type of validation to perform",
-        example="parameters"
-    )
+        json_schema_extra={"example": "parameters"}    )
 
 
 class CrossLanguageValidationResponse(BaseAPIResponse):
@@ -2180,8 +2129,7 @@ class AudioStreamRequest(BaseAPIRequest):
     format: str = Field(
         default="wav",
         description="Audio format",
-        example="wav"
-    )
+        json_schema_extra={"example": "wav"}    )
     provider: Optional[str] = Field(
         default=None,
         description="Specific audio provider to use"
@@ -2282,13 +2230,11 @@ class TextProcessingRequest(BaseAPIRequest):
     stage: str = Field(
         default="general",
         description="Processing stage",
-        example="general"
-    )
+        json_schema_extra={"example": "general"}    )
     normalizer: Optional[str] = Field(
         default=None,
         description="Specific normalizer to use (optional)",
-        example="numbers"
-    )
+        json_schema_extra={"example": "numbers"}    )
     context: Optional[Dict[str, Any]] = Field(
         default=None,
         description="Optional client context (session_id, client_id, room_name, device_context)"
@@ -2301,6 +2247,14 @@ class TextProcessingResponse(BaseAPIResponse):
     processed_text: str = Field(description="Processed/normalized text")
     stage: str = Field(description="Processing stage used")
     normalizers_applied: List[str] = Field(description="Names of normalizers that were applied")
+    session_id: Optional[str] = Field(
+        default=None,
+        description="Session identifier from the conversation context"
+    )
+    room_context: bool = Field(
+        default=False,
+        description="Whether the request carried room/client context"
+    )
 
 
 class NumberConversionRequest(BaseAPIRequest):
@@ -2309,8 +2263,7 @@ class NumberConversionRequest(BaseAPIRequest):
     language: str = Field(
         default="ru",
         description="Language for number conversion",
-        example="ru"
-    )
+        json_schema_extra={"example": "ru"}    )
 
 
 class NumberConversionResponse(BaseAPIResponse):
@@ -2386,7 +2339,7 @@ class DashboardResponse(BaseAPIResponse):
 
 class AnalyticsReportResponse(BaseAPIResponse):
     """Response for comprehensive analytics report (moved from component)"""
-    timestamp: float = Field(description="Report generation timestamp")
+    timestamp: float = Field(default_factory=time.time, description="Report generation timestamp")
     report_type: str = Field(description="Type of analytics report")
     intents: Dict[str, Any] = Field(description="Intent analytics data")
     sessions: Dict[str, Any] = Field(description="Session analytics data")
@@ -2413,8 +2366,7 @@ class SessionSatisfactionRequest(BaseAPIRequest):
         description="User satisfaction score",
         ge=0.0,
         le=1.0,
-        example=0.8
-    )
+        json_schema_extra={"example": 0.8}    )
 
 
 class SessionSatisfactionResponse(BaseAPIResponse):
@@ -2430,7 +2382,7 @@ class IntentAnalyticsResponse(BaseAPIResponse):
     unique_intent_types: int = Field(description="Number of unique intent types")
     intent_breakdown: Dict[str, Any] = Field(description="Detailed intent breakdown")
     overall_success_rate: float = Field(description="Overall intent success rate")
-    timestamp: float = Field(description="Analytics timestamp")
+    timestamp: float = Field(default_factory=time.time, description="Analytics timestamp")
 
 
 class SessionAnalyticsResponse(BaseAPIResponse):
@@ -2440,7 +2392,7 @@ class SessionAnalyticsResponse(BaseAPIResponse):
     average_session_duration: float = Field(description="Average session duration")
     average_user_satisfaction: float = Field(description="Average user satisfaction score")
     uptime_seconds: float = Field(description="System uptime in seconds")
-    timestamp: float = Field(description="Analytics timestamp")
+    timestamp: float = Field(default_factory=time.time, description="Analytics timestamp")
 
 
 class PerformanceAnalyticsResponse(BaseAPIResponse):
@@ -2448,7 +2400,7 @@ class PerformanceAnalyticsResponse(BaseAPIResponse):
     system: Dict[str, Any] = Field(description="System performance metrics")
     vad: Dict[str, Any] = Field(description="Voice Activity Detection metrics")
     components: Dict[str, Any] = Field(description="Component-specific metrics")
-    timestamp: float = Field(description="Analytics timestamp")
+    timestamp: float = Field(default_factory=time.time, description="Analytics timestamp")
 
 
 # ============================================================
@@ -2535,7 +2487,7 @@ class SectionToTomlResponse(BaseAPIResponse):
 class AnalyzeDonationRequest(BaseAPIRequest):
     """Request for real-time donation analysis"""
     handler_name: str = Field(description="Handler name to analyze")
-    language: str = Field(description="Language of the donation", example="en")
+    language: str = Field(description="Language of the donation", json_schema_extra={"example": "en"})
     donation_data: Dict[str, Any] = Field(description="Complete donation data to analyze")
 
 
@@ -2622,7 +2574,7 @@ class ChangeImpactAnalysisResponse(BaseAPIResponse):
 class ValidateRequest(BaseAPIRequest):
     """Request for pre-save validation"""
     handler_name: str = Field(description="Handler name to validate")
-    language: str = Field(description="Language of the donation", example="en")
+    language: str = Field(description="Language of the donation", json_schema_extra={"example": "en"})
     donation_data: Dict[str, Any] = Field(description="Complete donation data to validate")
 
 

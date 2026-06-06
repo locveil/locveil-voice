@@ -53,7 +53,7 @@ def _calculate_rms_energy_cached(data_hash: int, data_length: int) -> float:
     """Cached RMS energy calculation for repeated audio patterns"""
     # This is a placeholder for the actual cached calculation
     # The real calculation is done in calculate_rms_energy_optimized
-    pass
+    return 0.0
 
 
 def _preprocess_audio_for_vad(audio_array: np.ndarray) -> np.ndarray:
@@ -888,7 +888,7 @@ class AdvancedVAD(SimpleVAD):
             
             smoothed_detection = energy_confirms and zcr_confirms
         
-        return smoothed_detection
+        return bool(smoothed_detection)
 
 
 # Utility functions for audio energy analysis

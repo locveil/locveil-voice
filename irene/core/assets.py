@@ -156,7 +156,7 @@ class AssetManager:
         """Get provider-specific cache directory path"""
         return self.config.cache_root / provider_name
     
-    async def get_cached_data(self, cache_key: str, provider_name: str = None) -> Optional[Dict[str, Any]]:
+    async def get_cached_data(self, cache_key: str, provider_name: Optional[str] = None) -> Optional[Dict[str, Any]]:
         """
         Retrieve cached data by key with comprehensive error handling.
         
@@ -214,7 +214,7 @@ class AssetManager:
             logger.warning(f"Failed to load cached data for {cache_key}: {e}")
             return None
     
-    async def set_cached_data(self, cache_key: str, data: Dict[str, Any], provider_name: str = None) -> bool:
+    async def set_cached_data(self, cache_key: str, data: Dict[str, Any], provider_name: Optional[str] = None) -> bool:
         """
         Store data in cache with given key and comprehensive error handling.
         
@@ -279,7 +279,7 @@ class AssetManager:
             logger.error(f"Failed to cache data for {cache_key}: {e}")
             return False
     
-    async def invalidate_cache(self, cache_pattern: str = None, provider_name: str = None) -> int:
+    async def invalidate_cache(self, cache_pattern: Optional[str] = None, provider_name: Optional[str] = None) -> int:
         """
         Invalidate cached data based on pattern or clear all cache.
         
@@ -315,7 +315,7 @@ class AssetManager:
             logger.error(f"Failed to invalidate cache: {e}")
             return 0
     
-    async def get_cache_stats(self, provider_name: str = None) -> Dict[str, Any]:
+    async def get_cache_stats(self, provider_name: Optional[str] = None) -> Dict[str, Any]:
         """
         Get cache statistics and health information.
         
@@ -499,7 +499,7 @@ class AssetManager:
                     async for chunk in response.content.iter_chunked(8192):
                         f.write(chunk)
     
-    async def _extract_archive(self, archive_path: Path, target_dir: Path, model_url: str = None) -> None:
+    async def _extract_archive(self, archive_path: Path, target_dir: Path, model_url: Optional[str] = None) -> None:
         """Extract archive to target directory"""
         import zipfile
         import tarfile

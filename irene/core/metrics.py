@@ -1022,7 +1022,7 @@ class MetricsCollector:
             resampling['failures'] += 1
         resampling['average_time_ms'] = resampling['total_time_ms'] / resampling['total_operations']
     
-    def record_detection_operation(self, component_name: str, success: bool, wake_word: str = None) -> None:
+    def record_detection_operation(self, component_name: str, success: bool, wake_word: Optional[str] = None) -> None:
         """Record a detection operation for voice trigger components"""
         domain = f"component_{component_name}_detection"
         
@@ -1232,7 +1232,7 @@ def get_metrics_collector() -> MetricsCollector:
     return _metrics_collector
 
 
-async def initialize_metrics_system(config: dict = None) -> MetricsCollector:
+async def initialize_metrics_system(config: Optional[dict] = None) -> MetricsCollector:
     """Initialize the global metrics system with configuration"""
     collector = get_metrics_collector()
     

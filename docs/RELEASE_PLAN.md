@@ -449,7 +449,15 @@ See `docs/review/phase1_architecture_map.md` §5.
       of their own by default; cascades to all 3). **Done-criterion met: `irene-dependency-validate --validate-all` =
       55/55 passed, 0 errors.** Verified: 9/9 import contracts kept, suite 84=baseline. _The remaining QUAL-4d Cluster A
       (39: `name`/`is_available`/`initialize`/`set_default_provider` port alignments) is the non-QUAL-3 remainder._
-- [~] **QUAL-4** (P1) — Type-safety debt: drive **standard-mode pyright to ZERO** (the release gate) via a **by-rule
+- [x] **QUAL-4** (P1) — **✓ DONE 2026-06-06.** Type-safety debt: drove **standard-mode pyright to ZERO** (the release
+      gate) via a **by-rule ratchet** — `uv run pyright` now reports **0 errors at full standard mode with an empty
+      suppression list** (762 baseline → 0; `pyright==1.1.410` pinned; the lone scoped exception is the documented
+      Pydantic file-directive in `irene/api/schemas.py`). All five slices done: **4a** gate · **4b** None-safety (238) ·
+      **4c** phantom-attrs (163) · **4d** override-compat (87) · **4e** type-tail (261). The burn-down doubled as a
+      bug-hunt: ~25+ genuine latent bugs fixed across 4b–4e (None-derefs, phantom attrs, a microWakeWord `metadata`
+      TypeError swallowed as not-detected, a sync method being `await`ed, `min_items`→`min_length`, `callable`-as-type,
+      a broken `default_factory`, an `UnboundLocalError`, …). Verified throughout: 9/9 import contracts, validator 55/55,
+      suite 84=baseline. Drive **standard-mode pyright to ZERO** (the release gate) via a **by-rule
       ratchet**, and re-tighten the config. Refs: §E. **Reconciled 2026-06-06 (Invariant #8(b), user-approved):** the §E
       baseline of 1,107 has fallen to **762 errors / 172 files** at standard mode (accurate venv-resolved count, pyright
       1.1.410, tests excluded) — the ARCH/QUAL refactors fixed ~31% incidentally. **Target = zero at standard** (user
@@ -506,7 +514,16 @@ See `docs/review/phase1_architecture_map.md` §5.
         (coroutine) while impls are async generators → made the base a plain `def …-> AsyncIterator[str]` (async-gen
         overrides are covariant-compatible). Verified end-to-end: gate green with 4b+4c+4d all enforced, 9/9 contracts,
         validator 55/55, suite 84=baseline.
-      - **4e** — the tail (`reportArgumentType` 113, `reportCallIssue` 91, `reportPossiblyUnboundVariable` 27,
+      - **4e ✓ DONE 2026-06-06** — the type-tail (261: `reportArgumentType`/`reportCallIssue`/`reportPossiblyUnbound`/
+        `reportReturnType`/… ) cleared; **all remaining suppressions deleted → empty list = full standard mode.** `schemas.py`
+        (71) was mostly Pydantic v1-isms with clean v2 fixes: `Field(example=…)`→`json_schema_extra={"example": …}` (66),
+        a broken `default_factory=PerformanceMetrics` (required fields → would crash; made the field required), 4 `timestamp`
+        overrides given the base default. The 190-file tail was cleared by 6 verified sub-agents (mostly `param: T = None`
+        → `Optional[T]`, untyped-3rd-party `cast`s, possibly-unbound inits, and real bugs). **Flagged for follow-up (real
+        logic bugs surfaced, type-fix applied but deeper fix deferred):** `config/manager.py` `_generate_*_sections` drops
+        all but the last section header in generated TOML; the `intent_asset_loader` validators emit `{field,message,
+        severity}` dicts but `api.schemas.ValidationError` needs `{type,message,path}` (would 500 on a real validation
+        error). _Original tail estimate below._ the tail (`reportArgumentType` 113, `reportCallIssue` 91, `reportPossiblyUnboundVariable` 27,
         `reportReturnType` 17, `reportGeneralTypeIssues` 14, + ~20 long-tail) → empty suppression list = full standard mode
         on. Decide `mypy.ini` disposition here (retire vs align — pyright is the gate; running both is redundant).
         Hotspot `intent_component.py` (97 errors, 18%) spans 4b–4e.

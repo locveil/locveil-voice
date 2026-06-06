@@ -1007,7 +1007,7 @@ def get_analytics_dashboard() -> AnalyticsDashboard:
     return _analytics_dashboard
 
 
-def initialize_analytics_dashboard(metrics_collector, config: dict = None) -> AnalyticsDashboard:
+def initialize_analytics_dashboard(metrics_collector, config: Optional[dict] = None) -> AnalyticsDashboard:
     """Initialize the global analytics dashboard with configuration"""
     dashboard = get_analytics_dashboard()
     dashboard.set_metrics_collector(metrics_collector)

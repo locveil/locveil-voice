@@ -547,7 +547,7 @@ class ConversationIntentHandler(IntentHandler):
 
             if targeted:
                 full_response = self._get_template(
-                    "fallback_targeted", language, action=domain_labels[likely_domain]
+                    "fallback_targeted", language, action=domain_labels[str(likely_domain)]
                 )
             else:
                 # Generic responder: a varied "didn't understand" line + a help suggestion.

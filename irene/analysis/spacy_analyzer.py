@@ -19,6 +19,8 @@ try:
     from spacy.tokens import Doc, Token
     SPACY_AVAILABLE = True
 except ImportError:
+    spacy = None
+    Matcher = None
     SPACY_AVAILABLE = False
 
 
@@ -61,6 +63,8 @@ class SpacyProviderAnalyzer(BaseAnalyzer):
     
     def _initialize_models(self):
         """Initialize SpaCy models for available languages"""
+        if spacy is None or Matcher is None:
+            return
         for language, model_names in self.language_models.items():
             for model_name in model_names:
                 try:
@@ -397,12 +401,12 @@ class SpacyProviderAnalyzer(BaseAnalyzer):
         Uses SpaCy's semantic understanding to detect conflicts that keyword
         analysis might miss.
         """
-        analysis = {
+        analysis: Dict[str, Any] = {
             'semantic_overlaps': [],
             'conceptual_conflicts': [],
             'domain_boundary_issues': []
         }
-        
+
         if not nlp.meta.get('vectors', 0):
             analysis['vectors_available'] = False
             return analysis
@@ -505,6 +509,8 @@ class SpacyProviderAnalyzer(BaseAnalyzer):
     
     def _validate_token_pattern(self, pattern: List[Dict[str, Any]], nlp) -> bool:
         """Validate SpaCy token pattern syntax"""
+        if Matcher is None:
+            return False
         try:
             # Create a temporary matcher to test pattern
             matcher = Matcher(nlp.vocab)
@@ -520,7 +526,10 @@ class SpacyProviderAnalyzer(BaseAnalyzer):
             'performance_warning': None,
             'efficiency_score': 1.0
         }
-        
+
+        if Matcher is None:
+            return analysis
+
         try:
             # Test pattern syntax
             matcher = Matcher(nlp.vocab)
@@ -585,9 +594,12 @@ class SpacyProviderAnalyzer(BaseAnalyzer):
             'match_success': False
         }
         
+        if Matcher is None:
+            return result
+
         doc = nlp(text)
         matcher = Matcher(nlp.vocab)
-        
+
         # Test each token pattern
         for i, pattern in enumerate(unit.token_patterns):
             try:

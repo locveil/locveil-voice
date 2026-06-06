@@ -122,7 +122,7 @@ class ConfigurationComponent(Component, WebAPIPlugin):
     @classmethod
     def get_config_class(cls) -> Type[BaseModel]:
         """No own configuration - manages other components' configs"""
-        return None
+        return BaseModel
     
     @classmethod  
     def get_config_path(cls) -> str:
@@ -241,7 +241,7 @@ class ConfigurationComponent(Component, WebAPIPlugin):
                 setattr(current_config, section_name, validated_data)
                 
                 # 4. Create backup before saving changes
-                backup_path = await self._create_config_backup(self.active_config_path)
+                backup_path = await self._create_config_backup(self._require_config_path())
                 
                 # 5. Save updated configuration to file
                 # This triggers existing hot-reload via file modification
@@ -300,7 +300,7 @@ class ConfigurationComponent(Component, WebAPIPlugin):
                 return ConfigValidationResponse(
                     success=True,
                     valid=False,
-                    validation_errors=e.errors()
+                    validation_errors=[dict(err) for err in e.errors()]
                 )
             except HTTPException:
                 raise

@@ -438,7 +438,7 @@ class VoiceSynthesisIntentHandler(IntentHandler):
         
         return ""
     
-    def _extract_speech_parameters(self, command: str) -> tuple[str, str]:
+    def _extract_speech_parameters(self, command: str) -> tuple[str, Optional[str]]:
         """Extract text to speak and voice name from command"""
         parts = command.lower().split()
         

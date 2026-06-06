@@ -290,12 +290,14 @@ class RandomIntentHandler(IntentHandler):
             "language": language
         }
     
-    def roll_dice(self, sides: int = None, count: int = 1, *, language: str) -> Dict[str, Any]:
+    def roll_dice(self, sides: Optional[int] = None, count: int = 1, *, language: str) -> Dict[str, Any]:
         """Roll dice and return results (Phase 5: Use configured defaults)"""
         # Use configured default dice sides if not specified
         if sides is None:
             sides = self.default_dice_sides
-            
+        if sides is None:
+            sides = 6
+
         if sides < 2 or sides > 100:
             raise ValueError("Dice sides must be between 2 and 100")
         if count < 1 or count > 10:

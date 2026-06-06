@@ -12,7 +12,7 @@ canned string (the QUAL-14 "silent-success" finding).
 
 import os
 import logging
-from typing import Dict, Any, List
+from typing import Dict, Any, List, cast
 
 from .base import LLMProvider
 
@@ -79,11 +79,12 @@ class DeepSeekLLMProvider(LLMProvider):
 
     async def chat_completion(self, messages: List[Dict], **kwargs) -> str:
         """Chat completion via DeepSeek. Raises on failure (the component falls back to console)."""
+        from openai.types.chat import ChatCompletionMessageParam
         model = kwargs.get("model") or self.default_model
         client = self._client()
         response = await client.chat.completions.create(
             model=model,
-            messages=messages,
+            messages=cast(List[ChatCompletionMessageParam], messages),
             max_tokens=kwargs.get("max_tokens", self.max_tokens),
             temperature=kwargs.get("temperature", self.temperature),
         )

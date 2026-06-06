@@ -459,6 +459,7 @@ stages = {str(tp_config.stages)}
     def _generate_provider_sections(self, base_path: str, providers: dict) -> str:
         """Generate provider configuration sections"""
         sections = []
+        section = ""
         for provider_name, provider_config in providers.items():
             section = f"[{base_path}.{provider_name}]"
             for key, value in provider_config.items():
@@ -478,6 +479,7 @@ stages = {str(tp_config.stages)}
     def _generate_normalizer_sections(self, base_path: str, normalizers: dict) -> str:
         """Generate normalizer configuration sections"""
         sections = []
+        section = ""
         for normalizer_name, normalizer_config in normalizers.items():
             section = f"[{base_path}.{normalizer_name}]"
             for key, value in normalizer_config.items():

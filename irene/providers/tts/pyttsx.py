@@ -8,7 +8,7 @@ Provides cross-platform TTS using the pyttsx3 engine.
 import asyncio
 import logging
 from pathlib import Path
-from typing import Dict, Any, List
+from typing import Dict, Any, List, cast
 
 from .base import TTSProvider
 
@@ -37,7 +37,7 @@ class PyttsTTSProvider(TTSProvider):
         super().__init__(config)
         self._engine = None
         self._available = False
-        self._voices = []
+        self._voices: List[Any] = []
         
         # Configuration values
         self.voice_id = config.get("voice_id", 0)
@@ -62,7 +62,7 @@ class PyttsTTSProvider(TTSProvider):
             self._available = True
             
             # Get available voices
-            voices = self._engine.getProperty("voices")
+            voices = cast(List[Any], self._engine.getProperty("voices"))
             self._voices = voices if voices else []
             
             # Set default voice and properties

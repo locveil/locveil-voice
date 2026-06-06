@@ -186,7 +186,7 @@ def decimal_to_text_ru(
 # Text processing with lingua_franca integration
 # Migrated from utils/all_num_to_text.py
 
-def _convert_one_num_float(match_obj: re.Match, language: str = "ru") -> str:
+def _convert_one_num_float(match_obj: "re.Match[str]", language: str = "ru") -> str:
     """Convert a single matched number to words.
 
     Russian goes through the in-repo pure-Python implementation (`num_to_text_ru`/`decimal_to_text_ru`)

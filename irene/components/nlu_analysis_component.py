@@ -175,7 +175,9 @@ class NLUAnalysisComponent(Component, WebAPIPlugin):
             return cached_result
         
         self.analysis_stats['cache_misses'] += 1
-        
+
+        if self._analysis_semaphore is None:
+            raise RuntimeError("NLU Analysis component not initialized")
         async with self._analysis_semaphore:
             try:
                 # Convert donation data to IntentUnit
@@ -253,7 +255,7 @@ class NLUAnalysisComponent(Component, WebAPIPlugin):
                 language = change_data.get('language')
                 donation_data = change_data.get('donation_data')
                 
-                if not all([handler_name, language, donation_data]):
+                if not (handler_name and language and donation_data):
                     continue
                 
                 # Get current state for comparison
@@ -448,7 +450,9 @@ class NLUAnalysisComponent(Component, WebAPIPlugin):
         """Get current system health report"""
         if not self.system_health:
             await self._update_system_health()
-        
+
+        if self.system_health is None:
+            raise RuntimeError("System health report unavailable")
         return self.system_health
     
     async def get_handler_conflicts(self, handler_name: str, language: Optional[str] = None) -> List[ConflictReport]:
@@ -887,8 +891,8 @@ class NLUAnalysisComponent(Component, WebAPIPlugin):
                 
                 # Get handler conflicts
                 conflicts = await component.get_handler_conflicts(handler_name, validated_language)
-                
-                return conflicts
+
+                return [ConflictReport(**c.model_dump()) for c in conflicts]
                 
             except Exception as e:
                 component.logger.error(f"Failed to get conflicts for handler {handler_name}: {e}")
@@ -910,7 +914,7 @@ class NLUAnalysisComponent(Component, WebAPIPlugin):
                 return BatchAnalysisResponse(
                     success=True,
                     summary=batch_result.summary,
-                    conflicts=batch_result.conflicts,
+                    conflicts=[ConflictReport(**c.model_dump()) for c in batch_result.conflicts],
                     scope_issues=[issue.dict() for issue in batch_result.scope_issues],
                     system_health=batch_result.system_health,
                     language_breakdown=batch_result.language_breakdown,

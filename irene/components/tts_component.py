@@ -7,6 +7,7 @@ and provides unified web APIs and voice command interfaces.
 """
 
 import asyncio
+import inspect
 import logging
 import base64
 import time
@@ -167,7 +168,7 @@ class TTSComponent(Component, TTSPlugin, WebAPIPlugin, TTSPort):
         essential_providers = ["console"]  # Always load console as fallback
         
         # Add default provider if it's different from console
-        if self.default_provider not in essential_providers:
+        if self.default_provider and self.default_provider not in essential_providers:
             essential_providers.append(self.default_provider)
         
         for provider_name in essential_providers:
@@ -377,7 +378,9 @@ class TTSComponent(Component, TTSPlugin, WebAPIPlugin, TTSPort):
         provider = self.providers.get(self.default_provider) if self.default_provider else None
         stop = getattr(provider, "stop_synthesis", None)
         if callable(stop):
-            await stop()
+            result = stop()
+            if inspect.isawaitable(result):
+                await result
         else:
             self.logger.debug("stop_synthesis requested; active TTS provider does not support interruption")
 
@@ -695,7 +698,7 @@ class TTSComponent(Component, TTSPlugin, WebAPIPlugin, TTSPort):
                     logger.error(f"TTS API error: {e}")
                     return TTSResponse(
                         success=False,
-                        provider=request.provider or self.default_provider,
+                        provider=request.provider or self.default_provider or "console",
                         text=request.text,
                         error=str(e)
                     )
@@ -714,7 +717,7 @@ class TTSComponent(Component, TTSPlugin, WebAPIPlugin, TTSPort):
                 return TTSProvidersResponse(
                     success=True,
                     providers=result,
-                    default=self.default_provider
+                    default=self.default_provider or "console"
                 )
             
             @router.post("/configure", response_model=TTSConfigureResponse)
@@ -842,6 +845,7 @@ class TTSComponent(Component, TTSPlugin, WebAPIPlugin, TTSPort):
                         message = json.loads(data)
                         
                         if message["type"] == "tts_request":
+                            request: Optional[TTSStreamRequest] = None
                             try:
                                 # Parse and validate request
                                 request = TTSStreamRequest(**message)
@@ -1016,7 +1020,7 @@ class TTSComponent(Component, TTSPlugin, WebAPIPlugin, TTSPort):
                                 error_response = TTSErrorMessage(
                                     error=str(e),
                                     error_code="SYNTHESIS_ERROR",
-                                    provider=request.provider if 'request' in locals() else None,
+                                    provider=request.provider if request is not None else None,
                                     recoverable=True
                                 ).dict()
                                 await websocket.send_text(json.dumps(error_response))

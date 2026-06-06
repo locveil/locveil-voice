@@ -332,6 +332,7 @@ class MonitoringComponent(Component, WebAPIPlugin):
                     raise HTTPException(status_code=503, detail="Action debugger not available")
                 
                 return DebugResponse(
+                    success=True,
                     debug_status=self.action_debugger.get_debugging_status(),
                     inspection_history=[]  # Could add recent inspections here
                 )
@@ -344,6 +345,7 @@ class MonitoringComponent(Component, WebAPIPlugin):
                     raise HTTPException(status_code=503, detail="Analytics dashboard not available")
                 
                 return DashboardResponse(
+                    success=True,
                     dashboard_data=self.analytics_dashboard.get_dashboard_data(),
                     health_summary=self.analytics_dashboard.get_system_health_summary()
                 )

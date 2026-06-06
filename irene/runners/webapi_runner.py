@@ -333,6 +333,8 @@ monitoring = true
         await self._mount_static_files(app)
         
         # Include main router with all endpoints
+        if self.core is None:
+            raise RuntimeError("WebAPI runner core not initialized before router creation")
         main_router = create_webapi_router(
             core=self.core,
             asset_loader=self._asset_loader,

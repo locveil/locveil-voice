@@ -353,6 +353,7 @@ class DependencyValidator:
     
     def _import_entry_point_class(self, file_path: str, class_name: str, result: ValidationResult) -> Optional[Type]:
         """Import entry-point class dynamically."""
+        module_path = file_path
         try:
             # Convert file path to module path
             if file_path.endswith(".py"):

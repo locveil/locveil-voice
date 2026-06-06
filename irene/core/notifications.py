@@ -364,10 +364,11 @@ class NotificationService:
         if not (self.tts_component and self.audio_component):
             raise RuntimeError("TTS or Audio component not available")
         
+        temp_path: Optional[Path] = None
         try:
             # Create TTS-friendly message
             tts_message = self._create_tts_message(notification)
-            
+
             # Generate temporary audio file
             temp_filename = f"notification_{notification.id}.wav"
             temp_path = Path("/tmp") / temp_filename  # TODO: Use proper temp directory from config
@@ -385,7 +386,7 @@ class NotificationService:
             raise
         finally:
             # Clean up temp file
-            if temp_path.exists():
+            if temp_path is not None and temp_path.exists():
                 temp_path.unlink()
     
     def _create_tts_message(self, notification: NotificationMessage) -> str:
@@ -424,7 +425,7 @@ class NotificationService:
 _notification_service: Optional[NotificationService] = None
 
 
-async def initialize_notification_service(components: Dict[str, Any], config: dict = None) -> NotificationService:
+async def initialize_notification_service(components: Dict[str, Any], config: Optional[dict] = None) -> NotificationService:
     """Initialize the global notification service with configuration"""
     global _notification_service
     if _notification_service is None:

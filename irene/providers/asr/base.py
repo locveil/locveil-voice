@@ -6,7 +6,7 @@ Following ABC inheritance pattern for type safety and runtime validation.
 """
 
 from abc import abstractmethod
-from typing import Dict, Any, List, AsyncIterator
+from typing import Dict, Any, List, AsyncIterator, Optional
 from pathlib import Path
 
 from ..base import ProviderBase
@@ -123,7 +123,7 @@ class ASRProvider(ProviderBase):
         """
         pass
     
-    def reset(self, language: str = None) -> bool:
+    def reset(self, language: Optional[str] = None) -> bool:
         """Reset provider state to prevent contamination between utterances
         
         This method should clear any internal state that might persist between

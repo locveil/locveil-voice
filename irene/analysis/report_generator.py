@@ -6,7 +6,7 @@ and clear severity classifications for the NLU analysis system.
 """
 
 import time
-from typing import Dict, Any, List, Tuple
+from typing import Dict, Any, List, Tuple, Literal
 from .base import ReportGenerator
 from .models import (
     IntentUnit,
@@ -146,7 +146,7 @@ class NLUReportGenerator(ReportGenerator):
         # Default scoring
         return analysis_data.get('score', 0.5)
     
-    def _classify_conflict_severity(self, score: float) -> str:
+    def _classify_conflict_severity(self, score: float) -> Literal['blocker', 'warning', 'info']:
         """
         Classify conflict severity based on score
         

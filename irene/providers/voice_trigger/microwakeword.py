@@ -38,8 +38,8 @@ class MicroWakeWordProvider(VoiceTriggerProvider):
         super().__init__(config)
         self.tf_lite = None
         self.interpreter: Any = None
-        self.input_details = None
-        self.output_details = None
+        self.input_details: Any = None
+        self.output_details: Any = None
         
         # Asset management integration - single source of truth
         from ...core.assets import get_asset_manager

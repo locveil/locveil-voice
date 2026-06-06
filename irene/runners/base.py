@@ -32,7 +32,7 @@ class RunnerConfig:
     requires_config_file: bool = False
     supports_interactive: bool = False
     default_components: Optional[ComponentConfig] = None
-    required_dependencies: List[str] = None
+    required_dependencies: Optional[List[str]] = None
     
     def __post_init__(self):
         if self.required_dependencies is None:
@@ -77,6 +77,7 @@ class BaseRunner(ABC):
 
     async def run(self, args: Optional[List[str]] = None) -> int:
         """Main runner entry point with unified pattern"""
+        parsed_args: Optional[argparse.Namespace] = None
         try:
             # 1. Load environment variables from .env file first
             from dotenv import load_dotenv

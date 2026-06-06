@@ -6,7 +6,7 @@ accumulate phrases or patterns that belong to other domains.
 """
 
 import re
-from typing import Dict, Any, List, Set, Tuple
+from typing import Dict, Any, List, Set, Tuple, Optional, Literal
 from collections import defaultdict, Counter
 
 from .base import ScopeAnalyzer
@@ -215,7 +215,7 @@ class NLUScopeAnalyzer(ScopeAnalyzer):
         self._phrase_domain_affinities[cache_key] = affinities
         return affinities
     
-    def _analyze_domain_purity(self, intent: IntentUnit, domain_vocabularies: Dict[str, Set[str]]) -> ScopeIssue:
+    def _analyze_domain_purity(self, intent: IntentUnit, domain_vocabularies: Dict[str, Set[str]]) -> Optional[ScopeIssue]:
         """
         Analyze overall domain purity of an intent
         
@@ -362,7 +362,7 @@ class NLUScopeAnalyzer(ScopeAnalyzer):
         # This is a simplified analysis - real implementation would analyze the token structure
         return 0.7  # Default high breadth for token patterns
     
-    def _classify_scope_severity(self, score: float) -> str:
+    def _classify_scope_severity(self, score: float) -> Literal['blocker', 'warning', 'info']:
         """Classify scope issue severity based on score"""
         if score >= 0.3:
             return 'blocker'

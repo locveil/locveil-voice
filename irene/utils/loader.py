@@ -141,7 +141,7 @@ class DynamicLoader:
     def __init__(self):
         self._cache: Dict[str, Dict[str, Type]] = {}
         
-    def discover_providers(self, namespace: str, enabled: List[str] = None) -> Dict[str, Type]:
+    def discover_providers(self, namespace: str, enabled: Optional[List[str]] = None) -> Dict[str, Type]:
         """
         Discover providers via entry-points with optional configuration filtering.
         

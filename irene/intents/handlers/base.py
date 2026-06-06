@@ -680,15 +680,18 @@ class IntentHandler(EntryPointMetadata, ABC):
         service = self._notification_service
         if service is None:
             return
+        session_id = record.session_id
+        if session_id is None:
+            return
         try:
             duration = time.time() - record.started_at
             if success:
                 await service.send_action_completion_notification(
-                    session_id=record.session_id, domain=record.domain,
+                    session_id=session_id, domain=record.domain,
                     action_name=record.action_name, duration=duration, success=True)
             else:
                 await service.send_action_failure_notification(
-                    session_id=record.session_id, domain=record.domain,
+                    session_id=session_id, domain=record.domain,
                     action_name=record.action_name, error=error or "Unknown error", is_critical=False)
         except Exception as e:
             self.logger.error(f"Failed to send action notification for {record.action_name}: {e}")
@@ -765,7 +768,10 @@ class IntentHandler(EntryPointMetadata, ABC):
                     break
         
         # All retries exhausted, raise the last exception
-        raise last_exception
+        if last_exception is not None:
+            raise last_exception
+        # The loop always records an exception before breaking; this is a defensive guard.
+        raise RuntimeError(f"Action {action_name} failed without a captured exception")
     
     def _is_transient_failure(self, error: Exception) -> bool:
         """

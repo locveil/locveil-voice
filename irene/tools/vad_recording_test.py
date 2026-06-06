@@ -175,7 +175,11 @@ class VADRecordingTester:
             # Stop after duration
             if time.time() - start_time > duration:
                 break
-            yield audio_data
+            # microphone.listen() is typed AsyncIterator[InputData] (str | AudioData);
+            # a microphone only ever emits AudioData — narrow so we never feed a str
+            # into the AudioData-typed pipeline.
+            if isinstance(audio_data, AudioData):
+                yield audio_data
     
     async def _save_wav_file(self, audio_data: AudioData, filename: Path):
         """Save AudioData as WAV file"""

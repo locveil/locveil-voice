@@ -101,7 +101,7 @@ class ContextManager:
         self.metrics_collector.record_session_start(session_id)
         return context
 
-    async def get_context_with_request_info(self, session_id: str, request_context: 'RequestContext' = None) -> UnifiedConversationContext:
+    async def get_context_with_request_info(self, session_id: str, request_context: Optional['RequestContext'] = None) -> UnifiedConversationContext:
         """Enhanced context creation with proper room context injection
         
         CRITICAL: Preserves room-scoped session boundaries for fire-and-forget actions
@@ -267,7 +267,7 @@ class ContextManager:
         logger.info(f"Configured context manager: timeout={self.session_timeout}s, "
                    f"max_turns={self.max_history_turns}, cleanup_interval={self.cleanup_interval}s")
     
-    async def get_context_for_intent_processing(self, session_id: str, intent_domain: str = None) -> UnifiedConversationContext:
+    async def get_context_for_intent_processing(self, session_id: str, intent_domain: Optional[str] = None) -> UnifiedConversationContext:
         """
         Get context optimized for intent processing with domain awareness.
         
@@ -405,8 +405,8 @@ class ContextManager:
         self,
         physical_id: str,
         command_type: str,
-        target_domains: List[str] = None,
-        domain_priorities: Dict[str, int] = None,
+        target_domains: Optional[List[str]] = None,
+        domain_priorities: Optional[Dict[str, int]] = None,
         require_confirmation: bool = False
     ) -> Dict[str, Any]:
         """
@@ -462,8 +462,8 @@ class ContextManager:
         self,
         physical_id: str,
         command_type: str,
-        target_domains: List[str] = None,
-        domain_priorities: Dict[str, int] = None,
+        target_domains: Optional[List[str]] = None,
+        domain_priorities: Optional[Dict[str, int]] = None,
         require_confirmation: bool = False
     ) -> Dict[str, Any]:
         """Internal disambiguation logic.
@@ -685,8 +685,8 @@ class ContextManager:
     
     def should_ask_for_clarification(
         self, 
-        session_id: str, 
-        domain_priorities: Dict[str, int] = None,
+        session_id: str,
+        domain_priorities: Optional[Dict[str, int]] = None,
         clarification_threshold: int = 2
     ) -> Dict[str, Any]:
         """

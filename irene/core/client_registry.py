@@ -140,7 +140,7 @@ class ClientRegistry:
     serializes and never survives a restart.
     """
     
-    def __init__(self, config: Dict[str, Any] = None):
+    def __init__(self, config: Optional[Dict[str, Any]] = None):
         self.config = config or {}
         self.clients: Dict[str, ClientRegistration] = {}
 
@@ -193,7 +193,7 @@ class ClientRegistry:
     
     async def register_esp32_node(self, client_id: str, room_name: str, 
                                  devices: List[Dict[str, Any]], 
-                                 source_address: str = None,
+                                 source_address: Optional[str] = None,
                                  language: str = "ru") -> bool:
         """
         Register an ESP32 node with its device capabilities.
@@ -244,7 +244,7 @@ class ClientRegistry:
         return await self.register_client(registration)
     
     async def register_web_client(self, client_id: str, room_name: str,
-                                 user_agent: str = None,
+                                 user_agent: Optional[str] = None,
                                  language: str = "ru") -> bool:
         """
         Register a web client.
@@ -592,7 +592,7 @@ def get_client_registry() -> ClientRegistry:
     return _client_registry
 
 
-def initialize_client_registry(config: Dict[str, Any] = None) -> ClientRegistry:
+def initialize_client_registry(config: Optional[Dict[str, Any]] = None) -> ClientRegistry:
     """Initialize the global client registry with configuration"""
     global _client_registry
     _client_registry = ClientRegistry(config)
