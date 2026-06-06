@@ -42,16 +42,21 @@ class ASRProvider(ProviderBase):
         pass
     
     @abstractmethod
-    async def transcribe_stream(self, audio_stream: AsyncIterator[bytes]) -> AsyncIterator[str]:
+    def transcribe_stream(self, audio_stream: AsyncIterator[bytes]) -> AsyncIterator[str]:
         """Transcribe streaming audio data
-        
+
+        Returns an async iterator of transcribed text chunks. Implementations are
+        async generators (`async def` + `yield`); the base is declared as a plain
+        `def` returning `AsyncIterator[str]` so those async-generator overrides are
+        type-compatible (an async generator IS an AsyncIterator). QUAL-4d.
+
         Args:
             audio_stream: Async iterator of audio chunks
-            
+
         Yields:
             Transcribed text chunks as they become available
         """
-        pass
+        ...
     
     def get_parameter_schema(self) -> Dict[str, Any]:
         """Auto-generate parameter schema from Pydantic model

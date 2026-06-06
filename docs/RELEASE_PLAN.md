@@ -478,8 +478,19 @@ See `docs/review/phase1_architecture_map.md` §5.
         imports all inward (components→config/providers, core→intents-domain).** Done across one in-file helper + targeted
         fixes + 5 verified sub-agents. Verified: 0 `reportAttributeAccessIssue` + 0 `reportOptionalMemberAccess` repo-wide,
         gate green with both rules enforced, suite 84=baseline (no regression despite the real bug fixes).
-      - **4d** — `reportIncompatible{Method,Variable}Override` (34+42) — impls diverging from their ABC/base contract
-        (architecturally meaningful post-ARCH); enable rules.
+      - **4d** [~ PARTIAL] — `reportIncompatible{Method,Variable}Override` (87: 53 var + 34 method). **Cluster B+C DONE
+        2026-06-06; Cluster A paused to do QUAL-3 first (user, 2026-06-06).** **C — schemas (40):** Pydantic field/Config
+        narrowing (`success: Literal[False]`, discriminator `type`, inner `class Config`) is by-design, not a bug; pyright's
+        invariant-class-var rule doesn't fit it → scoped-off via a documented file-level `# pyright:
+        reportIncompatibleVariableOverride=false` in `irene/api/schemas.py` only (rule stays enforced everywhere else;
+        wire shape unchanged → config-ui unaffected). **B — ASR `transcribe_stream` (4):** abstract base was `async def`
+        (coroutine) while impls are async generators → made the base a plain `def …-> AsyncIterator[str]` (async-gen
+        overrides are covariant-compatible). **A — REMAINING (43, all Cluster A):** component↔port signature divergences
+        — `name` (@property on components vs `name: str` on `WebAPIPlugin`/`ComponentPort`), `is_available` (async on
+        `Component` vs sync on capability ports), `initialize(self, core=None)` default dropped in overrides,
+        `set_default_provider`, `get_python_dependencies`. **This overlaps QUAL-3** (the `get_python_dependencies`
+        unbound-instance-method defects on Monitoring/Configuration ARE these errors) → doing QUAL-3 first, then aligning
+        the rest of the port hierarchy on top. Rules NOT yet enabled (enable after Cluster A clears).
       - **4e** — the tail (`reportArgumentType` 113, `reportCallIssue` 91, `reportPossiblyUnboundVariable` 27,
         `reportReturnType` 17, `reportGeneralTypeIssues` 14, + ~20 long-tail) → empty suppression list = full standard mode
         on. Decide `mypy.ini` disposition here (retire vs align — pyright is the gate; running both is redundant).

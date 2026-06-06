@@ -12,6 +12,19 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-06
+- **QUAL-4d PARTIAL (Cluster B+C done); Cluster A paused to do QUAL-3 first (user decision).** Triaged the 87
+  override-incompat errors into three clusters. **C (40, `api/schemas.py`):** Pydantic field/Config narrowing
+  (`success: Literal[False]`, discriminator `type`, inner `class Config`) is by-design and pyright's invariant-class-var
+  rule is a false-positive for it; per the user, scoped-off with a documented file-level
+  `# pyright: reportIncompatibleVariableOverride=false` in that module ONLY (enforced everywhere else; no wire change →
+  config-ui unaffected). **B (4, ASR `transcribe_stream`):** the abstract base was `async def` (coroutine type) while all
+  4 impls are async generators → made the base a plain `def … -> AsyncIterator[str]` (async generators are covariant
+  AsyncIterator overrides). **A (43, remaining):** component↔port signature divergences (`name` @property vs
+  `WebAPIPlugin.name: str`; `is_available` async on `Component` vs sync on the capability ports; `initialize` default
+  dropped; `set_default_provider`; `get_python_dependencies`). **Key finding:** Cluster A overlaps **QUAL-3** — the
+  `get_python_dependencies overrides Component/EntryPointMetadata` errors on Monitoring/Configuration ARE QUAL-3's
+  unbound-instance-method defect. User chose to do QUAL-3 first, then align the rest of the port hierarchy on top. 4d rules
+  not yet enabled. Verified B+C: schemas + ASR transcribe_stream cleared (43 left, all Cluster A); suite 84=baseline.
 - **QUAL-4c DONE — 163 `reportAttributeAccessIssue` (phantom-attribute) errors cleared; rule enabled. ~15 were genuine
   latent bugs.** This slice paid for itself in real fixes, not just annotations: `voice_trigger_component._resampling_metrics`
   was never initialized (Phase-1 migration dropped the init, kept the `+=` usages → first resample raised

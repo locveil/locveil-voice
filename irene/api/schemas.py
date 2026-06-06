@@ -13,6 +13,14 @@ Organization:
 Follows AsyncAPI and OpenAPI standards for documentation generation.
 """
 
+# QUAL-4d: pyright treats class variables as invariant, so a Pydantic subclass that
+# narrows a base field (e.g. `success: Literal[False]`, discriminator `type: Literal[...]`)
+# or declares its own inner `class Config` trips reportIncompatibleVariableOverride. That
+# narrowing is by-design in Pydantic (it powers the discriminated response unions) and is
+# not a bug, so the rule is scoped-off for this module of response/request DTOs only — it
+# stays enforced everywhere else in the codebase (user decision, 2026-06-06).
+# pyright: reportIncompatibleVariableOverride=false
+
 import time
 from typing import Literal, Optional, Dict, Any, List, Union
 from pydantic import BaseModel, Field
