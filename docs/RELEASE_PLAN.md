@@ -263,7 +263,8 @@ See `docs/review/phase1_architecture_map.md` §5.
       blind to wb-rules vs Home Assistant. Rejected: Irene→raw-broker, and the archived `intent_mqtt.md` fat-handler/
       runtime-method-gen design. **Agreed contract:** (A) `POST /devices/{id}/canonical {capability,action,params}`, 6-code
       structured error enum, 500 ms synchronous value-topic echo; (B) `GET /system/catalog` (dedicated, flat, all-locales
-      rooms+devices, read-only `sensor` capability, multi-room, explicit-opt-in `global` room) + retained
+      rooms+devices, read-only `sensor` capability, one-device-one-room [`global` = whole-house room, not an
+      "everywhere" opt-in; Irene iterates all rooms for "везде"]) + retained
       `bridge/catalog/version` refresh nudge; (C) bridge-side native onboarding (generic `WbPassthroughDevice` driver +
       capability-adapter composition + caps `brightness`/`color`/`cover`/`climate`/`sensor`; wb-rules stays, bridge mirrors
       state). **Hexagon (Irene):** `DeviceCommand` + `ActuationPort`/`DeviceCatalogPort` (QUAL-24 ABC pattern) +

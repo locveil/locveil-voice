@@ -12,6 +12,15 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-06
+- **Reconciled `mqtt_integration.md` (ARCH-7) to a bridge-side contract tightening (Invariant #5/#8).** The bridge's
+  `voice_integration_contract_draft.md` was updated after the AGREED snapshot, with two changes that affect Irene's side:
+  **(1) one device / one room** — the catalog device shape changed from `rooms: [...]` (multi) to `room: Optional[str]`
+  (single); **(2) `global` semantics** — it's no longer an *opt-in tag* for "выключи всё" but a regular room for genuinely
+  whole-house controls only, so **"выключи свет везде" is now Irene's job** (iterate *all* rooms, fire the capability
+  per-device), not a `global`-membership lookup. Updated `mqtt_integration.md` §5a (catalog example + bullet), §6 (the
+  "everywhere" fan-out), §10 (PR-5), §11 (resolved summary) + the ARCH-7 ledger line. (Bridge-side-only refinements not
+  affecting Irene: per-control `…/meta/error` topics with `r`/`w`/`p` codes; `config/devices/wb-devices/<room>/` layout.)
+  No code impact (ARCH-8 not started); design stays consistent for when it is.
 - **Filed QUAL-40 + QUAL-41 — the two real logic bugs QUAL-4e surfaced (Invariant #6: findings → ledger IDs).** QUAL-40:
   `ConfigManager._generate_*_sections` drop all but the last section header in generated TOML (4e fixed only the type
   error). QUAL-41: the `IntentAssetLoader` validators emit `{field,message,severity}` but `api.schemas.ValidationError`

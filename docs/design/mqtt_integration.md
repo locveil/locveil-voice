@@ -113,11 +113,11 @@ UI-oriented). Irene pulls it on boot and builds the DeviceCatalog:
 ```jsonc
 { "version": "<content-hash>",
   "rooms":   [ {"id":"children_room", "names":{"ru":"Детская","en":"Kids Room"}, "devices":["wb-mr6c_47"]},
-               {"id":"global",        "names":{"ru":"Весь дом"},                 "devices":[…opted-in…]} ],
+               {"id":"global",        "names":{"ru":"Весь дом"},                 "devices":[]} ],
   "devices": [ {"id":"wb-mr6c_47", "names":{"ru":"Свет в детской","en":"…"}, "class":"WbPassthrough",
-                "rooms":["children_room","global"],
+                "room":"children_room",
                 "capabilities":[ {"name":"power","actions":[{"name":"on"},{"name":"off"}]} ]},
-               {"id":"wb-msw-v3_220", "names":{…}, "rooms":["children_room"],
+               {"id":"wb-msw-v3_220", "names":{…}, "room":"children_room",
                 "capabilities":[ {"name":"sensor","fields":[{"name":"temperature","type":"float","unit":"°C","labels":{…}}]} ]} ] }
 ```
 
@@ -127,8 +127,10 @@ UI-oriented). Irene pulls it on boot and builds the DeviceCatalog:
   supports `power`"* and speaks `power.on` back. One vocabulary end to end.
 - **Sensors** = one read-only `sensor` capability with `fields` (no actions) — drives the **read**
   flow (§6), not actuation.
-- **Devices are multi-room** (`rooms` is a list); the **`global`** room has *explicit opt-in*
-  membership (lights/dimmers/RGB only — not fridge/HVAC/sensors/AV).
+- **One device, one room** (`room: Optional[str]` — *tightened from a multi-room draft 2026-06-06*).
+  **`global` is a regular room for genuinely whole-house controls only — NOT an opt-in "everywhere"
+  set.** "Выключи свет везде" is **Irene's** responsibility: she iterates *all* rooms and fires the
+  capability on each matching device (§6); the bridge does not synthesize a cross-room group.
 - **Refresh:** Irene subscribes to retained **`bridge/catalog/version`** (content hash, bumped on
   bridge config change / `/reload`) and re-pulls `/system/catalog` when it changes.
 
@@ -198,10 +200,13 @@ canonical→native. (The bridge aligns with HA's namespace where it fits, but it
 
 **Three interaction kinds** the resolver dispatches to:
 1. **Actuate** — single device → one `POST …/canonical` (§5b).
-2. **"Everywhere" / room-wide** ("выключи свет везде") — resolve the **`global`** room (or a named
-   room) from the catalog → **N parallel `…/canonical` calls** Irene fans out client-side, then
-   reports partial failures in speech ("свет в гостиной выключен, спальня не ответила"). A batched
-   bridge endpoint is **v2** (only if N-call latency becomes a measurable voice-UX problem).
+2. **"Everywhere" / room-wide** ("выключи свет везде") — Irene resolves the **target room set** from
+   the catalog (a named room → its devices; "везде" → **every** room) and, for each device in that set
+   exposing the capability, fans out **N parallel `…/canonical` calls** client-side, reporting partial
+   failures in speech ("свет в гостиной выключен, спальня не ответила"). **`global` is NOT the
+   "everywhere" set** — it's a regular room for genuinely whole-house controls; "везде" iterates all
+   rooms. A batched bridge endpoint is **v2** (only if N-call latency becomes a measurable voice-UX
+   problem).
 3. **Read** ("какая температура…") — `GET /devices/{id}/state` (§5c), speak the value.
 
 ## 7. Flow 1 — content-agnostic output (deferred)
@@ -249,8 +254,8 @@ PR-2+ integrate against the live `/system/catalog` + `/devices/{id}/canonical` a
 - **PR-4** — reference device handler end-to-end: "включи свет в детской" → `power.on` →
   `POST …/canonical` → 500 ms echo → spoken confirm. Includes the error-code→speech mapping (§5b) and
   the `param_invalid`→clarify path. Broad device coverage + T2/T3 NLU = QUAL-35.
-- **PR-5** — sensor **read** flow (`sensor` capability → `GET /devices/{id}/state`) + the `global`
-  room **fan-out** (N parallel calls + partial-failure speech).
+- **PR-5** — sensor **read** flow (`sensor` capability → `GET /devices/{id}/state`) + the "everywhere"
+  **fan-out** (iterate all rooms → N parallel calls + partial-failure speech; not a `global` lookup).
 - **(later)** — Flow 1 OutputPort + raw-MQTT adapter, if/when a consumer appears; batched room/group
   endpoint (bridge v2) only if N-call latency hurts.
 
@@ -263,12 +268,13 @@ All ARCH-7 open questions are now settled in the AGREED contract:
    per-driver configurable.
 2. **Catalog read** → dedicated **`GET /system/catalog`** (not the Layer-3 manifest); flat,
    capability-shaped, **all locales** for rooms *and* devices; one read-only `sensor` capability;
-   multi-room; explicit-opt-in `global` room. Refresh via retained **`bridge/catalog/version`**.
+   **one device / one room** (`room: Optional[str]`). Refresh via retained **`bridge/catalog/version`**.
 3. **Native onboarding** (bridge-side) → generic data-driven `WbPassthroughDevice` driver +
    capability-adapter composition layer (RGB/HVAC) + new caps `brightness`/`color`/`cover`/`climate`/
    `sensor`; wb-rules stays on the controller, the bridge **mirrors** state (loop-guarded).
-4. **Rooms** → `rooms.json` bootstrapped from WB HomeUI; **ru name is the resolution key**; `global`
-   opt-in.
+4. **Rooms** → `rooms.json` bootstrapped from WB HomeUI; **ru name is the resolution key**; one device
+   belongs to exactly one room; **`global` is a regular whole-house-controls room, not an "everywhere"
+   opt-in** — Irene resolves "выключи свет везде" by iterating all rooms (§6).
 
 Deferred to bridge **v2**: a batched room/group actuation endpoint (Irene does N client-side calls
 for v1).
