@@ -14,7 +14,8 @@ import path from 'node:path';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const SRC = path.join(ROOT, 'src');
-const ENTRIES = ['src/main.tsx', 'src/App.tsx'];
+const STATIC_ENTRIES = ['src/main.tsx', 'src/App.tsx'];
+const isTest = (f) => /\.(test|spec)\.tsx?$/.test(f);
 
 function walk(dir) {
   return fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
@@ -47,8 +48,12 @@ for (const f of files) {
   edges.set(f, deps);
 }
 
+// Entry points = the app roots PLUS every test file (a module reachable from a test is intentional, not dead).
 const seen = new Set();
-const stack = ENTRIES.map((e) => path.normalize(path.join(ROOT, e)));
+const stack = [
+  ...STATIC_ENTRIES.map((e) => path.normalize(path.join(ROOT, e))),
+  ...files.filter(isTest),
+];
 while (stack.length) {
   const cur = stack.pop();
   if (seen.has(cur)) continue;
@@ -56,11 +61,11 @@ while (stack.length) {
   for (const d of edges.get(cur) ?? []) stack.push(d);
 }
 
-const orphans = files.filter((f) => !seen.has(f) && !/\.gen\./.test(f)).sort();
+const orphans = files.filter((f) => !seen.has(f) && !/\.gen\./.test(f) && !isTest(f)).sort();
 if (orphans.length) {
-  console.error(`✗ ${orphans.length} orphan module(s) unreachable from ${ENTRIES.join(' / ')}:`);
+  console.error(`✗ ${orphans.length} orphan module(s) unreachable from the app entries or any test:`);
   for (const o of orphans) console.error(`  ${path.relative(ROOT, o)}`);
-  console.error('Wire them up, delete them, or (if intentionally an entry) add to ENTRIES in scripts/find-orphans.mjs.');
+  console.error('Wire them up, cover them with a test, delete them, or add an entry in scripts/find-orphans.mjs.');
   process.exit(1);
 }
 console.log('✓ no orphan modules');

@@ -12,6 +12,15 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-06
+- **UI-2 DONE — the frontend-only pattern translation engine `patternModel.ts`.** decompile/compile between raw spaCy
+  token dicts and the human card model (word/one-of/number/any-word/the-rest/advanced), with the §3.3 regex reductions
+  and optional/repeat↔OP. Lossless by construction: each card preserves its source encoding (TEXT/LOWER/LEMMA, IN vs
+  alternation-regex, LIKE_NUM vs digit-regex) and anything else is stored verbatim in an `advanced` card, so
+  compile∘decompile is identity for every token. Proven by `patternModel.test.ts` (40 tests = unit cases locking the
+  §3.2/§3.3 mapping + the required round-trip across all 28 real phrasing files + a >50%-friendly-coverage guard
+  against a trivial all-advanced pass). Added vitest + a `test` script; updated the UI-8 orphan guard to treat test
+  files as entry points (a tested module is intentional, not dead) — which also keeps patternModel.ts non-orphan
+  until UI-3 consumes it. `npm test` 40/40, `npm run check` + `build` green.
 - **UI-8 DONE — config-ui orphan sweep + a reachability guard.** Deleted 5 unreachable modules (3 editor components,
   `testWorkflow.ts`, and the borderline `spacyAttributes.ts` — a 392-line catalog nothing imports; the live advanced
   editor uses `spacyAttributeHelpers.ts` instead, and UI-3's vocabulary is survey-grounded). Added

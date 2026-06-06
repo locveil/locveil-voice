@@ -1365,9 +1365,20 @@ Governed by Invariant #4 (config-ui must stay functional).
       cards into the one widget — no double build). **Scope correction (supersedes prior note):** `ParameterSpecEditor`
       is NOT "already fine" — it embeds raw `extraction_patterns` + a regex `pattern` that move to the phrasing side, so
       all three editors are in scope. **Surfaced UI-7** (config-ui-wide i18n). **Depended on QUAL-10 [PEX] ✓.**
-- [ ] **UI-2** [DEDITOR] (P2) — Bidirectional translation layer (human model ↔ spaCy token/slot patterns) with
-      round-trip fidelity + validation (must emit schema-valid spaCy). Decide frontend-only vs. a backend
-      `compile/decompile` endpoint reusing the real spaCy logic.
+- [x] **UI-2** [DEDITOR] (P2) — **DONE 2026-06-06.** Built the bidirectional translation layer as the
+      **frontend-only** pure module `config-ui/src/utils/patternModel.ts` (decision settled in UI-1 §4 — no backend
+      compile/decompile endpoint). `decompileToken`/`compileToken` (+ pattern/slot/extraction-pattern wrappers) map
+      raw spaCy token dicts ↔ the human **card** model (word [TEXT/LOWER/LEMMA] / one-of [IN or alternation-regex] /
+      number [LIKE_NUM or digit-regex] / any-word / the-rest / **advanced**), with the §3.3 regex reductions and
+      optional/repeat ↔ `OP:"?"`/`"+"`. **Lossless by construction:** each friendly card preserves its source encoding
+      and anything else is stored **verbatim** in an `advanced` card, so `compile(decompile(x))` deep-equals `x` for
+      every token. **Proven** by `patternModel.test.ts` (40 tests): unit cases that lock the §3.2/§3.3 mapping + the
+      **required round-trip across all 28 real phrasing files** + a guard that >50% of real tokens map to friendly
+      cards (no trivial all-advanced pass). Added **vitest** + a `test` script; updated the UI-8 orphan guard to treat
+      test files as entry points (a module covered by a test is intentional). The §3.4 per-parameter merge/split is
+      provided at the label level (extraction/slot helpers preserve labels verbatim); the param↔label association is
+      applied by **UI-3** using the contract. DoD met: `npm test` (40/40), `npm run check` (type-check + lint + orphan
+      guard) + `npm run build` pass. This is the engine **UI-3** sits on.
 - [ ] **UI-3** [DEDITOR] (P2) — Reimplement `TokenPatternsEditor`/`SlotPatternsEditor` on the new model (retain
       raw-spaCy advanced mode); add "test pattern against sample text" via the NLU recognize endpoint.
 - [ ] **UI-4** [WORKFLOWVIZ] (P-deferred) — A config-ui **"Workflow Control" / pipeline-visualization page** (live
