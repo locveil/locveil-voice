@@ -469,8 +469,11 @@ See `docs/review/phase1_architecture_map.md` §5.
       **ARCH-15** (sliced PR-0..9, design §12). Refs: `io_architecture.md`, ARCH-6 (WS driving-adapter template), ARCH-7/8
       (output seams — reconciled by ARCH-15 PR-9), QUAL-28 (identity), `dataflow_reconciliation.md` Q2/Q3/Q4.
 - [ ] **ARCH-15** [IO] (P-TBD) — **Implement the I/O architecture per `docs/design/io_architecture.md` §12, sliced.**
-      **PR-0** CLI double-reader stopgap (stop auto-starting `cli` under the interactive runner, mirror the `web` guard
-      `manager.py:129`; design-compatible bugfix, unblocks interactive CLI now, superseded by PR-5). **PR-1** `InputData.format`
+      **PR-0 ✓ DONE 2026-06-07** CLI double-reader stopgap — stopped auto-starting `cli` in
+      `InputManager._auto_start_configured_sources` (`inputs/manager.py`; the source stays registered in `_sources`, just not
+      started), mirroring the existing `web` guard; the runner's own `_run_interactive_loop` is now the sole stdin reader, so
+      typed lines stop being swallowed by the competing `CLIInput._input_loop` (whose `_command_queue` had no consumer).
+      `irene/tests/test_input_manager_autostart.py` (2) guards it. Design-compatible; superseded by PR-5. **PR-1** `InputData.format`
       first-class → workflow derives entry stage (retire per-runner skip-flag hand-setting). **PR-2** `OutputPort`
       (`core/interfaces/output.py`) + `irene/outputs/` + `OutputManager` + pipeline event bus + event vocabulary + modality
       matrix/negotiation (fakes; parallel with PR-1). **PR-3** real text outputs (console + ws/web) + origin routing via

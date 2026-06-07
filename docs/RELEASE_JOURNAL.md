@@ -12,6 +12,18 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-07
+- **ARCH-15 PR-0 DONE — CLI double-reader stopgap; interactive CLI no longer swallows typed lines.** `InputManager`
+  auto-started the `cli` source (`_auto_start_configured_sources`), spawning `CLIInput._input_loop` — a second
+  `prompt_toolkit.prompt()` reader on the same TTY whose `_command_queue` nothing drains (`get_next_input` has no live
+  consumer) — while the interactive runner (`InteractiveRunnerMixin._run_interactive_loop`) ran its *own* reader and called
+  `process_text_input`. The two raced; lines won by `CLIInput` were silently dropped (zero pipeline logs). Fix: stop
+  auto-starting `cli` (the source stays registered in `_sources`, just not started), mirroring the existing `web`
+  "don't auto-start to avoid conflicts" guard (`inputs/manager.py:128-129`) — safe because nothing consumes the InputManager
+  cli stream in any live profile. The runner's loop is now the sole stdin owner. New
+  `irene/tests/test_input_manager_autostart.py` (2): cli is registered-but-not-active, and no `CLIInput` read loop / listen
+  task is spawned. Design-compatible stopgap (ARCH-15 PR-5 makes the double-reader structurally impossible by making the
+  console adapter the single daemon-consumed reader). Gates: `pyright` 0, import-linter 9/9, dep-validator 55/55, `check_scope`
+  clean, backend suite 84-failed=baseline (0 net regression, +2 new passing). Backend-only; no config-ui surface.
 - **ARCH-14 DESIGN — symmetric, configurable, hexagonal I/O architecture (design session with user).** A CLI bug
   (`irene.runners.cli` interactive silently swallows typed lines — two `prompt_toolkit.prompt()` readers racing one TTY:
   the runner's `_run_interactive_loop` vs the auto-started `CLIInput._input_loop` whose `_command_queue` nobody drains)
