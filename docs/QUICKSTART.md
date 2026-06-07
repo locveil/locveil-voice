@@ -1,0 +1,103 @@
+# Quickstart & Tester Guide
+
+How to install, run, and exercise Irene. Aimed at a tester doing a first pass; no models or cloud
+keys are required for the basic text flows.
+
+> **Run from the repository root** (`wb-mqtt-voice/`). All paths below are relative to it.
+
+---
+
+## 1. Install
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh   # if you don't have uv
+uv sync                                           # creates the venv + installs deps
+```
+
+## 2. (Optional) `.env` — only for cloud providers
+
+The basic text flows need **no** API keys. Only create `.env` if you'll test cloud TTS/ASR/LLM
+(OpenAI, Anthropic, ElevenLabs, Google):
+
+```bash
+cp docs/env-example.txt .env      # then fill in the keys you need
+```
+
+> Leave the `IRENE_COMPONENTS__*` lines **commented** (they are by default). Components belong in your
+> config file, not `.env`; setting them in `.env` overrides the config and can produce an invalid combo
+> (e.g. TTS on / Audio off).
+
+## 3. Pick a config
+
+Copy a profile to `config.toml`, or pass it with `-c`. For testing, use a **lightweight** one
+(`minimal` / `api-only` keep TTS+Audio **off**, so no models are downloaded):
+
+| Config | Components | Use for |
+|---|---|---|
+| `configs/minimal.toml` | text pipeline only (NLU + intents); TTS/Audio **off** | **CLI text testing** |
+| `configs/api-only.toml` | web API + text pipeline; TTS/Audio **off** | **WebAPI + config-ui testing** |
+| `configs/config-master.toml` | every option, documented | reference only (heavy) |
+
+> For **voice** testing you need a config whose **`[components]`** section enables `tts`/`audio`/`asr`
+> **and** the matching models installed — the shipped `minimal`/`api-only` keep them off so a first run
+> needs no downloads. (Note: a profile's `[tts]`/`[audio]` sub-sections can read `enabled = true` while
+> the component is still off in `[components]`; the `[components]` flags are what actually load it.)
+
+---
+
+## 4. Run it
+
+### CLI (interactive text)
+```bash
+uv run python -m irene.runners.cli -c configs/minimal.toml
+```
+Then type, e.g.:
+- `привет` → a greeting
+- `который час` / `какое сегодня число` → date/time
+- `поставь таймер на 5 минут` → sets a timer (confirms "5 мин")
+- `расскажи что-нибудь` → conversation (degrades gracefully offline)
+- `help`, `status` → system info; `quit` to exit
+
+### WebAPI (REST + WebSocket + the config-ui backend)
+```bash
+uv run python -m irene.runners.webapi_runner -c configs/api-only.toml --host 0.0.0.0 --port 8000
+```
+Smoke-check:
+```bash
+curl http://localhost:8000/health
+curl -X POST http://localhost:8000/execute/command -H 'Content-Type: application/json' \
+     -d '{"command":"привет"}'
+```
+Interactive API docs: open `http://localhost:8000/docs`.
+
+### config-ui (browser config editor)
+Needs the WebAPI backend running (step above), which it talks to at `http://localhost:8000`.
+```bash
+cd config-ui
+npm ci
+npm run dev          # opens a Vite dev server (printed URL, usually http://localhost:3000)
+```
+
+---
+
+## 5. What's in scope for this build
+
+**Test these:**
+- Text commands via CLI and `POST /execute/command`: greetings, date/time, timers, conversation, system (`help`/`status`/`version`).
+- WebAPI endpoints: `/health`, `/status`, `/execute/command`, `/docs`.
+- config-ui: browse + edit config sections (incl. the new **Output Channels** `[outputs]` section), donation/prompt editors, language switch.
+
+**NOT in this build (don't file these as bugs):**
+- **Smart-home / device control** ("включи свет в гостиной") — the MQTT/bridge integration is designed but **not implemented** (ARCH-8). Device/room commands will report a resolution failure by design.
+- **ESP32 voice satellite** and the wake-word path.
+- **Voice/ASR** end-to-end unless you deliberately use `development.toml` + install models.
+- **Docker** packaging (release-phase item).
+
+## 6. Known state (so you can calibrate)
+- The **automated test suite has ~83 known failures** — these are *stale tests* from the recent architecture refactors (the suite rewrite is tracked separately) plus the unbuilt smart-home tests. They are **not** functional bugs in the running software; the user-facing flows above are verified working (see `irene/tests/test_smoke_e2e.py`).
+- If a **core text flow** (greeting, time, timer, conversation, a WebAPI endpoint, or config-ui editing) misbehaves — **that** is worth reporting.
+
+## 7. Reporting findings
+For each issue, include: the **mode** (CLI / WebAPI / config-ui), the **config** used (`-c …`), the
+**exact input** (command or request), what you **expected** vs **saw**, and the relevant **log lines**
+(`logs/irene.log`). A copy-pasteable repro beats a description.

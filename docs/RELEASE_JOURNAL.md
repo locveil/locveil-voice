@@ -12,6 +12,22 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-07
+- **Tester-handover prep — fixed the quickstart `.env` crash + drafted `docs/QUICKSTART.md` + triaged the test suite.**
+  **(1) Default-config crash (root cause):** the README quickstart (`cp docs/env-example.txt .env`) shipped a broken
+  template — it set `IRENE_COMPONENTS__TTS=true` but the **wrong** field `IRENE_COMPONENTS__AUDIO_OUTPUT` (schema field is
+  `audio`), so a fresh run with no `config.toml` got TTS-on/Audio-off → `CoreConfig` rejects it ("TTS component requires
+  Audio component") and won't start (`.env` is loaded by `runners/base.py:83`; env *overrides* the config file). Fixed
+  `env-example.txt`: commented the component toggles (they belong in `config.toml`) with corrected field names + a warning,
+  removed the retired `IRENE_PLUGINS__*` block (ARCH-13) and the stale `IRENE_VERSION=13.0.0`. Verified a fresh copy yields
+  a valid config. (The user's existing gitignored `.env` needs the same one-line fix — not touched.) **(2) `docs/QUICKSTART.md`:**
+  install → `.env` (cloud-only) → pick a lightweight profile (`minimal`/`api-only`, TTS/Audio off so no model downloads) →
+  run CLI / WebAPI / config-ui → in-scope vs out-of-scope (MQTT/ESP32/voice/Docker are NOT in this build) → how to report.
+  **(3) Functional triage:** all 6 real-flow smoke tests pass (WebAPI boot, greeting, NLU recognize, conversation-degrades,
+  timer e2e, CLI boot+respond). The **~83 baseline test failures are NOT functional breakage** — categorized as stale
+  tests / API drift from the ARCH-1..15 refactors (`active_actions`→ClientRegistry per QUAL-28, `Intent.__init__` change,
+  removed/renamed classes/modules/methods, metrics-as-dict, mock misuse, event-loop harness drift; = TEST-2/TEST-7), the
+  unbuilt smart-home device/room resolution (needs ARCH-8/QUAL-35), and a missing spacy model in the test env. Updated
+  REL-2 with this progress. Conclusion: core flows are solid for a tester; the suite is coverage debt, not a quality signal.
 - **ARCH-15 COMPLETE — the symmetric configurable hexagonal I/O architecture is delivered (PR-0..9); PR-10 deferred → ARCH-16.**
   Closes the work that began with a one-line CLI bug ("started cli, but nothing happens") and a design session. Delivered
   across 19 commits: **PR-0** CLI double-reader stopgap; **PR-1** `InputFormat` first-class; **PR-2** `OutputPort`/

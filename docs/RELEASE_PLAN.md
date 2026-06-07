@@ -1675,6 +1675,12 @@ Governed by Invariant #4 (config-ui must stay functional).
 ### Release Readiness (REL)
 - [ ] **REL-1** (P0) — Sign off the Definition-of-release checklist above (fill target + criteria).
 - [ ] **REL-2** (P1) — `config-example.toml` + quickstart finalization (the release-time config story).
+      _Progress 2026-06-07 (tester-handover prep):_ drafted **`docs/QUICKSTART.md`** (install → config → run CLI/WebAPI/
+      config-ui → in/out-of-scope → reporting), and **fixed the `env-example.txt` template** (the quickstart's `.env`
+      source crashed a fresh run: it enabled TTS but used the wrong field `AUDIO_OUTPUT`, leaving Audio off → invalid
+      config). Recommends the lightweight `minimal`/`api-only` profiles for first run. **Remaining for release:** a curated
+      `config-example.toml` (vs the heavy `config-master.toml`), final README pointer, and a friendlier runner message on
+      config-validation failure.
 - [ ] **REL-3** (P1) — Version bump / changelog / tag.
 
 ---
