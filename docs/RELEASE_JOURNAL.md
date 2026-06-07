@@ -12,6 +12,26 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-07
+- **ARCH-15 PR-9.2 DONE — cross-task sweep + extended master-config completeness check; PR-9 complete.**
+  **(a) Sweep** of every open/paused ARCH/QUAL item for I/O-design impact: **no impact** — ARCH-10 (ONNX inference,
+  unrelated), QUAL-18 (AsyncAPI tooling — the new `/ws/observe`+`/ws/output` endpoints could *optionally* be
+  documented there later), QUAL-19/20 (ESP32 wakeword — ESP32 stays an input channel, no structural change),
+  QUAL-31 (clarification — its responses just flow through the OutputManager like any conversational result);
+  **aligned** — QUAL-32 (TYPE_CHECKING purge): the new I/O modules were authored TYPE_CHECKING-free per the PR-3
+  directive, so they add nothing to its surface; **uses-the-design** — QUAL-35: device handlers emit a
+  `device_command`-modality result via the OutputManager to the §13 bridge `OutputPort` (no ActuationPort);
+  ARCH-8 already reconciled in PR-9.1. Amended QUAL-32 + QUAL-35 with pointers. **(b) Extended
+  `AutoSchemaRegistry.get_master_config_completeness`** to validate **top-level config sections + scalar fields**
+  against the schema (was `*.providers.*`-only — which is why the `[outputs]`/`observe_*` drift went uncaught).
+  Scalar fields are checked by **key-text-search** (`^\s*#?\s*field\s*=`) so an intentionally-commented optional
+  (`observe_token`) counts as documented rather than false-missing; Dict/List/nested-model fields are tables,
+  validated at section granularity (new `_is_scalar_annotation` helper distinguishes them — avoids the false
+  positives a naïve check produced on `providers`/`normalizers`/`domain_priorities`). Folded into `valid`, so
+  future drift fails the existing alignment test. Made the function accept a `master_config_path` so drift detection
+  is testable. New `test_master_config_completeness_toplevel.py` (6): real config-master complete, detects a
+  simulated missing section + missing scalar field, commented-optional counts as documented, scalar-detection unit.
+  Gates: `pyright` 0, import-linter 9/9, dep-validator 55/55, `check_scope` clean, full suite 83-failed=baseline
+  (**0 regressions**, stash-diff). **ARCH-15 PR-9 COMPLETE.**
 - **ARCH-15 PR-9.1 DONE — reconciled ARCH-7 (`mqtt_integration.md`) with the I/O architecture; fed ARCH-8.** Added a
   top **banner** + a new **§13 "Reconciliation with the I/O architecture"** stating the contract ARCH-8 builds against:
   bridge actuation is a **request/response `OutputPort`** returning the rich `DeliveryResult` (echo + 6-code error);

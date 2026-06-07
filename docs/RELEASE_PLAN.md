@@ -534,11 +534,14 @@ See `docs/review/phase1_architecture_map.md` §5.
       reconciliation section: bridge=request/response `OutputPort`+rich `DeliveryResult`, `device_command` modality,
       `DeviceCatalogPort` read port, Flow-1 terminal `OutputPort`, `ActuationPort` dropped, observable on the bus;
       §13 wins over §3–§10) + amended ARCH-7/ARCH-8 ledger entries; the entire MQTT build still lives in ARCH-8 (PR-9.1
-      only produced the spec). **(2)** sweep every other
-      unfinished ARCH/QUAL item (ARCH-8, ARCH-10, QUAL-35, any input/output/session/identity/notification task) to
-      verify+adjust per Invariants #5/#8, with a journal reconciliation note; **also extend
-      `get_master_config_completeness` to cover top-level config sections + scalar fields** (today only `*.providers.*`)
-      so config-master drift (like the `[outputs]`/`observe_*` synced manually 2026-06-07) is caught automatically. **PR-10** daemon multiplexer + runners→thin
+      only produced the spec). **(2) ✓ DONE 2026-06-07** swept every other
+      unfinished ARCH/QUAL item (no-impact: ARCH-10/QUAL-18/19/20/31; aligned: QUAL-32 — new I/O modules already
+      TYPE_CHECKING-free; uses-the-design: QUAL-35 — device handlers emit `device_command` via the §13 bridge `OutputPort`;
+      ARCH-8 reconciled in 9.1) — amended QUAL-32/QUAL-35 with pointers, journal sweep note. **Extended
+      `get_master_config_completeness`** to cover top-level config sections + scalar fields (was `*.providers.*` only;
+      scalar via key-text-search so commented optionals like `observe_token` aren't false-missing; Dict/nested fields
+      checked at section granularity) → catches `[outputs]`/`observe_*`-class drift automatically; `test_master_config_
+      completeness_toplevel.py` (6). **ARCH-15 PR-9 COMPLETE (9.1+9.2).** **PR-10** daemon multiplexer + runners→thin
       presets (concurrent input+output registries + runtime attach/detach §4; layered-override presets §8) — the web/vosk
       *consume/preset* unification rides here (their *outputs* arrive in PR-6/PR-8); CLI's PR-5b consume loop is the first
       instance to generalize; closes the runners-as-presets endgame. Gates per slice: `pyright` 0 · import-linter ·
@@ -1085,7 +1088,10 @@ _Apply to every remediation task below (from the 4 review docs + QUAL-25/26). So
       on the conversation session + `ConversationState = awaiting-clarification` + a pipeline pre-check that fills the
       slot from the next turn and completes the original intent (symmetric to the F&F `contextual` check, but transient).
       Expires with the Q2 idle window. Follow-up to QUAL-30.
-- [ ] **QUAL-32** `[release]` [QUAL] (P2) — **Purge `TYPE_CHECKING` import guards repo-wide (Invariant #9).** ~13 files
+- [ ] **QUAL-32** `[release]` [QUAL] (P2) — **Purge `TYPE_CHECKING` import guards repo-wide (Invariant #9).** _ARCH-15
+      PR-9.2 note: the new I/O modules (`core/interfaces/output.py`, `core/event_bus.py`, `core/observe.py`,
+      `outputs/*`) were authored TYPE_CHECKING-free (direct imports, per the PR-3 user directive), so they add **nothing**
+      to this purge surface._ ~13 files
       still carry an `if TYPE_CHECKING:` block (`core/metadata.py`, `core/interfaces/webapi.py`, several
       `intents/handlers/*.py`, `utils/audio_helpers.py`, …). For each: if there's no real import cycle, hoist the import
       to module top and de-stringize the annotation; if there **is** a cycle, fix it at the architecture level (break
@@ -1135,7 +1141,10 @@ _Apply to every remediation task below (from the 4 review docs + QUAL-25/26). So
       Today `get_param` either clamps-to-default (silent) or raises `MissingRequiredParameter` (mislabeling an invalid
       required value as "missing") — fix the distinction here. Refs: `declared_param_audit.md`, QUAL-11, QUAL-30, QUAL-33, Q6/Q7.
 - [ ] **QUAL-35** `[release]` [PEX][MQTT] (P-TBD) — **Declarative NLU tiers T2 + T3 — MUST-HAVE for smart-home/MQTT
-      (gated on ARCH-7/8). Split out of QUAL-11 (2026-06-03, user).** QUAL-11 deliberately shipped the **lightweight (T1)**
+      (gated on ARCH-7/8). Split out of QUAL-11 (2026-06-03, user).** _ARCH-15 PR-9.2 note: the device handlers QUAL-35
+      authors **emit a `device_command`-modality result delivered via the OutputManager to the designated bridge
+      `OutputPort`** and await its rich `DeliveryResult` (echo/error → spoken confirm; `param_invalid` → clarify) — per
+      `mqtt_integration.md` §13 (ARCH-8). No bespoke ActuationPort._ QUAL-11 deliberately shipped the **lightweight (T1)**
       extraction contract — keyword/NER + regex + CHOICE surfaces + lemmas, which is what the `hybrid_keyword_matcher`
       (the hot path) actually runs. T1 covers the easy ~80% of commands but **fails on the complex commands smart-home
       control needs.** This task builds the two heavier tiers when MQTT/smart-home lands:

@@ -22,6 +22,7 @@ Design Principles:
 
 import logging
 import inspect
+import re
 import tomllib
 from pathlib import Path
 from typing import Dict, Any, Type, Optional, get_origin, get_args
@@ -37,6 +38,21 @@ class AutoSchemaRegistry:
     _component_schemas_cache: Optional[Dict[str, Type[BaseModel]]] = None
     _provider_schemas_cache: Optional[Dict[str, Dict[str, Type[BaseModel]]]] = None
     
+    @staticmethod
+    def _is_scalar_annotation(annotation: Any) -> bool:
+        """True if the annotation is a plain scalar (str/int/float/bool), incl. Optional[scalar].
+
+        Used by the master-config completeness check (ARCH-15 PR-9.2): only scalar fields are
+        validated by key-presence (`field = ...`); Dict/List/BaseModel fields appear as tables and
+        are checked at section granularity instead, so they are skipped here.
+        """
+        args = get_args(annotation)
+        if args and type(None) in args:  # Optional[X] / Union[X, None]
+            non_none = [a for a in args if a is not type(None)]
+            if len(non_none) == 1:
+                annotation = non_none[0]
+        return annotation in (str, int, float, bool)
+
     @staticmethod
     def _resolve_section_model(annotation: Any) -> Optional[Type[BaseModel]]:
         """Return the Pydantic section model a CoreConfig field annotation denotes, if any.
@@ -502,10 +518,13 @@ class AutoSchemaRegistry:
             return None
     
     @classmethod
-    def get_master_config_completeness(cls) -> Dict[str, Any]:
+    def get_master_config_completeness(cls, master_config_path: Optional[Path] = None) -> Dict[str, Any]:
         """
-        Analyze config-master.toml completeness against all provider schemas.
-        Returns comprehensive report of missing/orphaned sections.
+        Analyze config-master.toml completeness against provider schemas AND (ARCH-15 PR-9.2) the
+        top-level config sections + their scalar fields. Returns a report of missing/orphaned items.
+
+        `master_config_path` defaults to ``configs/config-master.toml``; override it (e.g. with a
+        drifted copy) to test drift detection.
         """
         report = {
             "missing_sections": [],
@@ -513,10 +532,11 @@ class AutoSchemaRegistry:
             "coverage_percentage": 0.0,
             "valid": True
         }
-        
+
         try:
             # Load master config
-            master_config_path = Path("configs/config-master.toml")
+            if master_config_path is None:
+                master_config_path = Path("configs/config-master.toml")
             if not master_config_path.exists():
                 report["valid"] = False
                 report["missing_sections"].append("ENTIRE_MASTER_CONFIG_MISSING")
@@ -546,7 +566,31 @@ class AutoSchemaRegistry:
             
             if expected_sections:
                 report["coverage_percentage"] = (len(actual_sections & expected_sections) / len(expected_sections)) * 100
-            
+
+            # ARCH-15 PR-9.2: also validate TOP-LEVEL config sections + their scalar fields against the
+            # schema (the provider check above only covers `*.providers.*`). This catches reference
+            # drift like the missing `[outputs]` section / `observe_*` fields (synced 2026-06-07).
+            # A scalar field counts as documented if its key appears anywhere in the file TEXT — live
+            # OR a commented example (so an intentionally-commented optional like `observe_token` is not
+            # a false positive). Dict/List/nested-model fields are tables, validated at section
+            # granularity, so they are skipped at field level.
+            master_text = master_config_path.read_text(encoding="utf-8")
+            missing_top_level_sections = []
+            missing_fields = []
+            for section_name, model in cls.get_section_models().items():
+                if section_name not in master_config:
+                    missing_top_level_sections.append(section_name)
+                    continue
+                for field_name, field_info in model.model_fields.items():
+                    if not cls._is_scalar_annotation(getattr(field_info, "annotation", None)):
+                        continue
+                    if re.search(rf"(?m)^\s*#?\s*{re.escape(field_name)}\s*=", master_text) is None:
+                        missing_fields.append(f"{section_name}.{field_name}")
+            report["missing_top_level_sections"] = missing_top_level_sections
+            report["missing_fields"] = missing_fields
+            if missing_top_level_sections or missing_fields:
+                report["valid"] = False
+
             logger.debug(f"Master config analysis: {len(expected_sections)} expected, {len(actual_sections)} actual")
             
         except Exception as e:
