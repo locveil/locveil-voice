@@ -12,6 +12,17 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-07
+- **ARCH-15 scope refinement (user-directed) — MQTT out of PR-8, web-app addressed, PR-10 added.** Three corrections
+  to the remaining-PR map: (1) **PR-8 no longer touches MQTT** — it builds the **local audio/voice SPEECH `OutputPort`
+  only** (restoring pure D-3, retiring the PR-5a legacy-TTS fallback); the *entire* MQTT build (Flow-2 bridge actuation
+  + Flow-1 `irene/{room}/event`) is **ARCH-8's** implementation, fed by PR-9.1. (2) **PR-9.1 redefines/feeds ARCH-8**
+  with the I/O contract (bridge as a request/response `OutputPort` + rich `DeliveryResult`, `device_command` modality,
+  etc.) rather than implementing MQTT in the I/O track. (3) **The web runner's built-in browser app is an interactive
+  text channel like CLI** (browser textbox → `POST /execute/command` → reply) — its sync path is the HTTP reply, but it
+  lacks a *push* channel for deferred F&F results, so **PR-6 gains a WS/SSE push output** to deliver them to the browser.
+  Also filed **PR-10** (daemon multiplexer + runners→thin presets) to close the endgame PR-5b only started — the web/vosk
+  consume/preset unification rides PR-10 (their outputs ride PR-6/PR-8). vosk deferral to PR-8 confirmed. Ledger + design
+  (`io_architecture.md` §12) updated; no code change.
 - **ARCH-15 PR-5b DONE — interactive runner CONSUMES the single CLI source; the double-reader is structurally gone.**
   `InteractiveRunnerMixin._run_interactive_loop` no longer runs its own `prompt_toolkit` reader — it consumes
   `CLIInput.listen()` (the single InputManager-owned reader, `_input_loop`) and routes each line through

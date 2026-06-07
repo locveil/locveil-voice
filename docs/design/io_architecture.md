@@ -369,24 +369,37 @@ landable and gated (`pyright` 0 · import-linter · dep-validator · `check_scop
     full multi-channel daemon multiplexer (concurrent web+ws+mqtt consume, runtime attach/detach, runners→pure
     presets) remains a follow-on — PR-5b lands the CLI consume loop as its first instance; web/vosk keep their
     existing paths for now. (`_print_interactive_help`/`_print_interactive_status` are now unused — cleanup later.)
-- **PR-6 — Observation tap.** Continuous trace-event subscription + identity filters + gating (§5, D-5);
-  remote debug-CLI attach (text format) reusing the ARCH-6 ws shape.
+- **PR-6 — Observation tap + web built-in-app push output.** (a) Continuous trace-event subscription +
+  identity filters + gating (§5, D-5); remote debug-CLI attach (text format) reusing the ARCH-6 ws shape.
+  (b) **The web runner's built-in browser app is an interactive text channel like CLI** (browser textbox →
+  `POST /execute/command` → rendered reply). Its *sync* path is already request/response (delivery = the HTTP
+  reply), but it has **no push channel for deferred F&F results** (a browser-set timer would drop). Add a
+  **WS/SSE push output** (a `CallbackTextOutput`-shaped adapter over a browser WebSocket) so the OutputManager
+  delivers deferred results back to the browser, origin/identity-addressed — bringing the web app into the
+  model like CLI.
 - **PR-7 — config-ui.** `[outputs]` editor + inputs `format`/multi-input + capability-matrix display +
   tap-gating config (§9). Lands as the backend `[outputs]` schema (PR-2/PR-3) comes online.
-- **PR-8 — Audio/MQTT outputs + ARCH-8 convergence.** Local-audio output (the "voice" modality), MQTT
-  event output (Flow 1), and ARCH-8's bridge actuation as a request/response `OutputPort`/`DeliveryResult`
-  (D-6, §3.2). Deepens the two flagged-hard cases (MQTT, voice).
-- **PR-9 — Cross-task reconciliation sweep (runs last).** Once the I/O contracts are real:
-  1. **Explicitly revisit ARCH-7** (`mqtt_integration.md`) — adjust the smart-home design to this I/O
-     architecture: `ActuationPort` re-expressed as the bridge `OutputPort`/`DeliveryResult`, `device_command`
-     as a delivery modality (D-2), `DeviceCatalogPort` as a read port, the canonical-command flow restated as
-     `device_command` output (awaited) + origin-paired confirmation, actuation-on-the-bus/observability,
-     bounded-await/degraded-confirmation. Update the ARCH-7 doc + ledger so ARCH-8 builds against the
-     reconciled design.
+- **PR-8 — Local audio/voice output ONLY (NO MQTT).** Build the local-audio SPEECH `OutputPort` (the "voice"
+  modality, wrapping the TTS+audio components) and register it in the voice/vosk profile — which **restores
+  pure D-3 drop+log** (retires the PR-5a legacy-TTS fallback). **No broker code here.** *All MQTT — Flow-2
+  bridge actuation AND Flow-1 `irene/{room}/event` — is ARCH-8's implementation, not PR-8's;* the I/O work
+  never touches a broker. (vosk's output unification rides this; its preset-ification rides PR-10.)
+- **PR-9 — Cross-task reconciliation (runs last).** Once the I/O contracts are real:
+  1. **Revisit ARCH-7 → redefine/feed ARCH-8** (`mqtt_integration.md`): hand ARCH-8 the I/O contract so **it**
+     implements MQTT/bridge as `OutputPort`(s) under this design — bridge actuation = a request/response
+     `OutputPort` returning the rich `DeliveryResult` (echo/error, D-6/§3.2), Flow-1 event = a terminal
+     `OutputPort`, `device_command` as a delivery modality (D-2), `DeviceCatalogPort` as a read port,
+     canonical-command flow = `device_command` output (awaited) + origin-paired confirmation,
+     actuation-on-the-bus/observability, bounded-await/degraded-confirmation. The **entire MQTT build lives in
+     ARCH-8** (redefined accordingly); PR-9.1 only produces the spec + updates the ARCH-7 doc/ledger.
   2. **Sweep every other unfinished ARCH/QUAL item** (esp. ARCH-8, ARCH-10, QUAL-35, and any open task
      touching input/output/session/identity/notifications) to verify whether this design affects it; amend
-     the affected ledger entries (+ docs) per Invariants #5/#8. Emit a short reconciliation note in the
-     journal listing what was / wasn't affected.
+     the affected ledger entries (+ docs) per Invariants #5/#8. Emit a short reconciliation note in the journal.
+- **PR-10 — Daemon multiplexer + runners → thin presets.** One process hosting concurrent input+output
+  registries with runtime attach/detach (§4); runners demoted to config-preset launchers with layered overrides
+  (§8). The per-channel *consume/preset* unification of **web** and **vosk** rides here (their *outputs* arrive
+  in PR-6/PR-8); CLI's consume loop (PR-5b) is the proven first instance to generalize. This closes the
+  "runners-as-presets over one daemon" endgame that PR-5b only started.
 
 PR-0 is the only thing needed to unblock today; PR-1/PR-2 can begin immediately and in parallel; the rest
 sequence behind them. **PR-9 runs last** — reconcile the remaining backlog once the contracts are concrete.

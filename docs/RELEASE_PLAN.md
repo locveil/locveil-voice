@@ -502,16 +502,24 @@ See `docs/review/phase1_architecture_map.md` §5.
       reader + one consumer ⇒ double-reader structurally impossible; `help`/`status` → `system.*` intents (D-4),
       only `quit` transport-local. Full multi-channel daemon multiplexer (web/ws/mqtt concurrent + runtime
       attach/detach + runners→pure presets) is a follow-on; PR-5b lands the CLI consume loop as the first instance. **PR-6** observation tap (continuous
-      trace subscription + identity filters + gating D-5; remote debug-CLI text attach reusing ARCH-6 ws shape). **PR-7**
-      config-ui: `[outputs]` editor + inputs `format`/multi-input + capability-matrix display + tap-gating (§9, Invariant #4;
-      reuse UI-9 `KeyValueEditor`). **PR-8** audio/MQTT outputs + ARCH-8 bridge actuation as a request/response
-      `OutputPort`/`DeliveryResult` (D-6). **PR-9** (runs last) cross-task reconciliation: (1) explicitly revisit **ARCH-7**
-      (`mqtt_integration.md`) → adjust the MQTT design to this I/O architecture (bridge as `OutputPort`, `device_command`
-      modality, `DeviceCatalogPort` read port, bus/observability, bounded-await); (2) sweep every other unfinished ARCH/QUAL
-      item (esp. ARCH-8, ARCH-10, QUAL-35, any input/output/session/identity/notification task) to verify+adjust per
-      Invariants #5/#8, with a journal reconciliation note. Gates per slice: `pyright` 0 · import-linter · dep-validator ·
-      `check_scope` · backend suite no-net-regression · config-ui `npm run check`+`build` where touched. **PR-0 unblocks
-      today; PR-1/PR-2 can begin immediately.** Refs: ARCH-14, ARCH-6, ARCH-7/8, QUAL-28.
+      trace subscription + identity filters + gating D-5; remote debug-CLI text attach reusing ARCH-6 ws shape) **+ web
+      built-in-app push output** (the browser app is an interactive text channel like CLI; add a WS/SSE
+      `CallbackTextOutput` so the OutputManager delivers *deferred* F&F results back to the browser — its sync path is
+      already the HTTP reply). **PR-7** config-ui: `[outputs]` editor + inputs `format`/multi-input + capability-matrix
+      display + tap-gating (§9, Invariant #4; reuse UI-9 `KeyValueEditor`). **PR-8** **local audio/voice SPEECH output
+      ONLY — NO MQTT** (wrap TTS+audio as a SPEECH `OutputPort`, register in voice/vosk profile → restores pure D-3,
+      retires the PR-5a legacy-TTS fallback; no broker code — *all* MQTT is ARCH-8's). **PR-9** (runs last) cross-task
+      reconciliation: (1) revisit **ARCH-7** → **redefine/feed ARCH-8** with the I/O contract so **ARCH-8** implements
+      MQTT/bridge as `OutputPort`(s) (bridge=request/response `OutputPort`+rich `DeliveryResult`, Flow-1 event=terminal
+      `OutputPort`, `device_command` modality, `DeviceCatalogPort` read port, bus/observability, bounded-await); the
+      entire MQTT build lives in ARCH-8, PR-9.1 only produces the spec + updates ARCH-7 doc/ledger; (2) sweep every other
+      unfinished ARCH/QUAL item (ARCH-8, ARCH-10, QUAL-35, any input/output/session/identity/notification task) to
+      verify+adjust per Invariants #5/#8, with a journal reconciliation note. **PR-10** daemon multiplexer + runners→thin
+      presets (concurrent input+output registries + runtime attach/detach §4; layered-override presets §8) — the web/vosk
+      *consume/preset* unification rides here (their *outputs* arrive in PR-6/PR-8); CLI's PR-5b consume loop is the first
+      instance to generalize; closes the runners-as-presets endgame. Gates per slice: `pyright` 0 · import-linter ·
+      dep-validator · `check_scope` · backend suite no-net-regression · config-ui `npm run check`+`build` where touched.
+      Refs: ARCH-14, ARCH-6, ARCH-7/8, QUAL-28.
 
 ### Code Quality & Review (QUAL)
 - [x] **QUAL-1** — Phase-0 static baseline (ruff/pyright/vulture/validators/import-graph). → `docs/review/phase0_static_baseline.md` (6e39886)
