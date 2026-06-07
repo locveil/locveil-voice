@@ -98,6 +98,7 @@ Living findings behind the tasks (Invariant #5). `[x]` = exists; others are prod
 | `docs/design/mqtt_integration.md` `[x]` (DONE 2026-06-06; bridge contract AGREED) | smart-home integration — bridge is the single device authority, Irene speaks canonical commands | ARCH-7/8 |
 | `docs/design/ws_esp32_transport.md` `[x]` | WS streaming-input driving adapter + ESP32 satellite transport | ARCH-6 |
 | `docs/design/onnx_inference_layer.md` `[x]` (complete 2026-06-04; ASR/platform/build + VAD/wake-word all resolved) | shared sherpa-onnx inference layer — ASR-centric; WB7 armv7 feasibility proven on hardware | ARCH-9/10 |
+| `docs/design/io_architecture.md` (DRAFT 2026-06-07) | symmetric configurable hexagonal I/O — format-vs-input, OutputPort + modality matrix, daemon multiplexing, event-bus delivery+observation, F&F via OutputManager, runners-as-presets | ARCH-14/15 |
 | `config-ui/docs/donation_editor_ux.md` | human-friendly donations editor design | UI-1/2/3 |
 
 ---
@@ -438,6 +439,54 @@ See `docs/review/phase1_architecture_map.md` §5.
       report sourced from the real component/handler registries. **Why split from ARCH-11:** keeps the hexagon-inversion
       commit single-purpose and bisectable before Gate 2; the status-endpoint regression surface here is verified in
       isolation. Same DI/anti-service-locator family as QUAL-24. Slot: AFTER ARCH-11; post-Gate-2 acceptable.
+- [x] **ARCH-14** [IO] (P-TBD) — **DESIGN — symmetric, configurable, hexagonal I/O architecture; deliverable
+      `docs/design/io_architecture.md` (DRAFT 2026-06-07, design session with user).** Triggered by a CLI bug
+      (`irene.runners.cli` interactive silently swallows typed lines — two concurrent `prompt_toolkit.prompt()` readers race
+      for the same TTY: the runner's own `_run_interactive_loop` vs the auto-started `CLIInput._input_loop` whose
+      `_command_queue` nobody drains), which exposed three structural gaps: input consumption is ad-hoc per-runner (the
+      `InputManager._input_queue` "Command Queue" of `architecture.md` §5.1 is dead-by-decision, `dataflow_reconciliation.md`
+      Q4/P0-8; every runner bypasses it); there is **no output abstraction at all** (`irene/outputs/` does not exist;
+      async/F&F output hard-wires the one global TTS/audio sink, `notifications.py:377-380`); and the system assumes exactly
+      one input + one output (hence one mutually-exclusive runner per channel). **Design decided (consolidated from the
+      user's 5-point brief — supersedes the earlier A/B framing, both of which were too narrow):** (1) **format vs input**
+      are orthogonal — *format* (`text`/`audio`) selects the workflow entry stage, *input* is the capture mechanism;
+      many-to-many. (2) **Output is the symmetric twin** — TOML-configurable `[outputs]`, the output adapter drives delivery
+      format, channel-paired, governed by a **modality/capability matrix** with degrade-then-drop negotiation; subsumes
+      ARCH-7 Flow 1/Flow 2 as ordinary outputs. (3) **One daemon multiplexes many concurrent inputs+outputs** with runtime
+      attach/detach; routing-by-origin mandatory. (4) **One pipeline event bus, two subscriber kinds** — OutputManager
+      (delivery, origin-addressed) + observers (read-only tap, identity-filtered, gated) — reusing the existing `/trace`
+      vocabulary; supports the operator's reproduce-AND-observe-live debug scenario. (5) **F&F is not special** — ack +
+      deferred notification both route through OutputManager (sync/ack → live connection; deferred → **persistent physical
+      identity** via `resolve_physical_id`, so a kitchen timer announces in the kitchen after session eviction);
+      `NotificationService` demoted deliverer→producer. (6) **Runners → thin config-preset launchers** (kept as convenience +
+      config-override via layering `flags>preset>file>defaults`; the double-reader bug becomes structurally impossible).
+      Spine = the already-built session-vs-identity split (QUAL-28) + `resolve_physical_id`. **Decisions D-1..D-6 LOCKED
+      2026-06-07** (§10): D-1 3-value format enum (`voice`/`audio`/`text`); D-2 modality-routed (conversational→origin-paired,
+      actuation/event→designated, +opt-in broadcast); D-3 drop+log+history with bounded reconnect for persistent targets;
+      D-4 delete REPL meta-commands → existing `system.*` intents; D-5 authenticated-WS tap, shared-token, localhost-first;
+      D-6 **MQTT/bridge actuation = just another output channel** via `OutputPort.deliver()->DeliveryResult` (rich echo for
+      the bridge, bounded await), `ActuationPort`→bridge `OutputPort`, `DeviceCatalogPort` stays a read port. Implementation =
+      **ARCH-15** (sliced PR-0..9, design §12). Refs: `io_architecture.md`, ARCH-6 (WS driving-adapter template), ARCH-7/8
+      (output seams — reconciled by ARCH-15 PR-9), QUAL-28 (identity), `dataflow_reconciliation.md` Q2/Q3/Q4.
+- [ ] **ARCH-15** [IO] (P-TBD) — **Implement the I/O architecture per `docs/design/io_architecture.md` §12, sliced.**
+      **PR-0** CLI double-reader stopgap (stop auto-starting `cli` under the interactive runner, mirror the `web` guard
+      `manager.py:129`; design-compatible bugfix, unblocks interactive CLI now, superseded by PR-5). **PR-1** `InputData.format`
+      first-class → workflow derives entry stage (retire per-runner skip-flag hand-setting). **PR-2** `OutputPort`
+      (`core/interfaces/output.py`) + `irene/outputs/` + `OutputManager` + pipeline event bus + event vocabulary + modality
+      matrix/negotiation (fakes; parallel with PR-1). **PR-3** real text outputs (console + ws/web) + origin routing via
+      `resolve_physical_id`. **PR-4** F&F/notifications re-routed through OutputManager (producer-demote `NotificationService`;
+      deferred→persistent identity; origin-unreachable fallback D-3). **PR-5** daemon multiplexer + runners-as-presets +
+      runtime attach/detach (removes PR-0 stopgap; double-reader structurally impossible). **PR-6** observation tap (continuous
+      trace subscription + identity filters + gating D-5; remote debug-CLI text attach reusing ARCH-6 ws shape). **PR-7**
+      config-ui: `[outputs]` editor + inputs `format`/multi-input + capability-matrix display + tap-gating (§9, Invariant #4;
+      reuse UI-9 `KeyValueEditor`). **PR-8** audio/MQTT outputs + ARCH-8 bridge actuation as a request/response
+      `OutputPort`/`DeliveryResult` (D-6). **PR-9** (runs last) cross-task reconciliation: (1) explicitly revisit **ARCH-7**
+      (`mqtt_integration.md`) → adjust the MQTT design to this I/O architecture (bridge as `OutputPort`, `device_command`
+      modality, `DeviceCatalogPort` read port, bus/observability, bounded-await); (2) sweep every other unfinished ARCH/QUAL
+      item (esp. ARCH-8, ARCH-10, QUAL-35, any input/output/session/identity/notification task) to verify+adjust per
+      Invariants #5/#8, with a journal reconciliation note. Gates per slice: `pyright` 0 · import-linter · dep-validator ·
+      `check_scope` · backend suite no-net-regression · config-ui `npm run check`+`build` where touched. **PR-0 unblocks
+      today; PR-1/PR-2 can begin immediately.** Refs: ARCH-14, ARCH-6, ARCH-7/8, QUAL-28.
 
 ### Code Quality & Review (QUAL)
 - [x] **QUAL-1** — Phase-0 static baseline (ruff/pyright/vulture/validators/import-graph). → `docs/review/phase0_static_baseline.md` (6e39886)

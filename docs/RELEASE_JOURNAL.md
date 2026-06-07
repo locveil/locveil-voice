@@ -12,6 +12,31 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-07
+- **ARCH-14 DESIGN — symmetric, configurable, hexagonal I/O architecture (design session with user).** A CLI bug
+  (`irene.runners.cli` interactive silently swallows typed lines — two `prompt_toolkit.prompt()` readers racing one TTY:
+  the runner's `_run_interactive_loop` vs the auto-started `CLIInput._input_loop` whose `_command_queue` nobody drains)
+  surfaced three structural gaps confirmed by a full code+ledger+docs investigation (5 parallel research agents): input
+  consumption is ad-hoc per-runner (the `architecture.md` §5.1 "Command Queue" is dead-by-decision, Q4/P0-8; every runner
+  bypasses `InputManager`); there is **no output abstraction** (`irene/outputs/` absent; async/F&F output hard-wires the
+  one global TTS/audio sink); and the system assumes one-input-one-output (mutually-exclusive runners). Along the way the
+  investigation **corrected two stale beliefs**: F&F/notifications are **live** (QUAL-28+QUAL-9, not the dead state the
+  frozen QUAL-8 review describes), and a **physical-identity model already exists** (`resolve_physical_id` + `ClientRegistry`
+  action store, Model 2 / QUAL-28) — the exact addressing spine the new design needs. Deliverable
+  `docs/design/io_architecture.md` (DRAFT) consolidates the user's 5-point brief: format-vs-input axes; output as the
+  configurable symmetric twin with a modality/capability matrix; one daemon multiplexing many concurrent inputs+outputs
+  with runtime attach/detach; one pipeline event bus with delivery + observation (tap) subscribers; F&F ack+notification
+  routed through OutputManager (deferred → persistent physical identity); runners demoted to thin config-preset launchers
+  (making the double-reader bug structurally impossible). The earlier A/B "who owns input consumption" framing is
+  superseded — both options were too narrow. Implementation = **ARCH-15** (PR-0..8): PR-0 is a design-compatible CLI
+  stopgap that unblocks interactive CLI now; PR-1/PR-2 (format-first-class, OutputPort+bus) can begin immediately; config-ui
+  gets a new `[outputs]` editor (PR-7). **Decisions D-1..D-6 walked through and LOCKED** in the same session (§10):
+  3-value format enum; modality-routed output (+broadcast escape hatch); drop+log+history with bounded reconnect;
+  meta-commands → existing `system.*` intents (delete REPL interception); authenticated-WS tap (shared-token, localhost-first);
+  and the load-bearing one — **D-6: MQTT/bridge actuation is just another output channel** (`OutputPort.deliver()->DeliveryResult`,
+  rich echo for the bridge with bounded await; `ActuationPort`→bridge `OutputPort`; `DeviceCatalogPort` stays a read port),
+  which corrected an earlier "actuation is a separate synchronous port" framing and unified ARCH-8 under ARCH-15's OutputPort.
+  Added **PR-9** (runs last): explicitly revisit ARCH-7 to adjust the MQTT design to this architecture, then sweep all other
+  unfinished ARCH/QUAL items for impact and adjust. ARCH-14 (design) flipped `[x]`; ARCH-15 (impl, PR-0..9) filed open.
 - **UI-9 DONE — free-form dict config fields render an editable key/value table instead of a dead-end warning.**
   Reported from the live UI: `Intent System → domain_priorities*` (and other places) showed "⚠️ Объектное поле должно
   отображаться как сворачиваемый раздел (проблема ConfigSection)" instead of an editor. Traced end-to-end: the schema
