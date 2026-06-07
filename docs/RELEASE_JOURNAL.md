@@ -12,6 +12,21 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-07
+- **ARCH-15 PR-6c DONE (backend) — web built-in-app push output; deferred F&F results reach the originating browser.**
+  The web runner's built-in browser app is an interactive text channel like CLI (textbox → `POST /execute/command` →
+  rendered reply). Its *sync* path is the HTTP reply, but it had **no push channel for deferred F&F** (a browser-set
+  timer would drop). New `/ws/output` WebSocket: the browser registers a `CallbackTextOutput` on the **shared**
+  OutputManager keyed by a per-connection `client_id` (minted + handed back if not supplied); on disconnect it's
+  deregistered (new `OutputManager.remove_output`). **Identity addressing:** `OutputManager._origin_output` now
+  prefers a `client_id` (physical-identity) match *before* the channel (`source`) match — so a deferred notification
+  carrying the action's `physical_id` routes to the **exact** browser connection that set it, and a generic REST
+  caller's F&F never lands in a random browser. (Backward-compatible: CLI/console pairing — `client_id=None`, match
+  by `source` — unchanged; existing OM + notification tests green.) New `test_web_push_output.py` (5): identity-routed
+  delivery, no-match drop, idempotent remove, and real `/ws/output` registration lifecycle via FastAPI `TestClient`
+  (supplied + minted client_id). **Frontend follow-on (tracked separately):** the built-in app's JS must open
+  `/ws/output`, include its `client_id` in each `POST /execute/command` (so `physical_id` resolves to it), and render
+  pushed `{type:"message"}` frames — a web-template edit. Gates: `pyright` 0, import-linter 9/9, dep-validator 55/55,
+  `check_scope` clean, full suite 83-failed=baseline (**0 regressions**, stash-diff). **ARCH-15 PR-6 COMPLETE (6a+6b+6c).**
 - **ARCH-15 PR-6b DONE — gated observation tap (`/ws/observe`): live, identity-filtered pipeline-event stream.**
   A debug client connects to `/ws/observe`, authenticates, sends an identity filter, and receives the live
   `EventBus` stream (`input.received`/`result.produced`/`output.delivered`/…) — the "observe live traffic" half of

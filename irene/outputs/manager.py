@@ -56,6 +56,15 @@ class OutputManager:
             await self._outputs[name].stop()
         self._active.clear()
 
+    def remove_output(self, name: str) -> None:
+        """Deregister an output (e.g. a browser WS push channel on disconnect). Idempotent."""
+        self._outputs.pop(name, None)
+        if name in self._active:
+            self._active.remove(name)
+        for modality, designated in list(self._designated.items()):
+            if designated == name:
+                del self._designated[modality]
+
     def designate(self, modality: OutputModality, output_name: str) -> None:
         """Designate the single output that carries a capability-routed modality (D-2)."""
         if output_name not in self._outputs:
@@ -65,9 +74,22 @@ class OutputManager:
     # --- selection (D-2) -----------------------------------------------------------------------
 
     def _origin_output(self, context: RequestContext) -> Optional[OutputPort]:
-        for out in self._outputs.values():
-            if out.origin_key() is not None and out.origin_key() == context.source:
-                return out
+        """Pair a conversational result to its origin output (D-2).
+
+        Prefer a **physical-identity** match (`origin_key() == client_id`) — this is how a deferred
+        F&F result reaches the specific room/device/browser connection it belongs to — then fall back
+        to the **channel** match (`origin_key() == source`) for live sync delivery.
+        """
+        client_id = getattr(context, "client_id", None)
+        if client_id is not None:
+            for out in self._outputs.values():
+                if out.origin_key() == client_id:
+                    return out
+        source = getattr(context, "source", None)
+        if source is not None:
+            for out in self._outputs.values():
+                if out.origin_key() is not None and out.origin_key() == source:
+                    return out
         return None
 
     def select(self, modality: OutputModality, context: RequestContext,

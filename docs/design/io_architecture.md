@@ -382,12 +382,15 @@ landable and gated (`pyright` 0 · import-linter · dep-validator · `check_scop
     `core/observe.py`: `authorize_observer` (D-5 gating) + `subscribe_to_queue` (bounded queue that drops the
     OLDEST event when full, so a slow tap can never stall `publish`). The remote debug-CLI's *inject* half reuses
     `/execute/command`; its *observe* half is this endpoint.
-  - **PR-6c — web built-in-app push output (remaining).** **The web runner's built-in browser app is an
-    interactive text channel like CLI** (browser textbox → `POST /execute/command` → rendered reply). Its *sync*
-    path is already request/response (delivery = the HTTP reply), but it has **no push channel for deferred F&F
-    results** (a browser-set timer would drop). Add a **WS/SSE push output** (a `CallbackTextOutput`-shaped
-    adapter over a browser WebSocket) so the OutputManager delivers deferred results back to the browser,
-    origin/identity-addressed — bringing the web app into the model like CLI.
+  - **PR-6c — web built-in-app push output (backend). ✓ DONE 2026-06-07.** `/ws/output` WebSocket: the browser
+    registers a `CallbackTextOutput` on the shared OutputManager keyed by a per-connection `client_id` (minted if
+    not supplied, handed back). Deferred results are routed to that exact connection by **physical identity** — the
+    OutputManager's `_origin_output` now prefers a `client_id` match before the channel (`source`) match, so a REST
+    caller's F&F never lands in a random browser. Added `OutputManager.remove_output` (deregister on disconnect).
+    The app's *sync* commands still go via `POST /execute/command` (the HTTP reply is the sync delivery).
+    _Frontend follow-on:_ the built-in app's JS must open `/ws/output`, include its `client_id` in each
+    `POST /execute/command` (so the action's `physical_id` resolves to it), and render pushed `{type:"message"}`
+    frames — a web-template edit, tracked separately.
 - **PR-7 — config-ui.** `[outputs]` editor + inputs `format`/multi-input + capability-matrix display +
   tap-gating config (§9). Lands as the backend `[outputs]` schema (PR-2/PR-3) comes online.
 - **PR-8 — Local audio/voice output ONLY (NO MQTT).** Build the local-audio SPEECH `OutputPort` (the "voice"

@@ -901,6 +901,54 @@ def create_webapi_router(
             if unsubscribe is not None:
                 unsubscribe()
 
+    # ARCH-15 PR-6c: web built-in-app push channel. The browser opens this WS and registers a
+    # CallbackTextOutput on the shared OutputManager, keyed by a per-connection client_id. The app's
+    # *sync* commands still go via POST /execute/command (the HTTP reply is the sync delivery); this
+    # WS exists so DEFERRED results (a browser-set timer firing) can be PUSHED back — the OutputManager
+    # pairs them by physical identity (client_id). Commands carry that client_id so the action's
+    # physical_id resolves to it, and the deferred notification routes here.
+    @router.websocket("/ws/output")
+    async def ws_output(websocket: WebSocket):
+        from fastapi import WebSocketDisconnect
+        from ..outputs.text import CallbackTextOutput
+
+        await websocket.accept()
+        output_manager = getattr(core, "output_manager", None)
+        if output_manager is None:
+            await websocket.send_json({"type": "error", "error": "output manager unavailable"})
+            await websocket.close()
+            return
+
+        # First frame may supply a client_id; otherwise mint one (and hand it back so the app can
+        # include it in its POST /execute/command calls for identity-addressed deferred delivery).
+        client_id = None
+        try:
+            first = json.loads(await websocket.receive_text())
+            client_id = first.get("client_id")
+        except Exception:
+            client_id = None
+        if not client_id:
+            client_id = f"web_{uuid.uuid4().hex[:8]}"
+
+        async def _send(text: str) -> None:
+            await websocket.send_json({"type": "message", "text": text})
+
+        output = CallbackTextOutput(_send, name=client_id, origin=client_id)
+        await output_manager.add_output(client_id, output)
+        await websocket.send_json({"type": "connected", "client_id": client_id})
+        try:
+            while True:
+                msg = await websocket.receive()
+                if msg.get("type") == "websocket.disconnect":
+                    break
+        except WebSocketDisconnect:
+            pass
+        except Exception as e:
+            logger.error(f"WS output channel error ({client_id}): {e}")
+        finally:
+            output_manager.remove_output(client_id)
+            logger.debug(f"WS output channel deregistered ({client_id})")
+
     # AsyncAPI documentation endpoints
     @router.get("/asyncapi", response_class=HTMLResponse, include_in_schema=False)
     async def asyncapi_docs():

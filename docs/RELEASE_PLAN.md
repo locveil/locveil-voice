@@ -508,9 +508,12 @@ See `docs/review/phase1_architecture_map.md` §5.
       deferred). **PR-6b ✓ DONE 2026-06-07** gated `/ws/observe`
       tap (shared-token + localhost-first auth via `core/observe.authorize_observer`; identity-filtered live `EventBus`
       stream via `subscribe_to_queue`, bounded queue drops-oldest so a slow tap can't stall publish; `system.observe_token`
-      / `observe_allow_remote` config). **PR-6c** (remaining) web built-in-app push output (the browser app is an
-      interactive text channel like CLI; add a WS/SSE `CallbackTextOutput` so the OutputManager delivers *deferred* F&F
-      results back to the browser — its sync path is already the HTTP reply). **PR-7** config-ui: `[outputs]` editor + inputs `format`/multi-input + capability-matrix
+      / `observe_allow_remote` config). **PR-6c ✓ DONE 2026-06-07 (backend)** web built-in-app
+      push output: `/ws/output` registers a `CallbackTextOutput` keyed by per-connection `client_id`; OutputManager
+      `_origin_output` now prefers a `client_id` (physical-identity) match before the channel match, so deferred F&F
+      routes to the exact browser connection (not a random one); added `remove_output`. Frontend follow-on: the
+      app's JS must open `/ws/output`, thread its `client_id` into POSTs, and render pushed frames (web-template edit).
+      **ARCH-15 PR-6 COMPLETE (6a+6b+6c).** **PR-7** config-ui: `[outputs]` editor + inputs `format`/multi-input + capability-matrix
       display + tap-gating (§9, Invariant #4; reuse UI-9 `KeyValueEditor`). **PR-8** **local audio/voice SPEECH output
       ONLY — NO MQTT** (wrap TTS+audio as a SPEECH `OutputPort`, register in voice/vosk profile → restores pure D-3,
       retires the PR-5a legacy-TTS fallback; no broker code — *all* MQTT is ARCH-8's). **PR-9** (runs last) cross-task
