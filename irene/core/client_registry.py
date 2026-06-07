@@ -112,6 +112,7 @@ class ActionRecord:
     status: str = "running"
     session_id: Optional[str] = None         # conversation that launched it (informational)
     room_id: Optional[str] = None
+    source: Optional[str] = None             # originating channel (cli/web/ws/…) for deferred-result addressing (ARCH-15 PR-4)
     metadata: Dict[str, Any] = field(default_factory=dict)
 
     def is_live(self) -> bool:

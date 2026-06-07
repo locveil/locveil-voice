@@ -139,6 +139,10 @@ class ContextManager:
         
         # Update language and metadata if provided
         if request_context:
+            # ARCH-15 PR-4: thread the originating channel onto the conversation context so a
+            # fire-and-forget action can address its deferred completion back to that channel's
+            # output. (Wires the previously-unpopulated `request_source` field.)
+            context.request_source = request_context.source
             if request_context.language and request_context.language != context.language:
                 context.language = request_context.language
             if request_context.metadata:

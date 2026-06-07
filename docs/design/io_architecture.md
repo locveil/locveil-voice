@@ -340,9 +340,17 @@ landable and gated (`pyright` 0 · import-linter · dep-validator · `check_scop
   replacing the bare prints (with a print fallback when no manager is wired; superseded by PR-5).
   **Reconciliation:** sync delivery pairs on the **live channel (`source`)**, not `resolve_physical_id` —
   that keys the *persistent-identity* addressing of **deferred** F&F (PR-4, §6), not the live connection.
-- **PR-4 — F&F + notifications re-routed.** Demote `NotificationService` to producer; deferred notifications
-  delivered by OutputManager addressed by persistent physical identity (§6, §7); origin-unreachable fallback
-  (D-3). Timer end-to-end: ack to origin, completion to room/device output.
+- **PR-4 — F&F + notifications re-routed. ✓ DONE 2026-06-07.** `NotificationService` demoted to a producer:
+  when an `OutputManager` is wired (`set_output_manager`), `_deliver_notification` delivers the deferred
+  completion through it as a conversational result **addressed by the action's identity** — `source` (channel)
+  + `physical_id`/`room` threaded from the `ActionRecord` onto the `NotificationMessage`; the legacy global-TTS
+  handler is bypassed, LOG always kept. Origin-unreachable → **drop + log** (D-3; completion stays in the
+  action-store history). Wired the previously-dead `UnifiedConversationContext.request_source` from
+  `RequestContext.source`, captured `source` on `ActionRecord`, threaded it through the F&F launch. The ack half
+  is already PR-3 (sync return). **Pre-daemon scoping:** the seam is opt-in — `output_manager` is `None` until
+  the composition root wires a process-wide OutputManager into NotificationService (**PR-5**), so runtime
+  behaviour is unchanged until then; the **bounded reconnect** in D-3 applies to persistent transports (MQTT/WS)
+  that arrive in **PR-8**, so PR-4 implements drop+log+history.
 - **PR-5 — Daemon multiplexer + runners-as-presets.** One process, concurrent input+output registries,
   runtime attach/detach; runners become config-preset launchers with layered overrides (§8); **PR-0's
   stopgap removed** (console input is now a single daemon-consumed adapter — double-reader structurally

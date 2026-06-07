@@ -487,8 +487,12 @@ See `docs/review/phase1_architecture_map.md` §5.
       repurposed to the channel now PR-1 freed it from the format label); CLI runner renders via
       `OutputManager`+`ConsoleOutput` (origin-paired, print fallback). Reconciliation: sync pairs on the live
       channel, not `resolve_physical_id` (that's PR-4's deferred-identity path). Also dropped all `TYPE_CHECKING`
-      from the PR-2/3 output modules (direct imports, mirroring `input.py`). **PR-4** F&F/notifications re-routed through OutputManager (producer-demote `NotificationService`;
-      deferred→persistent identity; origin-unreachable fallback D-3). **PR-5** daemon multiplexer + runners-as-presets +
+      from the PR-2/3 output modules (direct imports, mirroring `input.py`). **PR-4 ✓ DONE 2026-06-07** F&F/notifications re-routed through OutputManager
+      (producer-demote `NotificationService` via `set_output_manager`; `_deliver_notification` delivers the
+      completion addressed by the action's identity — `source`/`physical_id`/`room` threaded from `ActionRecord`
+      onto `NotificationMessage`; legacy global-TTS bypassed, LOG kept; origin-unreachable → drop+log+history,
+      D-3). Wired the dead `request_source` field; captured `source` on `ActionRecord`. Opt-in (composition wiring
+      = PR-5; bounded reconnect = PR-8). Recovered 1 baseline drift test (request_source flow); baseline now 83. **PR-5** daemon multiplexer + runners-as-presets +
       runtime attach/detach (removes PR-0 stopgap; double-reader structurally impossible). **PR-6** observation tap (continuous
       trace subscription + identity filters + gating D-5; remote debug-CLI text attach reusing ARCH-6 ws shape). **PR-7**
       config-ui: `[outputs]` editor + inputs `format`/multi-input + capability-matrix display + tap-gating (§9, Invariant #4;

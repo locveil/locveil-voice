@@ -118,6 +118,7 @@ class IntentHandler(EntryPointMetadata, ABC):
             physical_id=physical_id,
             owner_session_id=context.session_id,
             room_id=context.client_id or context.room_name,
+            source=getattr(context, "request_source", None),
             timeout=timeout,
             max_retries=max_retries,
             retry_delay=retry_delay,
@@ -558,6 +559,7 @@ class IntentHandler(EntryPointMetadata, ABC):
         physical_id: Optional[str] = None,
         owner_session_id: Optional[str] = None,
         room_id: Optional[str] = None,
+        source: Optional[str] = None,
         timeout: Optional[float] = None,
         max_retries: int = 0,
         retry_delay: float = 1.0,
@@ -596,6 +598,7 @@ class IntentHandler(EntryPointMetadata, ABC):
                 status="running",
                 session_id=owner_session_id,
                 room_id=room_id,
+                source=source,
                 metadata={"handler": self.__class__.__name__, "timeout": timeout,
                           "max_retries": max_retries, "retry_count": 0},
             )
@@ -685,14 +688,18 @@ class IntentHandler(EntryPointMetadata, ABC):
             return
         try:
             duration = time.time() - record.started_at
+            # ARCH-15 PR-4: carry the action's addressing identity so the OutputManager can deliver
+            # the deferred result back to the originating channel / room-device (else drop+log, D-3).
             if success:
                 await service.send_action_completion_notification(
                     session_id=session_id, domain=record.domain,
-                    action_name=record.action_name, duration=duration, success=True)
+                    action_name=record.action_name, duration=duration, success=True,
+                    source=record.source, physical_id=record.physical_id, room_name=record.room_id)
             else:
                 await service.send_action_failure_notification(
                     session_id=session_id, domain=record.domain,
-                    action_name=record.action_name, error=error or "Unknown error", is_critical=False)
+                    action_name=record.action_name, error=error or "Unknown error", is_critical=False,
+                    source=record.source, physical_id=record.physical_id, room_name=record.room_id)
         except Exception as e:
             self.logger.error(f"Failed to send action notification for {record.action_name}: {e}")
 

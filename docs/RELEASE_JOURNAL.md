@@ -12,6 +12,25 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-07
+- **ARCH-15 PR-4 DONE — F&F/deferred notifications re-routed through the OutputManager, addressed by identity.**
+  `NotificationService` demoted deliverer→producer: `set_output_manager(om)` wires it, and `_deliver_notification`
+  then delivers the completion through the OutputManager as a conversational `IntentResult`, **addressed by the
+  action's identity** — `source` (channel) + `physical_id`/`room` now threaded from the `ActionRecord` onto the
+  `NotificationMessage` (the carried-but-unused identity the investigation flagged, now *used*). The legacy global
+  TTS/audio sink is bypassed when the OutputManager is present; `LOG` always runs; if the identity has no attached
+  output → **drop + log** (D-3) — the completion stays queryable via the action-store history, so nothing is lost.
+  Threading: wired the previously-**dead** `UnifiedConversationContext.request_source` from `RequestContext.source`
+  (`context.py`), added `ActionRecord.source`, and a keyword-only `source` on the F&F launch
+  (`execute_fire_and_forget_action`), captured from `context.request_source`. The immediate **ack** half is already
+  PR-3 (sync return rendered via the output hexagon). **Opt-in / pre-daemon:** `output_manager` stays `None` until
+  the composition root injects a process-wide OutputManager into NotificationService (PR-5) — so runtime behaviour
+  is unchanged until then; legacy TTS+LOG remains the fallback. The D-3 **bounded reconnect** targets persistent
+  transports (MQTT/WS) that arrive in PR-8; PR-4 ships drop+log+history. `core` keeps no import edge to
+  `irene.outputs` (OutputManager duck-typed `Any`). New `test_notification_output_routing.py` (5): origin delivery,
+  drop-on-unreachable, speech→text degrade, legacy-LOG back-compat, addressing-threading. **Side effect:** wiring
+  `request_source` recovered a baseline drift test (`test_phase1_integration::...request_context_to_conversation_
+  context_flow`) — backend baseline 84→**83 failed**. Gates: `pyright` 0, import-linter 9/9, dep-validator 55/55,
+  `check_scope` clean, full suite 83-failed (0 regressions, 1 recovery, +5 new passing; timer e2e green).
 - **ARCH-15 PR-3 DONE — real text outputs + origin routing; the CLI renders through the output hexagon.**
   New adapters `irene/outputs/console.py` (`ConsoleOutput` — CLI sink, injectable sink, origin=`cli`, TEXT-only)
   and `irene/outputs/text.py` (`CallbackTextOutput` — ws/web text via an async send callback; live consumer is

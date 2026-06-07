@@ -55,6 +55,10 @@ class NotificationMessage:
     delivery_methods: List[DeliveryMethod] = field(default_factory=lambda: [DeliveryMethod.LOG])
     session_id: Optional[str] = None
     domain: Optional[str] = None
+    # ARCH-15 PR-4: addressing for OutputManager delivery of deferred results (was carried-but-unused)
+    source: Optional[str] = None       # originating channel (cli/web/ws/…) — origin-pair key
+    physical_id: Optional[str] = None  # persistent room/device/session scope
+    room_name: Optional[str] = None    # human room name (room/device addressing, PR-8)
     created_at: float = field(default_factory=time.time)
     delivered_at: Optional[float] = None
     delivery_status: Dict[DeliveryMethod, bool] = field(default_factory=dict)
@@ -93,6 +97,14 @@ class NotificationService:
         self.tts_component = None
         self.audio_component = None
         self.context_manager = None
+        # ARCH-15 PR-4: when wired, the OutputManager OWNS delivery (addressed by physical identity);
+        # NotificationService becomes a producer. None → legacy global-TTS/LOG path (back-compat).
+        # Typed Any (not the concrete OutputManager) so `core` keeps no import edge to `irene.outputs`.
+        self.output_manager: Optional[Any] = None
+
+    def set_output_manager(self, output_manager) -> None:
+        """Wire the OutputManager so deferred F&F results are delivered, addressed by identity (PR-4)."""
+        self.output_manager = output_manager
         
     async def initialize(self, components: Dict[str, Any]) -> None:
         """Initialize notification service with system components"""
@@ -161,10 +173,13 @@ class NotificationService:
         self, 
         session_id: str, 
         domain: str, 
-        action_name: str, 
+        action_name: str,
         duration: float,
         success: bool = True,
-        error: Optional[str] = None
+        error: Optional[str] = None,
+        source: Optional[str] = None,
+        physical_id: Optional[str] = None,
+        room_name: Optional[str] = None
     ) -> bool:
         """Send notification for completed fire-and-forget action"""
         
@@ -208,18 +223,24 @@ class NotificationService:
             },
             delivery_methods=delivery_methods,
             session_id=session_id,
-            domain=domain
+            domain=domain,
+            source=source,
+            physical_id=physical_id,
+            room_name=room_name
         )
-        
+
         return await self.send_notification(notification)
-    
+
     async def send_action_failure_notification(
         self,
         session_id: str,
         domain: str,
         action_name: str,
         error: str,
-        is_critical: bool = False
+        is_critical: bool = False,
+        source: Optional[str] = None,
+        physical_id: Optional[str] = None,
+        room_name: Optional[str] = None
     ) -> bool:
         """Send notification for failed fire-and-forget action"""
         
@@ -257,11 +278,14 @@ class NotificationService:
             },
             delivery_methods=delivery_methods,
             session_id=session_id,
-            domain=domain
+            domain=domain,
+            source=source,
+            physical_id=physical_id,
+            room_name=room_name
         )
-        
+
         return await self.send_notification(notification)
-    
+
     async def send_system_status_notification(
         self,
         title: str,
@@ -314,8 +338,24 @@ class NotificationService:
             self._metrics["deliveries_by_type"].get(notification.type.value, 0) + 1
         
         successful_deliveries = 0
-        
-        for method in notification.delivery_methods:
+
+        # ARCH-15 PR-4: producer→OutputManager. When an OutputManager is wired it OWNS delivery
+        # (addressed by the action's physical identity); the legacy global-TTS handler is bypassed
+        # and only LOG is kept. If the identity has no attached output → drop + log (D-3); the
+        # completion stays queryable via the action-store history, so nothing is lost.
+        if self.output_manager is not None:
+            if await self._deliver_via_output_manager(notification):
+                successful_deliveries += 1
+            else:
+                self.logger.info(
+                    f"Notification not delivered (no attached output for source="
+                    f"{notification.source} room={notification.room_name} id={notification.physical_id}); "
+                    f"dropped — recorded in action history")
+            methods = [DeliveryMethod.LOG]
+        else:
+            methods = notification.delivery_methods
+
+        for method in methods:
             try:
                 handler = self._delivery_handlers.get(method)
                 if handler:
@@ -344,6 +384,38 @@ class NotificationService:
             self._metrics["failed_deliveries"] += 1
             self.logger.error(f"Failed to deliver notification via any method")
     
+    async def _deliver_via_output_manager(self, notification: NotificationMessage) -> bool:
+        """Deliver a deferred result through the OutputManager, addressed by the action's identity.
+
+        Builds a request context from the notification's addressing (channel/identity) and a
+        conversational `IntentResult`; the OutputManager routes it to the output paired with that
+        channel/identity, degrading SPEECH→TEXT as needed (§3.1). Returns True iff ≥1 output
+        delivered it (else the caller drops + logs, D-3). (ARCH-15 PR-4)
+        """
+        if self.output_manager is None:
+            return False
+
+        from ..intents.context_models import RequestContext
+        from ..intents.models import IntentResult
+        from .interfaces.output import OutputModality
+
+        speak = (notification.priority in (NotificationPriority.HIGH, NotificationPriority.CRITICAL)
+                 or DeliveryMethod.TTS in notification.delivery_methods)
+        ctx = RequestContext(
+            source=notification.source or "unknown",
+            session_id=notification.session_id,
+            client_id=notification.physical_id,
+            room_name=notification.room_name,
+        )
+        result = IntentResult(text=notification.message, should_speak=speak)
+        modality = OutputModality.SPEECH if speak else OutputModality.TEXT
+        try:
+            outcomes = await self.output_manager.deliver(result, ctx, modality)
+        except Exception as e:
+            self.logger.error(f"OutputManager delivery failed: {e}")
+            return False
+        return any(o.delivered for o in outcomes)
+
     async def _deliver_via_log(self, notification: NotificationMessage) -> None:
         """Deliver notification via logging system"""
         log_level = {
