@@ -145,6 +145,21 @@ class InputConfig(BaseModel):
 
 
 # ============================================================
+# OUTPUT CHANNELS CONFIGURATION (ARCH-15 PR-7)
+# ============================================================
+
+class OutputConfig(BaseModel):
+    """Output delivery-channel configuration — the symmetric twin of InputConfig.
+
+    Declares which output adapters the runners/composition register on the OutputManager and their
+    settings. The OutputManager + the adapters are the runtime hexagon (ARCH-15 PR-2..6); this is the
+    config surface that gates them (config-ui renders it as the `[outputs]` editor)."""
+    console: bool = Field(default=True, description="Enable console (terminal) text output (CLI channel)")
+    console_prefix: str = Field(default="📝 ", description="Prefix for console output lines")
+    web_push: bool = Field(default=True, description="Enable the browser push channel (/ws/output) for deferred results")
+
+
+# ============================================================
 # COMPONENT CONFIGURATION
 # ============================================================
 
@@ -1227,6 +1242,7 @@ class CoreConfig(BaseSettings):
     # New architecture sections
     system: SystemConfig = Field(default_factory=SystemConfig, description="System capabilities configuration")
     inputs: InputConfig = Field(default_factory=InputConfig, description="Input sources configuration")
+    outputs: OutputConfig = Field(default_factory=OutputConfig, description="Output delivery channels configuration")
     components: ComponentConfig = Field(default_factory=ComponentConfig, description="Component configuration")
     assets: AssetConfig = Field(default_factory=AssetConfig, description="Asset management configuration")
     workflows: WorkflowConfig = Field(default_factory=WorkflowConfig, description="Workflow configuration")

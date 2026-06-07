@@ -12,6 +12,23 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-07
+- **ARCH-15 PR-7 DONE — config-driven outputs (`[outputs]`) + config-ui editor (renders for free).** The blocker
+  surfaced before starting: there was no `[outputs]` config schema (outputs were registered programmatically), so the
+  config-ui editor had nothing to render. **Backend prerequisite built:** new `OutputConfig` model
+  (`console`/`console_prefix`/`web_push`) added to `CoreConfig` as the `outputs` section. Because `AutoSchemaRegistry`
+  auto-generates a config-ui section for any top-level `CoreConfig` field that's a Pydantic model, this **automatically**
+  produces the `[outputs]` schema section (added to the section order after `inputs`, title "📤 Output Channels") — no
+  config-ui hardcoding. Adapter registration is now **config-gated**: `CLIRunner` registers `ConsoleOutput` only if
+  `config.outputs.console` (and uses `console_prefix`); the `/ws/output` web-push endpoint rejects when
+  `config.outputs.web_push` is off. **Frontend:** the `[outputs]` editor renders **for free** — config-ui consumes the
+  schema dynamically and the UI-9 generic widgets render the bool/string fields (labels from the Pydantic
+  descriptions); `npm run check` (type-check + lint + orphans) + `npm run build` green (Invariant #4), **no config-ui
+  code change**. Scope notes: multi-input is already representable (`InputConfig.{cli,microphone,web}`); per-input
+  `format` is *derived* (PR-1) not a config field, so it has no editor surface; the read-only capability-matrix display
+  is deferred as an optional enhancement. New `test_output_config.py` (5): OutputConfig defaults, CoreConfig section,
+  auto-generated schema section (order/title/model), and `/ws/output` web_push gating (reject/allow via TestClient).
+  Gates: `pyright` 0, import-linter 9/9, dep-validator 55/55, `check_scope` clean, backend suite 83-failed=baseline
+  (**0 regressions**, stash-diff); config-ui `npm run check`+`build` green.
 - **ARCH-15 PR-6c DONE (backend) — web built-in-app push output; deferred F&F results reach the originating browser.**
   The web runner's built-in browser app is an interactive text channel like CLI (textbox → `POST /execute/command` →
   rendered reply). Its *sync* path is the HTTP reply, but it had **no push channel for deferred F&F** (a browser-set

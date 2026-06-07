@@ -513,8 +513,12 @@ See `docs/review/phase1_architecture_map.md` §5.
       `_origin_output` now prefers a `client_id` (physical-identity) match before the channel match, so deferred F&F
       routes to the exact browser connection (not a random one); added `remove_output`. Frontend follow-on: the
       app's JS must open `/ws/output`, thread its `client_id` into POSTs, and render pushed frames (web-template edit).
-      **ARCH-15 PR-6 COMPLETE (6a+6b+6c).** **PR-7** config-ui: `[outputs]` editor + inputs `format`/multi-input + capability-matrix
-      display + tap-gating (§9, Invariant #4; reuse UI-9 `KeyValueEditor`). **PR-8** **local audio/voice SPEECH output
+      **ARCH-15 PR-6 COMPLETE (6a+6b+6c).** **PR-7 ✓ DONE 2026-06-07** config-driven outputs +
+      config-ui editor: backend `OutputConfig` (`[outputs]` on CoreConfig: console/console_prefix/web_push) auto-generates
+      a config-ui section (AutoSchemaRegistry; order/title added); adapter registration config-gated (CLIRunner console
+      gate+prefix, `/ws/output` web_push gate). Frontend renders for free (schema-driven; UI-9 generic widgets; labels
+      from Pydantic descriptions) — `npm run check`+`build` green, no UI code change. multi-input already representable;
+      per-input `format` is derived (no editor surface); capability-matrix display deferred (optional). **PR-8** **local audio/voice SPEECH output
       ONLY — NO MQTT** (wrap TTS+audio as a SPEECH `OutputPort`, register in voice/vosk profile → restores pure D-3,
       retires the PR-5a legacy-TTS fallback; no broker code — *all* MQTT is ARCH-8's). **PR-9** (runs last) cross-task
       reconciliation: (1) revisit **ARCH-7** → **redefine/feed ARCH-8** with the I/O contract so **ARCH-8** implements

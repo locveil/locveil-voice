@@ -310,8 +310,10 @@ Note: CLI runner always uses CLI input only, regardless of config file settings.
             # (quiet suppresses result echo, matching prior behaviour).
             from ..outputs.console import ConsoleOutput
             self._output_manager = self.core.output_manager
-            if self._output_manager is not None:
-                await self._output_manager.add_output("console", ConsoleOutput(origin="cli"))
+            out_cfg = getattr(self.core.config, "outputs", None)  # ARCH-15 PR-7: config-driven
+            if self._output_manager is not None and (out_cfg is None or out_cfg.console):
+                prefix = out_cfg.console_prefix if out_cfg is not None else "📝 "
+                await self._output_manager.add_output("console", ConsoleOutput(origin="cli", prefix=prefix))
     
     async def _execute_runner_logic(self, args: argparse.Namespace) -> int:
         """Execute CLI runner logic"""

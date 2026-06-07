@@ -914,8 +914,9 @@ def create_webapi_router(
 
         await websocket.accept()
         output_manager = getattr(core, "output_manager", None)
-        if output_manager is None:
-            await websocket.send_json({"type": "error", "error": "output manager unavailable"})
+        out_cfg = getattr(getattr(core, "config", None), "outputs", None)  # ARCH-15 PR-7: config-driven
+        if output_manager is None or (out_cfg is not None and not out_cfg.web_push):
+            await websocket.send_json({"type": "error", "error": "web push output unavailable"})
             await websocket.close()
             return
 

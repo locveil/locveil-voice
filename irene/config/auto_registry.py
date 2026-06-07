@@ -595,7 +595,7 @@ class AutoSchemaRegistry:
         
         # Define logical ordering for sections
         preferred_order = [
-            'system', 'inputs', 'components',  # Core sections first
+            'system', 'inputs', 'outputs', 'components',  # Core sections first
             'tts', 'audio', 'asr', 'llm',      # Main components
             'voice_trigger', 'nlu', 'nlu_analysis', 'text_processor', 'intent_system',  # Advanced components
             'vad', 'monitoring',               # Utility components
@@ -619,6 +619,7 @@ class AutoSchemaRegistry:
         section_titles = {
             'system': '🔧 Core Settings',
             'inputs': '📝 Input Sources',
+            'outputs': '📤 Output Channels',
             'components': '🔌 Components',
             'tts': '🗣️ Text-to-Speech',
             'audio': '🔊 Audio Playback',

@@ -391,8 +391,16 @@ landable and gated (`pyright` 0 · import-linter · dep-validator · `check_scop
     _Frontend follow-on:_ the built-in app's JS must open `/ws/output`, include its `client_id` in each
     `POST /execute/command` (so the action's `physical_id` resolves to it), and render pushed `{type:"message"}`
     frames — a web-template edit, tracked separately.
-- **PR-7 — config-ui.** `[outputs]` editor + inputs `format`/multi-input + capability-matrix display +
-  tap-gating config (§9). Lands as the backend `[outputs]` schema (PR-2/PR-3) comes online.
+- **PR-7 — config-driven outputs + config-ui `[outputs]` editor. ✓ DONE 2026-06-07.** **Backend (the missing
+  prerequisite):** new `OutputConfig` (`[outputs]` section on `CoreConfig`: `console`/`console_prefix`/`web_push`)
+  → auto-generates a config-ui section via `AutoSchemaRegistry` (no UI hardcoding); `outputs` added to the section
+  order/title. Adapter registration is now **config-gated**: `CLIRunner` registers `ConsoleOutput` only if
+  `config.outputs.console` (using `console_prefix`); `/ws/output` rejects when `config.outputs.web_push` is off.
+  **Frontend:** the `[outputs]` editor **renders for free** — config-ui consumes the schema dynamically and the
+  UI-9 generic widgets render the bool/string fields (labels from the Pydantic descriptions); `npm run check` +
+  `build` green (Invariant #4), no config-ui code change. _Notes:_ multi-input is already representable
+  (`InputConfig.{cli,microphone,web}`); per-input `format` is *derived* (PR-1), not a config field, so it has no
+  editor surface; the read-only **capability-matrix display** is deferred as an optional enhancement.
 - **PR-8 — Local audio/voice output ONLY (NO MQTT).** Build the local-audio SPEECH `OutputPort` (the "voice"
   modality, wrapping the TTS+audio components) and register it in the voice/vosk profile — which **restores
   pure D-3 drop+log** (retires the PR-5a legacy-TTS fallback). **No broker code here.** *All MQTT — Flow-2
