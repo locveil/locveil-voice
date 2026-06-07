@@ -851,6 +851,56 @@ def create_webapi_router(
             except Exception:
                 pass
 
+    # ARCH-15 PR-6b: gated observation tap. A debug client subscribes to the pipeline event bus and
+    # receives a live, identity-filtered stream of {input.received, result.produced, output.delivered,
+    # …}. Disabled unless system.observe_token is set; localhost-only unless observe_allow_remote.
+    @router.websocket("/ws/observe")
+    async def ws_observe(websocket: WebSocket):
+        from fastapi import WebSocketDisconnect
+        from ..core.observe import authorize_observer, subscribe_to_queue
+        from ..core.event_bus import identity_filter, EventType
+
+        await websocket.accept()
+        sys_cfg = core.config.system
+        client_host = websocket.client.host if websocket.client else None
+        unsubscribe = None
+        try:
+            auth = json.loads(await websocket.receive_text())
+            if not authorize_observer(client_host, auth.get("token"),
+                                      configured_token=getattr(sys_cfg, "observe_token", None),
+                                      allow_remote=getattr(sys_cfg, "observe_allow_remote", False)):
+                await websocket.send_json({"type": "error", "error": "unauthorized"})
+                await websocket.close()
+                return
+            if core.event_bus is None:
+                await websocket.send_json({"type": "error", "error": "event bus unavailable"})
+                await websocket.close()
+                return
+
+            f = auth.get("filter") or {}
+            types = [EventType(t) for t in f.get("types", [])] or None
+            ev_filter = identity_filter(session_id=f.get("session_id"), client_id=f.get("client_id"),
+                                        room_name=f.get("room_name"), source=f.get("source"), types=types)
+            queue, unsubscribe = subscribe_to_queue(core.event_bus, ev_filter)
+            await websocket.send_json({"type": "subscribed"})
+            while True:
+                ev = await queue.get()
+                await websocket.send_json({
+                    "type": "event", "event": ev.type.value, "session_id": ev.session_id,
+                    "client_id": ev.client_id, "room_name": ev.room_name, "source": ev.source,
+                    "payload": ev.payload, "timestamp": ev.timestamp})
+        except WebSocketDisconnect:
+            logger.debug("WS observe tap disconnected")
+        except Exception as e:
+            logger.error(f"WS observe tap error: {e}")
+            try:
+                await websocket.send_json({"type": "error", "error": str(e)})
+            except Exception:
+                pass
+        finally:
+            if unsubscribe is not None:
+                unsubscribe()
+
     # AsyncAPI documentation endpoints
     @router.get("/asyncapi", response_class=HTMLResponse, include_in_schema=False)
     async def asyncapi_docs():

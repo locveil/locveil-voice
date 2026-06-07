@@ -376,14 +376,18 @@ landable and gated (`pyright` 0 · import-linter · dep-validator · `check_scop
     (carrying origin identity), and the OutputManager already publishes `output.delivered` — so the observation
     stream is now **live** end-to-end. (Deeper events `asr.transcript`/`intent.recognized` need workflow
     internals — a later increment.) No-op without a bus; backend-only; 0 regressions.
-  - **PR-6b — observation tap + web-app push (remaining).** (a) Continuous trace-event subscription + identity
-    filters + gating (§5, D-5); remote debug-CLI attach (text format) reusing the ARCH-6 ws shape.
-  (b) **The web runner's built-in browser app is an interactive text channel like CLI** (browser textbox →
-  `POST /execute/command` → rendered reply). Its *sync* path is already request/response (delivery = the HTTP
-  reply), but it has **no push channel for deferred F&F results** (a browser-set timer would drop). Add a
-  **WS/SSE push output** (a `CallbackTextOutput`-shaped adapter over a browser WebSocket) so the OutputManager
-  delivers deferred results back to the browser, origin/identity-addressed — bringing the web app into the
-  model like CLI.
+  - **PR-6b — observation tap. ✓ DONE 2026-06-07.** Gated `/ws/observe` WebSocket: a debug client authenticates
+    (shared `system.observe_token`; **localhost-only** unless `observe_allow_remote`), sends an identity filter
+    (room/client/session/source/types), and receives the live `EventBus` stream. Testable cores in
+    `core/observe.py`: `authorize_observer` (D-5 gating) + `subscribe_to_queue` (bounded queue that drops the
+    OLDEST event when full, so a slow tap can never stall `publish`). The remote debug-CLI's *inject* half reuses
+    `/execute/command`; its *observe* half is this endpoint.
+  - **PR-6c — web built-in-app push output (remaining).** **The web runner's built-in browser app is an
+    interactive text channel like CLI** (browser textbox → `POST /execute/command` → rendered reply). Its *sync*
+    path is already request/response (delivery = the HTTP reply), but it has **no push channel for deferred F&F
+    results** (a browser-set timer would drop). Add a **WS/SSE push output** (a `CallbackTextOutput`-shaped
+    adapter over a browser WebSocket) so the OutputManager delivers deferred results back to the browser,
+    origin/identity-addressed — bringing the web app into the model like CLI.
 - **PR-7 — config-ui.** `[outputs]` editor + inputs `format`/multi-input + capability-matrix display +
   tap-gating config (§9). Lands as the backend `[outputs]` schema (PR-2/PR-3) comes online.
 - **PR-8 — Local audio/voice output ONLY (NO MQTT).** Build the local-audio SPEECH `OutputPort` (the "voice"

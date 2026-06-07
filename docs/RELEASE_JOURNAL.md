@@ -12,6 +12,20 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-07
+- **ARCH-15 PR-6b DONE — gated observation tap (`/ws/observe`): live, identity-filtered pipeline-event stream.**
+  A debug client connects to `/ws/observe`, authenticates, sends an identity filter, and receives the live
+  `EventBus` stream (`input.received`/`result.produced`/`output.delivered`/…) — the "observe live traffic" half of
+  the operator scenario. **Testable cores** in `core/observe.py`: `authorize_observer` (D-5 gating — disabled unless
+  `system.observe_token` is set; **localhost-only** unless `observe_allow_remote`; then token must match) and
+  `subscribe_to_queue` (funnels filtered events into a **bounded** `asyncio.Queue` that drops the *oldest* event when
+  full, so a stuck/slow tap can never block `EventBus.publish` or stall the workflow). New `SystemConfig.observe_token`
+  / `observe_allow_remote` config (optional; the config-ui editor renders them via existing generic widgets — no
+  config-ui change). The `/ws/observe` FastAPI endpoint (in `webapi_router`) wires it: accept → auth frame → authorize
+  (host + token) → subscribe with `identity_filter` → stream events → unsubscribe on disconnect. The remote debug-CLI's
+  *inject* half reuses `/execute/command`; *observe* is this endpoint. New `test_observe_tap.py` (8): gating matrix,
+  queue funnel/filter/overflow-drop, and real WS auth-rejection via FastAPI `TestClient`. Gates: `pyright` 0,
+  import-linter 9/9, dep-validator 55/55, `check_scope` clean, full suite 83-failed=baseline (**0 regressions**,
+  stash-diff). **Remaining = PR-6c** (web built-in-app push output for deferred F&F results to the browser).
 - **ARCH-15 PR-6a DONE — process-wide EventBus wired; the canonical pipeline-event stream is live end-to-end.**
   The composition root now builds one `EventBus` and shares it: the `OutputManager` (so `output.delivered` flows
   to the *same* bus) and the `WorkflowManager` (new `event_bus` ctor arg), with the bus also injected into the

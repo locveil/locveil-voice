@@ -505,8 +505,10 @@ See `docs/review/phase1_architecture_map.md` §5.
       `EventBus` wired (composition builds it, shared by OutputManager + WorkflowManager, injected into engine);
       `process_text_input`/`process_audio_input` publish `input.received`+`result.produced` (origin identity carried),
       OutputManager publishes `output.delivered` → observation stream live end-to-end (`asr.transcript`/`intent.recognized`
-      deferred). **PR-6b** (remaining) observation tap (continuous trace subscription + identity filters + gating D-5;
-      remote debug-CLI text attach reusing ARCH-6 ws shape) **+ web built-in-app push output** (the browser app is an
+      deferred). **PR-6b ✓ DONE 2026-06-07** gated `/ws/observe`
+      tap (shared-token + localhost-first auth via `core/observe.authorize_observer`; identity-filtered live `EventBus`
+      stream via `subscribe_to_queue`, bounded queue drops-oldest so a slow tap can't stall publish; `system.observe_token`
+      / `observe_allow_remote` config). **PR-6c** (remaining) web built-in-app push output (the browser app is an
       interactive text channel like CLI; add a WS/SSE `CallbackTextOutput` so the OutputManager delivers *deferred* F&F
       results back to the browser — its sync path is already the HTTP reply). **PR-7** config-ui: `[outputs]` editor + inputs `format`/multi-input + capability-matrix
       display + tap-gating (§9, Invariant #4; reuse UI-9 `KeyValueEditor`). **PR-8** **local audio/voice SPEECH output

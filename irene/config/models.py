@@ -38,10 +38,15 @@ class SystemConfig(BaseModel):
     microphone_enabled: bool = Field(default=False, description="Enable microphone hardware capability")
     audio_playback_enabled: bool = Field(default=False, description="Enable audio playback hardware capability")
     
-    # Service capabilities  
+    # Service capabilities
     web_api_enabled: bool = Field(default=True, description="Enable web API service")
     web_port: int = Field(default=8000, ge=1, le=65535, description="Web API server port")
-    
+
+    # ARCH-15 PR-6b: gated observation tap (debug). Disabled unless a token is set. Localhost-only
+    # by default — set observe_allow_remote=true to accept non-local connections (still token-gated).
+    observe_token: Optional[str] = Field(default=None, description="Shared token for the /ws/observe debug tap; None disables it")
+    observe_allow_remote: bool = Field(default=False, description="Allow non-localhost observation-tap connections (still token-gated)")
+
     @field_validator('web_port')
     @classmethod
     def validate_ports(cls, v):
