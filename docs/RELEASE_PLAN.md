@@ -1145,15 +1145,24 @@ _Apply to every remediation task below (from the 4 review docs + QUAL-25/26). So
       from the generated TOML. QUAL-4e fixed only the type error (init `section=""`, behavior-preserving); the logic bug
       remains. **Fix:** accumulate each header into `sections` (or restructure the join); verify generated TOML round-trips
       all sections. Pairs with the config-ui TOML-editor surface.
-- [ ] **QUAL-41** `[release]` (P2) — **`IntentAssetLoader` validator output doesn't match `api.schemas.ValidationError`
-      (real bug surfaced by QUAL-4e, 2026-06-06).** `validate_template_data` / `validate_prompt_data` /
-      `validate_localization_data` (`core/intent_asset_loader.py`) emit error/warning dicts keyed `{field, message,
-      severity}`, but `api.schemas.ValidationError` requires `{type, message}` (+ optional `path`/`line`). So
-      `ValidationError(**err)` in `intent_component.py`'s template/prompt/localization editing endpoints (~L1148/1210/1456/
-      1526/1761/1823) raises a pydantic error (missing required `type`) → **HTTP 500 whenever those endpoints hit a real
-      validation error**. QUAL-4e only widened the annotation (type-clean, current behavior preserved). **Fix:** map
-      `field`→`path` + supply a `type` at the boundary (or align the validator output to the schema). **Invariant #4:**
-      these endpoints feed config-ui's donation editor (UI-5) — coordinate the error shape there.
+- [x] **QUAL-41** `[release]` (P2) — **DONE 2026-06-07.** `IntentAssetLoader` validator output now matches
+      `api.schemas.ValidationError`. **Was:** `validate_template_data` / `validate_prompt_data` /
+      `validate_localization_data` (`core/intent_asset_loader.py`) emitted error/warning dicts keyed `{field, message,
+      severity}`, but `api.schemas.ValidationError` requires `{type, message}` (+ optional `path`/`line`), so
+      `ValidationError(**err)` in `intent_component.py`'s template/prompt/localization editing endpoints raised a pydantic
+      error (missing required `type`) → **HTTP 500 whenever those endpoints hit a real validation error**. **Fix (chose
+      "align validator output to schema" over a boundary mapper):** rewrote all three validators (incl.
+      `_validate_domain_specific_localization`) to emit canonical `{type, message, path}` — the **same shape the sibling
+      `validate_phrasing_data`/`validate_contract_data` already produce** (`field`→`path`; `severity` dropped, already
+      encoded by the errors-vs-warnings list; `type` carries a category: `structure`/`missing_field`/`value`/`validation`).
+      No consumer read `field`/`severity` (all 9 endpoint sites only `ValidationError(**err)`). **Invariant #4:** config-ui's
+      template/prompt editors already read `.message` (via `any` casts: TemplatesPage/PromptsPage) → render correctly now;
+      `npm run check` + `build` stay clean (no config-ui change needed). **Regression test:** `test_asset_validation_schema.py`
+      (3) constructs the schema models from each validator's failing-input output — the exact path that used to 500. Gates:
+      pyright 0, import-contracts 9/9, dep-validator 55/55, check_scope clean, suite 84=baseline (+3). **Also fixed
+      (user-directed, same change):** `DonationsPage.tsx:859` read `err.msg` on the **phrasing** validation response while
+      `validate_phrasing_data` emits `message` (canonical) — a pre-existing latent display bug on the UI-5/QUAL-29 surface
+      (the adjacent warnings map already read `.message`); `err.msg`→`err.message`, config-ui check + build green.
 - [x] **QUAL-42** `[release]` [DVALIDATE] (P1) — **Donation contract↔code validator + LLM translation services.
       DONE 2026-06-06 (user-directed: "do this validator right away").** Closed the real gap the donation-validation
       investigation found: nothing reconciled a **contract** against the **handler code** it drives (only contract→method

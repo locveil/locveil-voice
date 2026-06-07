@@ -856,7 +856,7 @@ const DonationsPage: React.FC = () => {
       // Convert new API response structure to legacy ValidationResult format
       const validationResult: ValidationResult = {
         valid: response.is_valid,
-        errors: response.errors?.map((err: any) => err.msg) || [],
+        errors: response.errors?.map((err: any) => err.message) || [],
         warnings: response.warnings?.map((warn: any) => warn.message) || [],
         details: response
       };

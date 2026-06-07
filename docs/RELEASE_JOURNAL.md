@@ -12,6 +12,25 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-07
+- **QUAL-41 DONE — asset validators now match `api.schemas.ValidationError` (no more 500 on a real validation error).**
+  `validate_template_data`/`validate_prompt_data`/`validate_localization_data` (`core/intent_asset_loader.py`) emitted
+  `{field, message, severity}`, but the schema requires `{type, message}` (+ optional `path`/`line`), so
+  `ValidationError(**err)` in `intent_component.py`'s template/prompt/localization editing endpoints raised a pydantic
+  error → HTTP 500 the moment a real template/prompt/localization validation failure occurred. Of the two fix options the
+  ledger offered (boundary mapper vs align-to-schema), chose **align-to-schema** because the **sibling validators
+  `validate_phrasing_data`/`validate_contract_data` already emit the canonical `{type, message, path}`** — so this makes
+  all of `intent_asset_loader`'s validators consistent rather than papering over one cluster at the boundary. Mapping:
+  `field`→`path`; dropped `severity` (redundant — the errors-vs-warnings list already encodes it); added a `type` category
+  (`structure`/`missing_field`/`value`/`validation`). Verified no consumer read the old keys (all 9 endpoint sites only
+  `ValidationError(**err)`/`ValidationWarning(**warn)`; no tests). **Invariant #4 (config-ui):** the template/prompt
+  editors already read `.message` via `any` casts (TemplatesPage/PromptsPage), so they render correctly with no change;
+  `npm run check` + `npm run build` stay green. New `irene/tests/test_asset_validation_schema.py` (3) reproduces the old
+  500 by constructing the API schema models from each validator's *failing-input* output. Gates: `uv run pyright` 0,
+  import-contracts 9/9, dependency-validator 55/55 (0 errors), `check_scope` clean, backend suite 84-failed=baseline
+  (0 net regression, +3 new passing). **Also fixed (user-directed, folded into the same change):**
+  `config-ui DonationsPage.tsx:859` read `err.msg` from the **phrasing** validation response while `validate_phrasing_data`
+  emits `message` — a pre-existing latent display bug on the UI-5/QUAL-29 donation surface (the adjacent warnings map at
+  :860 already read `.message`); changed `err.msg`→`err.message`, config-ui `npm run check` + `build` green.
 - **UI-7 DONE — config-ui is now fully bilingual (ru + en).** Stood up `react-i18next` from scratch under `src/i18n/`
   (the bridge only *declared* `i18next ^23`/`react-i18next ^13`, never wired them) — namespaced TS bundles
   (`locales/{en,ru}/{common,layout,donations,configuration,prompts,templates,localizations,monitoring,overview}.ts`),

@@ -867,37 +867,37 @@ class IntentAssetLoader:
             # Basic YAML structure validation
             if not isinstance(template_data, dict):
                 errors.append({
-                    "field": "root",
+                    "type": "structure",
                     "message": "Template data must be a dictionary/object",
-                    "severity": "error"
+                    "path": "root"
                 })
                 return False, errors, warnings
-            
+
             # Check for common template keys and types
             for key, value in template_data.items():
                 if not isinstance(key, str):
                     errors.append({
-                        "field": key,
+                        "type": "structure",
                         "message": "Template keys must be strings",
-                        "severity": "error"
+                        "path": str(key)
                     })
                     continue
-                
+
                 # Validate template value types (can be strings, arrays, or objects)
                 if not isinstance(value, (str, list, dict)):
                     warnings.append({
-                        "field": key,
+                        "type": "value",
                         "message": f"Template value has unusual type: {type(value).__name__}",
-                        "severity": "warning"
+                        "path": key
                     })
-            
+
             return len(errors) == 0, errors, warnings
-            
+
         except Exception as e:
             errors.append({
-                "field": "validation",
+                "type": "validation",
                 "message": f"Validation error: {str(e)}",
-                "severity": "error"
+                "path": "validation"
             })
             return False, errors, warnings
 
@@ -1123,49 +1123,49 @@ class IntentAssetLoader:
             # Basic YAML structure validation
             if not isinstance(localization_data, dict):
                 errors.append({
-                    "field": "root",
+                    "type": "structure",
                     "message": "Localization data must be a dictionary/object",
-                    "severity": "error"
+                    "path": "root"
                 })
                 return False, errors, warnings
-            
+
             # Check localization entries
             for key, value in localization_data.items():
                 if not isinstance(key, str):
                     errors.append({
-                        "field": key,
+                        "type": "structure",
                         "message": "Localization keys must be strings",
-                        "severity": "error"
+                        "path": str(key)
                     })
                     continue
-                
+
                 # Validate value types (can be string, list, or dict)
                 if not isinstance(value, (str, list, dict)):
                     warnings.append({
-                        "field": key,
+                        "type": "value",
                         "message": f"Localization value has unexpected type: {type(value).__name__}",
-                        "severity": "warning"
+                        "path": key
                     })
                     continue
-                
+
                 # Check for empty values
                 if value is None or (isinstance(value, (str, list, dict)) and len(value) == 0):
                     warnings.append({
-                        "field": key,
+                        "type": "value",
                         "message": "Empty localization value",
-                        "severity": "warning"
+                        "path": key
                     })
-            
+
             # Domain-specific validation checks
             await self._validate_domain_specific_localization(domain, localization_data, errors, warnings)
-            
+
             return len(errors) == 0, errors, warnings
-            
+
         except Exception as e:
             errors.append({
-                "field": "validation",
+                "type": "validation",
                 "message": f"Validation failed: {str(e)}",
-                "severity": "error"
+                "path": "validation"
             })
             return False, errors, warnings
     
@@ -1178,25 +1178,25 @@ class IntentAssetLoader:
             for field in required_fields:
                 if field not in data:
                     warnings.append({
-                        "field": field,
+                        "type": "missing_field",
                         "message": f"Missing expected datetime field: {field}",
-                        "severity": "warning"
+                        "path": field
                     })
         elif domain == "components":
             # Check for component mappings
             if "component_mappings" not in data:
                 warnings.append({
-                    "field": "component_mappings",
+                    "type": "missing_field",
                     "message": "Missing component_mappings field",
-                    "severity": "warning"
+                    "path": "component_mappings"
                 })
         elif domain == "commands":
             # Check for stop patterns
             if "stop_patterns" not in data:
                 warnings.append({
-                    "field": "stop_patterns", 
+                    "type": "missing_field",
                     "message": "Missing stop_patterns field",
-                    "severity": "warning"
+                    "path": "stop_patterns"
                 })
     
     async def validate_prompt_data(self, handler_name: str, prompt_data: Dict[str, Any]) -> tuple[bool, List[Dict[str, Any]], List[Dict[str, Any]]]:
@@ -1208,76 +1208,76 @@ class IntentAssetLoader:
             # Basic YAML structure validation
             if not isinstance(prompt_data, dict):
                 errors.append({
-                    "field": "root",
+                    "type": "structure",
                     "message": "Prompt data must be a dictionary/object",
-                    "severity": "error"
+                    "path": "root"
                 })
                 return False, errors, warnings
-            
+
             # Check prompt definitions
             for prompt_name, prompt_def in prompt_data.items():
                 if not isinstance(prompt_name, str):
                     errors.append({
-                        "field": prompt_name,
+                        "type": "structure",
                         "message": "Prompt names must be strings",
-                        "severity": "error"
+                        "path": str(prompt_name)
                     })
                     continue
-                
+
                 # Validate prompt definition structure
                 if not isinstance(prompt_def, dict):
                     errors.append({
-                        "field": prompt_name,
+                        "type": "structure",
                         "message": "Prompt definitions must be objects with metadata",
-                        "severity": "error"
+                        "path": prompt_name
                     })
                     continue
-                
+
                 # Check required fields
                 required_fields = ["description", "usage_context", "prompt_type", "content"]
                 for field in required_fields:
                     if field not in prompt_def:
                         errors.append({
-                            "field": f"{prompt_name}.{field}",
+                            "type": "missing_field",
                             "message": f"Required field '{field}' is missing",
-                            "severity": "error"
+                            "path": f"{prompt_name}.{field}"
                         })
-                
+
                 # Validate prompt type
                 if "prompt_type" in prompt_def:
                     valid_types = ["system", "template", "user"]
                     if prompt_def["prompt_type"] not in valid_types:
                         warnings.append({
-                            "field": f"{prompt_name}.prompt_type",
+                            "type": "value",
                             "message": f"Prompt type '{prompt_def['prompt_type']}' not in recommended types: {valid_types}",
-                            "severity": "warning"
+                            "path": f"{prompt_name}.prompt_type"
                         })
-                
+
                 # Validate variables structure
                 if "variables" in prompt_def:
                     variables = prompt_def["variables"]
                     if not isinstance(variables, list):
                         errors.append({
-                            "field": f"{prompt_name}.variables",
+                            "type": "structure",
                             "message": "Variables must be a list",
-                            "severity": "error"
+                            "path": f"{prompt_name}.variables"
                         })
                     else:
                         for i, var in enumerate(variables):
                             if not isinstance(var, dict) or "name" not in var:
                                 warnings.append({
-                                    "field": f"{prompt_name}.variables[{i}]",
+                                    "type": "structure",
                                     "message": "Variable should have 'name' and 'description' fields",
-                                    "severity": "warning"
+                                    "path": f"{prompt_name}.variables[{i}]"
                                 })
-            
+
             return len(errors) == 0, errors, warnings
-            
+
         except Exception as e:
             errors.append({
-                "field": "validation",
+                "type": "validation",
                 "message": f"Validation error: {str(e)}",
-                "severity": "error"
+                "path": "validation"
             })
             return False, errors, warnings
     
