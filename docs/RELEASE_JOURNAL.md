@@ -12,6 +12,22 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-07
+- **ARCH-15 PR-5a DONE — process-wide OutputManager wired into composition + NotificationService (F&F delivery live).**
+  The composition root (`runners/composition.build_core`) now builds one `OutputManager` (symmetric to
+  `InputManager`) and injects it into the engine (`AsyncVACore.output_manager`, typed `Any` — `core` keeps no
+  import edge to `irene.outputs`, mirroring `input_manager`) and into the `NotificationService` (via
+  `MonitoringComponent.initialize`, passing the object only — no `components→outputs` edge). This closes PR-4's
+  opt-in: deferred F&F results now actually deliver through the output hexagon, addressed by identity. `CLIRunner`
+  registers its `ConsoleOutput` on the **shared** `core.output_manager` (instead of a private one), so sync renders
+  *and* F&F notifications both reach the terminal through the same manager. **Migration fallback (deliberate):** if
+  the OM has no attached output for an identity (e.g. voice mode — no audio output exists until PR-8),
+  `_deliver_notification` falls back to the legacy TTS/LOG path rather than dropping, so the voice timer-announce
+  does **not** regress; pure D-3 drop+log is restored at PR-8 once the SPEECH/audio output lands. The OM injection
+  is object-only (duck-typed), so the import-linter hexagon (no core/components→outputs) stays intact. Verified
+  end-to-end on real subprocess boots — `test_cli_headless_boots_and_responds` (CLI renders via the wired shared OM)
+  and `test_set_timer_end_to_end` (F&F path with OM wired) both green. Gates: `pyright` 0, import-linter 9/9,
+  dep-validator 55/55, `check_scope` clean, full suite 83-failed=baseline (**0 regressions**, stash-diff confirmed).
+  **Remaining = PR-5b** (daemon consume loop + runners-as-presets + PR-0 stopgap removal + meta-commands D-4).
 - **ARCH-15 PR-4 DONE — F&F/deferred notifications re-routed through the OutputManager, addressed by identity.**
   `NotificationService` demoted deliverer→producer: `set_output_manager(om)` wires it, and `_deliver_notification`
   then delivers the completion through the OutputManager as a conversational `IntentResult`, **addressed by the

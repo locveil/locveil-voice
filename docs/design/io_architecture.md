@@ -351,10 +351,19 @@ landable and gated (`pyright` 0 · import-linter · dep-validator · `check_scop
   the composition root wires a process-wide OutputManager into NotificationService (**PR-5**), so runtime
   behaviour is unchanged until then; the **bounded reconnect** in D-3 applies to persistent transports (MQTT/WS)
   that arrive in **PR-8**, so PR-4 implements drop+log+history.
-- **PR-5 — Daemon multiplexer + runners-as-presets.** One process, concurrent input+output registries,
-  runtime attach/detach; runners become config-preset launchers with layered overrides (§8); **PR-0's
-  stopgap removed** (console input is now a single daemon-consumed adapter — double-reader structurally
-  impossible). Meta-commands per D-4.
+- **PR-5 — Daemon multiplexer + runners-as-presets.** _Split into 5a (done) + 5b (remaining)._
+  - **PR-5a — process-wide OutputManager wired. ✓ DONE 2026-06-07.** Composition root builds one
+    `OutputManager` and injects it into the engine (typed `Any`, no core→outputs edge) and into
+    `NotificationService` (via `MonitoringComponent`, object-only — no components→outputs edge), closing
+    PR-4's opt-in so deferred F&F **delivery is live**. `CLIRunner` registers its `ConsoleOutput` on the
+    *shared* OM, so sync renders and F&F notifications both reach the terminal. **Migration fallback:** when
+    the OM has no attached output for an identity (e.g. voice mode, no audio output until PR-8), the
+    notification falls back to the legacy TTS/LOG path rather than dropping — so the voice timer-announce does
+    not regress; the pure D-3 drop+log is restored at PR-8. Verified: real CLI + timer e2e green, 0 regressions.
+  - **PR-5b — daemon consume loop + runners-as-presets (remaining).** One process, concurrent input+output
+    registries, runtime attach/detach; runners become config-preset launchers with layered overrides (§8);
+    **PR-0's stopgap removed** (console input is a single daemon-consumed adapter — double-reader structurally
+    impossible). Meta-commands per D-4.
 - **PR-6 — Observation tap.** Continuous trace-event subscription + identity filters + gating (§5, D-5);
   remote debug-CLI attach (text format) reusing the ARCH-6 ws shape.
 - **PR-7 — config-ui.** `[outputs]` editor + inputs `format`/multi-input + capability-matrix display +

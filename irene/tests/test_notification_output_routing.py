@@ -36,15 +36,17 @@ async def test_completion_delivered_to_origin_channel():
     assert captured == ["📝 таймер сработал"]
 
 
-async def test_dropped_when_no_output_for_identity():
+async def test_no_output_for_identity_does_not_reach_wrong_channel():
     captured = []
     svc = await _service_with_console(captured.append, origin="cli")
 
-    # Originating channel is "ws" — no ws output is attached → drop + log (must not raise).
+    # Originating channel is "ws" — no ws output attached. The OutputManager delivers nothing, so
+    # NotificationService falls back to legacy methods (PR-5 migration fallback) — but crucially it
+    # never mis-delivers to the cli console. Must not raise; the cli console stays empty.
     note = NotificationMessage(message="done", source="ws", session_id="s1", physical_id="s1")
     await svc._deliver_notification(note)
 
-    assert captured == []  # nothing rendered; completion stays in action-store history
+    assert captured == []  # never the wrong channel; completion stays in action-store history
 
 
 async def test_high_priority_requests_speech_modality_degrades_to_text():

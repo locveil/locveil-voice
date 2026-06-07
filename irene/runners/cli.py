@@ -303,13 +303,15 @@ Note: CLI runner always uses CLI input only, regardless of config file settings.
 
             print("💻 Input mode: CLI only (other inputs disabled)")
 
-            # ARCH-15 PR-3: render results through the output hexagon (origin-paired console
-            # output) instead of bare prints. Built only in non-quiet mode (quiet suppresses
-            # result echo, matching prior behaviour). Superseded by PR-5 (daemon-owned delivery).
-            from ..outputs.manager import OutputManager
+            # ARCH-15 PR-3/PR-5: render results through the output hexagon (origin-paired console
+            # output) instead of bare prints. Registers ConsoleOutput on the *shared* process-wide
+            # OutputManager (built by the composition root), so sync renders AND deferred F&F
+            # notifications (routed by NotificationService) both reach the terminal. Non-quiet only
+            # (quiet suppresses result echo, matching prior behaviour).
             from ..outputs.console import ConsoleOutput
-            self._output_manager = OutputManager()
-            await self._output_manager.add_output("console", ConsoleOutput(origin="cli"))
+            self._output_manager = self.core.output_manager
+            if self._output_manager is not None:
+                await self._output_manager.add_output("console", ConsoleOutput(origin="cli"))
     
     async def _execute_runner_logic(self, args: argparse.Namespace) -> int:
         """Execute CLI runner logic"""

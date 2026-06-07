@@ -20,6 +20,7 @@ from ..core.timers import AsyncTimerManager
 from ..core.metrics import get_metrics_collector
 from ..intents.context import ContextManager
 from ..inputs.manager import InputManager
+from ..outputs.manager import OutputManager
 
 
 def build_core(config: CoreConfig, config_path: Optional[Path] = None) -> AsyncVACore:
@@ -30,6 +31,9 @@ def build_core(config: CoreConfig, config_path: Optional[Path] = None) -> AsyncV
     """
     component_manager = ComponentManager(config)
     input_manager = InputManager(component_manager, config.inputs)
+    # ARCH-15 PR-5: the process-wide output delivery layer (symmetric to InputManager). Built here
+    # and injected; runners/profiles register the concrete output adapters onto it.
+    output_manager = OutputManager()
     context_manager = ContextManager(  # QUAL-36: seed sessions from the one canonical language source
         default_language=config.default_language,
         supported_languages=config.supported_languages,
@@ -43,6 +47,7 @@ def build_core(config: CoreConfig, config_path: Optional[Path] = None) -> AsyncV
         config_path=config_path,
         component_manager=component_manager,
         input_manager=input_manager,
+        output_manager=output_manager,
         context_manager=context_manager,
         timer_manager=timer_manager,
         metrics_collector=metrics_collector,

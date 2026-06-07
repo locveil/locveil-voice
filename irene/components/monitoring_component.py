@@ -90,6 +90,13 @@ class MonitoringComponent(Component, WebAPIPlugin):
                     'web_enabled': config_dict.get('notifications_web_enabled', True)
                 }
                 self.notification_service = await initialize_notification_service(components_dict, notification_config)
+                # ARCH-15 PR-5: hand the process-wide OutputManager to the notification service so
+                # deferred F&F results deliver through the output hexagon, addressed by identity
+                # (PR-4 seam goes live). Passing the object only — no import edge components→outputs.
+                output_manager = getattr(core, 'output_manager', None)
+                if output_manager is not None:
+                    self.notification_service.set_output_manager(output_manager)
+                    self.logger.info("✅ Notification service wired to the OutputManager (deferred-result delivery)")
                 self.logger.info(f"✅ Notification service initialized with default_channel={notification_config['default_channel']}")
             else:
                 self.logger.info("⏭️ Notification service disabled in configuration")

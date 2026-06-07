@@ -492,8 +492,12 @@ See `docs/review/phase1_architecture_map.md` §5.
       completion addressed by the action's identity — `source`/`physical_id`/`room` threaded from `ActionRecord`
       onto `NotificationMessage`; legacy global-TTS bypassed, LOG kept; origin-unreachable → drop+log+history,
       D-3). Wired the dead `request_source` field; captured `source` on `ActionRecord`. Opt-in (composition wiring
-      = PR-5; bounded reconnect = PR-8). Recovered 1 baseline drift test (request_source flow); baseline now 83. **PR-5** daemon multiplexer + runners-as-presets +
-      runtime attach/detach (removes PR-0 stopgap; double-reader structurally impossible). **PR-6** observation tap (continuous
+      = PR-5; bounded reconnect = PR-8). Recovered 1 baseline drift test (request_source flow); baseline now 83. **PR-5a ✓ DONE 2026-06-07** process-wide
+      OutputManager wired (composition→engine [Any-typed] + injected into NotificationService via
+      MonitoringComponent [object-only]; closes PR-4 opt-in → F&F delivery live; CLIRunner registers
+      ConsoleOutput on the *shared* OM; migration fallback to legacy TTS when no output for an identity, so
+      voice-announce doesn't regress — pure D-3 restored at PR-8). **PR-5b** (remaining) daemon consume loop +
+      runners-as-presets + runtime attach/detach (removes PR-0 stopgap; double-reader structurally impossible). **PR-6** observation tap (continuous
       trace subscription + identity filters + gating D-5; remote debug-CLI text attach reusing ARCH-6 ws shape). **PR-7**
       config-ui: `[outputs]` editor + inputs `format`/multi-input + capability-matrix display + tap-gating (§9, Invariant #4;
       reuse UI-9 `KeyValueEditor`). **PR-8** audio/MQTT outputs + ARCH-8 bridge actuation as a request/response
