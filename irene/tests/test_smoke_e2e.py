@@ -150,6 +150,9 @@ def test_cli_headless_boots_and_responds():
         timeout=180,
     )
     assert res.returncode == 0, res.stderr[-2000:]
-    # success marker printed by the CLI runner; and no execution error
-    assert "Response:" in res.stdout, res.stdout[-2000:]
+    # A response was rendered through the output hexagon (ARCH-15 PR-3: the CLI now delivers via
+    # ConsoleOutput, prefix "📝 ", replacing the old "📝 Response: " single-command print), plus the
+    # runner's success marker; and no execution error.
+    assert "📝 " in res.stdout, res.stdout[-2000:]
+    assert "Command executed successfully" in res.stdout, res.stdout[-2000:]
     assert "Error executing command" not in res.stdout, res.stdout[-2000:]

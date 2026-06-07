@@ -7,22 +7,18 @@ ack/nack for terminal channels, **rich** (echo + error_code) for the request/res
 actuation channel (D-6). Lives in `core/interfaces` so `core` depends inward on the abstraction;
 the concrete adapters live in `irene/outputs/` (PR-3+).
 
-The `IntentResult`/`RequestContext` type hints are import-light (TYPE_CHECKING only) so this port
-module has no runtime import into the domain — mirroring how the input port stays dependency-thin.
+Mirrors the input port: `core/interfaces/input.py` imports `intents.models` directly, and so does
+this module (`IntentResult`/`RequestContext`) — `core` may depend inward on the domain.
 """
-
-from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Dict, Optional, Set
+from typing import Any, Dict, Optional, Set
 
 from ..metadata import EntryPointMetadata
-
-if TYPE_CHECKING:  # type-only — no runtime domain import (keeps the port dependency-thin)
-    from ...intents.models import IntentResult
-    from ...intents.context_models import RequestContext
+from ...intents.models import IntentResult
+from ...intents.context_models import RequestContext
 
 
 class OutputModality(Enum):
@@ -92,7 +88,7 @@ class OutputPort(EntryPointMetadata, ABC):
         ...
 
     @abstractmethod
-    async def deliver(self, result: "IntentResult", context: "RequestContext",
+    async def deliver(self, result: IntentResult, context: RequestContext,
                       modality: OutputModality) -> DeliveryResult:
         """Render `result` to this channel as `modality`. Returns the delivery outcome."""
         ...

@@ -12,6 +12,23 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-07
+- **ARCH-15 PR-3 DONE — real text outputs + origin routing; the CLI renders through the output hexagon.**
+  New adapters `irene/outputs/console.py` (`ConsoleOutput` — CLI sink, injectable sink, origin=`cli`, TEXT-only)
+  and `irene/outputs/text.py` (`CallbackTextOutput` — ws/web text via an async send callback; live consumer is
+  the PR-6 remote attach). `RequestContext.source` repurposed from the format-ish `"text"` to the **channel**
+  (`process_text_input` now takes it from `client_context["source"]`, default `"text"`) — safe because PR-1 moved
+  the format onto `input_format`, and `source` was read only in 3 debug logs. The CLI runner renders results
+  through `OutputManager`+`ConsoleOutput` (origin-paired to `cli`) instead of bare prints, via a new
+  `InteractiveRunnerMixin._render_result` (print fallback when no manager wired; quiet still suppresses) —
+  superseded by PR-5 (daemon-owned delivery with the real request context). **Reconciliation:** sync delivery
+  pairs on the *live channel* (`source`), not `resolve_physical_id` — that keys the *persistent-identity*
+  addressing of **deferred** F&F (PR-4). **Also (user directive): removed all `TYPE_CHECKING`** from the PR-2/PR-3
+  output modules (`core/interfaces/output.py`, `outputs/manager.py`, `console.py`, `text.py`) — direct runtime
+  imports of `IntentResult`/`RequestContext`, mirroring `core/interfaces/input.py` (verified cycle-free). Updated
+  the `test_smoke_e2e` CLI assertion (the single-command prefix unified `"📝 Response: "`→`"📝 "`; now asserts the
+  render marker + success line). New tests: `test_output_text_adapters.py` (4), `test_cli_render.py` (4).
+  Gates: `pyright` 0, import-linter 9/9, dep-validator 55/55, `check_scope` clean, backend suite 84-failed=baseline
+  (0 net regression, +8 new passing; smoke e2e green). Backend-only; config-ui surface lands PR-7.
 - **ARCH-15 PR-2 DONE — output hexagon core: `OutputPort` + `OutputManager` + pipeline event bus (adapter-free).**
   The missing symmetric half of the input port. New `core/interfaces/output.py`: `OutputPort` ABC (mirrors `InputPort`,
   off `EntryPointMetadata`, import-thin via TYPE_CHECKING), `OutputModality{TEXT,SPEECH,DEVICE_COMMAND,EVENT}`,

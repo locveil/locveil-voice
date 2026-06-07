@@ -444,9 +444,13 @@ class WorkflowManager:
         
         unified_workflow = self.active_workflow
         
-        # Create enhanced request context
+        # Create enhanced request context.
+        # ARCH-15 PR-3: `source` is the *channel* (cli/web/ws/…) for origin-addressed output —
+        # taken from client_context; the *format* is carried separately by input_format (PR-1),
+        # so source no longer doubles as the format label "text". Defaults to "text" when the
+        # caller gives no channel (back-compat).
         context = RequestContext(
-            source="text",
+            source=(client_context or {}).get("source", "text"),
             session_id=session_id,
             wants_audio=wants_audio,
             input_format=InputFormat.TEXT,  # enters at NLU (derives skip_wake_word + skip_asr)

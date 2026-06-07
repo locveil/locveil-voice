@@ -8,8 +8,6 @@ The event vocabulary is defined **once** here and reused for `/trace`, live-obse
 Subscriber failures are isolated so one bad observer can never break delivery or the pipeline.
 """
 
-from __future__ import annotations
-
 import logging
 import time
 from dataclasses import dataclass, field

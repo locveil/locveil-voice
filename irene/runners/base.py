@@ -380,10 +380,31 @@ class InteractiveRunnerMixin:
             text=command,
             session_id=f"{self.runner_config.name}_interactive",
             wants_audio=getattr(args, 'enable_tts', False),
-            client_context={"source": f"{self.runner_config.name}_interactive"}
+            client_context={"source": "cli"}  # channel (ARCH-15 PR-3 origin routing)
         )
-        
-        if result.text and not args.quiet:
+
+        await self._render_result(result, args)
+
+    async def _render_result(self, result, args: argparse.Namespace) -> None:
+        """Render a result through the output layer (ARCH-15 PR-3).
+
+        If an OutputManager is wired (CLIRunner builds one with a ConsoleOutput on the `cli`
+        channel), the result is delivered origin-paired through the output hexagon; otherwise it
+        falls back to a direct print. Superseded by PR-5, where the daemon delivers with the real
+        request context instead of the runner constructing one.
+        """
+        if not result.text:
+            return
+        output_manager = getattr(self, "_output_manager", None)
+        if output_manager is not None:
+            from ..intents.context_models import RequestContext
+            from ..core.interfaces.output import OutputModality
+            ctx = RequestContext(source="cli",
+                                 session_id=f"{self.runner_config.name}_interactive")
+            delivered = await output_manager.deliver(result, ctx, OutputModality.TEXT)
+            if any(d.delivered for d in delivered):
+                return
+        if not args.quiet:
             print(f"📝 {result.text}")
     
     def _print_interactive_help(self) -> None:

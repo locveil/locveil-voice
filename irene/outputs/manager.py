@@ -14,17 +14,13 @@ drop) and returns a `DeliveryResult`. Adapter-free in PR-2: exercised by fakes; 
 workflow in PR-3. Optionally publishes `output.delivered` to the event bus.
 """
 
-from __future__ import annotations
-
 import logging
-from typing import TYPE_CHECKING, Dict, List, Optional
+from typing import Dict, List, Optional
 
 from ..core.interfaces.output import DeliveryResult, OutputModality, OutputPort, negotiate
 from ..core.event_bus import EventBus, EventType, PipelineEvent
-
-if TYPE_CHECKING:
-    from ..intents.models import IntentResult
-    from ..intents.context_models import RequestContext
+from ..intents.models import IntentResult
+from ..intents.context_models import RequestContext
 
 logger = logging.getLogger(__name__)
 
@@ -68,13 +64,13 @@ class OutputManager:
 
     # --- selection (D-2) -----------------------------------------------------------------------
 
-    def _origin_output(self, context: "RequestContext") -> Optional[OutputPort]:
+    def _origin_output(self, context: RequestContext) -> Optional[OutputPort]:
         for out in self._outputs.values():
             if out.origin_key() is not None and out.origin_key() == context.source:
                 return out
         return None
 
-    def select(self, modality: OutputModality, context: "RequestContext",
+    def select(self, modality: OutputModality, context: RequestContext,
                broadcast: bool = False) -> List[OutputPort]:
         """Return the target output(s) for `modality` under D-2 (may be empty)."""
         if broadcast:
@@ -87,8 +83,8 @@ class OutputManager:
 
     # --- delivery ------------------------------------------------------------------------------
 
-    async def _deliver_one(self, out: OutputPort, result: "IntentResult",
-                           context: "RequestContext", modality: OutputModality) -> DeliveryResult:
+    async def _deliver_one(self, out: OutputPort, result: IntentResult,
+                           context: RequestContext, modality: OutputModality) -> DeliveryResult:
         target_modality = negotiate(modality, out.supported_modalities())
         if target_modality is None:
             dr = DeliveryResult.drop(out.get_output_type(), modality,
@@ -100,7 +96,7 @@ class OutputManager:
             dr.degraded_from = modality
         return dr
 
-    async def deliver(self, result: "IntentResult", context: "RequestContext",
+    async def deliver(self, result: IntentResult, context: RequestContext,
                       modality: OutputModality, broadcast: bool = False) -> List[DeliveryResult]:
         """Route + deliver `result` as `modality`. Returns one DeliveryResult per target."""
         targets = self.select(modality, context, broadcast=broadcast)
@@ -111,7 +107,7 @@ class OutputManager:
             await self._emit_delivered(dr, context)
         return results
 
-    async def _emit_delivered(self, dr: DeliveryResult, context: "RequestContext") -> None:
+    async def _emit_delivered(self, dr: DeliveryResult, context: RequestContext) -> None:
         if self._event_bus is None:
             return
         await self._event_bus.publish(PipelineEvent(

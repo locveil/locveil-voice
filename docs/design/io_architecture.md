@@ -333,9 +333,13 @@ landable and gated (`pyright` 0 · import-linter · dep-validator · `check_scop
   +broadcast; negotiation; optional `output.delivered` emission). `irene.outputs` added to the hexagon
   import-linter contracts (ARCH-1/2/3/11/12). Adapter-free — exercised by fakes (`test_output_port`,
   `test_event_bus`, `test_output_manager`, 18 tests). Workflow wiring = PR-3.
-- **PR-3 — Real text outputs + origin routing.** console output + ws/web text output; wire origin-addressed
-  delivery via `resolve_physical_id` (§6). Sync results now flow input→workflow→output through the bus for
-  text channels.
+- **PR-3 — Real text outputs + origin routing. ✓ DONE 2026-06-07.** `ConsoleOutput` (CLI channel sink,
+  injectable sink, origin=`cli`) + `CallbackTextOutput` (ws/web text, send-callback; live consumer = PR-6).
+  `RequestContext.source` repurposed to the **channel** on the text entry (PR-1 freed it from the format
+  duty); the CLI runner now renders results through `OutputManager`+`ConsoleOutput` (origin-paired),
+  replacing the bare prints (with a print fallback when no manager is wired; superseded by PR-5).
+  **Reconciliation:** sync delivery pairs on the **live channel (`source`)**, not `resolve_physical_id` —
+  that keys the *persistent-identity* addressing of **deferred** F&F (PR-4, §6), not the live connection.
 - **PR-4 — F&F + notifications re-routed.** Demote `NotificationService` to producer; deferred notifications
   delivered by OutputManager addressed by persistent physical identity (§6, §7); origin-unreachable fallback
   (D-3). Timer end-to-end: ack to origin, completion to room/device output.

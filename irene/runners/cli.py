@@ -300,8 +300,16 @@ Note: CLI runner always uses CLI input only, regardless of config file settings.
                 print(f"📦 Active components: {', '.join(active_components)}")
             else:
                 print("📦 Running in minimal mode (no optional components)")
-            
+
             print("💻 Input mode: CLI only (other inputs disabled)")
+
+            # ARCH-15 PR-3: render results through the output hexagon (origin-paired console
+            # output) instead of bare prints. Built only in non-quiet mode (quiet suppresses
+            # result echo, matching prior behaviour). Superseded by PR-5 (daemon-owned delivery).
+            from ..outputs.manager import OutputManager
+            from ..outputs.console import ConsoleOutput
+            self._output_manager = OutputManager()
+            await self._output_manager.add_output("console", ConsoleOutput(origin="cli"))
     
     async def _execute_runner_logic(self, args: argparse.Namespace) -> int:
         """Execute CLI runner logic"""
@@ -319,8 +327,7 @@ Note: CLI runner always uses CLI input only, regardless of config file settings.
                     wants_audio=getattr(args, 'enable_tts', False),  # Phase 5: TTS support
                     client_context={"source": "cli", "quiet": args.quiet}
                 )
-                if result.text and not args.quiet:
-                    print(f"📝 Response: {result.text}")
+                await self._render_result(result, args)
                 
                 # Exit unless interactive mode is forced
                 if not args.interactive:
