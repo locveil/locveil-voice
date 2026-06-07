@@ -272,9 +272,16 @@ See `docs/review/phase1_architecture_map.md` §5.
       state). **Hexagon (Irene):** `DeviceCommand` + `ActuationPort`/`DeviceCatalogPort` (QUAL-24 ABC pattern) +
       `BridgeClient` REST adapter under a new `irene.providers.outputs` group + in-memory `DeviceCatalog` (distinct from
       `ClientRegistry`). Substrate for **QUAL-35** (T2/T3 device NLU + the relocated `entity_type`/`_is_device_entity`→
-      declarative resolver swap). Implementation = ARCH-8.
-- [ ] **ARCH-8** [MQTT] (P-TBD) — **UNBLOCKED 2026-06-06** (contract AGREED). Implement per
-      `docs/design/mqtt_integration.md` §10, against the agreed bridge contract, aligned to the **vertical slice**
+      declarative resolver swap). Implementation = ARCH-8. **Design extended 2026-06-07 (ARCH-15 PR-9.1):**
+      `mqtt_integration.md` §13 reconciles the seam shapes with the I/O architecture (bridge = `OutputPort`, see ARCH-8).
+- [ ] **ARCH-8** [MQTT] (P-TBD) — **UNBLOCKED 2026-06-06** (contract AGREED); **RECONCILED with the I/O architecture
+      2026-06-07 (ARCH-15 PR-9.1) — build against `mqtt_integration.md` §13**: bridge actuation is a **request/response
+      `OutputPort`** returning the rich `DeliveryResult` (echo/error), `device_command` is a delivery **modality**
+      capability-routed to the `designate(DEVICE_COMMAND,"bridge")` output, `DeviceCatalogPort` stays a read port, Flow-1
+      event is a terminal `OutputPort`; the `ActuationPort` ABC is **dropped** (the bridge IS an OutputPort). ARCH-8 thus
+      stands on PR-2 (`OutputPort`/`DeliveryResult`), PR-5a (process-wide OutputManager), D-2 (designated routing) — all
+      landed; actuation is observable on the event bus (PR-6b) for free. Implement per
+      `docs/design/mqtt_integration.md` §10 **as amended by §13**, against the agreed bridge contract, aligned to the **vertical slice**
       ("включи свет в детской", one `wb-mr6c` channel): **PR-1** `DeviceCommand` + `ActuationPort`/`DeviceCatalogPort` +
       application services (adapter-free, fake bridge — **can start now**); **PR-2** `BridgeClient` REST adapter +
       `irene.providers.outputs` group + config/schema + `GET /system/catalog` pull → `DeviceCatalog` + `bridge/catalog/
@@ -523,10 +530,11 @@ See `docs/review/phase1_architecture_map.md` §5.
       registers it + designates it the OutputManager **conversational fallback** (new: unmatched conversational result →
       designated local speaker), which solves voice addressing (source `voice`/`audio_stream`, no room) and lets the
       PR-5a legacy-TTS fallback be **retired → pure D-3 restored**. No broker code — all MQTT is ARCH-8's. **PR-9** (runs last) cross-task
-      reconciliation: (1) revisit **ARCH-7** → **redefine/feed ARCH-8** with the I/O contract so **ARCH-8** implements
-      MQTT/bridge as `OutputPort`(s) (bridge=request/response `OutputPort`+rich `DeliveryResult`, Flow-1 event=terminal
-      `OutputPort`, `device_command` modality, `DeviceCatalogPort` read port, bus/observability, bounded-await); the
-      entire MQTT build lives in ARCH-8, PR-9.1 only produces the spec + updates ARCH-7 doc/ledger; (2) sweep every other
+      reconciliation: **(1) ✓ DONE 2026-06-07** revisit **ARCH-7** → fed ARCH-8 via `mqtt_integration.md` §13 (banner +
+      reconciliation section: bridge=request/response `OutputPort`+rich `DeliveryResult`, `device_command` modality,
+      `DeviceCatalogPort` read port, Flow-1 terminal `OutputPort`, `ActuationPort` dropped, observable on the bus;
+      §13 wins over §3–§10) + amended ARCH-7/ARCH-8 ledger entries; the entire MQTT build still lives in ARCH-8 (PR-9.1
+      only produced the spec). **(2)** sweep every other
       unfinished ARCH/QUAL item (ARCH-8, ARCH-10, QUAL-35, any input/output/session/identity/notification task) to
       verify+adjust per Invariants #5/#8, with a journal reconciliation note; **also extend
       `get_master_config_completeness` to cover top-level config sections + scalar fields** (today only `*.providers.*`)

@@ -12,6 +12,20 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-07
+- **ARCH-15 PR-9.1 DONE — reconciled ARCH-7 (`mqtt_integration.md`) with the I/O architecture; fed ARCH-8.** Added a
+  top **banner** + a new **§13 "Reconciliation with the I/O architecture"** stating the contract ARCH-8 builds against:
+  bridge actuation is a **request/response `OutputPort`** returning the rich `DeliveryResult` (echo + 6-code error);
+  `device_command` is a delivery **modality** capability-routed to the `designate(DEVICE_COMMAND,"bridge")` output;
+  the handler **awaits the rich result under a bounded timeout** and composes the origin-paired confirmation;
+  **`ActuationPort` is dropped** (the `BridgeClient` *is* the OutputPort); `DeviceCatalogPort` stays a read port;
+  Flow-1 event is a **terminal `OutputPort` (EVENT modality)**; actuation is observable on the event bus for free;
+  ARCH-8 stands on the landed PR-2/PR-5a/D-2. **Contradiction sweep (per user):** every superseded decision in §3–§10
+  is now removed or marked obsolete inline (the §4 hexagon diagram flagged OBSOLETE on the actuation side and rewritten
+  without `ActuationPort`/`ActuationService`; §3/§6/§7/§9/§10 ActuationPort hops struck through with §13 pointers;
+  §8 flags the **`OutputConfig` name collision** — PR-7 already owns `[outputs]`, so ARCH-8 adds a distinct
+  `BridgeConfig`, not a second `OutputConfig`). "§13 wins where §3–§10 differ." Amended the ARCH-7 (design-extended note)
+  and ARCH-8 (build-against-§13) ledger entries. Doc-only; no code. **Remaining = PR-9.2** (sweep other ARCH/QUAL items
+  + extend `get_master_config_completeness` to top-level sections/fields).
 - **ARCH-15 config-master sync — added `[outputs]` + `[system].observe_*` to the reference config.** The hand-maintained
   `configs/config-master.toml` had drifted: the PR-7 `[outputs]` section (`console`/`console_prefix`/`web_push`) and the
   PR-6b `observe_token`/`observe_allow_remote` were in the Pydantic schema but not the reference. Added both (`[outputs]`
