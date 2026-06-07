@@ -9,6 +9,7 @@ import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ChevronDown, Eye, EyeOff, Info } from 'lucide-react';
 import apiClient from '@/utils/apiClient';
+import KeyValueEditor from './KeyValueEditor';
 import type { ConfigFieldSchema } from '@/types/api';
 
 // ============================================================
@@ -668,8 +669,27 @@ export const ConfigWidget: React.FC<ConfigWidgetProps & {
     case 'array':
       return <ArrayWidget {...props} />;
     case 'object':
-      // Object fields should be handled by ConfigSection's nested object logic
-      // If we get here, render as a read-only display indicating this should be a collapsible section
+      // Free-form maps (Dict[str, X]) carry no fixed `properties`; render an editable
+      // key/value table so domain_priorities and similar dict fields are usable.
+      if (!schema.properties) {
+        return (
+          <div className="space-y-1">
+            <KeyValueEditor
+              label={name}
+              object={(value as Record<string, any>) ?? {}}
+              onChange={props.onChange}
+              disabled={props.disabled}
+            />
+            {schema.description && (
+              <div className="flex items-center">
+                <span className="text-xs text-gray-500">{schema.description}</span>
+              </div>
+            )}
+          </div>
+        );
+      }
+      // Fixed-shape objects carry `properties` and should be routed to a collapsible
+      // ConfigSection upstream; reaching here means a real routing bug, so keep the warning.
       return (
         <div className="space-y-1">
           <label className="block text-sm font-medium text-gray-700">

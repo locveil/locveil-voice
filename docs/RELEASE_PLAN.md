@@ -1522,6 +1522,21 @@ Governed by Invariant #4 (config-ui must stay functional).
       human-card pattern model — keep if UI-3 will consume it, else remove. Consider adding the reachability check as a
       lint/CI guard so orphans don't reaccumulate. DoD: `cd config-ui && npm run check && npm run build` pass; no
       unreachable non-`*.gen.*` modules remain (or each remaining one has a documented reason). Refs: UI-5.
+- [x] **UI-9** [DEDITOR] (P2) — **DONE 2026-06-07.** Free-form dict (map) config fields now render an editable
+      key/value table instead of a dead-end warning. **Root cause (verified end-to-end):** the backend schema
+      generator maps any `Dict[str, X]` field to `type: "object"` (`config/auto_registry.py:329`) but only attaches
+      `properties` for nested *Pydantic models* (`_extract_nested_object_schema`), so free-form maps like
+      `domain_priorities` (`Dict[str, int]`) arrive with `type: "object"` and **no `properties`**. config-ui's
+      `ConfigSection` only promotes object fields to a collapsible subsection when `type==='object' && properties`
+      (`ConfigSection.tsx:262`); without `properties` the field fell through to `ConfigWidget`'s `case 'object'`, whose
+      sole job was the yellow `objectFieldWarning` placeholder ("should be a collapsible section") — so **every**
+      free-form map field showed the warning, not just `domain_priorities`. **Fix (config-ui only, no backend/contract
+      change):** `ConfigWidget`'s `case 'object'` now branches on `schema.properties` — absent → render the existing
+      `KeyValueEditor` (add/rename/delete entries with value coercion); present → keep the warning, since a *fixed-shape*
+      object reaching the factory is a genuine routing bug worth surfacing. Single touch point because both render paths
+      (simple-field `renderField` and direct widget calls) funnel through `ConfigWidget`. Reused the already-present
+      `KeyValueEditor` (the deleted `KeyValueOfStringArray` from UI-8 was a different, string-array variant). DoD met:
+      `cd config-ui && npm run check` (type-check + lint 0-warn + orphan guard) + `npm run build` green. Refs: UI-5/UI-8.
 
 ### Release Readiness (REL)
 - [ ] **REL-1** (P0) — Sign off the Definition-of-release checklist above (fill target + criteria).

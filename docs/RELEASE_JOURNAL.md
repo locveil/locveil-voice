@@ -12,6 +12,23 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-07
+- **UI-9 DONE — free-form dict config fields render an editable key/value table instead of a dead-end warning.**
+  Reported from the live UI: `Intent System → domain_priorities*` (and other places) showed "⚠️ Объектное поле должно
+  отображаться как сворачиваемый раздел (проблема ConfigSection)" instead of an editor. Traced end-to-end: the schema
+  generator maps any `Dict[str, X]` field to `type: "object"` (`config/auto_registry.py:329`) but only attaches
+  `properties` for nested **Pydantic models** (`_extract_nested_object_schema`), so a free-form map like
+  `domain_priorities` (`Dict[str, int]`, `intents/orchestrator.py:20`) arrives as `type: "object"` with **no
+  `properties`**. config-ui's `ConfigSection` only promotes an object to a collapsible subsection when
+  `type==='object' && properties` (`ConfigSection.tsx:262`); lacking `properties` the field fell through to
+  `ConfigWidget`'s `case 'object'`, whose only job was the yellow `objectFieldWarning` placeholder — so **every**
+  free-form map field showed the warning, which is why it appeared in multiple places. **Fix (config-ui only, no
+  backend/contract change):** `ConfigWidget`'s `case 'object'` now branches on `schema.properties` — absent → render
+  the already-present `KeyValueEditor` (add/rename/delete with value coercion); present → keep the warning, since a
+  *fixed-shape* object reaching the widget factory is a genuine upstream routing bug worth surfacing. One touch point
+  suffices because both render paths (`renderField` for simple fields, and direct widget calls) funnel through
+  `ConfigWidget`. Note: `KeyValueEditor` is the surviving generic map editor — UI-8 deleted `KeyValueOfStringArray`,
+  a different string-array variant. Gates: `cd config-ui && npm run check` (type-check + lint 0-warn + orphan guard) +
+  `npm run build` green. (Backend untouched; no pyright/import-contract surface.)
 - **QUAL-40 DONE — generated-TOML section headers no longer dropped.** `ConfigManager._generate_provider_sections` /
   `_generate_normalizer_sections` (`config/manager.py`) assigned a `[base_path.<name>]` header per provider/normalizer
   but never appended it; the closing `"\n".join([section] + sections)` kept only the **last** header (placed at the top),
