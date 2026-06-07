@@ -475,7 +475,15 @@ See `docs/review/phase1_architecture_map.md` §5.
       the bridge, bounded await), `ActuationPort`→bridge `OutputPort`, `DeviceCatalogPort` stays a read port. Implementation =
       **ARCH-15** (sliced PR-0..9, design §12). Refs: `io_architecture.md`, ARCH-6 (WS driving-adapter template), ARCH-7/8
       (output seams — reconciled by ARCH-15 PR-9), QUAL-28 (identity), `dataflow_reconciliation.md` Q2/Q3/Q4.
-- [ ] **ARCH-15** [IO] (P-TBD) — **Implement the I/O architecture per `docs/design/io_architecture.md` §12, sliced.**
+- [x] **ARCH-15** [IO] (P-TBD) — **DONE 2026-06-07 — the I/O hexagon is fully delivered (PR-0..9).** Symmetric
+      configurable hexagonal I/O per `docs/design/io_architecture.md`: input `format` first-class; `OutputPort`/
+      `OutputManager`/`DeliveryResult` + modality routing/negotiation; pipeline `EventBus`; F&F delivery + observation
+      tap + web-app push, all identity-addressed; config-driven `[outputs]`; local audio/voice SPEECH output (pure D-3);
+      ARCH-7 reconciled (§13) to feed ARCH-8; master-config completeness extended. **PR-10 DEFERRED → ARCH-16** (daemon
+      multiplexer + runners→thin presets + remote text-attach channel — a large internal refactor of low incremental
+      user value; the working system already runs all channels and the webapi process already hosts concurrent WS
+      channels; decision 2026-06-07 to consider the hexagon complete rather than rush it). Minor follow-ons also in
+      ARCH-16: the PR-6c web-app JS render + the PR-7 capability-matrix display. _Slice log below._
       **PR-0 ✓ DONE 2026-06-07** CLI double-reader stopgap — stopped auto-starting `cli` in
       `InputManager._auto_start_configured_sources` (`inputs/manager.py`; the source stays registered in `_sources`, just not
       started), mirroring the existing `web` guard; the runner's own `_run_interactive_loop` is now the sole stdin reader, so
@@ -547,6 +555,17 @@ See `docs/review/phase1_architecture_map.md` §5.
       instance to generalize; closes the runners-as-presets endgame. Gates per slice: `pyright` 0 · import-linter ·
       dep-validator · `check_scope` · backend suite no-net-regression · config-ui `npm run check`+`build` where touched.
       Refs: ARCH-14, ARCH-6, ARCH-7/8, QUAL-28.
+- [ ] **ARCH-16** [IO] (P-deferred) — **I/O daemon multiplexer + runners→thin presets (deferred ARCH-15 PR-10).**
+      The I/O hexagon (ARCH-15) is complete and every channel runs; this is the internal-cleanliness endgame, deferred
+      2026-06-07 as low-incremental-value / higher-risk. Scope: (a) **remote interactive text-attach channel** (e.g.
+      `/ws/cli` — attach a debug-CLI from a notebook, text in/out, routed through the workflow + OutputManager,
+      origin-paired; the *reproduce* half of the operator scenario, pairing with the PR-6b `/ws/observe` *observe* half) —
+      the highest-value, low-risk piece, additive + testable; (b) **runners → thin config-preset launchers** over **one
+      daemon multiplexer** that consumes all active input sources concurrently (generalising PR-5b's CLI consume loop) +
+      **runtime attach/detach** (§4/§8) — fuses the CLI/webapi/vosk shapes; the larger, riskier refactor (low e2e
+      coverage on interactive paths). Also carries the small ARCH-15 follow-ons: **PR-6c web-app JS** (open `/ws/output`,
+      thread `client_id` into POSTs, render pushed frames — web-template edit) and **PR-7 capability-matrix display**
+      (read-only outputs×modalities). Refs: `io_architecture.md` §4/§8/§12 (PR-10), ARCH-15, ARCH-6.
 
 ### Code Quality & Review (QUAL)
 - [x] **QUAL-1** — Phase-0 static baseline (ruff/pyright/vulture/validators/import-graph). → `docs/review/phase0_static_baseline.md` (6e39886)

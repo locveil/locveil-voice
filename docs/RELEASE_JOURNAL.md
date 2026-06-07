@@ -12,6 +12,21 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-07
+- **ARCH-15 COMPLETE — the symmetric configurable hexagonal I/O architecture is delivered (PR-0..9); PR-10 deferred → ARCH-16.**
+  Closes the work that began with a one-line CLI bug ("started cli, but nothing happens") and a design session. Delivered
+  across 19 commits: **PR-0** CLI double-reader stopgap; **PR-1** `InputFormat` first-class; **PR-2** `OutputPort`/
+  `OutputManager`/`DeliveryResult` + `EventBus` (adapter-free); **PR-3** console/ws text outputs + origin routing;
+  **PR-4** F&F notifications re-routed through the OutputManager, identity-addressed; **PR-5a** process-wide OutputManager
+  wired (F&F live); **PR-5b** interactive runner consumes the single CLI source (double-reader structurally impossible);
+  **PR-6a** EventBus published end-to-end, **PR-6b** gated `/ws/observe` tap, **PR-6c** web-app `/ws/output` push;
+  **PR-7** config-driven `[outputs]` + config-ui editor; **PR-8** local audio/voice SPEECH output (pure D-3 restored);
+  **PR-9.1** reconciled ARCH-7 (§13) to feed ARCH-8 as `OutputPort`s, **PR-9.2** swept other items + extended the
+  master-config completeness check. Six design decisions D-1..D-6 locked; config-master synced. Every slice landed with
+  0 net regression (baseline drifted 84→83 via a recovered test). **Decision (user, 2026-06-07):** consider the hexagon
+  complete and **defer PR-10** (daemon multiplexer + runners→thin presets + remote text-attach channel) to **ARCH-16** —
+  it's a large, higher-risk internal-cleanliness refactor of low incremental value (the webapi process already hosts
+  concurrent WS channels; every channel runs). ARCH-16 also tracks the minor follow-ons (PR-6c web-app JS render, PR-7
+  capability-matrix display). ARCH-15 flipped `[x]`; ARCH-16 filed P-deferred.
 - **ARCH-15 PR-9.2 DONE — cross-task sweep + extended master-config completeness check; PR-9 complete.**
   **(a) Sweep** of every open/paused ARCH/QUAL item for I/O-design impact: **no impact** — ARCH-10 (ONNX inference,
   unrelated), QUAL-18 (AsyncAPI tooling — the new `/ws/observe`+`/ws/output` endpoints could *optionally* be

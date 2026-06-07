@@ -424,11 +424,14 @@ landable and gated (`pyright` 0 · import-linter · dep-validator · `check_scop
      **Also: extend `AutoSchemaRegistry.get_master_config_completeness`** to cover **top-level config sections +
      scalar fields** (today it only checks `*.providers.*`), so config-master drift like the missing `[outputs]` /
      `observe_*` (synced manually 2026-06-07) is caught automatically going forward.
-- **PR-10 — Daemon multiplexer + runners → thin presets.** One process hosting concurrent input+output
-  registries with runtime attach/detach (§4); runners demoted to config-preset launchers with layered overrides
-  (§8). The per-channel *consume/preset* unification of **web** and **vosk** rides here (their *outputs* arrive
-  in PR-6/PR-8); CLI's consume loop (PR-5b) is the proven first instance to generalize. This closes the
-  "runners-as-presets over one daemon" endgame that PR-5b only started.
+- **PR-10 — Daemon multiplexer + runners → thin presets. ⏸ DEFERRED 2026-06-07 → ARCH-16.** One process hosting
+  concurrent input+output registries with runtime attach/detach (§4); runners demoted to config-preset launchers
+  with layered overrides (§8); the web/vosk *consume/preset* unification; plus a **remote interactive text-attach
+  channel** (`/ws/cli`) for the reproduce-from-notebook scenario. **Decision (2026-06-07):** the I/O *hexagon* is
+  complete (PR-0..9) and every channel already runs — the webapi process already hosts concurrent WS channels — so
+  this internal-cleanliness refactor (large, higher-risk, low incremental user value, thin e2e coverage on
+  interactive paths) is **deferred to ARCH-16** rather than rushed. The remote text-attach channel (a) is the
+  highest-value, low-risk part to pick up first there.
 
 PR-0 is the only thing needed to unblock today; PR-1/PR-2 can begin immediately and in parallel; the rest
 sequence behind them. **PR-9 runs last** — reconcile the remaining backlog once the contracts are concrete.
