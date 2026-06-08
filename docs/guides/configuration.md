@@ -32,6 +32,9 @@ A capability needs both — `components.tts = true` *and* a `[tts]` section with
 (`[system]`, `[inputs]`, `[outputs]`, `[assets]`, `[workflows]`) plus the top-level meta (name, language, log
 level, timeouts) round it out.
 
+Two subsystems have dedicated guides for their knobs: [audio output](audio.md) and
+[voice activity detection](vad.md).
+
 ## Profiles
 
 You rarely start from scratch. `configs/` ships ready-made profiles for common shapes — `minimal` and

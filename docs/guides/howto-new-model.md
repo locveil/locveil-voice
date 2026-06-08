@@ -83,3 +83,6 @@ use a different VAD model you don't write code; you point the `[vad]` config at 
 Enable the provider in a config and run it; the model downloads on first use. If it doesn't show up, check the
 entry-point is registered and that you ran `uv sync`. For how providers sit under a component, see
 [Components & providers](../architecture/components.md).
+
+Two related guides: an LLM engine's **prompts** are authored separately (see [prompting](prompting.md)), and
+the **playback** side of TTS has its own knobs (see [audio](audio.md)).
