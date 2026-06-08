@@ -401,7 +401,7 @@ class IreneBuildAnalyzer:
             return [
                 "irene.providers.audio", "irene.providers.tts", "irene.providers.asr",
                 "irene.providers.llm", "irene.providers.voice_trigger", "irene.providers.nlu",
-                "irene.providers.text_processing", "irene.components", "irene.workflows",
+                "irene.providers.text_processor", "irene.components", "irene.workflows",
                 "irene.intents.handlers", "irene.inputs", "irene.outputs",
                 "irene.runners"
             ]

@@ -14,7 +14,7 @@ from .webapi import WebAPIPlugin
 from .asr import ASRPlugin
 from .llm import LLMPlugin
 from .nlu import NLUPlugin
-from .text_processing import TextProcessorPlugin
+from .text_processor import TextProcessorPlugin
 from .voice_trigger import VoiceTriggerPlugin
 
 __all__ = [

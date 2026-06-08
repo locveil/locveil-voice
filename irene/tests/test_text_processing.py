@@ -6,7 +6,7 @@ the right normalizers in order, disabled normalizers don't run, and number norma
 for Russian.
 """
 
-from irene.providers.text_processing.unified import UnifiedTextProcessor, NORMALIZER_ORDER
+from irene.providers.text_processor.unified import UnifiedTextProcessor, NORMALIZER_ORDER
 
 
 def _cfg(numbers=True, prepare=True, runorm=False):

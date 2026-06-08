@@ -15,12 +15,12 @@ from typing import Dict, Any, List, Optional, Type
 from pydantic import BaseModel
 from .base import Component
 from ..core.interfaces.webapi import WebAPIPlugin
-from ..core.interfaces.text_processing import TextProcessorPlugin
+from ..core.interfaces.text_processor import TextProcessorPlugin
 from ..core.trace_context import TraceContext
 from ..intents.context_models import UnifiedConversationContext
 from ..utils.loader import dynamic_loader
 from ..utils.text_processing import all_num_to_text_async
-from ..providers.text_processing.base import TextProcessingProvider
+from ..providers.text_processor.base import TextProcessingProvider
 
 logger = logging.getLogger(__name__)
 
@@ -73,7 +73,7 @@ class TextProcessorComponent(Component, TextProcessorPlugin, WebAPIPlugin):
                 providers_config.get("unified_text_processor", {}).get("enabled", True) is not False:
             enabled_providers.append("unified_text_processor")
 
-        self._provider_classes = dynamic_loader.discover_providers("irene.providers.text_processing", enabled_providers)
+        self._provider_classes = dynamic_loader.discover_providers("irene.providers.text_processor", enabled_providers)
         logger.info(f"Discovered {len(self._provider_classes)} enabled text processing providers: {list(self._provider_classes.keys())}")
 
         # Initialize enabled providers
@@ -186,9 +186,9 @@ class TextProcessorComponent(Component, TextProcessorPlugin, WebAPIPlugin):
     def enabled_by_default(self) -> bool:
         return True
         
-    @property  
+    @property
     def category(self) -> str:
-        return "text_processing"
+        return "text_processor"
         
     @property
     def platforms(self) -> List[str]:
@@ -375,7 +375,7 @@ class TextProcessorComponent(Component, TextProcessorPlugin, WebAPIPlugin):
                                            if provider_config.get("enabled", False)]
 
                         # Discover and initialize providers with new config
-                        self._provider_classes = dynamic_loader.discover_providers("irene.providers.text_processing", enabled_providers)
+                        self._provider_classes = dynamic_loader.discover_providers("irene.providers.text_processor", enabled_providers)
 
                         for provider_name, provider_class in self._provider_classes.items():
                             provider_config = providers_config.get(provider_name, {})

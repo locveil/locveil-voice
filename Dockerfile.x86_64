@@ -57,19 +57,7 @@ try:
         data = json.load(f)
     intent_files = data.get('intent_json_files', [])
     if intent_files:
-        print(f'Found {len(intent_files)} intent JSON files to validate')
-        import subprocess
-        result = subprocess.run([
-            'python', '-m', 'irene.tools.intent_validator', 
-            '--validate-all', '--quiet'
-        ], capture_output=True, text=True)
-        if result.returncode != 0:
-            print('❌ Intent JSON validation failed:', file=sys.stderr)
-            print(result.stdout, file=sys.stderr)
-            print(result.stderr, file=sys.stderr)
-            sys.exit(1)
-        else:
-            print('✅ Intent JSON validation passed')
+        print(f'Found {len(intent_files)} intent JSON files (validated at runtime by the cross-language validator)')
     else:
         print('📋 No intent handlers enabled, skipping JSON validation')
 except Exception as e:
@@ -85,7 +73,7 @@ with open('/tmp/build-requirements.json', 'r') as f:
     
 # Write Ubuntu system packages
 with open('/tmp/system-packages.txt', 'w') as f:
-    packages = data.get('system_packages', {}).get('ubuntu', [])
+    packages = data.get('system_packages', {}).get('linux.ubuntu', [])
     if packages:
         f.write(' '.join(packages))
     else:

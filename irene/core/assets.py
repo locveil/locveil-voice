@@ -85,7 +85,7 @@ class AssetManager:
                 'irene.providers.llm',
                 'irene.providers.voice_trigger',
                 'irene.providers.nlu',
-                'irene.providers.text_processing'
+                'irene.providers.text_processor'
             ]
             for namespace in namespaces:
                 provider_class = dynamic_loader.get_provider_class(namespace, provider)

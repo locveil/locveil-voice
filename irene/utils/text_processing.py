@@ -314,7 +314,7 @@ def load_language(lang: str) -> None:
 # Following the document specification for normalizer migration
 
 # Number-normalization helpers only. The text-processing pipeline is the single config-driven
-# UnifiedTextProcessor (irene.providers.text_processing.unified) with per-stage normalizer chains (QUAL-13).
+# UnifiedTextProcessor (irene.providers.text_processor.unified) with per-stage normalizer chains (QUAL-13).
 
 
 # Original normalizer classes moved to irene/utils/text_normalizers.py

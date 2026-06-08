@@ -1,23 +1,28 @@
 # ============================================================
 # IRENE VOICE ASSISTANT - ARMv7 EMBEDDED DOCKER BUILD
 # ============================================================
-# Alpine-based minimal build optimized for Raspberry Pi and embedded devices
-# Supports configuration profiles with cross-compilation and minimal dependencies
-# 
+# Debian-based build for Raspberry Pi / Wirenboard 7 and embedded armv7 devices.
+# Debian (glibc), NOT Alpine (musl): sherpa-onnx ships a glibc-only armv7 wheel and pip has no
+# armv7 onnxruntime wheel (ARCH-9 / onnx_inference_layer.md §4.7/§9), so musl cannot run the ONNX
+# ASR path. Uses the build analyzer to install only what a config profile needs.
+#
+# NOTE: drafted for the Debian armv7 path; the actual image build/boot is verified under BUILD-3
+# (release phase) on real hardware.
+#
 # Usage:
-#   docker build -f Dockerfile.armv7 --platform linux/arm/v7 --build-arg CONFIG_PROFILE=embedded-armv7 .
-#   docker build -f Dockerfile.armv7 --platform linux/arm/v7 --build-arg CONFIG_PROFILE=minimal .
-#   docker buildx build --platform linux/arm/v7 -f Dockerfile.armv7 --build-arg CONFIG_PROFILE=voice .
+#   docker buildx build --platform linux/arm/v7 -f Dockerfile.armv7 --build-arg CONFIG_PROFILE=embedded-armv7 .
+#   docker buildx build --platform linux/arm/v7 -f Dockerfile.armv7 --build-arg CONFIG_PROFILE=minimal .
 
 # ============================================================
 # STAGE 1: BUILD ANALYZER - Runtime Configuration Analysis
 # ============================================================
-FROM --platform=$BUILDPLATFORM python:3.11-alpine as analyzer
+FROM --platform=$BUILDPLATFORM python:3.11-slim-bullseye as analyzer
 
 WORKDIR /build-analyzer
 
-# Install minimal dependencies for build analysis (Alpine packages)
-RUN apk add --no-cache python3-dev py3-pip
+# Minimal dependencies for build analysis (Debian packages)
+RUN apt-get update && apt-get install -y --no-install-recommends python3-dev python3-pip && \
+    rm -rf /var/lib/apt/lists/*
 
 # Copy build analyzer tool and configuration profiles
 COPY irene/tools/ irene/tools/
@@ -35,109 +40,88 @@ COPY assets/ assets/
 ARG CONFIG_PROFILE=embedded-armv7
 ENV CONFIG_PROFILE=${CONFIG_PROFILE}
 
-# Install tomllib for Python < 3.11 compatibility and jsonschema for JSON validation
-RUN pip install tomli jsonschema
+# jsonschema for JSON validation (tomllib is stdlib on 3.11)
+RUN pip install jsonschema
 
-# Runtime analysis of selected configuration profile
+# Runtime analysis of selected configuration profile (Debian/apt → linux.ubuntu package set)
 RUN echo "🔍 Analyzing configuration profile: ${CONFIG_PROFILE}" && \
     python -m irene.tools.build_analyzer \
     --config configs/${CONFIG_PROFILE}.toml \
-    --platform linux.alpine \
+    --platform linux.ubuntu \
     --json > /tmp/build-requirements.json && \
     echo "📋 Build requirements generated successfully"
 
-# Validate intent JSON configurations if intents are enabled
-RUN echo "🔍 Validating intent JSON configurations..." && \
+# Note any intent JSON configurations (validated at runtime by the cross-language validator)
+RUN echo "🔍 Checking intent JSON configurations..." && \
     python -c "
-import json
-import sys
+import json, sys
 try:
     with open('/tmp/build-requirements.json', 'r') as f:
         data = json.load(f)
     intent_files = data.get('intent_json_files', [])
     if intent_files:
-        print(f'Found {len(intent_files)} intent JSON files to validate')
-        import subprocess
-        result = subprocess.run([
-            'python', '-m', 'irene.tools.intent_validator', 
-            '--validate-all', '--quiet'
-        ], capture_output=True, text=True)
-        if result.returncode != 0:
-            print('❌ Intent JSON validation failed:', file=sys.stderr)
-            print(result.stdout, file=sys.stderr)
-            print(result.stderr, file=sys.stderr)
-            sys.exit(1)
-        else:
-            print('✅ Intent JSON validation passed')
+        print(f'Found {len(intent_files)} intent JSON files (validated at runtime by the cross-language validator)')
     else:
         print('📋 No intent handlers enabled, skipping JSON validation')
 except Exception as e:
-    print(f'⚠️ Intent validation check failed: {e}', file=sys.stderr)
-    # Continue build - validation issues will be caught later
-" && echo "📋 Intent validation completed"
+    print(f'⚠️ Intent check failed: {e}', file=sys.stderr)
+" && echo "📋 Intent check completed"
 
-# Extract Alpine-specific dependencies using dynamic metadata queries
+# Extract Debian (linux.ubuntu) dependencies from the analyzer output
 RUN python -c "
 import json
 with open('/tmp/build-requirements.json', 'r') as f:
     data = json.load(f)
 
-# Get Alpine packages from metadata (no hardcoded mapping needed)
-alpine_packages = data.get('system_packages', {}).get('alpine', [])
+# Debian armv7 uses the apt (linux.ubuntu) package set
+ubuntu_packages = data.get('system_packages', {}).get('linux.ubuntu', [])
 
-# Write Alpine system packages
+# Write system packages
 with open('/tmp/system-packages.txt', 'w') as f:
-    if alpine_packages:
-        f.write(' '.join(alpine_packages))
-    else:
-        f.write('')
+    f.write(' '.join(ubuntu_packages) if ubuntu_packages else '')
 
 # Write Python dependencies
 with open('/tmp/python-deps.txt', 'w') as f:
     deps = data.get('python_dependencies', [])
-    if deps:
-        f.write(' '.join(deps))
-    else:
-        f.write('')
+    f.write(' '.join(deps) if deps else '')
 
 # Write enabled modules for selective copying
 with open('/tmp/python-modules.txt', 'w') as f:
-    modules = data.get('python_modules', [])
-    f.write('\n'.join(modules))
+    f.write('\n'.join(data.get('python_modules', [])))
 
-print(f'📦 Alpine packages: {len(alpine_packages)} (from {len(ubuntu_packages)} Ubuntu packages)')
+print(f'📦 apt packages: {len(ubuntu_packages)} -> {ubuntu_packages}')
 print(f'🐍 Python deps: {len(data.get(\"python_dependencies\", []))}')
 print(f'📋 Modules: {len(data.get(\"python_modules\", []))}')
-print(f'🏗️  Alpine packages: {alpine_packages}')
 "
 
 # ============================================================
-# STAGE 2: DEPENDENCY BUILDER - Cross-Compilation Build
+# STAGE 2: DEPENDENCY BUILDER
 # ============================================================
-FROM python:3.11-alpine as builder
+FROM arm32v7/python:3.11-slim-bullseye as builder
 
 WORKDIR /app
 
-# Copy system dependency list from analyzer
+# Copy dependency lists from analyzer
 COPY --from=analyzer /tmp/system-packages.txt /tmp/system-packages.txt
 COPY --from=analyzer /tmp/python-deps.txt /tmp/python-deps.txt
 COPY --from=analyzer /tmp/build-requirements.json /tmp/build-requirements.json
 
-# Install build tools for cross-compilation
-RUN apk add --no-cache \
-    gcc \
-    musl-dev \
-    linux-headers \
+# Build tools (most armv7 wheels are prebuilt; build-essential covers any source builds)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
     python3-dev \
-    py3-pip
+    python3-pip && \
+    rm -rf /var/lib/apt/lists/*
 
 # Install UV package manager
 RUN pip install uv
 
-# Install system dependencies (Alpine packages, only if specified)
+# Install system dependencies (apt, only if specified)
 RUN if [ -s /tmp/system-packages.txt ]; then \
-        echo "🔧 Installing Alpine system dependencies..." && \
-        apk add --no-cache $(cat /tmp/system-packages.txt); \
+        echo "🔧 Installing apt system dependencies..." && \
+        apt-get update && \
+        apt-get install -y --no-install-recommends $(cat /tmp/system-packages.txt) && \
+        rm -rf /var/lib/apt/lists/*; \
     else \
         echo "📦 No system dependencies required for this profile"; \
     fi
@@ -145,9 +129,9 @@ RUN if [ -s /tmp/system-packages.txt ]; then \
 # Copy project files for dependency resolution
 COPY pyproject.toml uv.lock ./
 
-# Install Python dependencies with UV (optimized for ARMv7)
+# Install Python dependencies with UV (bytecode-compiled for embedded)
 RUN if [ -s /tmp/python-deps.txt ]; then \
-        echo "🐍 Installing Python dependencies with UV (ARMv7 optimized)..." && \
+        echo "🐍 Installing Python dependencies with UV (armv7)..." && \
         UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy uv sync $(python -c "
 import json
 with open('/tmp/build-requirements.json', 'r') as f:
@@ -164,11 +148,10 @@ with open('/tmp/build-requirements.json', 'r') as f:
 # ============================================================
 # STAGE 3: RUNTIME - Minimal ARMv7 Runtime Image
 # ============================================================
-FROM python:3.11-alpine as runtime
+FROM arm32v7/python:3.11-slim-bullseye as runtime
 
-# Metadata
 LABEL maintainer="Irene Voice Assistant Team"
-LABEL description="Irene Voice Assistant - ARMv7 Embedded Runtime"
+LABEL description="Irene Voice Assistant - ARMv7 Embedded Runtime (Debian)"
 ARG CONFIG_PROFILE=embedded-armv7
 LABEL config.profile="${CONFIG_PROFILE}"
 LABEL platform="linux/arm/v7"
@@ -179,29 +162,29 @@ WORKDIR /app
 COPY --from=analyzer /tmp/build-requirements.json /app/build-requirements.json
 COPY --from=analyzer /tmp/python-modules.txt /app/python-modules.txt
 
-# Install runtime system dependencies (Alpine, only if they exist)
+# Install runtime system dependencies (apt, only if they exist)
 COPY --from=builder /tmp/system-packages.txt /tmp/system-packages.txt
 RUN if [ -s /tmp/system-packages.txt ]; then \
-        echo "🔧 Installing runtime system dependencies (Alpine)..." && \
-        apk add --no-cache $(cat /tmp/system-packages.txt); \
+        echo "🔧 Installing runtime system dependencies (apt)..." && \
+        apt-get update && \
+        apt-get install -y --no-install-recommends $(cat /tmp/system-packages.txt) && \
+        rm -rf /var/lib/apt/lists/*; \
     fi && rm -f /tmp/system-packages.txt
 
 # Copy Python environment from builder
 COPY --from=builder /root/.local /root/.local
 ENV PATH="/root/.local/bin:$PATH"
 
-# Copy application code (selective copying based on enabled modules)
+# Copy application code
 COPY irene/ irene/
 COPY configs/ configs/
-
-# Copy assets for intent JSON validation at runtime
 COPY assets/ assets/
 
-# Copy specific configuration profile for runtime
+# Copy the selected configuration profile for runtime
 COPY --from=analyzer configs/${CONFIG_PROFILE}.toml /app/runtime-config.toml
 
-# Create non-root user for security (Alpine style)
-RUN adduser -D -u 1000 irene && \
+# Create non-root user for security (Debian)
+RUN useradd -m -u 1000 irene && \
     chown -R irene:irene /app
 USER irene
 
@@ -223,4 +206,4 @@ ENV MALLOC_TOP_PAD_=65536
 CMD ["python", "-O", "-m", "irene.runners.webapi_runner", "--config", "/app/runtime-config.toml", "--host", "0.0.0.0", "--port", "6000"]
 
 # Expose web API port for embedded deployment
-EXPOSE 6000 
+EXPOSE 6000

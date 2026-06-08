@@ -1412,7 +1412,8 @@ _Apply to every remediation task below (from the 4 review docs + QUAL-25/26). So
 - [ ] **BUILD-4** (P1) — config-ui builds, type-checks **and lints** clean (`npm ci && npm run check && npm run build`;
       `check` = type-check + strict ESLint, harmonized with the bridge in UI-6; `dist` is git-ignored). Per Invariant #4
       this is an **ongoing gate** — add it to CI (BUILD-2) so backend contract changes that break config-ui are caught.
-- [ ] **BUILD-5** (P2) — **Verify conditional/profile-driven build analysis (`build_analyzer`) still works vs the
+- [x] **BUILD-5** (P2) — **DONE 2026-06-08** (outcome summary at the end of this item). **Verify conditional/profile-driven
+      build analysis (`build_analyzer`) still works vs the
       pre-pause (~Sep 2025) baseline.** The revival churned everything the analyzer reads — entry-points, providers,
       models (ASSET-1/2), and it removed surfaces (`train_schedule` handler QUAL-34, `settings` runner QUAL-21) — and
       **ARCH-13 just edited `build_analyzer.py`** (dropped the now-deleted `irene.plugins.builtin` discovery + a fallback
@@ -1436,6 +1437,19 @@ _Apply to every remediation task below (from the 4 review docs + QUAL-25/26). So
       and `Dockerfile.armv7` has an `ubuntu_packages` NameError; findings + line refs in
       `docs/review/docker_build_review.md`. Refs: build audit, `docs/guides/build-docker.md`,
       `docs/review/docker_build_review.md`, BUILD-3, `docs/design/onnx_inference_layer.md` §4.7/§9 (ARCH-9).
+      **— OUTCOME (2026-06-08):** Reconciliation (Invariant #8) found the feared analyzer drift was a non-issue —
+      `--list-profiles`, namespace discovery (`_discover_entry_point_namespaces`), and `--config/--docker` all sane;
+      ARCH-13 had already cleaned the `plugins.builtin` refs. **(A) config hygiene:** `--validate-all-profiles` was red
+      on 6 profiles (incl. canonical `config-master`, Invariant #2); root cause was the `text_processor` component vs
+      `text_processing` provider-namespace mismatch plus stale `general_text_processor` / `openai`-TTS provider refs. Per
+      user decision, **renamed the provider entry-point + module dir + port interface + the component `category`**
+      `text_processing`→`text_processor` (no aliases — consistent with every other capability) and fixed the 5 stale
+      configs → **all 12 profiles VALID**. **(B/§7):** removed the non-existent `intent_validator` call from both
+      Dockerfiles; fixed the armv7 `ubuntu_packages` NameError; fixed a latent x86_64 `system_packages` key bug
+      (`ubuntu`→`linux.ubuntu`). **(C/§6):** migrated `Dockerfile.armv7` Alpine→Debian (`arm32v7/python:3.11-slim-bullseye`,
+      apk→apt, reads the `linux.ubuntu` apt set the analyzer already emits — `libasound2` + the `asr-onnx` extra resolve).
+      9/9 import contracts kept; full suite 83 failed = baseline (no net regression). Image **build/boot** stays BUILD-3
+      (release phase; armv7 on hardware). Optional golden per-profile regression test deferred to TEST-7.
 
 ### Models & Assets (ASSET)
 - [x] **ASSET-1** — Refresh stale model IDs (Anthropic→Claude 4.x, Whisper large-v3, ElevenLabs multilingual_v2, spaCy 3.8, gpt-4→gpt-4o-mini). → fc85306

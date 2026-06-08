@@ -315,8 +315,8 @@ class TestPhase1RussianLanguageSupport:
     def test_russian_language_defaults(self):
         """Test Russian-first language configuration in modules"""
         # Test text processing defaults by importing and checking
-        from irene.providers.text_processing.general_text_processor import GeneralTextProcessor
-        from irene.providers.text_processing.number_text_processor import NumberTextProcessor
+        from irene.providers.text_processor.general_text_processor import GeneralTextProcessor
+        from irene.providers.text_processor.number_text_processor import NumberTextProcessor
         from irene.providers.nlu.spacy_provider import SpaCyNLUProvider
         
         # Test that modules default to Russian when no config provided

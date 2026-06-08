@@ -333,7 +333,7 @@ class ConfigurationComponent(Component, WebAPIPlugin):
                     "llm": "irene.providers.llm",
                     "voice_trigger": "irene.providers.voice_trigger",
                     "nlu": "irene.providers.nlu",
-                    "text_processor": "irene.providers.text_processing"
+                    "text_processor": "irene.providers.text_processor"
                 }
                 
                 entry_point_group = provider_groups.get(component_name)

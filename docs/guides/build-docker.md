@@ -5,11 +5,12 @@ Irene builds multi-platform Docker images that install only what a chosen config
 Dockerfiles, one per architecture:
 
 - **`Dockerfile.x86_64`** — Python 3.11 on Debian slim; desktop, server, cloud.
-- **`Dockerfile.armv7`** — Python 3.11 on Alpine; Raspberry Pi and embedded.
+- **`Dockerfile.armv7`** — Python 3.11 on Debian (`slim-bullseye`); Raspberry Pi / Wirenboard 7 and embedded.
+  (Debian, not Alpine: sherpa-onnx has no musl armv7 wheel — see [the build review](../review/docker_build_review.md).)
 
-> **Status:** the Dockerfiles currently carry two build-blocking bugs (a missing `intent_validator` tool and
-> an `ubuntu_packages` reference) — see [the Docker build review](../review/docker_build_review.md). The
-> commands below are the intended procedure; they run once those fixes land (BUILD-5).
+> **Status:** the analyzer + Dockerfiles are correct and verified (`--validate-all-profiles` is green; the
+> `--docker` package sets resolve). The actual image **build and boot** is checked under **BUILD-3** (release
+> phase) — on real armv7 hardware for the Debian path.
 
 ## Build
 

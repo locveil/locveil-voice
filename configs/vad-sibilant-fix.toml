@@ -129,9 +129,9 @@ enabled = true
 
 [text_processor]
 enabled = true
-default_provider = "general_text_processor"
+default_provider = "unified_text_processor"
 
-[text_processor.providers.general_text_processor]
+[text_processor.providers.unified_text_processor]
 enabled = true
 
 # ============================================================

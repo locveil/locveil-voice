@@ -12,6 +12,20 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-08
+- **BUILD-5 — build-analyzer verification → the `text_processor` namespace rename + Dockerfile fixes.** Reconciliation
+  (Invariant #8) showed the analyzer itself was healthy (ARCH-13 had already cleaned the `plugins.builtin` refs). The
+  real work: `--validate-all-profiles` was red on 6 profiles (incl. canonical `config-master`) because the
+  text-processing **component** is `text_processor` while its provider entry-point namespace was `text_processing` — the
+  lone capability whose names disagreed. Per the owner's call (no aliases), renamed the provider entry-point group +
+  module dir (`irene/providers/text_processing`→`text_processor`), the port interface module
+  (`core/interfaces/text_processing.py`→`text_processor.py`) + its importers, and the component `category` →
+  `"text_processor"` — now consistent with every other capability. Fixed the 5 stale configs
+  (`general_text_processor`→`unified_text_processor`; a non-existent `openai` TTS) → all 12 profiles validate. Fixed both
+  Dockerfiles: removed the non-existent `intent_validator` call; the armv7 `ubuntu_packages` NameError; a latent x86_64
+  `system_packages` key bug (`ubuntu`→`linux.ubuntu`); migrated `Dockerfile.armv7` Alpine→Debian
+  (`arm32v7/python:3.11-slim-bullseye`, apk→apt, the `linux.ubuntu` apt set with `libasound2`). 9/9 import contracts kept;
+  full suite 83 failed = baseline (no net regression). Image build/boot is BUILD-3. Refs
+  `docs/review/docker_build_review.md`, `docs/guides/build-docker.md`.
 - **Build/Docker docs — consolidated the two root READMEs into the guides set + filed the Docker-build defects.**
   Reviewed `README-BUILD.md` (Russian, ~644 L) and `README-DOCKER.md` against the real Dockerfiles + tooling.
   `README-DOCKER` → rewritten as **`docs/guides/build-docker.md`** (fixed: ports 8000/9090 → **6000**; x86_64 base

@@ -36,7 +36,7 @@ COMPONENT_NAMESPACES: Dict[str, str] = {
     "asr": "irene.providers.asr",
     "audio": "irene.providers.audio",
     "voice_trigger": "irene.providers.voice_trigger",
-    "text_processor": "irene.providers.text_processing",
+    "text_processor": "irene.providers.text_processor",
 }
 
 # config fields that reference a provider name by value (vs the providers dict keys)
