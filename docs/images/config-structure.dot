@@ -1,0 +1,28 @@
+// Irene — the shape of a config: two axes. Render:
+//   dot -Tpng docs/images/config-structure.dot -o docs/images/config-structure.png
+digraph structure {
+  rankdir=LR; bgcolor="white"; splines=spline; nodesep=0.3; ranksep=1.1;
+  fontname="Helvetica"; labelloc=t; fontsize=15;
+  label="A config has two axes: which capabilities are ON, and how each one is set up";
+  node [fontname="Helvetica", fontsize=10, shape=box, style="filled,rounded", penwidth=1.4];
+  edge [fontname="Helvetica", fontsize=9, color="#616161", arrowsize=0.7];
+
+  subgraph cluster_toml {
+    label="config.toml"; fontsize=12; color="#f9a825"; style=rounded; margin=12;
+    meta   [label="meta\nname · language · log_level\ntimeouts", fillcolor="#fff8e1", color="#f9a825"];
+    comp   [label="[components]\ntts=true · asr=true · llm=false …\n— the on/off switches", fillcolor="#fff8e1", color="#f9a825"];
+    caps   [label="[tts] · [asr] · [llm] · [nlu] …\n— configure each capability's\nproviders", fillcolor="#fff8e1", color="#f9a825"];
+    infra  [label="[system] · [inputs] · [outputs]\n[assets] · [workflows]", fillcolor="#fff8e1", color="#f9a825"];
+  }
+
+  core [label="CoreConfig\n(Pydantic — typed,\nvalidated, one model)", fillcolor="#e8f5e8", color="#388e3c"];
+
+  meta  -> core;
+  comp  -> core [label="enable a capability"];
+  caps  -> core [label="set its providers"];
+  infra -> core;
+
+  note [shape=note, fillcolor="#fffde7", color="#fbc02d", fontsize=9,
+        label="[components] turns a capability ON; [<capability>] configures it.\nBoth matter — TTS needs components.tts = true AND a [tts] provider."];
+  { rank=sink; note; }
+}
