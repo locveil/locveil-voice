@@ -1463,10 +1463,11 @@ _Apply to every remediation task below (from the 4 review docs + QUAL-25/26). So
 - [ ] **DOC-2** (P2) — Archive completed `docs/TODO/TODO0x`; mark `docs/TODO.md` superseded by this file; keep open TODO11 + partials.
 - [ ] **DOC-3** (P2) — Fix cosmetic stale-version strings: "v13" in `irene/core/engine.py` docstrings/logs and the
       "v14" CLI banner in `irene/runners/cli.py` (`--help` description). Should read v15.
-- [ ] **DOC-4** (P1) — Rewrite `architecture.md` to the harmonized current state **+ chosen target pattern**
-      (do after pattern sign-off, so it's written once). Refs: phase1_architecture_map §3, §4, §5.
-      Must also **document the fire-and-forget action flow** [FAF] (currently undocumented) and **retire
-      `docs/fire_forget_issues.md`** once QUAL-8/9 land.
+- [x] **DOC-4** (P1) — DONE 2026-06-08: fulfilled by the new canonical documentation set. `architecture.md`
+      is replaced by `docs/architecture/*` (harmonized current state + the hexagonal target pattern); the
+      **fire-and-forget action flow** [FAF] is documented in `architecture/dataflow.md` +
+      `architecture/client-registry.md`; and `docs/fire_forget_issues.md` is **retired** to `docs/archive/`
+      (its current verdicts live in `docs/review/fire_and_forget_review.md`).
 - [x] **DOC-5** (P1) — Fixed docs that CONTRADICT code: `donations_flow.md` + `intent_donation.md` (donation
       paths → `assets/donations/<handler>_handler/<lang>.json`, schema → `assets/donations/v1.0.json`),
       `ASSET_MANAGEMENT.md` (12 TOML-nesting fixes `[providers.X]`→`[X.providers]`), `train_schedule_handler.md`

@@ -32,8 +32,8 @@ A capability needs both — `components.tts = true` *and* a `[tts]` section with
 (`[system]`, `[inputs]`, `[outputs]`, `[assets]`, `[workflows]`) plus the top-level meta (name, language, log
 level, timeouts) round it out.
 
-Two subsystems have dedicated guides for their knobs: [audio output](audio.md) and
-[voice activity detection](vad.md).
+Three subsystems have dedicated guides for their knobs: [audio output](audio.md),
+[voice activity detection](vad.md) and the [voice trigger](voice-trigger.md).
 
 ## Profiles
 
