@@ -66,7 +66,7 @@ async def test_tts_provider(provider, test_text: str = "Привет! Это т�
 
 async def tts_provider_demo():
     """Demonstrate all TTS providers"""
-    print("🎙️  Irene Voice Assistant v13 - TTS Provider Demo")
+    print("🎙️  Irene Voice Assistant v15 - TTS Provider Demo")
     print("=" * 70)
     print()
     print("This demo showcases all 5 TTS engines:")

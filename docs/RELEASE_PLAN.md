@@ -1463,8 +1463,11 @@ _Apply to every remediation task below (from the 4 review docs + QUAL-25/26). So
 - [x] **DOC-2** (P2) — DONE 2026-06-08: archived the entire `docs/TODO/` subfolder + `docs/TODO.md` to
       `docs/archive/` (superseded by this plan). The open TODO11/microWakeWord work is tracked under
       QUAL-19/20 (`esp32_wakeword_review.md`), not the TODO folder, so nothing was lost.
-- [ ] **DOC-3** (P2) — Fix cosmetic stale-version strings: "v13" in `irene/core/engine.py` docstrings/logs and the
-      "v14" CLI banner in `irene/runners/cli.py` (`--help` description). Should read v15.
+- [x] **DOC-3** (P2) — DONE 2026-06-08: version-display strings now read v15 — `core/engine.py` (module
+      docstring + startup log), the runner `--help` banner (`runners/base.py:131`, which the CLI inherits), and
+      the `tts_demo`/`async_demo` print banners. Deliberately left: the `config_migrator`/`config/migration`
+      v13→v14 strings (functional config-schema-version identifiers) and the "v13/v14 architecture"
+      era-descriptor docstrings/comments.
 - [x] **DOC-4** (P1) — DONE 2026-06-08: fulfilled by the new canonical documentation set. `architecture.md`
       is replaced by `docs/architecture/*` (harmonized current state + the hexagonal target pattern); the
       **fire-and-forget action flow** [FAF] is documented in `architecture/dataflow.md` +

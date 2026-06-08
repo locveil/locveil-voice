@@ -1,7 +1,7 @@
 """
 AsyncVACore - The main async voice assistant engine
 
-This is the heart of Irene v13, providing non-blocking command processing
+This is the heart of Irene v15, providing non-blocking command processing
 with optional audio/TTS components.
 """
 
@@ -74,7 +74,7 @@ class AsyncVACore:
         
     async def start(self) -> None:
         """Initialize and start the assistant"""
-        logger.info("Starting Irene Voice Assistant v13...")
+        logger.info("Starting Irene Voice Assistant v15...")
 
         try:
             # Initialize components first - PASS CORE REFERENCE

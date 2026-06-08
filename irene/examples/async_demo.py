@@ -33,7 +33,7 @@ async def async_demo():
     - Context management
     """
     
-    print("🚀 Irene Voice Assistant v13 - Async Architecture Demo")
+    print("🚀 Irene Voice Assistant v15 - Async Architecture Demo")
     print("=" * 60)
     
     # Setup logging
