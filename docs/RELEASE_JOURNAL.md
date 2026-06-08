@@ -11,6 +11,29 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+### 2026-06-08
+- **Documentation overhaul — authored the canonical doc set from code + design/review, then consolidated and
+  archived the stale sprawl.** A full recreation (the old docs were mostly aspirational): new **README** and
+  **CONTRIBUTING**, a **`docs/architecture/`** set (overview = the hexagon + the 9 import-linter seams + 12
+  ports; workflow; dataflow; components; intents; nlu with a plain-English spaCy explainer; mqtt [planned];
+  esp32 [voice satellite — each per-room microWakeWord names its room]; client-registry), and a
+  **`docs/guides/`** set (asset-management, build-system, configuration, audio, vad, prompting, voice-trigger,
+  plus three HOWTOs: new-intent / new-model / new-language). **24 styled-Graphviz diagrams** (`.dot` sources +
+  PNGs) under `docs/images/` — no mermaid. Concise/human tone, no internal task IDs in the public text; every
+  claim checked against source, which surfaced and corrected several inaccuracies en route (TTS is gated by
+  *config* not only the request flag; handler = a domain that owns many intents; the v1.1 **two-part donation**
+  = language-neutral `contract.json` + per-language `<lang>.json`). **Regenerated** `DONATION_FILE_SPECIFICATION.md`
+  to v1.1 (was a self-flagged stale v1.0). **Consolidated** the 8 stale AUDIO/VAD/PROMPTING guides → 3 MECE docs
+  (audio re-anchored to the real playback component; vad gained the previously-undocumented Silero engine;
+  prompting completed) and harmonised `voice_trigger.md` → `guides/voice-trigger.md`. **Archived** ~20 superseded
+  docs to `docs/archive/` (incl. `architecture.md`, `ASSET_MANAGEMENT.md`, donations_flow / intent_donation,
+  HANDLER_DEVELOPMENT_GUIDE, the 8 audio/vad/prompting guides, UV_MIGRATION, IDE_SETUP, runtime_configure,
+  `TODO.md` + the `TODO/` subfolder, `fire_forget_issues.md`); **folded** MODEL_WARMUP into asset-management;
+  **promoted** CLIENT_REGISTRY → `architecture/client-registry.md` (documenting the runtime action store,
+  `resolve_physical_id`, and `ActionRecord.source`). Orphan check clean — every public doc reachable from the
+  README, every image referenced, `.dot`/`.png` paired. Ledger touched: **DOC-2, DOC-4, DOC-5b, DOC-7** (status
+  in `RELEASE_PLAN.md`). Commits `2682fc9`..`c88b1d0`.
+
 ### 2026-06-07
 - **Tester-handover prep — fixed the quickstart `.env` crash + drafted `docs/QUICKSTART.md` + triaged the test suite.**
   **(1) Default-config crash (root cause):** the README quickstart (`cp docs/env-example.txt .env`) shipped a broken
