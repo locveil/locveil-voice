@@ -22,7 +22,8 @@ newest entries near the top of each dated section.
   (owner-accepted) on 3 stale config fixtures — filed **BUILD-6**. **`frontend-health.yml`** (new): `npm ci` +
   `npm run check` (type-check + strict ESLint + orphans) + `npm run build` + `npm run test` (vitest, 40 tests) — all
   green today (the Invariant-#4 config-ui gate). Verified locally: lint-imports 9/9, pyright 0, validate-all 12/12,
-  dependency 110/110; config-ui check/build/test all pass.
+  dependency 110/110; config-ui check/build/test all pass. Follow-up: bumped the JS actions off the deprecated
+  Node 20 — `actions/checkout@v5`, `actions/setup-node@v5`, `actions/setup-python@v6`.
 - **QUAL-32 — purged the residual `TYPE_CHECKING` guards + added a build-time gate.** Reconciliation (Invariant #8):
   only **4** real `if TYPE_CHECKING:` blocks remained (not the ~13 estimated — prior refactors cleared the rest, and
   two apparent hits were *comments*). Removed all 4: two empty `pass` blocks (`core/interfaces/webapi.py`,
