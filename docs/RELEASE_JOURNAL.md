@@ -12,6 +12,11 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-08
+- **DOC-3 — version-display strings refreshed to v15.** `core/engine.py` (module docstring + startup log), the
+  runner `--help` banner (`runners/base.py`, inherited by the CLI), and the `tts_demo`/`async_demo` print
+  banners now read v15. Left untouched on purpose: the `config_migrator`/`config/migration` v13→v14 strings
+  (functional config-schema-version identifiers) and the "v13/v14 architecture" era-descriptor docstrings.
+  Commit `8a49ea2`.
 - **Documentation overhaul — authored the canonical doc set from code + design/review, then consolidated and
   archived the stale sprawl.** A full recreation (the old docs were mostly aspirational): new **README** and
   **CONTRIBUTING**, a **`docs/architecture/`** set (overview = the hexagon + the 9 import-linter seams + 12
