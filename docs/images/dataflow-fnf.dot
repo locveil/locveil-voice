@@ -1,0 +1,33 @@
+// Irene — fire-and-forget + a deferred result (a timer). Render:
+//   dot -Tpng docs/images/dataflow-fnf.dot -o docs/images/dataflow-fnf.png
+digraph dataflow_fnf {
+  rankdir=LR; bgcolor="white"; splines=spline; nodesep=0.45; ranksep=0.9;
+  fontname="Helvetica"; labelloc=t; fontsize=15;
+  label="Fire-and-forget: an instant acknowledgement now, a result delivered later — to the same room";
+  node [fontname="Helvetica", fontsize=11, shape=box, style="filled,rounded", penwidth=1.4];
+  edge [fontname="Helvetica", fontsize=9, color="#616161", arrowsize=0.7];
+
+  // --- phase 1: launch + ack (now) ---
+  subgraph cluster_now {
+    label="now"; fontsize=13; color="#a5d6a7"; style=rounded; margin=14;
+    utt    [label="“поставь таймер\nна 5 минут”", fillcolor="#fff8e1", color="#f9a825"];
+    handler[label="timer handler\nexecute()", fillcolor="#e8f5e8", color="#388e3c"];
+    store  [label="action store\nClientRegistry — keyed by\nphysical_id (room / device)", fillcolor="#e3f2fd", color="#1976d2"];
+    ack    [label="ack: “ставлю таймер”\n→ origin channel", fillcolor="#f3e5f5", color="#7b1fa2"];
+    utt -> handler;
+    handler -> store [label="register\nrunning task"];
+    handler -> ack   [label="return\nIntentResult"];
+  }
+
+  // --- phase 2: completion + deferred delivery (later) ---
+  subgraph cluster_later {
+    label="minutes later"; fontsize=13; color="#ce93d8"; style=rounded; margin=14;
+    done   [label="timer task\ncompletes", fillcolor="#e3f2fd", color="#1976d2"];
+    notify [label="NotificationService\nproduces a completion\n(carries physical_id / room)", fillcolor="#e8f5e8", color="#388e3c"];
+    om     [label="OutputManager\naddressed by identity →\nthe room that set it", fillcolor="#e3f2fd", color="#1976d2"];
+    spk    [label="room speaker\nor origin channel", fillcolor="#f3e5f5", color="#7b1fa2"];
+    done -> notify -> om -> spk;
+  }
+
+  store -> done [style=dashed, color="#9e9e9e", label="task runs detached"];
+}

@@ -1,0 +1,21 @@
+// Irene — a synchronous command, as the data is transformed. Render:
+//   dot -Tpng docs/images/dataflow-sync.dot -o docs/images/dataflow-sync.png
+digraph dataflow_sync {
+  rankdir=LR; bgcolor="white"; splines=spline; nodesep=0.4; ranksep=1.1;
+  fontname="Helvetica"; labelloc=t; fontsize=15;
+  label="A synchronous command: the same data, transformed stage by stage";
+  node [fontname="Helvetica", fontsize=11, shape=box, style="filled,rounded", penwidth=1.4,
+        fillcolor="#fff8e1", color="#f9a825"];
+  edge [fontname="Helvetica", fontsize=10, color="#546e7a", fontcolor="#37474f", arrowsize=0.8];
+
+  raw    [label="request\naudio or text\n+ format + origin"];
+  text   [label="text\n(transcript)"];
+  intent [label="Intent\nname · entities · confidence"];
+  result [label="IntentResult\ntext · should_speak · actions"];
+  out    [label="delivered to the\norigin channel"];
+
+  raw    -> text   [label="ASR → text processing\n(audio only)"];
+  text   -> intent [label="NLU\n(donations: keyword / spaCy)"];
+  intent -> result [label="intent handler\nexecute()"];
+  result -> out    [label="OutputManager\nroute by modality, origin-paired"];
+}
