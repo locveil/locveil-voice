@@ -1,0 +1,25 @@
+// Irene — adding an engine is one provider class. Render:
+//   dot -Tpng docs/images/howto-model.dot -o docs/images/howto-model.png
+digraph model {
+  rankdir=LR; bgcolor="white"; splines=spline; nodesep=0.35; ranksep=1.1;
+  fontname="Helvetica"; labelloc=t; fontsize=14;
+  label="Adding an engine = one provider class; its declarations wire it to the build, the assets and the config";
+  node [fontname="Helvetica", fontsize=10, shape=box, style="filled,rounded", penwidth=1.4];
+  edge [fontname="Helvetica", fontsize=9, color="#616161", arrowsize=0.7];
+
+  prov [label="your provider\nsubclass ASRProvider / TTSProvider /\nLLMProvider / VoiceTriggerProvider", fillcolor="#e8f5e8", color="#388e3c"];
+
+  work  [label="implements the work\ntranscribe_audio · synthesize_to_file ·\nchat_completion · detect_wake_word\n+ get_provider_name · is_available", fillcolor="#e3f2fd", color="#1976d2"];
+  deps  [label="get_python_dependencies()\n+ a pyproject optional extra", fillcolor="#eeeeee", color="#9e9e9e"];
+  asset [label="_get_default_model_urls()\n→ AssetManager downloads the model", fillcolor="#f3e5f5", color="#7b1fa2"];
+  reg   [label="entry-point\nirene.providers.<family>\n+ enable in [<capability>]", fillcolor="#fff8e1", color="#f9a825"];
+
+  prov -> work  [label="the capability"];
+  prov -> deps  [label="the libraries"];
+  prov -> asset [label="the model"];
+  prov -> reg   [label="discovery + selection"];
+
+  vad [shape=note, fillcolor="#fffde7", color="#fbc02d", fontsize=9,
+       label="VAD is the exception: a built-in (utils/vad_silero.py), not a provider.\nUse a different VAD model by pointing the [vad] config at its asset."];
+  { rank=sink; vad; }
+}
