@@ -1,0 +1,26 @@
+// Irene — minimal, config-driven builds. Render:
+//   dot -Tpng docs/images/build-system.dot -o docs/images/build-system.png
+digraph build {
+  rankdir=LR; bgcolor="white"; splines=spline; nodesep=0.4; ranksep=0.95;
+  fontname="Helvetica"; labelloc=t; fontsize=15;
+  label="A build ships only what its config uses: the analyzer turns a config into a minimal dependency set";
+  node [fontname="Helvetica", fontsize=10, shape=box, style="filled,rounded", penwidth=1.4];
+  edge [fontname="Helvetica", fontsize=9, color="#616161", arrowsize=0.7];
+
+  config [label="TOML config\ne.g. configs/minimal.toml\n(which components + providers)", fillcolor="#fff8e1", color="#f9a825"];
+  meta   [label="entry-points +\neach provider declares\nget_python_dependencies /\nget_platform_dependencies", fillcolor="#e3f2fd", color="#1976d2"];
+  extras [label="optional extras (the menu)\nadvanced-asr · tts · voice-trigger\naudio-output · asr-onnx · …", fillcolor="#eeeeee", color="#9e9e9e"];
+
+  analyzer [label="build_analyzer\nconfig × metadata", fillcolor="#e3f2fd", color="#1976d2"];
+  reqs  [label="minimal requirements\nonly the enabled providers' deps\n+ their intent JSONs", fillcolor="#f3e5f5", color="#7b1fa2"];
+  build [label="small install /\ncontainer", fillcolor="#e8f5e8", color="#388e3c"];
+
+  config -> analyzer;
+  meta   -> analyzer;
+  extras -> analyzer [style=dashed, color="#9e9e9e", label="pick the needed ones"];
+  analyzer -> reqs -> build;
+
+  note [shape=note, fillcolor="#fffde7", color="#fbc02d", fontsize=9,
+        label="Runtime, same idea: entry-points load only the configured providers —\nunconfigured ones are never imported, so their heavy libraries\n(torch, spaCy, sherpa-onnx, tflite …) aren't needed."];
+  { rank=sink; note; }
+}
