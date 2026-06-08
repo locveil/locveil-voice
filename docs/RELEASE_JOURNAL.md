@@ -12,6 +12,15 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-08
+- **QUAL-32 — purged the residual `TYPE_CHECKING` guards + added a build-time gate.** Reconciliation (Invariant #8):
+  only **4** real `if TYPE_CHECKING:` blocks remained (not the ~13 estimated — prior refactors cleared the rest, and
+  two apparent hits were *comments*). Removed all 4: two empty `pass` blocks (`core/interfaces/webapi.py`,
+  `intents/handlers/system_service_handler.py`), and two `pydantic.BaseModel` guards hoisted to module top (a hard
+  dep — no cycle) with the `Type[BaseModel]` annotations de-stringized (`core/metadata.py`,
+  `intents/handlers/random_handler.py`). Added a gate mirroring the hexagon `lint-imports` story:
+  `scripts/check_no_type_checking.py` (AST-based, ignores comments/strings) + a wrapping test
+  `irene/tests/test_no_type_checking.py` + a hard-failing CI step in `config-validation.yml` — CI breaks if a guard
+  reappears (negative-tested). 9/9 import contracts kept; suite 83 failed = baseline.
 - **BUILD-5 — build-analyzer verification → the `text_processor` namespace rename + Dockerfile fixes.** Reconciliation
   (Invariant #8) showed the analyzer itself was healthy (ARCH-13 had already cleaned the `plugins.builtin` refs). The
   real work: `--validate-all-profiles` was red on 6 profiles (incl. canonical `config-master`) because the

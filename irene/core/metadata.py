@@ -10,10 +10,9 @@ Enhanced with configuration metadata support for dynamic validation.
 """
 
 from abc import ABC
-from typing import Dict, Any, List, Optional, Type, TYPE_CHECKING
+from typing import Dict, Any, List, Optional, Type
 
-if TYPE_CHECKING:
-    from pydantic import BaseModel
+from pydantic import BaseModel
 
 
 class EntryPointMetadata(ABC):
@@ -54,7 +53,7 @@ class EntryPointMetadata(ABC):
     
     # 🆕 Configuration metadata methods (Configuration-driven validation)
     @classmethod
-    def get_config_schema(cls) -> Optional[Type["BaseModel"]]:
+    def get_config_schema(cls) -> Optional[Type[BaseModel]]:
         """
         Return Pydantic configuration schema if entry-point needs configuration.
         

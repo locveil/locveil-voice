@@ -8,14 +8,11 @@ Provides system service status and statistics information.
 import asyncio
 import logging
 from datetime import datetime
-from typing import List, Dict, TYPE_CHECKING
+from typing import List, Dict
 
 from .base import IntentHandler
 from ..models import Intent, IntentResult
 from ..context_models import UnifiedConversationContext
-
-if TYPE_CHECKING:
-    pass
 
 logger = logging.getLogger(__name__)
 

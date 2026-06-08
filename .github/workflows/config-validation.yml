@@ -82,6 +82,11 @@ jobs:
             --output-report dependency_validation_report.json
         continue-on-error: true  # Allow this to fail gracefully if tool doesn't exist yet
             
+      # Gate: forbid TYPE_CHECKING import guards (Invariant #9 / QUAL-32) — hard-fails CI if one reappears
+      - name: Forbid TYPE_CHECKING import guards
+        run: |
+          uv run python scripts/check_no_type_checking.py
+
       # Upload all validation reports
       - name: Upload validation reports
         uses: actions/upload-artifact@v3

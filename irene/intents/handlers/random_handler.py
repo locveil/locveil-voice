@@ -8,14 +8,13 @@ Provides random number generation, coin flips, and dice rolls.
 import random
 import asyncio
 import logging
-from typing import List, Dict, Any, Optional, Type, TYPE_CHECKING
+from typing import List, Dict, Any, Optional, Type
+
+from pydantic import BaseModel
 
 from .base import IntentHandler
 from ..models import Intent, IntentResult
 from ..context_models import UnifiedConversationContext
-
-if TYPE_CHECKING:
-    from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
 
@@ -77,7 +76,7 @@ class RandomIntentHandler(IntentHandler):
     
     # Configuration metadata methods
     @classmethod
-    def get_config_schema(cls) -> Type["BaseModel"]:
+    def get_config_schema(cls) -> Type[BaseModel]:
         """Return configuration schema for random handler"""
         from ...config.models import RandomHandlerConfig
         return RandomHandlerConfig

@@ -6,13 +6,10 @@ using FastAPI routers.
 """
 
 import importlib.util
-from typing import Optional, Any, TYPE_CHECKING
+from typing import Optional, Any
 from abc import abstractmethod
 
 from ..metadata import EntryPointMetadata
-
-if TYPE_CHECKING:
-    pass  # type: ignore
 
 
 class WebAPIPlugin(EntryPointMetadata):
