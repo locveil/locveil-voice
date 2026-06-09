@@ -12,6 +12,20 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-09
+- **QUAL-31 done — Grade-2 multi-turn clarification (slot-filling).** A missing-required-parameter ask is now a real
+  two-turn dialogue instead of an abandoned command. The QUAL-30 `_clarify` boundary arms a one-shot
+  `pending_clarification` on the session (original intent + asked-for slot + triggering utterance); a pre-check at the
+  head of `_process_pipeline` reads the next turn as the answer by **prepending the original utterance and re-running
+  the whole understanding pipeline on the combined text** — so existing NLU/extraction/coercion resume the original
+  intent with no separate slot-extractor, and CHOICE/range/typed params work for free. Covers text *and* voice (both
+  converge on `_process_pipeline`). Deliberately used a **dedicated field, not the `ConversationState` enum**: its
+  `CLARIFYING` value already means the unrelated no-intent fallback, and `CLARIFYING→CLARIFYING` is an invalid
+  transition that would break re-asks — so detection is decoupled from the existing state machine. Expiry rides
+  session eviction (pending lives on the context, dropped after `session_timeout` = the Q2 idle window) plus
+  single-turn consumption, so no separate timer. Re-asks append (resumed turn re-arms with the combined text →
+  multi-slot via successive rounds). No donation/config/REST contract touched → config-ui unaffected. New
+  `test_qual31_slot_filling.py` (4); QUAL-30's 3 still green; pyright 0, 9/9 contracts, suite 83=83 FAILED (0 net
+  regression, +4 new passing).
 - **BUILD-6 done — backend-health Gate 5 (config validation) goes green.** The 3 fixtures that failed
   `config_validator_cli` each lacked a *required* provider-schema field (no default): `vad-production.toml` was missing
   `api_key` on its active `elevenlabs` TTS + `openai` LLM defaults (added `${ELEVENLABS_API_KEY}`/`${OPENAI_API_KEY}`

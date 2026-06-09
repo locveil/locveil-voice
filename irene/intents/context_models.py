@@ -63,6 +63,15 @@ class UnifiedConversationContext:
     conversation_state: ConversationState = ConversationState.IDLE
     state_context: Dict[str, Any] = field(default_factory=dict)  # State-specific context
     state_changed_at: float = field(default_factory=time.time)
+
+    # QUAL-31 Grade-2 multi-turn slot-filling. When a handler asks the user to supply a missing
+    # required parameter (QUAL-30 `_clarify`), the original command is remembered here so the NEXT
+    # turn can be read as the answer and used to resume it. Kept on the session and decoupled from
+    # `conversation_state` on purpose (that enum's CLARIFYING value carries the unrelated no-intent
+    # fallback meaning, and CLARIFYING→CLARIFYING is an invalid transition that would break re-asks).
+    # One-shot: consumed by exactly the next turn, or dropped when the session is evicted after the
+    # idle window (so it "expires with the Q2 idle window" without a separate timer).
+    pending_clarification: Optional[Dict[str, Any]] = None
     
     # Unified timestamps
     created_at: float = field(default_factory=time.time)
@@ -601,6 +610,27 @@ class UnifiedConversationContext:
         """Update a specific key in state context"""
         self.state_context[key] = value
         self.last_activity = time.time()
+
+    # --- QUAL-31: multi-turn clarification (slot-filling) ---------------------------------------
+    def set_pending_clarification(self, intent_name: str, missing_param: str, original_text: str) -> None:
+        """Arm a one-shot clarification: remember that we asked the user to supply ``missing_param``
+        for ``intent_name`` (whose triggering utterance was ``original_text``), so the next turn can be
+        interpreted as the answer and used to resume the original command (QUAL-31 Grade 2)."""
+        self.pending_clarification = {
+            "intent_name": intent_name,
+            "missing_param": missing_param,
+            "original_text": original_text,
+            "created_at": time.time(),
+        }
+        self.last_activity = time.time()
+
+    def take_pending_clarification(self) -> Optional[Dict[str, Any]]:
+        """Pop the pending clarification, if any, clearing it (one-shot). Returns the record so the
+        caller can resume the original intent; ``None`` if nothing is pending. Clearing here is what
+        makes a clarification consumed by exactly the next turn."""
+        pending = self.pending_clarification
+        self.pending_clarification = None
+        return pending
     
     def clear_state_context(self) -> None:
         """Clear all state context data"""

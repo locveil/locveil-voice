@@ -304,9 +304,21 @@ class IntentHandler(EntryPointMetadata, ABC):
         enhancement gated on the QUAL-15 LLM foundation; deterministic is the offline guarantee.)
         Returns a SUCCESSFUL conversational turn (`success=True`) flagged in metadata, so the boundary
         and Grade-2 slot-filling (QUAL-31) can detect it.
+
+        QUAL-31: also arms a one-shot `pending_clarification` on the session, so the NEXT turn is read
+        as the answer and used to resume `intent` (see `BaseWorkflow._process_pipeline` pre-check).
         """
         description = getattr(exc, 'description', '') or getattr(exc, 'param_name', '') or ''
         param_name = getattr(exc, 'param_name', None)
+
+        # QUAL-31 Grade 2: remember the original command + the slot we just asked for, so the user can
+        # answer with just the missing value next turn. `intent.raw_text` is the literal utterance that
+        # triggered this (already the COMBINED text on a resumed turn → re-asks append naturally).
+        context.set_pending_clarification(
+            intent_name=intent.name,
+            missing_param=param_name or '',
+            original_text=getattr(intent, 'raw_text', '') or '',
+        )
 
         text = None
         loader = self.asset_loader

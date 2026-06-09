@@ -1104,7 +1104,25 @@ _Apply to every remediation task below (from the 4 review docs + QUAL-25/26). So
       stay graceful errors (not clarifications); their hardcoded English message → QUAL-36. Refs: Q7. _Original spec:_
       At the fail-loud boundary, convert structured failures into explain-and-ask; configurable responder; fix
       `confidence=1.0`.
-- [ ] **QUAL-31** [DFLOW] (P2, feature) — **Clarification UX — Grade 2 (multi-turn slot-filling).** `pending_clarification`
+- [x] **QUAL-31** [DFLOW] (P2, feature) — **Clarification UX — Grade 2 (multi-turn slot-filling). DONE 2026-06-09.**
+      A clarifying ask is now a real dialogue turn: the QUAL-30 `_clarify` boundary arms a one-shot
+      **`pending_clarification`** on the session (`UnifiedConversationContext.set_pending_clarification` — original
+      intent name + asked-for slot + the triggering utterance), and a **pipeline pre-check** at the head of
+      `BaseWorkflow._process_pipeline` reads the NEXT turn as the answer: it **prepends the original utterance** and
+      re-runs the FULL understanding pipeline (text-processing → NLU → extraction → coercion) on the combined text —
+      so *no separate slot-extractor* is needed and CHOICE/range/typed coercion all apply for free. Covers **text
+      and voice** (both `process_text_input` and the audio paths converge on `_process_pipeline`). **Design choices
+      vs. the original sketch (Invariant #8(d), narrowed):** (1) used a **dedicated `pending_clarification` field**, NOT
+      the `ConversationState` enum — its `CLARIFYING` value already carries the unrelated *no-intent fallback* meaning
+      (conversation handler) and `CLARIFYING→CLARIFYING` is an invalid transition that would have broken re-asks; the
+      field's presence is the trigger, fully decoupled from the existing state machine. (2) **Expiry rides session
+      eviction** — pending lives on the per-session context, which `ContextManager` drops after `session_timeout`
+      (the Q2 idle window), and it's consumed by exactly the next turn, so no separate timer is needed. (3) **Re-asks
+      append** — a resumed turn calls NLU with the combined text as `original_text`, so if the handler clarifies again
+      `_clarify` re-arms with it (multi-slot via successive rounds). Tests: `test_qual31_slot_filling.py` (4 — arming,
+      one-shot consumption, combined-utterance resume, normal-turn untouched); QUAL-30's 3 still green. No donation/
+      config/REST contract touched → config-ui N/A. Verified: pyright 0, 9/9 import contracts, no-TYPE_CHECKING clean,
+      suite 83=83 FAILED (0 net regression; +4 new passing). _Original spec:_ `pending_clarification`
       on the conversation session + `ConversationState = awaiting-clarification` + a pipeline pre-check that fills the
       slot from the next turn and completes the original intent (symmetric to the F&F `contextual` check, but transient).
       Expires with the Q2 idle window. Follow-up to QUAL-30.

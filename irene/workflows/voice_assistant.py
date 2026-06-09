@@ -377,21 +377,39 @@ class UnifiedVoiceAssistantWorkflow(Workflow):
         if self.nlu is None or self.intent_orchestrator is None:
             raise ConfigValidationError("Workflow not initialized: nlu/intent_orchestrator missing")
 
-        processed_text = input_data
-        
+        # QUAL-31 Grade 2: multi-turn clarification pre-check. If the previous turn asked the user to
+        # supply a missing required parameter (QUAL-30 `_clarify` armed `pending_clarification`), read
+        # THIS turn as the answer: prepend the original utterance so the full understanding pipeline
+        # (text-processing + NLU + extraction + coercion) runs on the combined text — no separate
+        # slot-extractor. If the handler clarifies again, `_clarify` re-arms with the combined text,
+        # so successive answers append; if the user instead issued a new command, the combined text
+        # still routes through NLU (the answer dominates) and the one-shot pending is already cleared.
+        effective_input = input_data
+        pending = conversation_context.take_pending_clarification()
+        if pending is not None:
+            original = pending.get("original_text") or ""
+            effective_input = f"{original} {input_data}".strip()
+            self.logger.info(
+                f"QUAL-31: resuming '{pending.get('intent_name')}' (slot "
+                f"'{pending.get('missing_param')}') with answer → '{effective_input[:60]}'"
+            )
+
+        processed_text = effective_input
+
         # Stage 1: Text Processing (if enabled and component available)
         if self._text_processing_enabled and self.text_processor:
             self.logger.debug("Stage: Text Processing")
             # PASS CONVERSATION CONTEXT TO TEXT PROCESSOR
             processed_text = await self.text_processor.process(processed_text, conversation_context, trace_context)
-        
+
         # Stage 2: NLU (Natural Language Understanding)
         # NLU matches on the (possibly normalized) processed_text, but Intent.raw_text must carry the
-        # literal original utterance (QUAL-26 Q1) — pass input_data as original_text.
+        # literal original utterance (QUAL-26 Q1) — pass the effective (combined, on resume) text so a
+        # re-clarification re-arms with the right original utterance.
         self.logger.debug("Stage: NLU")
         recognition_start_time = time.time()
         intent = await self.nlu.process(processed_text, conversation_context, trace_context,
-                                        original_text=input_data)
+                                        original_text=effective_input)
         
         # Phase 2: Record intent recognition metrics
         recognition_time = time.time() - recognition_start_time
