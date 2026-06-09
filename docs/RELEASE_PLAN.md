@@ -1122,10 +1122,29 @@ _Apply to every remediation task below (from the 4 review docs + QUAL-25/26). So
       `_clarify` re-arms with it (multi-slot via successive rounds). Tests: `test_qual31_slot_filling.py` (4 — arming,
       one-shot consumption, combined-utterance resume, normal-turn untouched); QUAL-30's 3 still green. No donation/
       config/REST contract touched → config-ui N/A. Verified: pyright 0, 9/9 import contracts, no-TYPE_CHECKING clean,
-      suite 83=83 FAILED (0 net regression; +4 new passing). _Original spec:_ `pending_clarification`
+      suite 83=83 FAILED (0 net regression; +4 new passing). **Known limitation → QUAL-44:** the resume pre-check
+      assumes the next turn IS the answer; if the user instead barks a new command it gets combined into a garbled
+      utterance (bounded only by one-shot consumption + idle expiry). _Original spec:_ `pending_clarification`
       on the conversation session + `ConversationState = awaiting-clarification` + a pipeline pre-check that fills the
       slot from the next turn and completes the original intent (symmetric to the F&F `contextual` check, but transient).
       Expires with the Q2 idle window. Follow-up to QUAL-30.
+- [ ] **QUAL-44** `[deferred]` [DFLOW] (P2, enhancement; split from QUAL-31) — **Answer-vs-new-command arbitration on a
+      clarifying turn.** QUAL-31's resume pre-check (`workflows/voice_assistant.py` `_process_pipeline`, the
+      `take_pending_clarification` branch) **unconditionally** treats the turn that follows a clarification as the answer:
+      it prepends the original utterance and re-runs NLU on the combined text. That is the intended flow ("answer with
+      just the missing value"), but if the user instead **abandons the clarification and barks a new command** ("какая
+      погода?" after being asked a timer duration), the combine yields a garbled utterance ("поставь таймер какая
+      погода?") that can misroute or no-op. Today this is bounded only by one-shot consumption (the bad turn clears the
+      marker) + idle-window expiry — acceptable for the P2 feature, but not robust. **Scope:** add deterministic
+      arbitration before combining — e.g. run NLU on the **bare answer first**; if it independently recognizes as a
+      **confident, non-fallback** intent (a real, different command), drop the pending clarification and process the
+      answer **fresh**; otherwise (bare fragment / low-confidence / fallback) treat it as the slot answer and combine as
+      today. **Trade-off to settle:** an extra NLU pass on clarifying turns only (cheap, rare) vs. a lighter
+      confidence/phrase heuristic; also decide whether a brand-new command should *cancel* the pending intent silently or
+      acknowledge the abandonment. Pairs with QUAL-31 (this is its known limitation) and the F&F `contextual` resolution
+      (same "is this turn about the prior context or a fresh request?" question). Done when a new-command answer routes
+      to the new command (not the garbled combine) with a regression test, and the legitimate slot-answer path stays
+      green. Refs: QUAL-31, QUAL-30, Q7.
 - [x] **QUAL-32** `[release]` [QUAL] (P2) — **DONE 2026-06-08** (outcome at end of item). **Purge `TYPE_CHECKING` import guards repo-wide (Invariant #9).** _ARCH-15
       PR-9.2 note: the new I/O modules (`core/interfaces/output.py`, `core/event_bus.py`, `core/observe.py`,
       `outputs/*`) were authored TYPE_CHECKING-free (direct imports, per the PR-3 user directive), so they add **nothing**

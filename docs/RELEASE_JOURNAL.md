@@ -26,6 +26,10 @@ newest entries near the top of each dated section.
   multi-slot via successive rounds). No donation/config/REST contract touched → config-ui unaffected. New
   `test_qual31_slot_filling.py` (4); QUAL-30's 3 still green; pyright 0, 9/9 contracts, suite 83=83 FAILED (0 net
   regression, +4 new passing).
+- **Filed QUAL-44** (`[deferred]`, enhancement split from QUAL-31): answer-vs-new-command arbitration on a clarifying
+  turn — QUAL-31's resume pre-check unconditionally combines the next turn as the answer, so a user who barks a new
+  command instead gets a garbled combined utterance. Bounded today by one-shot consumption + idle expiry; the task adds
+  deterministic arbitration (run NLU on the bare answer first; route fresh if it's a confident non-fallback intent).
 - **BUILD-6 done — backend-health Gate 5 (config validation) goes green.** The 3 fixtures that failed
   `config_validator_cli` each lacked a *required* provider-schema field (no default): `vad-production.toml` was missing
   `api_key` on its active `elevenlabs` TTS + `openai` LLM defaults (added `${ELEVENLABS_API_KEY}`/`${OPENAI_API_KEY}`
