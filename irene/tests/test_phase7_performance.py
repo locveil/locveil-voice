@@ -20,7 +20,7 @@ from concurrent.futures import ThreadPoolExecutor
 import numpy as np
 
 from irene.utils.audio_helpers import (
-    AudioTranscoder, ConversionMethod, AudioFormatConverter
+    AudioTranscoder, ConversionMethod
 )
 from irene.intents.models import AudioData
 

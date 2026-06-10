@@ -19,7 +19,7 @@ from typing import AsyncIterator, Dict, Any, Optional, List, cast
 from .base import ComponentNotAvailable
 from ..core.interfaces.input import InputPort, InputData
 from ..intents.models import AudioData
-from ..utils.audio_helpers import get_default_audio_input_device, validate_audio_input_device, AudioFormatConverter
+from ..utils.audio_helpers import get_default_audio_input_device, validate_audio_input_device, supports_audio_file_format
 
 logger = logging.getLogger(__name__)
 
@@ -90,7 +90,7 @@ class MicrophoneInput(InputPort):
                 self.device = None
             
         # Format validation using audio_helpers.py  
-        if not AudioFormatConverter.supports_format('wav'):
+        if not supports_audio_file_format('wav'):
             logger.warning("WAV format not supported, audio quality may be reduced")
         
         logger.info(f"Initialized microphone input - Device ID: {self.device_id}, "

@@ -66,6 +66,21 @@ def validate_audio_file(file_path: Union[str, Path]) -> bool:
     return True
 
 
+def supports_audio_file_format(format_name: str) -> bool:
+    """Whether an audio file format (wav/mp3/flac/…) can be read by the available libraries.
+
+    (ARCH-18: relocated out of the deleted AudioFormatConverter — a file-format query, distinct from the
+    PCM rate/format transcoding that now lives on AudioTranscoder.)"""
+    format_name = format_name.lower().lstrip('.')
+    if format_name in {'wav', 'mp3', 'ogg', 'flac'}:
+        return True
+    try:
+        import soundfile as sf  # type: ignore
+        return format_name in [fmt.lower() for fmt in sf.available_formats().keys()]
+    except ImportError:
+        return False
+
+
 def normalize_volume(volume: Optional[Union[int, float]]) -> float:
     """
     Normalize volume to a 0.0-1.0 range.
@@ -885,31 +900,9 @@ class AudioTranscoder:
             return audio_bytes  # Return original if no resampling possible
 
 
-class AudioFormatConverter:
-    """
-    Helper class for audio format conversions.
-    
-    This class provides utilities for converting between different
-    audio formats and sample rates when needed.
-    """
-    
-    @staticmethod
-    def supports_format(format_name: str) -> bool:
-        """Check if a format is supported by available libraries."""
-        format_name = format_name.lower().lstrip('.')
-        
-        # Common formats supported by most libraries
-        basic_formats = {'wav', 'mp3', 'ogg', 'flac'}
-        if format_name in basic_formats:
-            return True
-            
-        # Check for extended format support
-        try:
-            import soundfile as sf  # type: ignore
-            return format_name in [fmt.lower() for fmt in sf.available_formats().keys()]
-        except ImportError:
-            return False
-    
+    # --- Folded from AudioFormatConverter (ARCH-18 PR-3): the rate/format/channel convenience methods are
+    # now part of AudioTranscoder (the one transform primitive); the file-format query is the module-level
+    # supports_audio_file_format() below.
     @staticmethod
     async def convert_audio_data(
         audio_data: 'AudioData',
@@ -942,7 +935,7 @@ class AudioFormatConverter:
         
         # Convert sample rate if needed
         if target_rate and target_rate != audio_data.sample_rate:
-            method = AudioFormatConverter._get_conversion_method_for_quality(quality)
+            method = AudioTranscoder._get_conversion_method_for_quality(quality)
             temp_audio = AudioData(
                 data=result_data,
                 timestamp=audio_data.timestamp,
@@ -1024,7 +1017,7 @@ class AudioFormatConverter:
             
             async def convert_chunk_with_index(index: int, chunk: 'AudioData') -> tuple:
                 try:
-                    converted = await AudioFormatConverter.convert_audio_data(
+                    converted = await AudioTranscoder.convert_audio_data(
                         chunk, 
                         target_rate=target_rate, 
                         quality=quality
@@ -1055,7 +1048,7 @@ class AudioFormatConverter:
             
             for i, audio_chunk in enumerate(audio_stream):
                 try:
-                    converted_chunk = await AudioFormatConverter.convert_audio_data(
+                    converted_chunk = await AudioTranscoder.convert_audio_data(
                         audio_chunk, 
                         target_rate=target_rate, 
                         quality=quality
@@ -1659,7 +1652,7 @@ async def test_audio_playback_capability() -> Dict[str, Any]:
     # Test format support
     test_formats = ['wav', 'mp3', 'ogg', 'flac']
     for fmt in test_formats:
-        if AudioFormatConverter.supports_format(fmt):
+        if supports_audio_file_format(fmt):
             capabilities['supported_formats'].append(fmt)
     
     return capabilities
@@ -1693,7 +1686,7 @@ __all__ = [
     'get_default_audio_input_device',
     'validate_audio_input_device',
     'calculate_audio_buffer_size',
-    'AudioFormatConverter',
+    'supports_audio_file_format',
     'get_audio_info',
     'test_audio_playback_capability'
 ] 

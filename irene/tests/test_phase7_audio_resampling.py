@@ -16,7 +16,6 @@ from unittest.mock import Mock, patch, AsyncMock
 # Import the modules we're testing
 from irene.utils.audio_helpers import (
     AudioTranscoder, ConversionMethod, ResamplingResult,
-    AudioFormatConverter
 )
 from irene.intents.models import AudioData, WakeWordResult
 
@@ -240,7 +239,7 @@ class TestAudioFormatConverter:
         )
         
         # Test sample rate conversion
-        converted = await AudioFormatConverter.convert_audio_data(
+        converted = await AudioTranscoder.convert_audio_data(
             audio_data, target_rate=16000, quality="medium"
         )
         
@@ -265,7 +264,7 @@ class TestAudioFormatConverter:
             chunks.append(chunk)
         
         # Test parallel streaming conversion
-        converted_chunks = await AudioFormatConverter.convert_audio_data_streaming(
+        converted_chunks = await AudioTranscoder.convert_audio_data_streaming(
             chunks, target_rate=16000, parallel_processing=True
         )
         
@@ -274,7 +273,7 @@ class TestAudioFormatConverter:
             assert chunk.sample_rate == 16000
         
         # Test sequential streaming conversion
-        converted_chunks_seq = await AudioFormatConverter.convert_audio_data_streaming(
+        converted_chunks_seq = await AudioTranscoder.convert_audio_data_streaming(
             chunks, target_rate=16000, parallel_processing=False
         )
         

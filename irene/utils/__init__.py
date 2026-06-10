@@ -29,7 +29,7 @@ from .audio_helpers import (
     get_default_audio_input_device,
     validate_audio_input_device,
     calculate_audio_buffer_size,
-    AudioFormatConverter,
+    supports_audio_file_format,
     get_audio_info,
     test_audio_playback_capability,
 )
@@ -64,7 +64,7 @@ __all__ = [
     'get_default_audio_input_device',
     'validate_audio_input_device',
     'calculate_audio_buffer_size',
-    'AudioFormatConverter',
+    'supports_audio_file_format',
     'get_audio_info',
     'test_audio_playback_capability'
 ] 
