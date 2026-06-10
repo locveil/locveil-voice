@@ -613,8 +613,13 @@ See `docs/review/phase1_architecture_map.md` §5.
       `process_audio_input` boundary (traced `audio_negotiate` stage). **`AudioFormatConverter` folded + deleted** — its
       convert/streaming are now `AudioTranscoder` methods, `supports_format`→`supports_audio_file_format` module fn.
       _(Initially shipped config-derived + with the AFC fold deferred; both gaps closed on review.)_ pyright 0, 9/9
-      contracts, suite 81=81 (+~26 tests). **PR-4** symmetric **output** negotiation (TTS→playback through the
-      negotiator/transcoder, traced) + collapse the 3 TTS resample dups + remove redundant per-consumer resampling. **PR-5** pre-roll contract (`detection_latency_ms` → segmenter sizing). **PR-6
+      contracts, suite 81=81 (+~26 tests). **PR-4a+4b DONE 2026-06-10**: 4a collapsed the 3 TTS resample dups into one
+      `_conform_output_audio`; 4b made `asr.process_audio` + `voice_trigger.detect` **trust canonical** (conform once at
+      each entry boundary — mic via `to_canonical`, `/asr/transcribe` via `_conform_to_rate`, `/stream`=canonical-wire;
+      the per-consumer resampling was untested zero-value code, rewritten clean test-first) + §7 startup summary logs
+      every party's contract. pyright 0, 9/9, suite 81=81 (+~31 tests). **PR-4c TODO (design-first)** = symmetric
+      **output** negotiation (TTS→playback through an output negotiator) — needs a playback-device `AudioContract` that
+      doesn't exist yet. **PR-5** pre-roll contract (`detection_latency_ms` → segmenter sizing). **PR-6
       (FINAL) — user-facing docs + diagrams:** update `docs/guides/{vad,voice-trigger,audio}.md` + architecture docs for
       the new component + negotiation seam, and **re-author the affected dataflow/audio diagrams** in `docs/images/`
       (mic→VAD→wake→ASR flow + the transform/negotiation seam; PNG/JPEG per the docs rules, no mermaid). Invariant #4:

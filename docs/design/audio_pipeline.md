@@ -183,9 +183,17 @@ The flat `silero_*` / `microvad_*` fields move under their provider; `vad_implem
    + startup validation (fatal) + input transform-once at the `process_audio_input` boundary; `audio_negotiate`
    trace stage. **`AudioFormatConverter` folded + deleted** — its convert/streaming are now `AudioTranscoder`
    methods, `supports_format` relocated to the module fn `supports_audio_file_format`.
-4. **PR-4 — symmetric output**: route TTS→playback through the negotiator/transcoder + **collapse the 3
-   duplicated TTS resample blocks** + remove the now-redundant per-consumer resampling (VAD/wake/ASR see
-   canonical already); trace. (`AudioFormatConverter` is already gone — folded in PR-3.)
+4. **PR-4** (PR-4a + 4b done 2026-06-10; **4c = symmetric output deferred to a design pass**):
+   - **4a** — collapsed the 3 duplicated TTS resample blocks into one `TTSComponent._conform_output_audio`
+     through the shared `AudioTranscoder`.
+   - **4b** — input-side conformance done clean (the per-consumer resampling was untested zero-value code, not
+     simply "redundant"): `asr.process_audio` + `voice_trigger.detect` now **trust canonical**; conformance
+     happens once at each entry boundary — the mic pipeline via `to_canonical` (PR-3), the `/asr/transcribe`
+     file upload via `_conform_to_rate`, and `/stream` requires canonical 16 kHz on the wire. Plus the §7
+     **startup summary** now logs every party's contract (not a count). `AudioFormatConverter` already gone (PR-3).
+   - **4c (TODO, design-first)** — **symmetric output**: route TTS→playback through an *output* negotiator. Needs
+     a playback-device `AudioContract` that doesn't exist yet (the audio/playback component declares no device
+     rate), so this is genuinely new machinery, not a refactor — design before implementing.
 5. **PR-5 — pre-roll contract**: `detection_latency_ms` → `VoiceSegmenter` pre-roll sizing.
 6. **PR-6 — user-facing docs + diagrams (END of ARCH-17/18)**: update `docs/guides/{vad,voice-trigger,audio}.md`
    and the architecture docs for the new component + negotiation seam; **re-author the affected dataflow/audio

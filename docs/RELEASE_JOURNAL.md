@@ -12,6 +12,18 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-10
+- **ARCH-18 PR-4a+4b — TTS dedup + input conformance (consumers trust canonical).** 4a collapsed the three
+  duplicated TTS resample blocks into one `TTSComponent._conform_output_audio` through the shared `AudioTranscoder`
+  (and hoisted that import module-top, no TYPE_CHECKING — Inv #9). 4b: a #8 reconciliation found the per-consumer
+  resampling was **not** simply redundant — `asr.process_audio` is reached by two direct entries (`/asr/transcribe`
+  file upload + `/stream` WS) that bypass the mic boundary; and the endpoints were *implemented-never-tested* code.
+  So (user-chosen: narrow + canonical) I rewrote the seam **test-first**: `process_audio` + `voice_trigger.detect`
+  now **trust canonical** (dropped ~145 lines of "configuration-authority" resampling from voice_trigger), with
+  conformance once at each boundary — mic via `to_canonical` (PR-3), `/asr/transcribe` via a new `_conform_to_rate`,
+  `/stream` requires canonical 16 kHz on the wire. Also completed the §7 startup summary (logs every party's
+  contract, not a count). pyright 0, 9/9 contracts, suite 81=81 (+6 tests). **4c (symmetric output: TTS→playback
+  through an output negotiator) deferred to a design pass** — it needs a playback-device `AudioContract` that
+  doesn't exist yet (new machinery, not a refactor).
 - **ARCH-18 PR-3 — audio negotiation: `AudioContract` + `AudioNegotiator` + transform-once at the boundary.** The
   canonical format (`utils.audio_negotiation`: `AudioContract`/`derive_canonical`) is the common denominator of the
   parties' contracts — highest rate every consumer accepts that the capture can be downsampled to, mono downmix, pcm16
