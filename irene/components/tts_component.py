@@ -27,6 +27,7 @@ from ..intents.ports import TTSPort  # QUAL-24: domain capability port (applicat
 # Import TTS provider base class and dynamic loader
 from ..providers.tts import TTSProvider
 from ..utils.loader import dynamic_loader
+from ..utils.audio_helpers import AudioTranscoder
 
 logger = logging.getLogger(__name__)
 
@@ -299,6 +300,16 @@ class TTSComponent(Component, TTSPlugin, WebAPIPlugin, TTSPort):
         except Exception as e:
             logger.error(f"Failed to load fallback console provider: {e}")
     
+    async def _conform_output_audio(self, audio_data, target_rate: int, target_channels: int):
+        """Conform synthesized audio to the requested output rate/channels via the shared `AudioTranscoder`
+        (ARCH-18 PR-4 — the one transform primitive, both directions). No-op if already conformant. This
+        collapses the three previously-duplicated TTS resample blocks into one call."""
+        if audio_data.sample_rate == target_rate and audio_data.channels == target_channels:
+            return audio_data
+        logger.debug(f"Converting audio from {audio_data.sample_rate}Hz/{audio_data.channels}ch "
+                     f"to {target_rate}Hz/{target_channels}ch")
+        return await AudioTranscoder.resample_audio_data(audio_data, target_rate)
+
     # TTSPlugin interface - delegates to providers
     async def synthesize_to_file(self, text: str, output_path: Path, trace_context: Optional[TraceContext] = None, **kwargs) -> None:
         """Generate audio file with optional synthesis tracing"""
@@ -596,7 +607,6 @@ class TTSComponent(Component, TTSPlugin, WebAPIPlugin, TTSPort):
                         
                         # Read and convert audio to requested format
                         from ..intents.models import AudioData
-                        from ..utils.audio_helpers import AudioTranscoder
                         
                         # Check if this is a text-only provider (like console)
                         capabilities = provider.get_capabilities()
@@ -655,13 +665,8 @@ class TTSComponent(Component, TTSPlugin, WebAPIPlugin, TTSPort):
                             target_rate = audio_config.sample_rate
                             target_channels = audio_config.channels
                             
-                            if (audio_data.sample_rate != target_rate or 
-                                audio_data.channels != target_channels):
-                                logger.debug(f"Converting audio from {audio_data.sample_rate}Hz/{audio_data.channels}ch to {target_rate}Hz/{target_channels}ch")
-                                audio_data = await AudioTranscoder.resample_audio_data(
-                                    audio_data, target_rate
-                                )
-                            
+                            audio_data = await self._conform_output_audio(audio_data, target_rate, target_channels)
+
                             # Extract PCM data and encode as base64
                             pcm_data = audio_data.data
                             audio_base64 = base64.b64encode(pcm_data).decode('utf-8')
@@ -894,7 +899,6 @@ class TTSComponent(Component, TTSPlugin, WebAPIPlugin, TTSPort):
                                     
                                     # Read and convert audio to requested format
                                     from ..intents.models import AudioData
-                                    from ..utils.audio_helpers import AudioTranscoder
                                     
                                     # Read generated audio file
                                     with open(temp_path, 'rb') as f:
@@ -924,13 +928,8 @@ class TTSComponent(Component, TTSPlugin, WebAPIPlugin, TTSPort):
                                     target_rate = request.audio_config.sample_rate
                                     target_channels = request.audio_config.channels
                                     
-                                    if (audio_data.sample_rate != target_rate or 
-                                        audio_data.channels != target_channels):
-                                        logger.debug(f"Converting audio from {audio_data.sample_rate}Hz/{audio_data.channels}ch to {target_rate}Hz/{target_channels}ch")
-                                        audio_data = await AudioTranscoder.resample_audio_data(
-                                            audio_data, target_rate
-                                        )
-                                    
+                                    audio_data = await self._conform_output_audio(audio_data, target_rate, target_channels)
+
                                     # Split audio into chunks and stream
                                     chunk_duration_ms = 100  # 100ms chunks
                                     bytes_per_ms = (target_rate * target_channels * 2) // 1000  # 16-bit PCM
@@ -1211,7 +1210,6 @@ class TTSComponent(Component, TTSPlugin, WebAPIPlugin, TTSPort):
                                     
                                     # Read and convert audio
                                     from ..intents.models import AudioData
-                                    from ..utils.audio_helpers import AudioTranscoder
                                     
                                     # Read generated audio file 
                                     with open(temp_path, 'rb') as f:
@@ -1240,12 +1238,8 @@ class TTSComponent(Component, TTSPlugin, WebAPIPlugin, TTSPort):
                                     target_rate = session_config.sample_rate
                                     target_channels = session_config.channels
                                     
-                                    if (audio_data.sample_rate != target_rate or 
-                                        audio_data.channels != target_channels):
-                                        audio_data = await AudioTranscoder.resample_audio_data(
-                                            audio_data, target_rate
-                                        )
-                                    
+                                    audio_data = await self._conform_output_audio(audio_data, target_rate, target_channels)
+
                                     # Stream binary audio chunks
                                     bytes_per_ms = (target_rate * target_channels * 2) // 1000  # 16-bit PCM
                                     chunk_size_bytes = int(session_config.chunk_size_ms * bytes_per_ms)
