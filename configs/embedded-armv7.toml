@@ -85,10 +85,11 @@ default_provider = "deepseek"
 fallback_providers = ['console']
 
 
+# No server-side wake word on the WB7 (armv7): the ESP32 satellite wakes on-device (microWakeWord) and
+# only then streams audio, so the server runs with skip_wake_word=True. The wake-word providers are
+# 64-bit-only anyway. (QUAL-20)
 [voice_trigger]
-enabled = true
-default_provider = "openwakeword"
-wake_words = []                     # per-provider (QUAL-20); component-level override left empty
+enabled = false
 confidence_threshold = 0.8
 buffer_seconds = 1.0
 timeout_seconds = 5.0

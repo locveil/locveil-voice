@@ -6,57 +6,70 @@ satellite does this on-device instead (see [ESP32](../architecture/esp32.md)).
 
 ## Two providers
 
-- **OpenWakeWord** (`openwakeword`) — general-purpose detection with pre-trained models (ONNX / TF-Lite),
-  auto-downloaded. The easy default for common words.
-- **microWakeWord** (`microwakeword`) — runs a **custom-trained** TF-Lite model, small enough for
-  microcontrollers (~1–5 MB), via the lightweight `tflite-runtime` (~50 MB, not full TensorFlow). This is
-  the engine behind the per-room ESP32 wake words.
+- **OpenWakeWord** (`openwakeword`) — general-purpose detection with pre-trained models, auto-downloaded.
+  Runs on ONNX by default. The easy default for common English words.
+- **microWakeWord** (`microwakeword`) — runs a **custom-trained** TF-Lite model via
+  [pymicro-wakeword](https://github.com/OHF-Voice/pymicro-wakeword), which bundles the feature frontend and
+  the runtime (no full TensorFlow). It's the same engine, and the **same model file**, the ESP32 satellites
+  run on-device — so you train a wake word once and deploy it both places.
+
+Exactly one provider is active, picked by `default_provider`. There's no fallback chain — they're
+alternatives, not a cascade.
 
 ## Configuration
 
-```toml
-[components]
-voice_trigger = true
+Wake words are declared **per provider**, as a list of entries with the same shape for both:
 
+```toml
 [voice_trigger]
 enabled = true
-default_provider = "openwakeword"
-wake_words = ["irene", "jarvis"]
-confidence_threshold = 0.8
-buffer_seconds = 1.0
-timeout_seconds = 5.0
-```
+default_provider = "microwakeword"
 
-Provider-specific settings go under `[voice_trigger.providers.<name>]` — microWakeWord, for instance, needs a
-model:
-
-```toml
 [voice_trigger.providers.microwakeword]
-model_path = "/models/irene.tflite"
-detection_window_size = 3        # consecutive detections required
+enabled = true
+wake_words = [
+    { name = "irene", model = "/models/irene_ru.tflite", threshold = 0.8, language = "ru" },
+    { name = "boris", model = "/models/boris_ru.tflite", threshold = 0.8, language = "ru" },
+]
+
+[voice_trigger.providers.openwakeword]
+enabled = false
+inference_framework = "onnx"             # or "tflite"
+wake_words = [
+    { name = "hey_jarvis", model = "hey_jarvis", threshold = 0.7, language = "en" },
+]
 ```
+
+Each entry is `{ name, model, threshold, language }`:
+
+- **`name`** — the label you'll see on a detection, and the key that lets a wake word *name a room*
+  ("Irene" for the kitchen, "Boris" for the living room).
+- **`model`** — a built-in catalog name (OpenWakeWord: `hey_jarvis`, `alexa`, `hey_mycroft`; microWakeWord:
+  `okay_nabu`, …) **or** a path to a custom model file.
+- **`threshold`** — detection cut-off, 0–1.
+- **`language`** — two-letter tag, for your own bookkeeping.
 
 Audio is 16 kHz / 16-bit mono PCM (the device's native rate is resampled up the pipeline).
 
-## microWakeWord models
+## Custom (Russian) wake words
 
-OpenWakeWord ships its own models; microWakeWord needs one you train (see the
-[microWakeWord project](https://github.com/kahrendt/microWakeWord)). The shape of the process:
-
-1. Generate samples (Piper TTS or recordings).
-2. Extract MFCC features — 40 features every 10 ms.
-3. Train a streaming model in TensorFlow.
-4. Quantise to TF-Lite, then validate false-accept / false-reject rates.
-
-The model takes `[1, 49, 40]` (≈490 ms of 40-MFCC frames) and outputs a probability. One trained word per
-room is what lets the wake word *name* a room — "Irene" for the kitchen, "Boris" for the living room (see
-[ESP32](../architecture/esp32.md)).
+Built-in models are English. For per-room Russian names you train your own — the easiest path is the hosted
+[microwakeword.com](https://microwakeword.com/): give it a phrase, it generates Piper samples and returns a
+`.tflite` + a small JSON manifest. Point a `microwakeword` entry's `model` at that file (or the manifest) and
+the same artifact drops onto the ESP32. Expect to tune `threshold` and listen for false accepts — custom
+training is still finicky.
 
 ## Dependencies
 
-Behind the **`voice-trigger`** extra: `openwakeword`, `tflite-runtime`, `numpy`, `aiohttp`. (OpenWakeWord
-pulls `openwakeword`; microWakeWord needs only `tflite-runtime` + `numpy`.) Adding a different engine follows
-the [provider recipe](howto-new-model.md).
+Each provider declares its own extra (64-bit only — on a Wirenboard the satellite wakes on-device, so the
+server runs none of this):
+
+| Provider | Extra | Pulls |
+|---|---|---|
+| OpenWakeWord | `wake-onnx` | `openwakeword`, `onnxruntime` |
+| microWakeWord | `wake-tflite` | `pymicro-wakeword` |
+
+`voice-trigger` installs both. Adding a different engine follows the [provider recipe](howto-new-model.md).
 
 ## Web API
 
@@ -71,9 +84,10 @@ The component mounts endpoints under `/voice_trigger`:
 
 ## Troubleshooting
 
-- **Model not found** (microWakeWord) — check `model_path` points at a real `.tflite`.
-- **Never triggers** — lower `confidence_threshold`, confirm the word is in `wake_words`, and that audio is
-  16 kHz mono.
-- **False triggers** — raise `confidence_threshold` (or, for microWakeWord, retrain with more negatives).
+- **Model not found** (microWakeWord) — check a custom entry's `model` points at a real `.tflite`/manifest.
+- **Never triggers** — lower the entry's `threshold`, confirm the word is listed, and that audio is 16 kHz mono.
+- **`irene` on OpenWakeWord does nothing** — OpenWakeWord only knows its English catalog; a custom Russian
+  word needs microWakeWord (or a custom OpenWakeWord model file).
+- **False triggers** — raise `threshold`, or retrain with more negatives.
 - **Debug** — set the `irene.components.voice_trigger_component` and `irene.providers.voice_trigger` loggers
   to `DEBUG`.

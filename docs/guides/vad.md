@@ -23,6 +23,10 @@ VAD sits in the audio processor, ahead of ASR. Two switches must **both** be on 
   detector to an adaptive one that tracks the noise floor.
 - **`silero`** — the Silero VAD ONNX model (run via sherpa-onnx, 64-bit only; reuses the ASR-ONNX
   dependency). More robust in noise; the model downloads on first use. Tuned with `silero_threshold`.
+- **`microvad`** — `pymicro-vad` (64-bit only; the `vad-tflite` extra). Self-contained — bundles its model
+  and runtime, nothing to download — and shares its frontend with the microWakeWord trigger, so the two are
+  one stack and match what the ESP32 runs on-device. Tuned with `microvad_threshold`. Pick whichever runtime
+  your build already loads: `silero` if you're on sherpa-onnx ASR, `microvad` if you're on microWakeWord.
 
 ## Configuration
 
@@ -31,7 +35,7 @@ Every real `[vad]` knob:
 | Field | Default | Range | Engine |
 |---|---|---|---|
 | `enabled` | true | — | master switch |
-| `vad_implementation` | `energy` | energy / silero | selector |
+| `vad_implementation` | `energy` | energy / silero / microvad | selector |
 | `energy_threshold` | 0.01 | 0–1 | energy |
 | `sensitivity` | 0.5 | 0.1–3.0 | energy |
 | `voice_duration_ms` | 100 | 10–1000 | both |
@@ -46,6 +50,7 @@ Every real `[vad]` knob:
 | `buffer_size_frames` | 100 | ≥10 | both |
 | `silero_threshold` | 0.5 | 0–1 | silero |
 | `silero_model_url` | k2-fsa release URL | — | silero |
+| `microvad_threshold` | 0.5 | 0–1 | microvad |
 | `normalize_for_asr` | true | — | both |
 | `asr_target_rms` | 0.15 | 0.01–0.3 | both |
 | `enable_fallback_to_original` | true | — | both |

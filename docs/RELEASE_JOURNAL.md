@@ -12,6 +12,19 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-09
+- **QUAL-20 done — wake-word + microVAD rebuild (5 commits, subsumes ARCH-10 PR-5).** Acted on the QUAL-19 review.
+  Backend microWakeWord is now a thin adapter over `pymicro-wakeword` (the np.random stub + hand-rolled tflite plumbing
+  are gone; built-in + custom `from_config` models, 10 ms streaming); openWakeWord polished (ONNX default, per-spec
+  custom model); Porcupine cut. Wake-word selection is a uniform per-provider `WakeWordSpec={name,model,threshold,
+  language}` — kept per-provider (consistent with ASR/LLM model selection) rather than lifted to the component, with the
+  component-level list demoted to an optional override. That needed a backend array-items schema extraction + a generic
+  config-ui `ArrayOfObjectsEditor` (Invariant #4 — config-ui check/build/vitest green). Added server-side `microvad`
+  (`pymicro-vad`) as a third `VADEngine` beside energy/silero — self-contained, shares the micro frontend with the wake
+  word, matches the ESP32 on-device VAD. Extras split into `wake-onnx`/`wake-tflite`/`vad-tflite` (all 64-bit; armv7
+  wakes on-device, so `embedded-armv7.toml` now disables server voice-trigger). The `pymicro-*` libs import + detect on
+  x86 here (unlike sherpa) — real runtime tests for all three pieces; aarch64 wheel coverage is the one BUILD-3-stage
+  check left. User docs updated in house style (`voice-trigger.md` rewrite, `vad.md`, `howto-new-model.md`). Each of the
+  5 commits was independently green: pyright 0, 9/9 contracts, 0 net suite regression.
 - **QUAL-31 done — Grade-2 multi-turn clarification (slot-filling).** A missing-required-parameter ask is now a real
   two-turn dialogue instead of an abandoned command. The QUAL-30 `_clarify` boundary arms a one-shot
   `pending_clarification` on the session (original intent + asked-for slot + triggering utterance); a pre-check at the

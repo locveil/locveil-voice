@@ -74,9 +74,10 @@ key list. The other families work identically: swap `asr` for `tts` / `llm` / `v
 
 ## The exception: VAD
 
-Voice activity detection is not a provider — it is a built-in (`utils/vad_silero.py`) with one ONNX model. To
-use a different VAD model you don't write code; you point the `[vad]` config at the model you want
-(`silero_model_url`), and the AssetManager fetches it like any other asset.
+Voice activity detection is not a provider — it is a small `VADEngine` seam (`utils/vad.py`) with a handful
+of built-in engines (`energy`, `silero`, `microvad`). To switch engines you don't write code; you set
+`[vad] vad_implementation`. Adding a genuinely new one means a new `VADEngine` subclass, not a provider — see
+the [VAD guide](vad.md).
 
 ## Try it
 
