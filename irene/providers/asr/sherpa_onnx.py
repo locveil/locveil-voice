@@ -376,13 +376,17 @@ class SherpaOnnxASRProvider(ASRProvider):
     def get_python_dependencies(cls) -> List[str]:
         # CONTRACT: pyproject [project.optional-dependencies] GROUP NAME, not a
         # requirement string (build runs `uv sync --extra asr-onnx`). The per-arch
-        # version split (and "no torch") lives in the extra's PEP 508 markers.
+        # version split lives in the extra's PEP 508 markers — including `sherpa-onnx-core`
+        # (the native libs/onnxruntime, split out of the main wheel since 1.13) for non-armv7.
         return ["asr-onnx"]
 
     @classmethod
     def get_platform_dependencies(cls) -> Dict[str, List[str]]:
-        # sherpa-onnx links ALSA. linux.alpine kept for completeness (vestigial — both
-        # real builds are Debian/linux.ubuntu); see design §7.
+        # sherpa-onnx is self-contained: the wheel VENDORS libasound (auditwheel) and onnxruntime
+        # comes from the `sherpa-onnx-core` wheel (a Python dep, not a system package) — so import +
+        # inference need NO system packages. `libasound2`/`alsa-lib` are kept only as a runtime safety
+        # net for actual audio I/O; the capture/playback providers (sounddevice/aplay) own that need.
+        # macOS/Windows wheels are fully self-contained (empty lists).
         return {
             "linux.ubuntu": ["libasound2"],
             "linux.alpine": ["alsa-lib"],
@@ -392,4 +396,5 @@ class SherpaOnnxASRProvider(ASRProvider):
 
     @classmethod
     def get_platform_support(cls) -> List[str]:
+        # All four: armv7 (1.10.46), x86_64/aarch64 + Windows/macOS (1.13.x + sherpa-onnx-core).
         return ["linux.ubuntu", "linux.alpine", "macos", "windows"]

@@ -222,6 +222,27 @@ across all providers, and define those extras in pyproject. The new `sherpa_onnx
 (returns `["asr-onnx"]`) and is the reference. **The PEP 508 marker per-arch split works** *because* the markers sit in
 the pyproject extra that `uv sync` resolves in the per-arch build — not in a provider-returned string.
 
+### 7.2 sherpa-onnx-core + the verified wheel matrix (2026-06-10)
+
+A follow-up showed the per-arch split was **half-broken**: sherpa-onnx **≥1.13** moved its native libraries
+(onnxruntime + the C-API `.so`) out of the main wheel into a separate **`sherpa-onnx-core`** package. The
+`asr-onnx` extra pulled only `sherpa-onnx>=1.11`, so on x86_64/aarch64/Windows the extension loaded with
+`libonnxruntime.so: cannot open shared object file` — i.e. sherpa **worked only on armv7** (which pins the
+self-contained 1.10.46). Fix: add `sherpa-onnx-core>=1.13; platform_machine!='armv7l'`. Verified `import
+sherpa_onnx` on x86_64. The native libs are vendored (auditwheel) — **no system packages** are required to
+import/infer; the ALSA entries in `get_platform_dependencies` are a runtime safety net, really owned by the
+audio-I/O providers. Wheel availability (checked on PyPI):
+
+| Package | armv7l | x86_64 | aarch64 | win_amd64 | macos |
+|---|---|---|---|---|---|
+| `sherpa-onnx` (+`-core` ≥1.13) | ✓ 1.10.46 self-contained | ✓ | ✓ | ✓ | ✓ |
+| `pymicro-wakeword` | ✗ | ✓ | ✓ | ✓ | ✓ |
+| `pymicro-vad` | ✗ | ✓ | ✓ | ✗ | ✗ |
+
+The `wake-tflite` / `vad-tflite` extras now carry markers matching this (pymicro-wakeword excludes armv7;
+pymicro-vad is Linux-x86_64/aarch64 only) so an extra never fails on a missing wheel — it just resolves to
+nothing on an unsupported target and the provider/engine reports unavailable.
+
 ---
 
 ## 8. Config & profiles (Invariant #4)

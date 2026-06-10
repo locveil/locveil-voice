@@ -11,7 +11,18 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
-### 2026-06-09
+### 2026-06-10
+- **Fixed sherpa-onnx on 64-bit/Windows + honest wheel markers for the pymicro extras (ARCH-10 flag / QUAL-20).**
+  Verified the native libs across arm32 / 64-bit / Windows. sherpa-onnx **≥1.13 split its native libraries
+  (onnxruntime + C-API) into a separate `sherpa-onnx-core` wheel** the `asr-onnx` extra wasn't pulling, so
+  `import sherpa_onnx` failed everywhere except armv7 (which pins the self-contained 1.10.46) — exactly the
+  "only works on armv7" symptom. Added `sherpa-onnx-core>=1.13; platform_machine!='armv7l'`; `import sherpa_onnx`
+  now succeeds on x86_64 here. The libs are vendored (auditwheel) — no system packages are actually required to
+  import/infer (the ALSA in `get_platform_dependencies` is a runtime safety net owned by the audio-I/O providers);
+  comments corrected accordingly. Also pinned honest PEP 508 markers on the wake/vad extras to the verified wheel
+  matrix: `pymicro-wakeword` has no armv7 wheel (correct — wake is on-device there), `pymicro-vad` ships Linux
+  x86_64/aarch64 only — so the extras resolve to nothing on unsupported targets instead of failing on a missing
+  wheel. Matrix + detail in `onnx_inference_layer.md` §7.2. Gates green; suite 83=83 (0 net regression).
 - **QUAL-20 done — wake-word + microVAD rebuild (5 commits, subsumes ARCH-10 PR-5).** Acted on the QUAL-19 review.
   Backend microWakeWord is now a thin adapter over `pymicro-wakeword` (the np.random stub + hand-rolled tflite plumbing
   are gone; built-in + custom `from_config` models, 10 ms streaming); openWakeWord polished (ONNX default, per-spec

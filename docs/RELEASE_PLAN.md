@@ -334,9 +334,16 @@ See `docs/review/phase1_architecture_map.md` §5.
       `np.random`, hallucinated `*_v1.0` catalog, 404 model URL, training removed `886d4d1` — QUAL-19); **Porcupine** =
       dead code (schema/config, no impl). **Decision pending:** microwakeword (A) implement-real+experimental / (B)
       cut-archive per QUAL-20 / (C) thin; + openwakeword polish (extra split `wake-onnx`/`wake-tflite`, ONNX default,
-      custom `model_path` for a trained RU wake word, build-contract fix, cut Porcupine). **Flag:**
-      `import sherpa_onnx` fails on the x86 dev box (uv wheel `libonnxruntime.so` not found) — armv7/WB7 proven; verify
-      x86_64 at the **BUILD-3** image stage. WB7 hardware re-validation deferred to ARCH-10 completion (user).
+      custom `model_path` for a trained RU wake word, build-contract fix, cut Porcupine). **Flag — RESOLVED
+      2026-06-10:** `import sherpa_onnx` failed on x86_64 (`libonnxruntime.so` not found) because sherpa-onnx
+      **≥1.13 split its native libs (onnxruntime + C-API) into a separate `sherpa-onnx-core` wheel** that the
+      `asr-onnx` extra wasn't pulling — so only armv7 (self-contained 1.10.46) worked. Fixed by adding
+      `sherpa-onnx-core>=1.13; platform_machine!='armv7l'` to the extra; `import sherpa_onnx` now succeeds on
+      x86_64 (verified). (sherpa vendors libasound; needs no system packages — the ALSA in
+      `get_platform_dependencies` is a runtime safety net, owned really by the audio-I/O providers.) Wheel
+      matrix verified: sherpa works on armv7/x86_64/aarch64/win/macos; pymicro-wakeword on all but armv7;
+      pymicro-vad on Linux x86_64/aarch64 only (extras now carry honest markers). WB7 hardware re-validation
+      deferred to ARCH-10 completion (user).
       Build/Docker corrections = BUILD-5/3.
 - [x] **ARCH-11** `[release]` (P1) — **DONE 2026-06-03 (S1-S4, commits 64c4050·0453b12·b64be87·+S4).** Inverted all 4
       `core → inputs/workflows/components.base` composition-root edges + locked them with the import-linter contract "Core
