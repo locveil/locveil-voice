@@ -64,6 +64,8 @@ class UnifiedVoiceAssistantWorkflow(Workflow):
         
         # VAD processing components (always enabled)
         self.audio_processor_interface = None
+        # ARCH-18: derives the canonical audio format + transforms capture to it once at the boundary
+        self.audio_negotiator = None
         
         # Pipeline stage flags - will be configured from config in initialize()
         self._voice_trigger_enabled = False
@@ -166,6 +168,10 @@ class UnifiedVoiceAssistantWorkflow(Workflow):
                 self.audio_processor_interface = AudioProcessorInterface(vad_config)
                 self.logger.info(f"VAD audio processor initialized: provider={vad_config.default_provider}, "
                                f"max_segment={vad_config.max_segment_duration_s}s")
+                # ARCH-18: derive the canonical audio format now — fatal here if no canonical satisfies
+                # the capture + every audio consumer (loud, at startup).
+                from .audio_negotiator import AudioNegotiator
+                self.audio_negotiator = AudioNegotiator.from_config(config)
             else:
                 self.logger.error("VAD configuration missing or disabled. VAD processing is required for audio workflows.")
                 raise ConfigValidationError("VAD configuration is required for audio processing")
@@ -255,7 +261,12 @@ class UnifiedVoiceAssistantWorkflow(Workflow):
             # Record initial context state for tracing
             if trace_context:
                 trace_context.record_context_snapshot("before", conversation_context)
-            
+
+            # ARCH-18: transform the captured audio to the canonical format ONCE, here at the boundary,
+            # so VAD / wake / ASR all see canonical (the transform is traced; a no-op if already canonical).
+            if self.audio_negotiator is not None:
+                audio_data = await self.audio_negotiator.to_canonical(audio_data, trace_context)
+
             # Process single audio input through conditional pipeline
             result = await self._process_single_audio_pipeline(
                 audio_data=audio_data,

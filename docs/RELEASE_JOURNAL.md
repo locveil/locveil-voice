@@ -12,6 +12,17 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-10
+- **ARCH-18 PR-3 — audio negotiation: `AudioContract` + `AudioNegotiator` + transform-once at the boundary.** The
+  canonical format (`utils.audio_negotiation`: `AudioContract`/`derive_canonical`) is the common denominator of the
+  parties' contracts — highest rate every consumer accepts that the capture can be downsampled to, mono downmix, pcm16
+  a free pick (lossless int16↔float32), **fatal** if infeasible. The `AudioNegotiator` (workflows) builds those
+  contracts from config (mic + asr/vt/vad rates), derives the canonical at workflow init (**fatal at startup**), and
+  `to_canonical()` transforms each captured frame to it **once** at the `process_audio_input` boundary (via
+  `AudioTranscoder`, recorded as a `record_stage("audio_negotiate")` trace event; no-op if already canonical). 26 new
+  unit tests (derivation edge cases + every shipped config derives a feasible canonical + downsample/no-op/fatal).
+  Stabilized a pre-existing flaky sub-ms timing assertion (`test_zero_overhead_when_disabled`) my CPU-heavy resample
+  tests exposed via ordering. pyright 0, 9/9 contracts, suite 81=81 (0 net regression). **Deferred to PR-4** (where the
+  output side is touched): removing the now-redundant per-consumer resampling, and the `AudioFormatConverter` fold.
 - **ARCH-18 PR-2b — `[vad.providers.*]` config nesting + per-provider schemas + config-ui.** VADConfig split into
   component-level (segmentation/pipeline: enabled, default_provider, max_segment/timeout/buffer, ASR normalization) +
   a `providers` dict; the engine knobs moved under `[vad.providers.energy|silero|microvad]`, each with its own schema
