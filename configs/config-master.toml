@@ -334,7 +334,7 @@ strict_validation = true           # Fatal error on provider requirement conflic
 enabled = false                      # Enable OpenWakeWord provider
 wake_words = ["alexa", "jarvis"]   # List of wake words to detect
 threshold = 0.8                    # Detection threshold (0.0 - 1.0)
-inference_framework = "tflite"     # Framework: "onnx", "tflite" - using tflite to match downloaded models
+inference_framework = "onnx"       # Framework: "onnx" (default, no torch), "tflite"
 preload_models = false             # Preload AI models during provider initialization for faster startup
 
 # MicroWakeWord Provider (ESP32/embedded)

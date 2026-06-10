@@ -79,14 +79,23 @@ audio-output = [
     "librosa>=0.10.0",  # For high-quality audio resampling in audio_helpers.py
 ]
 
-# Voice trigger (wake word detection). 64-bit only — the WB7/armv7 satellite wakes on-device (ESP32).
-voice-trigger = [
+# Wake word detection. 64-bit only — the WB7/armv7 satellite wakes on-device (ESP32). Two provider
+# families, each its own extra (contribution principle); `voice-trigger` is the both-families umbrella.
+#   openWakeWord  → wake-onnx  (ONNX runtime, no torch)
+#   microWakeWord → wake-tflite (pymicro-wakeword: micro frontend + bundled tflite C lib; ESP32-unified)
+wake-onnx = [
     "numpy>=1.21.0",
-    # microWakeWord server-side via pymicro-wakeword (OHF-Voice) — bundles the micro frontend + a
-    # precompiled tflite C lib (no tflite-runtime). Same "micro" stack as the ESP32 on-device wake word.
-    "pymicro-wakeword>=2.0.0",
-    "aiohttp>=3.8.0", # Required for asset management model downloads
     "openwakeword>=0.6.0",
+    "onnxruntime>=1.15.0",
+    "aiohttp>=3.8.0", # Required for asset management model downloads
+]
+wake-tflite = [
+    "numpy>=1.21.0",
+    "pymicro-wakeword>=2.0.0",
+    "aiohttp>=3.8.0",
+]
+voice-trigger = [
+    "irene-voice-assistant[wake-onnx,wake-tflite]",
 ]
 
 # Web API components

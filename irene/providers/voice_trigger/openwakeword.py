@@ -24,7 +24,11 @@ class OpenWakeWordProvider(VoiceTriggerProvider):
         super().__init__(config)
         self.oww = None
         self.model = None
-        self.inference_framework = config.get('inference_framework', 'tflite')
+        # ONNX by default (QUAL-20): keeps openWakeWord in the no-torch ONNX-family image; tflite is opt-in.
+        self.inference_framework = config.get('inference_framework', 'onnx')
+        # Optional custom model file (a user-trained wake word, e.g. a Russian phrase) loaded alongside
+        # any built-in wake words.
+        self.model_path = config.get('model_path')
         self.chunk_size = config.get('chunk_size', 1280)  # 80ms at 16kHz
         self.n_samples_per_prediction = self.chunk_size
         
@@ -119,6 +123,13 @@ class OpenWakeWordProvider(VoiceTriggerProvider):
                     if wake_word.lower() == 'irene':
                         logger.info("Suggestion: Consider using 'hey_jarvis' or 'alexa' as wake words, or switch to microwakeword provider for custom models")
             
+            # Custom user-supplied model (e.g. a trained Russian wake word) — QUAL-20.
+            if self.model_path and Path(self.model_path).exists():
+                models_to_load.append(str(self.model_path))
+                logger.info(f"Using custom OpenWakeWord model: {self.model_path}")
+            elif self.model_path:
+                logger.warning(f"OpenWakeWord custom model_path not found: {self.model_path}")
+
             if not models_to_load:
                 raise ValueError("No valid wake word models found")
             
@@ -404,8 +415,8 @@ class OpenWakeWordProvider(VoiceTriggerProvider):
     # Build dependency methods (TODO #5 Phase 1)
     @classmethod
     def get_python_dependencies(cls) -> List[str]:
-        """OpenWakeWord requires specific voice trigger libraries"""
-        return ["openwakeword>=0.6.0", "numpy>=1.21.0", "aiohttp>=3.8.0"]
+        """OpenWakeWord on the ONNX runtime (no torch); extra: wake-onnx. 64-bit (armv7 wakes on-device)."""
+        return ["openwakeword>=0.6.0", "onnxruntime>=1.15.0", "numpy>=1.21.0", "aiohttp>=3.8.0"]
         
     @classmethod
     def get_platform_dependencies(cls) -> Dict[str, List[str]]:

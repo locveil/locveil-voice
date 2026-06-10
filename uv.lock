@@ -1072,6 +1072,7 @@ all = [
     { name = "httpx" },
     { name = "librosa" },
     { name = "numpy" },
+    { name = "onnxruntime" },
     { name = "openai" },
     { name = "openai-whisper" },
     { name = "openwakeword" },
@@ -1188,6 +1189,7 @@ voice = [
     { name = "httpx" },
     { name = "librosa" },
     { name = "numpy" },
+    { name = "onnxruntime" },
     { name = "openwakeword" },
     { name = "ovos-number-parser" },
     { name = "pymicro-wakeword" },
@@ -1207,7 +1209,19 @@ voice = [
 voice-trigger = [
     { name = "aiohttp" },
     { name = "numpy" },
+    { name = "onnxruntime" },
     { name = "openwakeword" },
+    { name = "pymicro-wakeword" },
+]
+wake-onnx = [
+    { name = "aiohttp" },
+    { name = "numpy" },
+    { name = "onnxruntime" },
+    { name = "openwakeword" },
+]
+wake-tflite = [
+    { name = "aiohttp" },
+    { name = "numpy" },
     { name = "pymicro-wakeword" },
 ]
 web-api = [
@@ -1220,7 +1234,8 @@ web-api = [
 [package.metadata]
 requires-dist = [
     { name = "aiohttp", specifier = ">=3.12.15" },
-    { name = "aiohttp", marker = "extra == 'voice-trigger'", specifier = ">=3.8.0" },
+    { name = "aiohttp", marker = "extra == 'wake-onnx'", specifier = ">=3.8.0" },
+    { name = "aiohttp", marker = "extra == 'wake-tflite'", specifier = ">=3.8.0" },
     { name = "anthropic", marker = "extra == 'llm'", specifier = ">=0.25.0" },
     { name = "audioplayer", marker = "extra == 'audio-output'", specifier = ">=0.6.0" },
     { name = "black", marker = "extra == 'dev'", specifier = ">=22.0.0" },
@@ -1240,6 +1255,7 @@ requires-dist = [
     { name = "irene-voice-assistant", extras = ["audio-input", "cloud-asr"], marker = "extra == 'audio-input-enhanced'" },
     { name = "irene-voice-assistant", extras = ["config-writing"], marker = "extra == 'headless'" },
     { name = "irene-voice-assistant", extras = ["config-writing", "web-api"], marker = "extra == 'api'" },
+    { name = "irene-voice-assistant", extras = ["wake-onnx", "wake-tflite"], marker = "extra == 'voice-trigger'" },
     { name = "isort", marker = "extra == 'dev'", specifier = ">=5.0.0" },
     { name = "jsonschema", specifier = ">=4.25.0" },
     { name = "librosa", marker = "extra == 'audio-output'", specifier = ">=0.10.0" },
@@ -1247,16 +1263,18 @@ requires-dist = [
     { name = "numpy", specifier = "<2" },
     { name = "numpy", marker = "extra == 'audio-output'", specifier = ">=1.21.0" },
     { name = "numpy", marker = "extra == 'nlu'", specifier = ">=1.21.0" },
-    { name = "numpy", marker = "extra == 'voice-trigger'", specifier = ">=1.21.0" },
+    { name = "numpy", marker = "extra == 'wake-onnx'", specifier = ">=1.21.0" },
+    { name = "numpy", marker = "extra == 'wake-tflite'", specifier = ">=1.21.0" },
+    { name = "onnxruntime", marker = "extra == 'wake-onnx'", specifier = ">=1.15.0" },
     { name = "openai", marker = "extra == 'llm'", specifier = ">=1.0.0" },
     { name = "openai-whisper", marker = "extra == 'advanced-asr'", specifier = ">=20230314" },
-    { name = "openwakeword", marker = "extra == 'voice-trigger'", specifier = ">=0.6.0" },
+    { name = "openwakeword", marker = "extra == 'wake-onnx'", specifier = ">=0.6.0" },
     { name = "ovos-number-parser", marker = "extra == 'text-multilingual'", specifier = ">=0.5.1" },
     { name = "prompt-toolkit", specifier = ">=3.0.51" },
     { name = "py-dev-gates", marker = "extra == 'dev'", git = "https://github.com/droman42/py-dev-gates?rev=v0.1.1" },
     { name = "pydantic", specifier = ">=2.0.0" },
     { name = "pydantic-settings", specifier = ">=2.0.0" },
-    { name = "pymicro-wakeword", marker = "extra == 'voice-trigger'", specifier = ">=2.0.0" },
+    { name = "pymicro-wakeword", marker = "extra == 'wake-tflite'", specifier = ">=2.0.0" },
     { name = "pyright", marker = "extra == 'dev'", specifier = "==1.1.410" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0.0" },
     { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.21.0" },
@@ -1291,7 +1309,7 @@ requires-dist = [
     { name = "vosk-tts", marker = "extra == 'tts'", specifier = ">=0.3.0" },
     { name = "websockets", marker = "extra == 'web-api'", specifier = ">=11.0.0" },
 ]
-provides-extras = ["audio-input", "advanced-asr", "asr-onnx", "audio-input-enhanced", "audio-input-complete", "tts", "audio-output", "voice-trigger", "web-api", "cloud-asr", "llm", "nlu", "config-writing", "text-multilingual", "dev", "voice", "api", "headless", "all"]
+provides-extras = ["audio-input", "advanced-asr", "asr-onnx", "audio-input-enhanced", "audio-input-complete", "tts", "audio-output", "wake-onnx", "wake-tflite", "voice-trigger", "web-api", "cloud-asr", "llm", "nlu", "config-writing", "text-multilingual", "dev", "voice", "api", "headless", "all"]
 
 [[package]]
 name = "isort"

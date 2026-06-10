@@ -242,7 +242,8 @@ class OpenWakeWordProviderSchema(VoiceTriggerProviderSchema):
     """OpenWakeWord provider configuration schema"""
     wake_words: List[str] = Field(default_factory=lambda: ["alexa", "jarvis"], description="List of wake words to detect")
     threshold: float = Field(default=0.8, ge=0.0, le=1.0, description="Detection threshold (0.0 - 1.0)")
-    inference_framework: str = Field(default="tflite", description="Inference framework")
+    inference_framework: str = Field(default="onnx", description="Inference framework: onnx (default, no torch) | tflite")
+    model_path: Optional[str] = Field(default=None, description="Optional custom wake-word model file (e.g. a trained Russian phrase)")
     preload_models: bool = Field(default=False, description="Preload AI models during provider initialization")
 
 
