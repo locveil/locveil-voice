@@ -12,6 +12,17 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-10
+- **ARCH-18 PR-6 — user-facing docs + diagrams (FINAL); ARCH-18 COMPLETE.** Rewrote `docs/guides/vad.md` for the
+  provider family + `[vad.providers.*]` nested config (component knobs vs per-engine tables, microvad
+  `detection_latency_ms`, the auto-sized pre-roll, the updated startup log); updated `audio.md` (canonical input
+  transform-once + the new output **sink**: provider/`[audio]` override, CD default, conform-down, PCM-only) and one
+  line each in `voice-trigger.md` + `howto-new-model.md`. Added a **"The audio front-end"** section to
+  `docs/architecture/dataflow.md` and a **new Graphviz diagram** `docs/images/audio-pipeline.dot` → `.png` (rendered
+  with `dot`; mic / ESP32 satellite / `/asr/transcribe` → `AudioNegotiator` → VoiceSegmenter → wake → ASR, with the
+  pre-segmented bypass and TTS → sink). A stale-term sweep across guides + architecture came back clean. With this,
+  **ARCH-18 is COMPLETE** — PR-1 (AudioTranscoder rename), PR-2 (VAD provider family + VoiceSegmenter), PR-3
+  (AudioContract + AudioNegotiator), PR-4a/4b/4c (TTS dedup, input conformance, symmetric output), PR-5 (pre-roll),
+  the input-path endpoint unification, and PR-6 docs — all landed.
 - **ARCH-18 PR-4c — symmetric output DONE.** `AudioNegotiator.to_sink` (output mirror of `to_canonical`) conforms a
   producer **down-only** to a sink's capability (pass through when `≤` the sink, downsample/downmix only when it
   exceeds it, never upsample; traced `audio_output_conform`). Sink contract = active audio provider's

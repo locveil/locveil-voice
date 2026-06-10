@@ -1,0 +1,35 @@
+// Irene — the audio front-end: capture → one canonical format → VAD → wake → ASR, plus TTS → sink. Render:
+//   dot -Tpng docs/images/audio-pipeline.dot -o docs/images/audio-pipeline.png
+digraph audio_pipeline {
+  rankdir=LR; bgcolor="white"; splines=spline; nodesep=0.45; ranksep=0.95;
+  fontname="Helvetica"; labelloc=t; fontsize=15;
+  label="The audio front-end: one canonical format, transformed once";
+  node [fontname="Helvetica", fontsize=11, shape=box, style="filled,rounded", penwidth=1.4,
+        fillcolor="#fff8e1", color="#f9a825"];
+  edge [fontname="Helvetica", fontsize=10, color="#546e7a", fontcolor="#37474f", arrowsize=0.8];
+
+  mic   [label="microphone\n(native rate)"];
+  esp   [label="ESP32 satellite\nVAD + wake on-device", fillcolor="#f3e5f5", color="#8e24aa"];
+  file  [label="/asr/transcribe\n(uploaded file)", fillcolor="#f3e5f5", color="#8e24aa"];
+
+  neg   [label="AudioNegotiator\ntransform once →\ncanonical 16 kHz / mono", fillcolor="#e8f5e9", color="#43a047"];
+  seg   [label="VoiceSegmenter\nVAD → utterance"];
+  wake  [label="wake word"];
+  asr   [label="ASR\n→ transcript"];
+  text  [label="text → NLU\npipeline", fillcolor="#e3f2fd", color="#1e88e5"];
+
+  mic  -> neg  [label="capture"];
+  esp  -> neg  [style=dashed];
+  file -> neg  [style=dashed];
+
+  neg  -> seg  [label="canonical"];
+  seg  -> wake -> asr -> text;
+  neg  -> asr  [label="pre-segmented\n(satellite / file):\nno VAD, no wake", style=dashed, constraint=false];
+
+  // output: a producer conforms DOWN to the playback sink (never up); the device plays lower
+  tts  [label="TTS\n(reply audio)"];
+  sink [label="playback sink\nconform-down (CD default)", fillcolor="#e8f5e9", color="#43a047"];
+  dev  [label="output device"];
+  tts -> sink [label="to_sink"];
+  sink -> dev;
+}

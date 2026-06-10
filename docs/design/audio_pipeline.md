@@ -236,10 +236,11 @@ The flat `silero_*` / `microvad_*` fields move under their provider; `vad_implem
    harmonized: energy frame-count-based (scales with `frame_ms` → pre-roll = `voice_frames_required + 2`), silero
    `voice_duration_ms`, microvad a new `detection_latency_ms` TOML field. Also fixes energy being undersized for
    big capture chunks (4096 samples ≈ 93 ms, not the old assumed 25).
-6. **PR-6 — user-facing docs + diagrams (END of ARCH-17/18)**: update `docs/guides/{vad,voice-trigger,audio}.md`
-   and the architecture docs for the new component + negotiation seam; **re-author the affected dataflow/audio
-   diagrams** in `docs/images/` (the mic→VAD→wake→ASR flow + the transform/negotiation seam — PNG/JPEG per the
-   docs rules, no mermaid). This is the explicit final step, not an afterthought.
+6. **PR-6 — user-facing docs + diagrams** (done 2026-06-10): rewrote `docs/guides/vad.md` (provider family +
+   `[vad.providers.*]` nested config), updated `audio.md` (canonical input + the output sink/CD-default/conform-down),
+   `voice-trigger.md` + `howto-new-model.md` (provider-family + canonical wording); added a **"The audio front-end"**
+   section to `docs/architecture/dataflow.md` with a **new Graphviz diagram** `docs/images/audio-pipeline.dot/.png`
+   (mic / satellite / file → AudioNegotiator → VAD → wake → ASR, + TTS → sink). PNG via `dot`, no mermaid.
 
 ## 14. Relationships
 

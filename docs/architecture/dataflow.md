@@ -23,6 +23,29 @@ Voice and text differ only at step 1 — *where* they enter; from NLU onward the
 handler needs something it doesn't have — an LLM that's offline, a device that isn't there — it doesn't
 crash: it returns a spoken explanation or asks a clarifying question.
 
+## The audio front-end
+
+Step 1 hides a small pipeline of its own — how raw audio becomes that transcript:
+
+![The audio front-end](../images/audio-pipeline.png)
+
+- **One canonical format, transformed once.** The `AudioNegotiator` derives a single internal format (16 kHz /
+  mono for voice) from what the consumers need, and transforms the capture to it **once** at the boundary — a
+  44.1 / 48 kHz mic is downsampled there, never up. VAD, wake word and ASR all then see canonical audio, and a
+  combination that can't be satisfied is a fatal error at startup, not a silent mismatch.
+- **VAD → wake → ASR.** With a local mic, the `VoiceSegmenter` runs VAD to cut the endless chunk stream into
+  utterances; each utterance is checked for the wake word, then transcribed. The pre-roll (audio kept *before*
+  the trigger) is sized from the active VAD engine's detection latency so the onset is never clipped.
+- **Pre-segmented inputs skip VAD and wake.** An **ESP32 satellite** does VAD and the wake word *on-device* and
+  streams a finished utterance (`/ws/audio`, bounded by an end frame); an uploaded file (`/asr/transcribe`) is
+  one utterance by definition. Both still flow through the negotiator (so they're conformed), then go straight
+  to ASR — VAD and wake are exactly the work the device already did.
+- **Output is the mirror.** A reply's audio (TTS) is conformed **down** to the playback **sink** — the device's
+  capability, CD by default — through the same machinery: any device plays lower, so it's never upsampled.
+
+See [VAD](../guides/vad.md), [voice trigger](../guides/voice-trigger.md) and [audio](../guides/audio.md) for
+the knobs.
+
 ## Fire-and-forget, and deferred results
 
 Some commands can't finish in one turn — a five-minute timer, a long-running action. These split in two:

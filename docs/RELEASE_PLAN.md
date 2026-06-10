@@ -600,7 +600,7 @@ See `docs/review/phase1_architecture_map.md` §5.
       (rename of `UniversalAudioProcessor` minus the if-else), **`AudioNegotiator`** (derive/validate/drive + trace).
       Symmetric in+out (output TTS→playback negotiates through the same transcoder, traced). Supersedes
       `onnx_inference_layer.md` §11.2's "small seam." Decisions D-1..D-7 LOCKED 2026-06-10 (§12). Implementation = ARCH-18.
-- [~] **ARCH-18** [AUDIO] (P-TBD) — **Implement ARCH-17, sliced PR-1..6 (`audio_pipeline.md` §13).** **PR-1 DONE
+- [x] **ARCH-18** [AUDIO] (P-TBD) — **Implement ARCH-17, sliced PR-1..6 (`audio_pipeline.md` §13). DONE 2026-06-10.** **PR-1 DONE
       2026-06-10** (`AudioProcessor`→`AudioTranscoder` rename everywhere — kills the `UniversalAudioProcessor` name
       collision; behavior-preserving, pyright 0, suite 83=83). _Reconciliation:_ `AudioFormatConverter` is a **used,
       tested convenience layer** (not the dead duplicate the plan assumed), so its dissolution moved to PR-3/PR-4 —
@@ -636,12 +636,14 @@ See `docs/review/phase1_architecture_map.md` §5.
       AudioSink stays future-addable.)_ **PR-5 DONE 2026-06-10**: pre-roll sized lazily from the active VAD provider's
       `detection_latency_ms(frame_ms)` at the REAL canonical frame duration — kills the magic `4` AND the 23/25 ms/frame
       constants. Latency declaration harmonized (energy frame-count→`frames+2`; silero `voice_duration_ms`; microvad new
-      `detection_latency_ms` TOML field+schema, config-ui green); also fixes energy undersized for big chunks. Suite 81=81. **Order: PR-5 → PR-4c (symmetric output, design-first) → PR-6.** **PR-6
-      (FINAL) — user-facing docs + diagrams:** update `docs/guides/{vad,voice-trigger,audio}.md` + architecture docs for
-      the new component + negotiation seam, and **re-author the affected dataflow/audio diagrams** in `docs/images/`
-      (mic→VAD→wake→ASR flow + the transform/negotiation seam; PNG/JPEG per the docs rules, no mermaid). Invariant #4:
+      `detection_latency_ms` TOML field+schema, config-ui green); also fixes energy undersized for big chunks. Suite 81=81. **Order: PR-5 → PR-4c (symmetric output, design-first) → PR-6.** **PR-6 DONE 2026-06-10
+      (FINAL) — user-facing docs + diagrams:** rewrote `vad.md` (provider family + `[vad.providers.*]` nesting),
+      updated `audio.md` (canonical input + output sink/CD-default/conform-down), `voice-trigger.md` +
+      `howto-new-model.md`; added a "The audio front-end" section to `architecture/dataflow.md` + a new Graphviz
+      diagram `docs/images/audio-pipeline.dot/.png` (mic/satellite/file → AudioNegotiator → VAD → wake → ASR, + TTS →
+      sink). Stale-term sweep across guides/architecture clean. Invariant #4:
       the `[vad.providers.*]` schema change updates config-ui in the same PR (PR-2). VAD providers wrap the existing
-      energy/silero/microvad engines (no new ML).
+      energy/silero/microvad engines (no new ML). **ARCH-18 COMPLETE — all of PR-1..6 + the input-path unification done.**
 
 ### Code Quality & Review (QUAL)
 - [x] **QUAL-1** — Phase-0 static baseline (ruff/pyright/vulture/validators/import-graph). → `docs/review/phase0_static_baseline.md` (6e39886)

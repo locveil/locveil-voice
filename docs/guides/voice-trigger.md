@@ -49,7 +49,8 @@ Each entry is `{ name, model, threshold, language }`:
 - **`threshold`** — detection cut-off, 0–1.
 - **`language`** — two-letter tag, for your own bookkeeping.
 
-Audio is 16 kHz / 16-bit mono PCM (the device's native rate is resampled up the pipeline).
+Audio is 16 kHz / 16-bit mono PCM — the pipeline's canonical format, which the microphone is transformed to
+once at the input boundary (see [audio](audio.md)).
 
 ## Custom (Russian) wake words
 

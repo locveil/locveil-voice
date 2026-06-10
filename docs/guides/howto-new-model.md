@@ -72,12 +72,13 @@ fallback_providers = ["whisper"]
 Provider-specific settings, if any, go in the same `[asr]` section — see `config-master.toml` for the full
 key list. The other families work identically: swap `asr` for `tts` / `llm` / `voice_trigger` throughout.
 
-## The exception: VAD
+## A note on VAD
 
-Voice activity detection is not a provider — it is a small `VADEngine` seam (`utils/vad.py`) with a handful
-of built-in engines (`energy`, `silero`, `microvad`). To switch engines you don't write code; you set
-`[vad] vad_implementation`. Adding a genuinely new one means a new `VADEngine` subclass, not a provider — see
-the [VAD guide](vad.md).
+Voice activity detection is a **lightweight provider family** (`irene.providers.vad`: `energy`, `silero`,
+`microvad`) — discovered by entry-point like any other, but without the web/manager apparatus. To switch
+engines you don't write code; you set `[vad] default_provider` and configure it under `[vad.providers.<name>]`.
+Adding a genuinely new engine means a new VAD provider (wrapping a `VADEngine`) plus its entry-point — see the
+[VAD guide](vad.md).
 
 ## Try it
 

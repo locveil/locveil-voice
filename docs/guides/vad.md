@@ -1,71 +1,111 @@
 # Voice activity detection (VAD)
 
 VAD decides which slices of incoming audio actually contain speech, so the rest of the pipeline (ASR, then
-intent) sees real utterances instead of every chunk of silence. It is a **built-in utility**
-(`irene/utils/vad.py`), not a provider you swap — but it has two interchangeable *engines*.
+intent) sees real utterances instead of every chunk of silence. It is a **lightweight provider family**
+(`irene.providers.vad`) — three interchangeable engines, selected and configured like every other component,
+but without the web/manager apparatus (it's a per-frame hot-path primitive, not a request/response service).
 
 It runs only where Irene has a local microphone. On a Wirenboard install the ESP32 satellite does VAD
-on-device, so this guide is for the standalone-mic case.
+on-device and streams already-segmented utterances, so this guide is for the standalone-mic case.
 
 ## How it's wired
 
-VAD sits in the audio processor, ahead of ASR. Two switches must **both** be on for it to run:
+VAD sits in the voice segmenter, ahead of the wake word and ASR. Two switches must **both** be on for it to run:
 
 - `[vad] enabled = true` — the master switch.
 - `[workflows.unified_voice_assistant] enable_vad_processing = true` — the pipeline flag.
 
-## Engines
+The microphone is captured at its native rate, transformed **once** to the pipeline's canonical 16 kHz / mono
+at the input boundary, and from there VAD, wake word and ASR all see the same canonical audio (see
+[audio](audio.md) for the format negotiation).
 
-`[vad] vad_implementation` picks the engine:
+## Engines (providers)
+
+`[vad] default_provider` picks the engine; each is configured under its own `[vad.providers.<name>]` table:
 
 - **`energy`** (default) — a lightweight energy / zero-crossing detector, no extra dependencies,
   sub-millisecond per chunk. Setting `use_zero_crossing_rate` or `adaptive_threshold` upgrades the simple
   detector to an adaptive one that tracks the noise floor.
-- **`silero`** — the Silero VAD ONNX model (run via sherpa-onnx, 64-bit only; reuses the ASR-ONNX
-  dependency). More robust in noise; the model downloads on first use. Tuned with `silero_threshold`.
+- **`silero`** — the Silero VAD ONNX model (run via sherpa-onnx, 64-bit only; reuses the `asr-onnx`
+  dependency). More robust in noise; the model downloads on first use.
 - **`microvad`** — `pymicro-vad` (64-bit only; the `vad-tflite` extra). Self-contained — bundles its model
   and runtime, nothing to download — and shares its frontend with the microWakeWord trigger, so the two are
-  one stack and match what the ESP32 runs on-device. Tuned with `microvad_threshold`. Pick whichever runtime
-  your build already loads: `silero` if you're on sherpa-onnx ASR, `microvad` if you're on microWakeWord.
+  one stack and match what the ESP32 runs on-device. Pick whichever runtime your build already loads:
+  `silero` if you're on sherpa-onnx ASR, `microvad` if you're on microWakeWord.
 
 ## Configuration
 
-Every real `[vad]` knob:
+The `[vad]` table holds the segmentation / pipeline knobs; the engine knobs live under
+`[vad.providers.<name>]` (only the active provider's table is read):
 
-| Field | Default | Range | Engine |
-|---|---|---|---|
-| `enabled` | true | — | master switch |
-| `vad_implementation` | `energy` | energy / silero / microvad | selector |
-| `energy_threshold` | 0.01 | 0–1 | energy |
-| `sensitivity` | 0.5 | 0.1–3.0 | energy |
-| `voice_duration_ms` | 100 | 10–1000 | both |
-| `silence_duration_ms` | 200 | 50–2000 | both |
-| `voice_frames_required` | 2 | ≥1 | energy |
-| `silence_frames_required` | 5 | ≥1 | energy |
-| `use_zero_crossing_rate` | true | — | energy → advanced |
-| `adaptive_threshold` | false | — | energy → advanced |
-| `noise_percentile` | 15 | 1–50 | energy (advanced) |
-| `voice_multiplier` | 3.0 | 1–10 | energy (advanced) |
-| `max_segment_duration_s` | 10 | 1–60 | both |
-| `buffer_size_frames` | 100 | ≥10 | both |
-| `silero_threshold` | 0.5 | 0–1 | silero |
-| `silero_model_url` | k2-fsa release URL | — | silero |
-| `microvad_threshold` | 0.5 | 0–1 | microvad |
-| `normalize_for_asr` | true | — | both |
-| `asr_target_rms` | 0.15 | 0.01–0.3 | both |
-| `enable_fallback_to_original` | true | — | both |
+```toml
+[vad]
+enabled = true
+default_provider = "energy"        # energy | silero | microvad
 
-VAD works on 16 kHz / 16-bit mono PCM; keep `sample_rate = 16000` across microphone/asr (the device's native
-rate is resampled up the pipeline). The last three knobs normalise a detected segment's loudness before ASR.
+[vad.providers.energy]
+energy_threshold = 0.01
+sensitivity = 0.5
+# … the energy knobs below
+```
+
+**`[vad]` — segmentation & pipeline**
+
+| Field | Default | Range |
+|---|---|---|
+| `enabled` | true | — |
+| `default_provider` | `energy` | energy / silero / microvad |
+| `max_segment_duration_s` | 10 | 1–60 |
+| `processing_timeout_ms` | 50 | ≥1 |
+| `buffer_size_frames` | 100 | ≥10 |
+| `normalize_for_asr` | true | — |
+| `asr_target_rms` | 0.15 | 0.01–0.3 |
+| `enable_fallback_to_original` | true | — |
+
+**`[vad.providers.energy]`**
+
+| Field | Default | Range |
+|---|---|---|
+| `energy_threshold` | 0.01 | 0–1 |
+| `sensitivity` | 0.5 | 0.1–3.0 |
+| `voice_frames_required` | 2 | ≥1 |
+| `silence_frames_required` | 5 | ≥1 |
+| `use_zero_crossing_rate` | true | — (→ advanced) |
+| `adaptive_threshold` | false | — (→ advanced) |
+| `noise_percentile` | 15 | 1–50 |
+| `voice_multiplier` | 3.0 | 1–10 |
+
+**`[vad.providers.silero]`**
+
+| Field | Default | Range |
+|---|---|---|
+| `threshold` | 0.5 | 0–1 |
+| `model_url` | k2-fsa release URL | — |
+| `voice_duration_ms` | 100 | 10–1000 |
+| `silence_duration_ms` | 200 | 50–2000 |
+
+**`[vad.providers.microvad]`**
+
+| Field | Default | Range |
+|---|---|---|
+| `threshold` | 0.5 | 0–1 |
+| `detection_latency_ms` | 30 | ≥0 |
+
+The last three `[vad]` knobs (`normalize_for_asr`, `asr_target_rms`, `enable_fallback_to_original`) normalise a
+detected segment's loudness before ASR. The pre-roll (the audio kept *before* the trigger, so the speech onset
+and the wake word aren't clipped) is sized automatically from the active engine's detection latency — energy
+from `voice_frames_required`, silero from `voice_duration_ms`, microvad from `detection_latency_ms` — so you
+don't tune it directly.
 
 ## Tuning
 
-Start from `energy` and adjust by symptom:
+Start from `energy` and adjust by symptom (energy knobs under `[vad.providers.energy]`):
 
 - **Noisy room** — raise `energy_threshold`, lower `sensitivity`, try `adaptive_threshold = true` (or switch
-  to `silero`).
+  `default_provider` to `silero`).
 - **Quiet speaker, words clipped** — lower `energy_threshold`, raise `sensitivity`.
-- **Choppy segments** (one sentence split in two) — raise `silence_duration_ms` / `silence_frames_required`.
+- **Choppy segments** (one sentence split in two) — raise the silero `silence_duration_ms` /
+  energy `silence_frames_required`.
 - **Laggy** (waits too long to cut off) — lower them.
 
 ## Performance
@@ -81,11 +121,11 @@ segment handling are `max_segment_duration_s` (caps a runaway segment) and `buff
 - **False positives** (noise triggers it) — raise `energy_threshold`, lower `sensitivity`, try
   `adaptive_threshold` or `silero`.
 - **Choppy or merged segments** — tune the timing knobs above.
-- **Poor ASR on short commands** — segments may be too small; raise `voice_duration_ms`; keep
+- **Poor ASR on short commands** — segments may be too small; raise the silero `voice_duration_ms`; keep
   `normalize_for_asr` on.
 
-At startup VAD logs `INFO … VAD audio processor initialized: threshold=…, sensitivity=…`. To watch live
-levels, a chunk's RMS is `sqrt(mean(samples²)) / 32768`.
+At startup VAD logs `INFO … VAD audio processor initialized: provider=…, max_segment=…s`, then the pre-roll
+size and the negotiated canonical format. To watch live levels, a chunk's RMS is `sqrt(mean(samples²)) / 32768`.
 
 Reference configs to copy: `configs/vad-development.toml`, `configs/vad-production.toml`, and the documented
-`[vad]` section of `configs/config-master.toml`.
+`[vad]` + `[vad.providers.*]` sections of `configs/config-master.toml`.
