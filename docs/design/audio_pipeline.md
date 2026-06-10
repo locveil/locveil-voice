@@ -11,7 +11,7 @@ now component-shaped). Design session 2026-06-10 (decisions §14).
 
 | Thread | Today | Smell |
 |---|---|---|
-| **VAD selection** | a 4-way `if/else` in `UniversalAudioProcessor.__init__` keyed on `vad_implementation`; engines are util classes | scattered knowledge → already shipped bugs: a validator that rejects `microvad` (`models.py:457`), an unconditional `calibrate_threshold` only the energy engines implement (`audio_processor.py:211`) |
+| **VAD selection** | a 4-way `if/else` in `UniversalAudioProcessor.__init__` keyed on `vad_implementation`; engines are util classes | scattered knowledge → a shipped bug: a validator that rejects `microvad` (`models.py:457`). (The suspected `calibrate_threshold` issue turned out benign — the ABC defaults it; see §10.) |
 | **Frame preservation** | a hardcoded `pre_buffer_size = 4` (~100 ms) prepended on voice onset | not coupled to the engine's detection latency → silero/microvad (or a high `voice_frames_required`) can clip the wake-word onset, because the segment feeds the wake word |
 | **Format/rate negotiation** | `voice_trigger` capability-negotiates; ASR config-resamples; each provider re-implements int16→float; `AudioProcessor.resample_audio_data` is shared by input *and* output but the TTS side copy-pastes it 3× | no single seam, format barely negotiated, transforms logged-not-traced — i.e. not transparent |
 
@@ -46,7 +46,7 @@ The **satellite path falls out for free**: the WS adapter declares it delivers 1
 | **`AudioContract`** (new value object) | what a party can deliver / needs | every input adapter + audio consumer | `utils` |
 | **`AudioNegotiator`** (new) | derive canonical, validate at startup (fatal), drive the transcoder, emit trace events | input boundary + output | startup: config path · runtime: boundary |
 | **`VoiceSegmenter`** (rename of `UniversalAudioProcessor`, minus the if-else) | consume the active VAD provider; own pre-roll; emit `VoiceSegment`s | the audio workflow | `workflows` |
-| **`VADPort` + `irene.providers.vad.*`** | per-frame `is_voice` engines (energy / silero / microvad) | the segmenter | `core/interfaces` + `providers` |
+| **`VADProvider` + `irene.providers.vad.*`** | per-frame `is_voice` engines (energy / silero / microvad) | the segmenter | `providers` (adapter-port) |
 
 This collapses the two colliding `AudioProcessor`s and the 3 duplicated TTS resample blocks into one named,
 direction-shared transcoder.
@@ -75,8 +75,11 @@ ASR provider) declares what it *needs*. The negotiator intersects them.
 The 8th provider family, but **without the component web/manager apparatus** (it's a per-frame hot-path
 primitive, not a request/response service):
 
-- `VADPort` (`core/interfaces/vad.py`) — `process_frame(AudioData) -> VADResult`, `reset()`,
-  `detection_latency_ms` (property), `calibrate(frames) -> bool` **with a default no-op** (engines opt in).
+- `VADProvider` (`irene/providers/vad/base.py`, the adapter-port — same shape `voice_trigger` uses; **no
+  separate `core/interfaces` port** needed since `VoiceSegmenter` imports it inward) — `process_frame(AudioData)
+  -> VADResult`, `reset()`, `detection_latency_ms` (property), `calibrate(frames) -> bool` **with a default
+  no-op** (energy opts in). The low-level `utils.vad.VADEngine` ABC stays as the engine contract the providers
+  wrap.
 - `irene.providers.vad`: `energy` (today's `SimpleVAD`/`AdvancedVAD`), `silero`, `microvad`. As adapters they
   may import `core/assets` directly — **the silero model-path injection workaround disappears**.
 - Selection = the standard entry-points discovery + `default_provider` single-active pattern (the
@@ -106,20 +109,22 @@ duplication and ties the audio-encoding layer of ARCH-15's output seam to the sa
 
 ## 9. Hexagon seams (new vs reused)
 
-- **New:** `AudioContract`, `AudioNegotiator` (logic), `VADPort`, `irene.providers.vad`, the `[vad.providers.*]`
-  schemas (auto_registry + config-ui get them like the QUAL-20 WakeWordSpec work).
+- **New:** `AudioContract`, `AudioNegotiator` (logic), `VADProvider` (`providers/vad/base.py`),
+  `irene.providers.vad`, the `[vad.providers.*]` schemas (auto_registry + config-ui get them like the QUAL-20
+  WakeWordSpec work).
 - **Reused/renamed:** `AudioTranscoder` (was `AudioProcessor`), `VoiceSegmenter` (was `UniversalAudioProcessor`),
   `trace_context` (ARCH-15), the entry-points discovery + single-active selection (`voice_trigger`).
 - **Layer check:** `utils` stays leaf (`AudioTranscoder`/`AudioContract` have no upward deps — ARCH-12 holds);
-  `VADPort` in `core/interfaces`; VAD adapters in `providers` may reach `core` inward; `VoiceSegmenter` in
-  `workflows` consumes the VAD component. No new backwards edges.
+  `VADProvider` is an adapter in `providers` (may reach `core` inward — silero pulls its asset path directly);
+  `VoiceSegmenter` in `workflows` discovers/consumes them. No new backwards edges.
 
-## 10. The two live bugs — folded in, not obsoleted
+## 10. The live bug — folded in, not obsoleted
 
 - `vad_implementation` validator (`models.py:457`, rejects `microvad`) → **deleted**; entry-points discovery
   is the source of "what engines exist," exactly like every other provider family.
-- unconditional `calibrate_threshold` (`audio_processor.py:211`) → a `VADPort.calibrate` method with a default
-  no-op; the segmenter calls the port, engines opt in.
+- _(Re-reconciled during PR-2: the "unconditional `calibrate_threshold`" was **not** a live bug after all — the
+  `VADEngine` ABC already defaults it to a no-op, so silero/microvad inherit it. It simply becomes the
+  `VADProvider.calibrate` port method with a default no-op; energy opts in. So one real bug, not two.)_
 
 Both are fixed *as a consequence* of the design (PR-2), so no separate patch is wasted.
 
@@ -167,9 +172,11 @@ The flat `silero_*` / `microvad_*` fields move under their provider; `vad_implem
    _Reconciliation:_ `AudioFormatConverter` turned out to be a **used, tested convenience layer** atop the
    engine (`convert_audio_data`/`_streaming` used internally + tested; `supports_format` used by the mic input),
    **not** the dead duplicate the original plan assumed — so its dissolution moved out of PR-1 (below).
-2. **PR-2 — VAD provider family + `VoiceSegmenter`**: `VADPort` + `energy`/`silero`/`microvad` providers +
-   entry-points + `[vad.providers.*]` config/schemas (config-ui via auto_registry); extract the if-else into
-   the segmenter; **fold the 2 bug fixes**.
+2. **PR-2 — VAD provider family + `VoiceSegmenter`** (done 2026-06-10): `VADProvider` (`providers/vad/base.py`,
+   adapter-port — *not* a separate `core/interfaces` port) + `energy`/`silero`/`microvad` providers wrapping the
+   existing engines + entry-points + `[vad.providers.*]` config/schemas (config-ui via auto_registry, all 12
+   configs nested); extract the if-else into the segmenter (discovery + energy fallback); `UniversalAudioProcessor`
+   → `VoiceSegmenter` rename; the one real bug fixed (validator deleted). Done in 3 commits + the rename.
 3. **PR-3 — `AudioContract` + `AudioNegotiator`**: declare contracts; derive canonical + startup validation
    (fatal) + input transform-once at the boundary; trace events. **Fold `AudioFormatConverter`'s
    convert/streaming into the transcoder/negotiator** (the rate/format/channel transform belongs on the one

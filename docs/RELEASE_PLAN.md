@@ -598,10 +598,14 @@ See `docs/review/phase1_architecture_map.md` §5.
       collision; behavior-preserving, pyright 0, suite 83=83). _Reconciliation:_ `AudioFormatConverter` is a **used,
       tested convenience layer** (not the dead duplicate the plan assumed), so its dissolution moved to PR-3/PR-4 —
       **`AudioFormatConverter` is deleted by the end of ARCH-18**, its transform methods folded onto the
-      transcoder/negotiator + the 3 TTS resample dups collapsed (PR-4). **PR-2** VAD provider family (`VADPort` + energy/silero/microvad adapters + entry-points +
-      `[vad.providers.*]` schemas via auto_registry/config-ui) + `VoiceSegmenter` (extract the if-else) — **folds the 2
-      live bugs**: delete the `vad_implementation` validator (entry-points discovery replaces it) and turn the
-      unconditional `calibrate_threshold` into a `VADPort.calibrate` default-no-op (engines opt in). **PR-3**
+      transcoder/negotiator + the 3 TTS resample dups collapsed (PR-4). **PR-2 DONE 2026-06-10** (3 commits + the
+      rename): VAD provider family (`VADProvider` in `providers/vad/base.py` — the **adapter-port**, not a separate
+      `core/interfaces` port — + energy/silero/microvad adapters wrapping the engines + entry-points + `[vad.providers.*]`
+      schemas via auto_registry/config-ui; all 12 configs nested) + `VoiceSegmenter` (extract the if-else → discovery,
+      energy fallback; `UniversalAudioProcessor`→`VoiceSegmenter` rename). **Folded the one real bug** (deleted the
+      `vad_implementation` validator); re-reconciliation found the `calibrate_threshold` "bug" benign (the ABC already
+      no-ops it) → it's just the `VADProvider.calibrate` default-no-op. config-ui green; suite 81 failed (down from 83,
+      nesting fixed 2; 2 stale flat-config tests → TEST-7); pyright 0, 9/9 contracts, dep 58/58. **PR-3**
       `AudioContract` + `AudioNegotiator` (derive canonical, startup validation/fatal, input transform-once at the
       boundary) + first-class trace events. **PR-4** symmetric **output** negotiation (TTS→playback through the
       negotiator/transcoder, traced). **PR-5** pre-roll contract (`detection_latency_ms` → segmenter sizing). **PR-6
