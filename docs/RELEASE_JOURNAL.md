@@ -12,6 +12,10 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-10
+- **ARCH-18 PR-5 — pre-roll sized from `detection_latency_ms`.** The `VoiceSegmenter` pre-buffer was a hardcoded 4
+  frames (~92 ms) that clipped the wake-word onset for engines whose detection latency exceeds it (silero's 100 ms).
+  It now sizes as `ceil(detection_latency_ms / 23ms) + 2` from the **active** VAD provider — energy(50)→5,
+  silero(100)→7, microvad(30)→4. The detection-correctness fix from §6. 2 tests; pyright 0, 9/9, suite 81=81.
 - **ARCH-18 PR-4a+4b — TTS dedup + input conformance (consumers trust canonical).** 4a collapsed the three
   duplicated TTS resample blocks into one `TTSComponent._conform_output_audio` through the shared `AudioTranscoder`
   (and hoisted that import module-top, no TYPE_CHECKING — Inv #9). 4b: a #8 reconciliation found the per-consumer
