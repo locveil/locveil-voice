@@ -537,6 +537,7 @@ silence_duration_ms = 300          # Minimum silence to end a segment (ms)
 # microVAD via pymicro-vad (64-bit Linux). Active when default_provider="microvad".
 [vad.providers.microvad]
 threshold = 0.5                    # Speech-probability threshold 0.0-1.0
+detection_latency_ms = 30          # Onset detection latency (ms) used to size the VAD pre-roll
 
 # ============================================================
 # MONITORING COMPONENT CONFIGURATION

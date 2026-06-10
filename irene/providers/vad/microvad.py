@@ -37,10 +37,9 @@ class MicroVADProvider(VADProvider):
     def reset(self) -> None:
         self._engine.reset()
 
-    @property
-    def detection_latency_ms(self) -> int:
-        # pymicro-vad decides per 10 ms chunk; a few chunks of margin.
-        return 30
+    def detection_latency_ms(self, frame_ms: float) -> int:
+        # Duration-based (pymicro-vad decides per 10 ms chunk); operator-tunable via config, default 30 ms.
+        return int(self.config.get("detection_latency_ms", 30))
 
     @classmethod
     def get_python_dependencies(cls) -> List[str]:

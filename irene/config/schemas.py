@@ -296,6 +296,7 @@ class SileroVADProviderSchema(VADProviderSchema):
 class MicroVADProviderSchema(VADProviderSchema):
     """microVAD (pymicro-vad) provider configuration schema. 64-bit Linux only."""
     threshold: float = Field(default=0.5, ge=0.0, le=1.0, description="Speech-probability threshold")
+    detection_latency_ms: int = Field(default=30, ge=0, description="Onset detection latency (ms) used to size the VAD pre-roll")
 
 
 # ============================================================

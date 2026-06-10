@@ -27,7 +27,7 @@ def test_energy_provider_processes_and_reports_latency():
     r = p.process_frame(_frame())
     assert r.is_voice is False                       # silence
     assert p.get_provider_name() == "energy"
-    assert p.detection_latency_ms == 50              # 2 frames * 25 ms
+    assert p.detection_latency_ms(20.0) == 40         # ARCH-18 PR-5: 2 frames × the real frame_ms (20)
     assert p.calibrate([_frame()]) in (True, False)  # energy supports calibration (no raise)
     p.threshold = 0.2                                 # delegated to the engine
     assert p.threshold == 0.2

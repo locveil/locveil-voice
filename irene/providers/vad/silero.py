@@ -48,9 +48,9 @@ class SileroVADProvider(VADProvider):
     def reset(self) -> None:
         self._engine.reset()
 
-    @property
-    def detection_latency_ms(self) -> int:
-        # Fires after `min_speech_duration` (voice_duration_ms) of speech.
+    def detection_latency_ms(self, frame_ms: float) -> int:
+        # Duration-based: fires after `min_speech_duration` (voice_duration_ms) of speech — independent of
+        # the frame size, so frame_ms is ignored.
         return int(self.config.get("voice_duration_ms", 100))
 
     @classmethod

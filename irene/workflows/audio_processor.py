@@ -22,6 +22,8 @@ from ..utils.loader import dynamic_loader
 from ..utils.audio_helpers import calculate_audio_energy, estimate_optimal_vad_threshold
 from ..core.metrics import get_metrics_collector
 
+_PREROLL_MARGIN_FRAMES = 2  # ARCH-18 PR-5: safety frames added to the detection-latency-derived pre-roll
+
 logger = logging.getLogger(__name__)
 
 
@@ -145,17 +147,12 @@ class VoiceSegmenter:
         self.voice_segment_start_time: Optional[float] = None
         
         # Pre-buffering to capture audio before VAD triggers (prevents missing speech onset).
-        # ARCH-18 PR-5: size the pre-roll to the ACTIVE VAD engine's detection latency, not a magic 4 — the
-        # voice segment feeds the wake word, so the pre-roll must cover the engine's onset lag or the wake-word
-        # start is clipped (silero's 100 ms onset overran the old 4 frames ≈ 92 ms).
-        #   preroll_frames = ceil(detection_latency_ms / frame_ms) + margin
+        # ARCH-18 PR-5: the pre-roll is sized LAZILY on the first frame, from the ACTIVE VAD engine's
+        # detection latency at the REAL canonical frame duration (no magic ms/frame constant) — the voice
+        # segment feeds the wake word, so the pre-roll must cover the onset lag or the wake-word start is
+        # clipped. For a frame-count engine (energy) the frame_ms cancels → preroll = frames + margin.
         self.pre_buffer: List[AudioData] = []
-        _NOMINAL_FRAME_MS = 23          # ~23 ms capture chunks (the "23 ms chunk problem" the VAD solves)
-        _PREROLL_MARGIN_FRAMES = 2
-        latency_ms = max(0, int(getattr(self.vad_engine, "detection_latency_ms", 0)))
-        self.pre_buffer_size = math.ceil(latency_ms / _NOMINAL_FRAME_MS) + _PREROLL_MARGIN_FRAMES
-        logger.info(f"VAD pre-roll sized to {self.pre_buffer_size} frames "
-                    f"(~{self.pre_buffer_size * _NOMINAL_FRAME_MS}ms) for {latency_ms}ms detection latency")
+        self.pre_buffer_size: Optional[int] = None   # sized on the first frame (see _size_preroll)
         self.voice_segment_start_timestamp: Optional[float] = None
         
         # Timeout and buffer management
@@ -227,6 +224,20 @@ class VoiceSegmenter:
             logger.error(f"Error during VAD calibration: {e}")
             return False
     
+    def _size_preroll(self, frame: AudioData) -> None:
+        """Size the pre-roll from the active VAD engine's detection latency at THIS frame's real duration
+        (ARCH-18 PR-5). preroll = ceil(detection_latency_ms / frame_ms) + margin; for a frame-count engine
+        the frame_ms cancels → frames + margin. Derived from the canonical frame, no magic ms/frame."""
+        samples = len(frame.data) / max(1, frame.channels * 2)  # int16 PCM
+        frame_ms = (samples / frame.sample_rate * 1000.0) if frame.sample_rate else 0.0
+        if frame_ms <= 0:
+            self.pre_buffer_size = _PREROLL_MARGIN_FRAMES
+            return
+        latency_ms = max(0, int(self.vad_engine.detection_latency_ms(frame_ms)))
+        self.pre_buffer_size = math.ceil(latency_ms / frame_ms) + _PREROLL_MARGIN_FRAMES
+        logger.info(f"VAD pre-roll sized to {self.pre_buffer_size} frames "
+                    f"(frame≈{frame_ms:.0f}ms, detection latency {latency_ms}ms)")
+
     async def process_audio_chunk(self, audio_data: AudioData) -> Optional[VoiceSegment]:
         """
         Process a single audio chunk and return complete voice segment if available.
@@ -241,11 +252,15 @@ class VoiceSegmenter:
             VoiceSegment if a complete voice segment is ready, None otherwise
         """
         start_time = time.time()
-        
+
         try:
+            # ARCH-18 PR-5: size the pre-roll from the real (canonical) frame duration on the first frame
+            if self.pre_buffer_size is None:
+                self._size_preroll(audio_data)
+
             # Maintain pre-buffer for capturing audio before VAD triggers
             self.pre_buffer.append(audio_data)
-            if len(self.pre_buffer) > self.pre_buffer_size:
+            if self.pre_buffer_size and len(self.pre_buffer) > self.pre_buffer_size:
                 self.pre_buffer.pop(0)  # Remove oldest frame
             
             # Perform VAD on the audio chunk

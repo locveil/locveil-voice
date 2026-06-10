@@ -44,10 +44,10 @@ class EnergyVADProvider(VADProvider):
     def reset(self) -> None:
         self._engine.reset()
 
-    @property
-    def detection_latency_ms(self) -> int:
-        # Fires after `voice_frames_required` consecutive voice frames (~25 ms each).
-        return int(self.config.get("voice_frames_required", 2)) * 25
+    def detection_latency_ms(self, frame_ms: float) -> int:
+        # Fires after `voice_frames_required` consecutive voice frames — its latency IS a frame count, so it
+        # scales with the real frame duration (ARCH-18 PR-5: derived from canonical, no hardcoded ms/frame).
+        return round(int(self.config.get("voice_frames_required", 2)) * frame_ms)
 
     def calibrate(self, audio_samples: List[AudioData]) -> bool:
         return self._engine.calibrate_threshold(audio_samples)

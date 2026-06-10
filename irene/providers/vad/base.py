@@ -33,11 +33,12 @@ class VADProvider(ProviderBase):
         """Reset per-utterance state (default no-op)."""
         return None
 
-    @property
     @abstractmethod
-    def detection_latency_ms(self) -> int:
+    def detection_latency_ms(self, frame_ms: float) -> int:
         """How long (ms) of speech this engine needs before it reports voice — the segmenter sizes its
-        pre-roll buffer from this so the wake-word onset is never clipped (ARCH-17 Q1)."""
+        pre-roll buffer from this so the wake-word onset is never clipped (ARCH-17 Q1). `frame_ms` is the
+        REAL canonical frame duration the segmenter observes: frame-count engines (energy) scale with it;
+        duration-based engines (silero/microvad) ignore it."""
         ...
 
     def calibrate(self, audio_samples: List[AudioData]) -> bool:
@@ -61,11 +62,12 @@ class VADProvider(ProviderBase):
         return True
 
     def get_capabilities(self) -> Dict[str, Any]:
+        # detection latency is now frame-duration-dependent (see detection_latency_ms(frame_ms)), so it's
+        # not a static capability — the segmenter computes it from the real canonical frame.
         return {
             "sample_rates": [16000],
             "channels": [1],
             "formats": ["pcm16"],
-            "detection_latency_ms": self.detection_latency_ms,
         }
 
     def audio_contract(self) -> AudioContract:
