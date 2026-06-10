@@ -305,7 +305,7 @@ class VADEngine(ABC):
     - `energy` → `SimpleVAD` / `AdvancedVAD` (built-in, dependency-light)
     - `silero` → `SileroVADEngine` (SileroVAD-ONNX via sherpa-onnx; 64-bit only)
 
-    `UniversalAudioProcessor` calls `process_frame` per audio chunk and drives its own
+    `VoiceSegmenter` calls `process_frame` per audio chunk and drives its own
     onset/offset state machine off `VADResult.is_voice`, so the contract is intentionally
     minimal.
     """

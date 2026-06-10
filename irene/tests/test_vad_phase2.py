@@ -15,7 +15,7 @@ from typing import List, AsyncIterator
 # Import Phase 2 components - Phase 4: ProcessingMetrics removed, using unified MetricsCollector
 from irene.workflows.audio_processor import (
     VoiceActivityState, VoiceSegment,
-    UniversalAudioProcessor, AudioProcessorInterface,
+    VoiceSegmenter, AudioProcessorInterface,
     create_audio_processor
 )
 from irene.config.models import VADConfig
@@ -116,8 +116,8 @@ def test_vad_config_validation():
 @pytest.mark.skip(reason="ARCH-18: constructs the processor with the pre-nesting flat VADConfig "
                          "(energy fields now under [vad.providers.energy]). Rewrite under TEST-7.")
 async def test_universal_audio_processor():
-    """Test UniversalAudioProcessor state machine."""
-    print("Testing UniversalAudioProcessor state machine...")
+    """Test VoiceSegmenter state machine."""
+    print("Testing VoiceSegmenter state machine...")
     
     # Create test configuration
     config = VADConfig(
@@ -130,7 +130,7 @@ async def test_universal_audio_processor():
     )
     
     # Create processor
-    processor = UniversalAudioProcessor(config)
+    processor = VoiceSegmenter(config)
     
     # Test initial state
     assert processor.vad_state == VoiceActivityState.SILENCE
@@ -172,7 +172,7 @@ async def test_universal_audio_processor():
     assert metrics.total_chunks_processed == chunk_count
     assert metrics.voice_segments_detected == len(voice_segments)
     
-    print("✓ UniversalAudioProcessor state machine test passed\n")
+    print("✓ VoiceSegmenter state machine test passed\n")
 
 
 async def test_voice_segment_timeout():
@@ -188,7 +188,7 @@ async def test_voice_segment_timeout():
         silence_frames_required=2
     )
     
-    processor = UniversalAudioProcessor(config)
+    processor = VoiceSegmenter(config)
     
     # Generate long continuous speech (should trigger timeout)
     long_speech_sequence = [("speech_like", 50)]  # 50 chunks
@@ -229,7 +229,7 @@ async def test_buffer_overflow_protection():
         max_segment_duration_s=30  # Long timeout to focus on buffer overflow
     )
     
-    processor = UniversalAudioProcessor(config)
+    processor = VoiceSegmenter(config)
     
     # Generate continuous speech that exceeds buffer
     overflow_sequence = [("speech_like", 20)]  # 20 chunks > 10 buffer limit
@@ -367,7 +367,7 @@ async def test_performance_real_time():
         processing_timeout_ms=25  # Must process faster than chunk rate
     )
     
-    processor = UniversalAudioProcessor(config)
+    processor = VoiceSegmenter(config)
     
     # Simulate high-frequency audio stream (every 23ms like the problem case)
     chunk_duration_ms = 23

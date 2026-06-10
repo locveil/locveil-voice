@@ -10,7 +10,7 @@ from irene.utils.loader import dynamic_loader
 from irene.providers.vad.energy import EnergyVADProvider
 from irene.config.models import VADConfig
 from irene.intents.models import AudioData
-from irene.workflows.audio_processor import UniversalAudioProcessor
+from irene.workflows.audio_processor import VoiceSegmenter
 
 
 def _frame(pcm: bytes = b"\x00\x00" * 320) -> AudioData:
@@ -34,11 +34,11 @@ def test_energy_provider_processes_and_reports_latency():
 
 
 def test_segmenter_builds_energy_by_default():
-    seg = UniversalAudioProcessor(VADConfig(default_provider="energy"))
+    seg = VoiceSegmenter(VADConfig(default_provider="energy"))
     assert seg.vad_engine.get_provider_name() == "energy"
 
 
 def test_segmenter_falls_back_to_energy_on_unknown_provider():
     # ARCH-18: an unknown default_provider is config-valid (no enum validator) and resolves to energy.
-    seg = UniversalAudioProcessor(VADConfig(default_provider="does_not_exist"))
+    seg = VoiceSegmenter(VADConfig(default_provider="does_not_exist"))
     assert seg.vad_engine.get_provider_name() == "energy"

@@ -1,6 +1,6 @@
 """VAD provider base — the voice-activity-detection capability port (ARCH-18 PR-2).
 
-VAD was a 4-way if-else over util engine classes in `UniversalAudioProcessor`. It is now a lightweight
+VAD was a 4-way if-else over util engine classes in `VoiceSegmenter`. It is now a lightweight
 provider family (`irene.providers.vad`): each provider wraps a VAD engine and is discovered via entry-points
 + selected by `[vad] default_provider`, exactly like the other provider families — no component/manager
 apparatus (VAD is a per-frame hot-path primitive, not a request/response service).

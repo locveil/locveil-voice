@@ -15,7 +15,7 @@ from dataclasses import dataclass
 
 # Import VAD components - Phase 4: ProcessingMetrics removed, using unified MetricsCollector
 from irene.workflows.audio_processor import (
-    UniversalAudioProcessor, AudioProcessorInterface, VoiceSegment, 
+    VoiceSegmenter, AudioProcessorInterface, VoiceSegment, 
     VoiceActivityState
 )
 from irene.config.models import VADConfig
@@ -157,7 +157,7 @@ async def test_scenario_a_voice_trigger():
     )
     
     # Create audio processor
-    processor = UniversalAudioProcessor(vad_config)
+    processor = VoiceSegmenter(vad_config)
     voice_segments = []
     
     print(f"Configuration: threshold={vad_config.energy_threshold}, "
@@ -226,7 +226,7 @@ async def test_scenario_b_vosk_runner():
     )
     
     # Create audio processor
-    processor = UniversalAudioProcessor(vad_config)
+    processor = VoiceSegmenter(vad_config)
     voice_segments = []
     
     print(f"Configuration: threshold={vad_config.energy_threshold}, "
@@ -331,7 +331,7 @@ async def test_performance_benchmark():
         print(f"\n⚡ Testing {config_name} configuration...")
         
         # Create processor
-        processor = UniversalAudioProcessor(vad_config)
+        processor = VoiceSegmenter(vad_config)
         
         # Performance test
         start_time = time.time()
@@ -426,7 +426,7 @@ async def test_edge_cases():
     for case_name, scenario, vad_config in edge_cases:
         print(f"  Testing {case_name}...")
         
-        processor = UniversalAudioProcessor(vad_config)
+        processor = VoiceSegmenter(vad_config)
         voice_segments = []
         
         async for audio_chunk in generate_scenario_audio_stream(scenario, duration_s=3.0):
@@ -471,7 +471,7 @@ async def test_vad_configuration_validation():
     for i, config in enumerate(valid_configs):
         print(f"  Valid config {i+1}: ✅")
         if config.enabled:
-            processor = UniversalAudioProcessor(config)
+            processor = VoiceSegmenter(config)
             # Just verify the processor was created successfully
             assert processor is not None
     

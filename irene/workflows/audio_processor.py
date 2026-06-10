@@ -108,7 +108,7 @@ class VoiceSegment:
 # Phase 4: AdvancedMetrics removed - all metrics functionality now unified in MetricsCollector
 # Any advanced metrics needed should be implemented as methods in MetricsCollector for unified collection
 
-class UniversalAudioProcessor:
+class VoiceSegmenter:
     """
     Handles VAD state management and voice segment accumulation.
     
@@ -158,7 +158,7 @@ class UniversalAudioProcessor:
         # Callbacks for voice segment processing
         self.voice_segment_callback: Optional[Callable] = None
         
-        logger.info(f"UniversalAudioProcessor initialized: provider={vad_config.default_provider}, "
+        logger.info(f"VoiceSegmenter initialized: provider={vad_config.default_provider}, "
                    f"max_segment={vad_config.max_segment_duration_s}s, "
                    f"buffer={vad_config.buffer_size_frames} frames")
 
@@ -679,7 +679,7 @@ class AudioProcessorInterface:
         Args:
             vad_config: VAD configuration object
         """
-        self.processor = UniversalAudioProcessor(vad_config)
+        self.processor = VoiceSegmenter(vad_config)
         self.vad_config = vad_config  # Store config for normalization settings
         
     async def process_audio_pipeline(self, 
@@ -890,17 +890,17 @@ class AudioProcessorInterface:
 
 # Utility functions for audio processor integration
 
-def create_audio_processor(vad_config: VADConfig) -> UniversalAudioProcessor:
+def create_audio_processor(vad_config: VADConfig) -> VoiceSegmenter:
     """
-    Factory function to create UniversalAudioProcessor with validated config.
+    Factory function to create VoiceSegmenter with validated config.
     
     Args:
         vad_config: VAD configuration object
         
     Returns:
-        Configured UniversalAudioProcessor instance
+        Configured VoiceSegmenter instance
     """
-    return UniversalAudioProcessor(vad_config)
+    return VoiceSegmenter(vad_config)
 
 
 async def process_audio_with_vad(audio_stream: AsyncIterator[AudioData], 
@@ -930,7 +930,7 @@ async def process_audio_with_vad(audio_stream: AsyncIterator[AudioData],
 __all__ = [
     'VoiceActivityState',
     'VoiceSegment', 
-    'UniversalAudioProcessor',
+    'VoiceSegmenter',
     'AudioProcessorInterface',
     'create_audio_processor',
     'process_audio_with_vad'
