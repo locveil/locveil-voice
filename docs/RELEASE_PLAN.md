@@ -627,10 +627,13 @@ See `docs/review/phase1_architecture_map.md` §5.
       every party's contract. pyright 0, 9/9, suite 81=81 (+~31 tests). _(Input-path **endpoint unification** landed
       2026-06-10 as a 4b follow-up: hoisted `AudioNegotiator`→`core` as a SHARED service, `/asr/transcribe`→`to_canonical`,
       deleted `/asr/stream`+`/asr/binary`, confirmed `/ws/audio` already VAD-free; QUAL-45 filed for the ESP32 firmware
-      end-of-utterance contract.)_ **PR-4c DESIGN LOCKED 2026-06-10 (§8, decisions D-8..D-13; impl pending)** = symmetric
-      **output**: sink-driven contract (audio provider `audio_contract()` + `[audio]` override, **CD default**),
-      `AudioNegotiator.to_sink` conform-**down-only**, TTS retires `_conform_output_audio`→`to_sink` (traced), PCM-only,
-      local-playback sink now + a generic `AudioSink` so streaming sinks are future-addable. **PR-5 DONE 2026-06-10**: pre-roll sized lazily from the active VAD provider's
+      end-of-utterance contract.)_ **PR-4c DONE 2026-06-10 (§8, D-8..D-13)** = symmetric
+      **output**: sink-driven contract (audio provider `audio_contract()` + `[audio]` `output_rate`/`output_channels`
+      override, **CD default**), `AudioNegotiator.to_sink` conform-**down-only** (traced), TTS retired
+      `_conform_output_audio`→`_conform_to_sink` at all 3 streaming sites (caller = sink, CD default; response carries
+      the actual conform-down rate). PCM-only; local file playback untouched (intentionally file-based). 5 tests,
+      pyright 0/9-9/config-ui green/suite 81=81. _(The streaming caller IS the sink for now; a generic remote/streaming
+      AudioSink stays future-addable.)_ **PR-5 DONE 2026-06-10**: pre-roll sized lazily from the active VAD provider's
       `detection_latency_ms(frame_ms)` at the REAL canonical frame duration — kills the magic `4` AND the 23/25 ms/frame
       constants. Latency declaration harmonized (energy frame-count→`frames+2`; silero `voice_duration_ms`; microvad new
       `detection_latency_ms` TOML field+schema, config-ui green); also fixes energy undersized for big chunks. Suite 81=81. **Order: PR-5 → PR-4c (symmetric output, design-first) → PR-6.** **PR-6

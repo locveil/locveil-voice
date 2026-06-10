@@ -224,7 +224,7 @@ The flat `silero_*` / `microvad_*` fields move under their provider; `vad_implem
      happens once at each entry boundary — the mic pipeline via `to_canonical` (PR-3), the `/asr/transcribe`
      file upload via `_conform_to_rate`, and `/stream` requires canonical 16 kHz on the wire. Plus the §7
      **startup summary** now logs every party's contract (not a count). `AudioFormatConverter` already gone (PR-3).
-   - **4c — symmetric output** (**design LOCKED 2026-06-10, see §8**; impl pending): sink-driven output contract
+   - **4c — symmetric output** (**DONE 2026-06-10, see §8**): sink-driven output contract
      (audio provider's `audio_contract()` + `[audio]` override, **CD default**), `AudioNegotiator.to_sink`
      conform-**down-only**, TTS retires `_conform_output_audio` for `to_sink` (traced), PCM-only, local-playback
      sink now with a generic `AudioSink` so streaming sinks are future-addable. Decisions D-8..D-13. _(Note: the

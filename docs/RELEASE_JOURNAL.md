@@ -12,6 +12,18 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-10
+- **ARCH-18 PR-4c — symmetric output DONE.** `AudioNegotiator.to_sink` (output mirror of `to_canonical`) conforms a
+  producer **down-only** to a sink's capability (pass through when `≤` the sink, downsample/downmix only when it
+  exceeds it, never upsample; traced `audio_output_conform`). Sink contract = active audio provider's
+  `audio_contract()` (base reads `sample_rate`/`channels`, CD default; sounddevice already CD) + optional `[audio]`
+  `output_rate`/`output_channels` override, resolved on the shared core negotiator at startup. TTS retired
+  `_conform_output_audio`→`_conform_to_sink` at all 3 streaming sites (`/speak`, `/tts/stream`, `/tts/binary`): the
+  **streaming caller is the sink** (its requested rate/channels, CD default); since conform is down-only the response
+  now carries the **actual** rate (engine-native or downsampled), read back from the result for the metadata/chunk
+  calcs. PCM-only; **local file playback left untouched** (intentionally file-based — streaming-to-device was a prior
+  dead end). 5 tests; pyright 0, lint 9/9, config-ui green, suite 81=81. _(Scope: the streaming caller is the sink for
+  now; a generic remote/streaming `AudioSink` is future-addable on this seam.)_ ARCH-18 PR-1..5 + 4a/4b/4c all done;
+  only **PR-6** (user docs + diagrams) remains.
 - **ARCH-18 PR-4c — symmetric-output DESIGN session (locked; impl pending).** Captured the user's spine: the output
   contract is the **sink's audio capability**, default **CD (44.1k/pcm16/stereo)** when nothing's in TOML (the
   producer's hint), **conform-down-only** (any device plays lower → pass-through `≤` sink, downsample/downmix only
