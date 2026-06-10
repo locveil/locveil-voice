@@ -41,23 +41,32 @@ class AudioNegotiator:
         """
         source = cls._source_contract(config)
 
-        consumers = []
+        labeled = []  # (label, contract) — kept for the startup summary (§7)
         if config.vad.enabled:
-            consumers.append(vad_provider.audio_contract() if vad_provider is not None
-                             else AudioContract([_VAD_RATE], _VAD_RATE))
+            labeled.append(("vad", vad_provider.audio_contract() if vad_provider is not None
+                            else AudioContract([_VAD_RATE], _VAD_RATE)))
         if config.voice_trigger.enabled:
             base = wake_provider.audio_contract() if wake_provider is not None else None
-            consumers.append(cls._with_override(base, config.voice_trigger.sample_rate,
-                                                config.voice_trigger.channels))
+            labeled.append(("wake", cls._with_override(base, config.voice_trigger.sample_rate,
+                                                       config.voice_trigger.channels)))
         if config.asr.enabled:
             base = asr_provider.audio_contract() if asr_provider is not None else None
-            consumers.append(cls._with_override(base, config.asr.sample_rate, config.asr.channels))
+            labeled.append(("asr", cls._with_override(base, config.asr.sample_rate, config.asr.channels)))
 
+        consumers = [c for _, c in labeled]
         derived = derive_canonical(source, consumers)
         canonical = cls._apply_config_pin(config, source, consumers, derived)
-        logger.info("Audio canonical format negotiated: %dHz/%s/%dch (capture<=%dHz, %d consumer contract(s))",
-                    canonical.rate, canonical.format, canonical.channels, max(source.supported_rates), len(consumers))
+        cls._log_startup_summary(source, labeled, canonical)
         return cls(canonical)
+
+    @staticmethod
+    def _log_startup_summary(source, labeled, canonical: CanonicalFormat) -> None:
+        """§7 one-time startup summary: the negotiated canonical + EVERY party's declared contract."""
+        lines = [f"Audio pipeline canonical = {canonical.rate}Hz/{canonical.format}/{canonical.channels}ch",
+                 f"  capture(source): rates={source.supported_rates} ch={source.channels}"]
+        for label, c in labeled:
+            lines.append(f"  consumer[{label}]: rates={c.supported_rates} fmt={c.preferred_format} ch={c.channels}")
+        logger.info("\n".join(lines))
 
     @staticmethod
     def _source_contract(config: CoreConfig) -> AudioContract:
