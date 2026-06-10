@@ -100,6 +100,7 @@ Living findings behind the tasks (Invariant #5). `[x]` = exists; others are prod
 | `docs/design/ws_esp32_transport.md` `[x]` | WS streaming-input driving adapter + ESP32 satellite transport | ARCH-6 |
 | `docs/design/onnx_inference_layer.md` `[x]` (complete 2026-06-04; ASR/platform/build + VAD/wake-word all resolved) | shared sherpa-onnx inference layer — ASR-centric; WB7 armv7 feasibility proven on hardware | ARCH-9/10 |
 | `docs/design/io_architecture.md` (DRAFT 2026-06-07) | symmetric configurable hexagonal I/O — format-vs-input, OutputPort + modality matrix, daemon multiplexing, event-bus delivery+observation, F&F via OutputManager, runners-as-presets | ARCH-14/15 |
+| `docs/design/audio_pipeline.md` `[x]` (2026-06-10) | audio I/O negotiation+transformation seam (input twin of ARCH-15) — VAD provider family, canonical transform-once + derived/fatal negotiation, pre-roll contract, AudioTranscoder/VoiceSegmenter/AudioNegotiator, symmetric in+out, traced | ARCH-17 ✓, ARCH-18 |
 | `config-ui/docs/donation_editor_ux.md` | human-friendly donations editor design | UI-1/2/3 |
 
 ---
@@ -577,6 +578,35 @@ See `docs/review/phase1_architecture_map.md` §5.
       coverage on interactive paths). Also carries the small ARCH-15 follow-ons: **PR-6c web-app JS** (open `/ws/output`,
       thread `client_id` into POSTs, render pushed frames — web-template edit) and **PR-7 capability-matrix display**
       (read-only outputs×modalities). Refs: `io_architecture.md` §4/§8/§12 (PR-10), ARCH-15, ARCH-6.
+- [x] **ARCH-17** [AUDIO] — **DESIGN — audio input/output negotiation + transformation seam; deliverable
+      `docs/design/audio_pipeline.md` (design session 2026-06-10).** The **input twin of ARCH-15**: unifies three
+      threads the audio chain (mic→VAD→wake→ASR) never got a clean contract layer for — **(1)** VAD becomes a
+      **lightweight provider family** (`VADPort` + `irene.providers.vad`: energy/silero/microvad; entry-points + nested
+      `[vad.providers.*]` config; no web/manager), killing the 4-way if-else and the scattered-knowledge bugs; **(2)**
+      **pre-roll becomes a declared contract** — a VAD provider exposes `detection_latency_ms`, the `VoiceSegmenter`
+      sizes the pre-buffer from it (replaces the magic `4`; the segment feeds the wake word, so this is detection
+      correctness); **(3)** audio **encoding (rate/format/channels) becomes a derived, negotiated, transform-once,
+      *traced* contract** — one **canonical** internal format derived as the common denominator of declared
+      `AudioContract`s (config can pin; **fatal startup error** if none satisfies all parties). Harmonized, function-named,
+      direction-shared set: **`AudioTranscoder`** (rename of `AudioProcessor`, absorbs `AudioFormatConverter`; one
+      transform primitive for input AND output — collapses the 3 duplicated TTS resample blocks), **`VoiceSegmenter`**
+      (rename of `UniversalAudioProcessor` minus the if-else), **`AudioNegotiator`** (derive/validate/drive + trace).
+      Symmetric in+out (output TTS→playback negotiates through the same transcoder, traced). Supersedes
+      `onnx_inference_layer.md` §11.2's "small seam." Decisions D-1..D-7 LOCKED 2026-06-10 (§12). Implementation = ARCH-18.
+- [ ] **ARCH-18** [AUDIO] (P-TBD) — **Implement ARCH-17, sliced PR-1..6 (`audio_pipeline.md` §13).** **PR-1**
+      `AudioTranscoder` rename/consolidation (absorb `AudioFormatConverter`; collapse the 3 TTS resample dups;
+      behavior-preserving). **PR-2** VAD provider family (`VADPort` + energy/silero/microvad adapters + entry-points +
+      `[vad.providers.*]` schemas via auto_registry/config-ui) + `VoiceSegmenter` (extract the if-else) — **folds the 2
+      live bugs**: delete the `vad_implementation` validator (entry-points discovery replaces it) and turn the
+      unconditional `calibrate_threshold` into a `VADPort.calibrate` default-no-op (engines opt in). **PR-3**
+      `AudioContract` + `AudioNegotiator` (derive canonical, startup validation/fatal, input transform-once at the
+      boundary) + first-class trace events. **PR-4** symmetric **output** negotiation (TTS→playback through the
+      negotiator/transcoder, traced). **PR-5** pre-roll contract (`detection_latency_ms` → segmenter sizing). **PR-6
+      (FINAL) — user-facing docs + diagrams:** update `docs/guides/{vad,voice-trigger,audio}.md` + architecture docs for
+      the new component + negotiation seam, and **re-author the affected dataflow/audio diagrams** in `docs/images/`
+      (mic→VAD→wake→ASR flow + the transform/negotiation seam; PNG/JPEG per the docs rules, no mermaid). Invariant #4:
+      the `[vad.providers.*]` schema change updates config-ui in the same PR (PR-2). VAD providers wrap the existing
+      energy/silero/microvad engines (no new ML).
 
 ### Code Quality & Review (QUAL)
 - [x] **QUAL-1** — Phase-0 static baseline (ruff/pyright/vulture/validators/import-graph). → `docs/review/phase0_static_baseline.md` (6e39886)

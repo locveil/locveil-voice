@@ -12,6 +12,21 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-10
+- **ARCH-17 done — designed the audio I/O negotiation + transformation seam (interactive session); filed ARCH-18 to
+  build it.** Deliverable `docs/design/audio_pipeline.md` — the input twin of ARCH-15. Triggered by "VAD now has 3
+  impls, should it be a component?" plus two related asks (don't let VAD swallow wake-word onset frames; full
+  transparency on audio transformations). Analysis found both partly-there-but-fragile (a hardcoded 100 ms pre-roll not
+  coupled to engine latency; scattered rate negotiation, format barely handled, transforms logged-not-traced) and two
+  live bugs (the `vad_implementation` validator rejects `microvad`; `calibrate_threshold` called unconditionally though
+  only energy engines have it). The design unifies all of it: VAD → a lightweight provider family
+  (`VADPort`+`irene.providers.vad`, no web/manager); pre-roll → a declared `detection_latency_ms` contract; audio
+  encoding → one **canonical** format derived as the common denominator of declared `AudioContract`s (config-pin
+  optional, **fatal** if infeasible), transformed once at the boundary and recorded as trace events. Harmonized the
+  confusingly-doubled audio helpers into function-named, direction-shared pieces — `AudioTranscoder` (one transform
+  primitive for input AND output, collapsing the 3 duplicated TTS resample blocks), `VoiceSegmenter`, `AudioNegotiator`.
+  Symmetric in+out; supersedes `onnx_inference_layer.md` §11.2's "small seam." Decisions D-1..D-7 locked with the user.
+  Implementation = ARCH-18 (PR-1..6, the 2 bug fixes fold into PR-2; user docs + diagram re-authoring are the explicit
+  final PR-6).
 - **Fixed sherpa-onnx on 64-bit/Windows + honest wheel markers for the pymicro extras (ARCH-10 flag / QUAL-20).**
   Verified the native libs across arm32 / 64-bit / Windows. sherpa-onnx **≥1.13 split its native libraries
   (onnxruntime + C-API) into a separate `sherpa-onnx-core` wheel** the `asr-onnx` extra wasn't pulling, so
