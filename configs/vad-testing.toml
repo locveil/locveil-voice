@@ -54,23 +54,18 @@ vad = true                    # Core component under test
 # ============================================================
 [vad]
 enabled = true
+max_segment_duration_s = 5    # Shorter for testing
+processing_timeout_ms = 25    # Aggressive timeout for testing
+buffer_size_frames = 50       # Small buffer for testing edge cases
+
+[vad.providers.energy]
 energy_threshold = 0.01       # Standard threshold for testing
 sensitivity = 0.5             # Balanced sensitivity
-voice_duration_ms = 100       # Standard voice duration
-silence_duration_ms = 200     # Standard silence duration
-max_segment_duration_s = 5    # Shorter for testing
 use_zero_crossing_rate = true # Test advanced features
 adaptive_threshold = false    # Disabled for consistent testing
 noise_percentile = 15
 voice_multiplier = 3.0
 
-# Testing performance settings
-processing_timeout_ms = 25    # Aggressive timeout for testing
-buffer_size_frames = 50       # Small buffer for testing edge cases
-
-# ============================================================
-# ASR CONFIGURATION - Testing Setup
-# ============================================================
 [asr]
 enabled = true
 default_provider = "vosk"

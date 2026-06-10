@@ -54,23 +54,18 @@ vad = true                    # Enable VAD component
 # ============================================================
 [vad]
 enabled = true
+max_segment_duration_s = 8    # Shorter segments for testing
+processing_timeout_ms = 30    # Faster timeout for development
+buffer_size_frames = 80       # Smaller buffer for testing
+
+[vad.providers.energy]
 energy_threshold = 0.008      # Lower threshold for sensitive detection
 sensitivity = 0.6             # Higher sensitivity for development
-voice_duration_ms = 80        # Shorter for responsive testing
-silence_duration_ms = 150     # Shorter for quick iteration
-max_segment_duration_s = 8    # Shorter segments for testing
 use_zero_crossing_rate = true # Enable for better accuracy
 adaptive_threshold = true     # Enable for varied test environments
 noise_percentile = 10         # Lower percentile for quieter environments
 voice_multiplier = 2.5        # Lower multiplier for sensitivity
 
-# Performance tuning for development
-processing_timeout_ms = 30    # Faster timeout for development
-buffer_size_frames = 80       # Smaller buffer for testing
-
-# ============================================================
-# ASR CONFIGURATION
-# ============================================================
 [asr]
 enabled = true
 default_provider = "vosk"

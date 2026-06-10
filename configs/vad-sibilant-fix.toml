@@ -56,31 +56,23 @@ monitoring = true                  # Monitor VAD performance
 # ============================================================
 [vad]
 enabled = true                     # Enable VAD processing
-# FIXED: Optimized settings to detect ALL speech sounds, not just sibilants
-energy_threshold = 0.0005          # VERY LOW: Catch quiet vowels and consonants
-sensitivity = 3.0                  # MAXIMUM: Highest possible sensitivity for comprehensive detection (schema raised to 3.0)
-voice_duration_ms = 40             # SHORT: Catch brief phonemes and vowels
-silence_duration_ms = 250          # MODERATE: Quick response but avoid choppiness
 max_segment_duration_s = 8         # Maximum voice segment duration
-use_zero_crossing_rate = true      # Enable enhanced ZCR logic
-adaptive_threshold = true          # Enable adaptive threshold
-noise_percentile = 10              # VERY LOW: Aggressive noise floor estimation
-voice_multiplier = 1.5             # LOW: Gentle multiplier above noise floor
 processing_timeout_ms = 50         # Processing timeout
 buffer_size_frames = 300           # Buffer size
-
-# Audio normalization for ASR
 normalize_for_asr = true
 asr_target_rms = 0.15
 enable_fallback_to_original = true
 
-# Frame-based configuration (testing with immediate detection)
+[vad.providers.energy]
+energy_threshold = 0.0005          # VERY LOW: Catch quiet vowels and consonants
+sensitivity = 3.0                  # MAXIMUM: Highest possible sensitivity for comprehensive detection (schema raised to 3.0)
+use_zero_crossing_rate = true      # Enable enhanced ZCR logic
+adaptive_threshold = true          # Enable adaptive threshold
+noise_percentile = 10              # VERY LOW: Aggressive noise floor estimation
+voice_multiplier = 1.5             # LOW: Gentle multiplier above noise floor
 voice_frames_required = 1          # TESTING: Immediate detection without hysteresis delay
 silence_frames_required = 6        # REDUCED: Faster silence confirmation
 
-# ============================================================
-# ASR CONFIGURATION - Testing Support
-# ============================================================
 [asr]
 enabled = true
 default_provider = "vosk"

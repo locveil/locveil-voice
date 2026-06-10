@@ -158,17 +158,14 @@ resample_quality = "fast"     # Resampling quality optimized for low-latency: "f
 # ============================================================
 [vad]
 enabled = true                # REQUIRED: Enable VAD to solve 23ms chunk problem
+max_segment_duration_s = 10   # Maximum voice segment duration in seconds
+
+[vad.providers.energy]
 energy_threshold = 0.01       # RMS energy threshold for voice detection (0.0-1.0)
 sensitivity = 0.5             # Detection sensitivity multiplier (0.1-2.0)
-voice_duration_ms = 100       # Minimum voice duration in milliseconds
-silence_duration_ms = 200     # Minimum silence duration to end voice segment
-max_segment_duration_s = 10   # Maximum voice segment duration in seconds
 use_zero_crossing_rate = true # Enable Zero Crossing Rate analysis for better accuracy
 adaptive_threshold = false    # Disable for consistent testing (enable for noisy environments)
 
-# ============================================================
-# WORKFLOW CONFIGURATION - Enable VAD Processing
-# ============================================================
 [workflows]
 enabled = ["unified_voice_assistant"]
 default = "unified_voice_assistant"

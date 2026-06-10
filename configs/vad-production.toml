@@ -57,23 +57,18 @@ vad = true                    # Enable VAD component
 # ============================================================
 [vad]
 enabled = true
+max_segment_duration_s = 12   # Longer segments for natural speech
+processing_timeout_ms = 40    # Balanced timeout for production
+buffer_size_frames = 120      # Stable buffer size
+
+[vad.providers.energy]
 energy_threshold = 0.012      # Balanced threshold for production
 sensitivity = 0.5             # Balanced sensitivity
-voice_duration_ms = 120       # Stable voice detection
-silence_duration_ms = 250     # Stable silence detection
-max_segment_duration_s = 12   # Longer segments for natural speech
 use_zero_crossing_rate = true # Enable for accuracy
 adaptive_threshold = true     # Enable for varied environments
 noise_percentile = 15         # Standard noise floor estimation
 voice_multiplier = 3.0        # Balanced voice threshold
 
-# Production performance settings
-processing_timeout_ms = 40    # Balanced timeout for production
-buffer_size_frames = 120      # Stable buffer size
-
-# ============================================================
-# ASR CONFIGURATION
-# ============================================================
 [asr]
 enabled = true
 default_provider = "vosk"
