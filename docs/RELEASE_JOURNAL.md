@@ -17,8 +17,10 @@ newest entries near the top of each dated section.
   input — already accumulates binary PCM until a `{"type":"end"}` frame → one `process_audio_input`) vs the
   ASR-utility `/asr/stream` + `/asr/binary`. Decision (user): `/ws/audio` is THE ESP32 path and must **skip server VAD
   too** (wake+VAD are on-device); **`/asr/stream` deleted** (untested per-chunk utility, superseded); `/asr/transcribe`
-  to be unified on `to_canonical`. This commit deletes `/asr/stream` (141 lines) + its now-dead `AudioChunkMessage`
-  import (pyright 0, suite 81=81). Filed **QUAL-45** [deferred] for the ESP32 firmware end-of-utterance signal +
+  to be unified on `to_canonical`. Deleted **both** ASR-utility WS endpoints `/asr/stream` (141 lines) and
+  `/asr/binary` (242 lines, also "ESP32-optimized" — superseded by `/ws/audio`) + their now-dead WS imports
+  (`AudioChunkMessage`/`TranscriptionResultMessage`/`Binary*`/`websocket_api`/`WebSocket*`/`base64`); pyright 0, suite
+  81=81. Filed **QUAL-45** [deferred] for the ESP32 firmware end-of-utterance signal +
   on-device VAD/wake contract (server side already done via the `end` frame; default = end-of-session). _Remaining for
   this unification: hoist `AudioNegotiator`→`core` (shared; layering forbids core→workflows today), build it on core +
   inject into the workflow, `/asr/transcribe`→`to_canonical`, and `/ws/audio` skip-VAD._
