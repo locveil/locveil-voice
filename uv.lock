@@ -1076,6 +1076,7 @@ all = [
     { name = "openai-whisper" },
     { name = "openwakeword" },
     { name = "ovos-number-parser" },
+    { name = "pymicro-wakeword" },
     { name = "python-multipart" },
     { name = "pyttsx3" },
     { name = "ru-core-news-md" },
@@ -1086,7 +1087,6 @@ all = [
     { name = "sounddevice" },
     { name = "soundfile" },
     { name = "spacy" },
-    { name = "tflite-runtime" },
     { name = "torch" },
     { name = "torchaudio" },
     { name = "uvicorn", extra = ["standard"] },
@@ -1190,6 +1190,7 @@ voice = [
     { name = "numpy" },
     { name = "openwakeword" },
     { name = "ovos-number-parser" },
+    { name = "pymicro-wakeword" },
     { name = "python-multipart" },
     { name = "pyttsx3" },
     { name = "ru-core-news-md" },
@@ -1198,7 +1199,6 @@ voice = [
     { name = "sounddevice" },
     { name = "soundfile" },
     { name = "spacy" },
-    { name = "tflite-runtime" },
     { name = "uvicorn", extra = ["standard"] },
     { name = "vosk" },
     { name = "vosk-tts" },
@@ -1208,7 +1208,7 @@ voice-trigger = [
     { name = "aiohttp" },
     { name = "numpy" },
     { name = "openwakeword" },
-    { name = "tflite-runtime" },
+    { name = "pymicro-wakeword" },
 ]
 web-api = [
     { name = "fastapi" },
@@ -1256,6 +1256,7 @@ requires-dist = [
     { name = "py-dev-gates", marker = "extra == 'dev'", git = "https://github.com/droman42/py-dev-gates?rev=v0.1.1" },
     { name = "pydantic", specifier = ">=2.0.0" },
     { name = "pydantic-settings", specifier = ">=2.0.0" },
+    { name = "pymicro-wakeword", marker = "extra == 'voice-trigger'", specifier = ">=2.0.0" },
     { name = "pyright", marker = "extra == 'dev'", specifier = "==1.1.410" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0.0" },
     { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.21.0" },
@@ -1275,7 +1276,6 @@ requires-dist = [
     { name = "soundfile", marker = "extra == 'audio-output'", specifier = ">=0.12.0" },
     { name = "spacy", marker = "extra == 'nlu'", specifier = ">=3.8.0" },
     { name = "termcolor", specifier = ">=1.1.0" },
-    { name = "tflite-runtime", marker = "extra == 'voice-trigger'", specifier = ">=2.12.0" },
     { name = "tomli-w", specifier = ">=1.0.0" },
     { name = "tomlkit", specifier = ">=0.12.0" },
     { name = "torch", marker = "extra == 'advanced-asr'", specifier = ">=1.13.0" },
@@ -2393,6 +2393,34 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/b0/77/a5b8c569bf593b0140bde72ea885a803b82086995367bf2037de0159d924/pygments-2.19.2.tar.gz", hash = "sha256:636cb2477cec7f8952536970bc533bc43743542f70392ae026374600add5b887", size = 4968631 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/c7/21/705964c7812476f378728bdf590ca4b771ec72385c533964653c68e86bdc/pygments-2.19.2-py3-none-any.whl", hash = "sha256:86540386c03d588bb81d44bc3928634ff26449851e99741617ecb9037ee5ec0b", size = 1225217 },
+]
+
+[[package]]
+name = "pymicro-features"
+version = "2.0.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/39/46/328092b4df890385594cf3d3e6015da72d77f63c58d3057276ac2353e891/pymicro_features-2.0.2.tar.gz", hash = "sha256:0d0bed7843ec78b6ced82d1a2dcddeb4fe5df61b3af80a281d0868c8e279c727", size = 54713 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/47/b1/511149e0ab3b244eedd8ba0d4f5293e2f1558f9e06a5c8724efb265e467b/pymicro_features-2.0.2-cp39-abi3-macosx_10_13_universal2.whl", hash = "sha256:a8f8b115cf825c44c7a1fddc0af154e2fb0c52f8d1a4597e1f1a113b91ff8324", size = 42354 },
+    { url = "https://files.pythonhosted.org/packages/cf/34/c52065f422c009d99c434fb68918142b815055942fcb57c9533810a22080/pymicro_features-2.0.2-cp39-abi3-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:acead36386b42934e620f57d7481177ba461dde247cccef6a846f5831805e6c7", size = 116415 },
+    { url = "https://files.pythonhosted.org/packages/aa/30/a31c5dc56015e55f897d0beb71447f1e10f0062067258856f3735ede133a/pymicro_features-2.0.2-cp39-abi3-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:65a76a7c7851ee0dd6083dda56b835ab9dc6eddeaf11b34461795758de846d0f", size = 119607 },
+    { url = "https://files.pythonhosted.org/packages/e4/22/577100459a7d3e7f5b3c5315c6c546a7980bf711371ca36398f440a1aee4/pymicro_features-2.0.2-cp39-abi3-win_amd64.whl", hash = "sha256:e76b656ce6a2eab9571657bbecaf17a5c07830306f9b544fbbea16c567bd78fb", size = 22695 },
+]
+
+[[package]]
+name = "pymicro-wakeword"
+version = "2.3.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "numpy" },
+    { name = "pymicro-features" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/fe/63/116e59d029507a69e17045485685d2d8d7daf46e3bc4e1812508c0a726db/pymicro_wakeword-2.3.0.tar.gz", hash = "sha256:35ad388878b2377938c9f8a6dbc36ef34f868a73a0cfa0df9812558762b0a380", size = 2094615 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b8/34/236d9506c8e739ce00ac9a97201fa7140054978cc394faa15a80471a8eb0/pymicro_wakeword-2.3.0-py3-none-macosx_15_0_universal2.whl", hash = "sha256:cadc6d977e648dd673642477f115bc99864d34a06a4d552812849599d4d9c306", size = 1713864 },
+    { url = "https://files.pythonhosted.org/packages/43/66/d3c4c3dfbc34300e97a59717e770570b53323b977e789e9e482dc2174652/pymicro_wakeword-2.3.0-py3-none-manylinux_2_35_aarch64.whl", hash = "sha256:853e2908db0b66ea391fbb0096098ac2512272a69cf3edb2a79247f66a7f714b", size = 1595926 },
+    { url = "https://files.pythonhosted.org/packages/f1/2a/26a5cb13ffa03523795f1edbca358798c56ceb2183b2115bba8334e8c94c/pymicro_wakeword-2.3.0-py3-none-manylinux_2_35_x86_64.whl", hash = "sha256:daf91166bc7bbd16ce7fcc6cbeab7af01f76e1746203889a6f2afa59e02cf5ec", size = 2099863 },
+    { url = "https://files.pythonhosted.org/packages/dd/ee/a9f6c9dfcb3dcb43cf4896ebbee1816e2207d32f5c670ac5303e4f1f1da3/pymicro_wakeword-2.3.0-py3-none-win_amd64.whl", hash = "sha256:f6f635931f6bc7f0f0a0f68aff701fa2d5bbc9ecc937404d8af1ffd815104af5", size = 1927576 },
 ]
 
 [[package]]

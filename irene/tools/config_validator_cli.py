@@ -232,7 +232,7 @@ class ConfigValidatorCLI:
                         "tts": ["elevenlabs", "silero_v3", "silero_v4"],
                         "audio": ["sounddevice", "audioplayer"],
                         "asr": ["whisper", "vosk"],
-                        "voice_trigger": ["openwakeword", "porcupine", "microwakeword"]
+                        "voice_trigger": ["openwakeword", "microwakeword"]
                     }
                 },
                 "api-only": {

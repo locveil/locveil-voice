@@ -233,7 +233,8 @@ class TestMasterConfigIntegrity:
         # Test that field name consistency is achieved (6.6.3)
         provider_schemas = AutoSchemaRegistry.get_provider_schemas()
         total_providers = sum(len(providers) for providers in provider_schemas.values())
-        assert total_providers >= 25, f"Should have 25+ providers, found {total_providers}"
+        # QUAL-20 cut the Porcupine voice-trigger provider (orphan: schema with no impl/entry-point).
+        assert total_providers >= 24, f"Should have 24+ providers, found {total_providers}"
         
         print("✓ Phase 8 success criteria met:")
         print(f"  - Master config coverage: 100%")

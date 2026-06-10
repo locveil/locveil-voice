@@ -157,7 +157,7 @@ class AutoSchemaRegistry:
                 # LLM providers
                 OpenAIProviderSchema, AnthropicProviderSchema, DeepSeekProviderSchema, ConsoleLLMProviderSchema,
                 # Voice trigger providers
-                OpenWakeWordProviderSchema, PorcupineProviderSchema, MicroWakeWordProviderSchema,
+                OpenWakeWordProviderSchema, MicroWakeWordProviderSchema,
                 # NLU providers
                 HybridKeywordMatcherProviderSchema, SpaCyNLUProviderSchema,
                 # Text processor provider (QUAL-13: one unified processor)
@@ -195,7 +195,6 @@ class AutoSchemaRegistry:
                 },
                 "voice_trigger": {
                     "openwakeword": OpenWakeWordProviderSchema,
-                    "porcupine": PorcupineProviderSchema,
                     "microwakeword": MicroWakeWordProviderSchema,
                 },
                 "nlu": {

@@ -318,7 +318,7 @@ enabled = true                      # keep enabled — this is the offline fallb
 # ============================================================
 [voice_trigger]
 enabled = false                      # Enable voice trigger component
-default_provider = "openwakeword"   # Default provider: "openwakeword", "porcupine", "microwakeword"
+default_provider = "openwakeword"   # Default provider: "openwakeword", "microwakeword"
 wake_words = ["jarvis", "alexa"]    # Wake words to detect - using supported OpenWakeWord models
 confidence_threshold = 0.8          # Detection confidence threshold (0.0-1.0)
 buffer_seconds = 1.0               # Audio buffer duration in seconds
@@ -336,12 +336,6 @@ wake_words = ["alexa", "jarvis"]   # List of wake words to detect
 threshold = 0.8                    # Detection threshold (0.0 - 1.0)
 inference_framework = "tflite"     # Framework: "onnx", "tflite" - using tflite to match downloaded models
 preload_models = false             # Preload AI models during provider initialization for faster startup
-
-# Porcupine Provider (Picovoice, commercial)
-[voice_trigger.providers.porcupine]
-enabled = false                     # Enable Porcupine provider
-access_key = "${PICOVOICE_ACCESS_KEY}"  # Picovoice access key
-keywords = ["jarvis"]              # Built-in keywords to use
 
 # MicroWakeWord Provider (ESP32/embedded)
 [voice_trigger.providers.microwakeword]

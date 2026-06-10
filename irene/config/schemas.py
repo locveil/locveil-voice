@@ -246,12 +246,6 @@ class OpenWakeWordProviderSchema(VoiceTriggerProviderSchema):
     preload_models: bool = Field(default=False, description="Preload AI models during provider initialization")
 
 
-class PorcupineProviderSchema(VoiceTriggerProviderSchema):
-    """Porcupine provider configuration schema"""
-    access_key: str = Field(description="Picovoice access key (use ${PICOVOICE_ACCESS_KEY})")
-    keywords: List[str] = Field(default_factory=lambda: ["jarvis"], description="Keywords to detect")
-
-
 class MicroWakeWordProviderSchema(VoiceTriggerProviderSchema):
     """MicroWakeWord provider configuration schema"""
     wake_words: List[str] = Field(default_factory=lambda: ["irene"], description="List of wake words to detect (must have corresponding models)")

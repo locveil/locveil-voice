@@ -1,14 +1,20 @@
 """
 microWakeWord Voice Trigger Provider
 
-Voice trigger provider using microWakeWord for custom wake word detection.
-Optimized for low-power devices with TensorFlow Lite for Microcontrollers support.
+Server-side wake-word detection backed by **pymicro-wakeword** (OHF-Voice, Apache-2.0) — the same
+"micro" stack that runs on the ESP32 satellites on-device. The library bundles the micro_speech feature
+frontend, the streaming tflite inference, and a precompiled tflite C lib, so this provider is a thin
+adapter (QUAL-20): it resolves each configured wake word to a `MicroWakeWord` (a built-in model, or a
+custom `.tflite`+manifest trained via microwakeword.com — the per-unit Russian-name plan) and streams
+16 kHz / 16-bit mono PCM through it in 10 ms chunks.
 
-Based on: https://github.com/kahrendt/microWakeWord
+64-bit only — the WB7/armv7 target wakes on-device (ESP32), so this never enters the armv7 image.
+See `docs/review/esp32_wakeword_review.md` and `docs/design/onnx_inference_layer.md` §11.
+
+Upstream: https://github.com/OHF-Voice/pymicro-wakeword
 """
 
 import logging
-import numpy as np
 from typing import Dict, Any, List, Optional
 from pathlib import Path
 
@@ -18,453 +24,235 @@ from ...utils.loader import safe_import
 
 logger = logging.getLogger(__name__)
 
+# 10 ms of 16 kHz / 16-bit mono PCM = 160 samples = 320 bytes — the unit pymicro-wakeword consumes.
+_CHUNK_BYTES = 320
+
+# Built-in models shipped inside pymicro-wakeword (English). Aliases map friendly names → enum members.
+_BUILTIN_ALIASES = {
+    "okay_nabu": "OKAY_NABU", "nabu": "OKAY_NABU",
+    "hey_jarvis": "HEY_JARVIS", "jarvis": "HEY_JARVIS",
+    "hey_mycroft": "HEY_MYCROFT", "mycroft": "HEY_MYCROFT",
+    "alexa": "ALEXA",
+}
+
 
 class MicroWakeWordProvider(VoiceTriggerProvider):
+    """microWakeWord provider — thin adapter over `pymicro-wakeword`.
+
+    Each configured wake word resolves to one streaming detector:
+    - a **built-in** model (``okay_nabu``/``hey_jarvis``/``hey_mycroft``/``alexa``), or
+    - a **custom** model — ``model_path`` pointing at a microwakeword.com manifest (``.json``) or a
+      ``.tflite`` (the per-ESP32-unit custom Russian-name model).
+
+    The library owns the feature frontend, the streaming state, the sliding window and the probability
+    cutoff — this class only marshals audio and reports detections.
     """
-    microWakeWord provider for custom wake word detection.
-    
-    Features:
-    - TensorFlow Lite streaming inference
-    - 40 spectrogram features every 10ms
-    - Low-power optimized for microcontrollers
-    - Custom model support
-    - Real-time audio processing at 16kHz
-    - Asset management integration for model downloads
-    """
-    
+
     def __init__(self, config: Dict[str, Any]):
         super().__init__(config)
-        self.tf_lite = None
-        self.interpreter: Any = None
-        self.input_details: Any = None
-        self.output_details: Any = None
-        
-        # Asset management integration - single source of truth
+        # Custom model: a manifest (.json) or a bare .tflite path. None → resolve built-ins by name.
+        self.model_path: Optional[str] = config.get('model_path')
+
+        # Lazily built in _do_initialize: one detector per wake word + a shared feature extractor.
+        self._detectors: List[Any] = []
+        self._features: Any = None
+        self._detector_words: List[str] = []
+        self._pcm_buffer = bytearray()  # carries sub-10 ms remainders between detect calls
+
+        # Asset management — custom models are deployment-supplied (resolved to a local path).
         from ...core.assets import get_asset_manager
         self.asset_manager = get_asset_manager()
-        
-        # microWakeWord specific configuration
-        self.feature_buffer_size = config.get('feature_buffer_size', 49)  # 49 * 10ms = 490ms
-        self.stride_duration_ms = config.get('stride_duration_ms', 10)
-        self.window_duration_ms = config.get('window_duration_ms', 30)
-        self.num_mfcc_features = config.get('num_mfcc_features', 40)
-        self.detection_window_size = config.get('detection_window_size', 3)  # Consecutive detections needed
-        
-        # Available wake words and their default models (mapped to asset registry)
-        self.available_models = {
-            'irene': 'irene_v1.0',
-            'jarvis': 'jarvis_v1.0', 
-            'hey_irene': 'hey_irene_v1.0',
-            'hey_jarvis': 'hey_jarvis_v1.0'
-        }
-        
-        # Audio preprocessing
-        self.feature_buffer = np.zeros((self.feature_buffer_size, self.num_mfcc_features), dtype=np.float32)
-        self.detection_buffer = []
-        
-        # Performance tracking
-        self.inference_time_ms = 0
-        self.total_inferences = 0
-    
+
     def get_provider_name(self) -> str:
         return "microwakeword"
-    
+
     async def is_available(self) -> bool:
-        """Check if microWakeWord dependencies are available."""
-        try:
-            # Check TensorFlow Lite Runtime (lightweight)
-            tflite = safe_import('tflite_runtime.interpreter')
-            if tflite is None:
-                # Fallback to full tensorflow if available
-                tflite = safe_import('tensorflow.lite')
-                if tflite is None:
-                    self._set_status(self.status.__class__.UNAVAILABLE, "tflite-runtime or tensorflow package not installed")
-                    return False
-            
-            # Check numpy
-            numpy = safe_import('numpy')
-            if numpy is None:
-                self._set_status(self.status.__class__.UNAVAILABLE, "numpy package not installed")
-                return False
-            
-            # Model availability will be checked during initialization via asset manager
-            
-            # Try to initialize the model
-            if self.interpreter is None:
-                await self._initialize_model()
-            
-            return self.interpreter is not None
-            
-        except Exception as e:
-            self._set_status(self.status.__class__.ERROR, f"microWakeWord initialization failed: {e}")
+        """Available iff pymicro-wakeword imports and at least one detector builds."""
+        if safe_import('pymicro_wakeword') is None:
+            self._set_status(self.status.__class__.UNAVAILABLE,
+                             "pymicro-wakeword not installed (extra: wake-tflite)")
             return False
-    
+        if not self._detectors:
+            await self._initialize_detectors()
+        return bool(self._detectors)
+
     async def _do_initialize(self) -> None:
-        """Initialize microWakeWord model."""
-        await self._initialize_model()
-    
-    async def _initialize_model(self):
-        """Initialize the TensorFlow Lite model."""
+        await self._initialize_detectors()
+
+    async def _initialize_detectors(self) -> None:
+        """Build one `MicroWakeWord` per configured wake word + the shared feature extractor."""
+        pmw = safe_import('pymicro_wakeword')
+        if pmw is None:
+            raise ImportError("pymicro-wakeword not installed (extra: wake-tflite)")
+
+        self._features = pmw.MicroWakeWordFeatures()
+        self._detectors = []
+        self._detector_words = []
+
+        for word in self.wake_words:
+            detector = await self._build_detector(pmw, word)
+            if detector is not None:
+                self._detectors.append(detector)
+                self._detector_words.append(word)
+
+        if not self._detectors:
+            raise RuntimeError(
+                f"No microWakeWord model resolved for wake words {self.wake_words!r} "
+                f"(model_path={self.model_path!r})"
+            )
+        logger.info("microWakeWord ready: %d detector(s) for %s", len(self._detectors), self._detector_words)
+
+    async def _build_detector(self, pmw: Any, word: str) -> Optional[Any]:
+        """Resolve a single wake word to a `MicroWakeWord` (built-in, custom manifest, or asset)."""
+        # 1) Custom model supplied directly (manifest .json → from_config; .tflite needs a manifest).
+        if self.model_path:
+            path = Path(self.model_path)
+            if path.suffix == ".json" and path.exists():
+                return pmw.MicroWakeWord.from_config(str(path))
+            logger.warning("microWakeWord model_path %s is not a usable manifest (.json)", self.model_path)
+
+        # 2) Built-in model by (aliased) name.
+        member = _BUILTIN_ALIASES.get(word.lower())
+        if member is not None:
+            return pmw.MicroWakeWord.from_builtin(pmw.Model[member])
+
+        # 3) Asset-managed custom model (deployment-supplied manifest registered under "microwakeword").
         try:
-            # Import TensorFlow Lite (prefer lightweight runtime)
-            tflite_module = safe_import('tflite_runtime.interpreter')
-            if tflite_module is not None:
-                # Use lightweight tflite-runtime
-                Interpreter = tflite_module.Interpreter
-                logger.info("Using tflite-runtime (lightweight ~50MB)")
-            else:
-                # Fallback to full tensorflow
-                tf = safe_import('tensorflow')
-                if tf is None:
-                    raise ImportError("Neither tflite-runtime nor tensorflow available")
-                Interpreter = tf.lite.Interpreter
-                logger.info("Using tensorflow.lite (full package ~800MB)")
-            
-            # Load model
-            model_path = await self._get_model_path()
-            if not model_path or not Path(model_path).exists():
-                raise FileNotFoundError(f"Model file not found: {model_path}")
-            
-            logger.info(f"Loading microWakeWord model from: {model_path}")
-            
-            # Initialize TensorFlow Lite interpreter
-            self.interpreter = Interpreter(model_path=str(model_path))
-            self.interpreter.allocate_tensors()
-            
-            # Get input and output details
-            self.input_details = self.interpreter.get_input_details()
-            self.output_details = self.interpreter.get_output_details()
-            
-            # Validate model input/output shapes
-            expected_input_shape = [1, self.feature_buffer_size, self.num_mfcc_features]
-            actual_input_shape = self.input_details[0]['shape'].tolist()
-            
-            if actual_input_shape != expected_input_shape:
-                logger.warning(f"Model input shape {actual_input_shape} != expected {expected_input_shape}")
-                # Update buffer size to match model
-                if len(actual_input_shape) >= 2:
-                    self.feature_buffer_size = actual_input_shape[1]
-                    self.num_mfcc_features = actual_input_shape[2] if len(actual_input_shape) >= 3 else 40
-                    self.feature_buffer = np.zeros((self.feature_buffer_size, self.num_mfcc_features), dtype=np.float32)
-            
-            logger.info(f"microWakeWord model initialized successfully")
-            logger.info(f"Input shape: {self.input_details[0]['shape']}")
-            logger.info(f"Output shape: {self.output_details[0]['shape']}")
-            
-        except Exception as e:
-            logger.error(f"Failed to initialize microWakeWord model: {e}")
-            self.interpreter = None
-            raise
-    
-    async def _get_model_path(self) -> Optional[str]:
-        """Get the model path using asset management or legacy configuration (following openwakeword pattern)."""
-        # Try to find models for supported wake words
-        for wake_word in self.wake_words:
-            # Use asset management for all supported wake words - unified pattern
-            if wake_word in self.available_models:
-                model_id = self.available_models[wake_word]
-                
-                try:
-                    # Get model info from asset manager  
-                    model_info = self.asset_manager.get_model_info("microwakeword", model_id)
-                    if model_info:
-                        logger.info(f"Loading microWakeWord model {model_id} for '{wake_word}' (size: {model_info.get('size', 'unknown')})")
-                    
-                    # Try asset manager download first
-                    model_path = await self._get_model_via_asset_manager(model_id)
-                    if model_path and model_path.exists():
-                        logger.info(f"Using asset-managed model for '{wake_word}': {model_path}")
-                        return str(model_path)
-                    else:
-                        # Fallback to checking if it's a direct path in available_models
-                        fallback_path = Path(model_id)
-                        if fallback_path.exists():
-                            logger.info(f"Using direct model path for '{wake_word}': {model_id}")
-                            return str(fallback_path)
-                        
-                except Exception as e:
-                    logger.warning(f"Asset manager failed for '{wake_word}', trying direct path: {e}")
-                    # Fallback to direct path interpretation
-                    fallback_path = Path(model_id)
-                    if fallback_path.exists():
-                        logger.info(f"Using direct model path for '{wake_word}': {model_id}")
-                        return str(fallback_path)
-        
+            resolved = await self.asset_manager.download_model("microwakeword", word)
+            if resolved and Path(resolved).exists() and Path(resolved).suffix == ".json":
+                return pmw.MicroWakeWord.from_config(str(resolved))
+        except Exception as e:  # asset miss is not fatal — just means this word has no model
+            logger.debug("No asset-managed microWakeWord model for '%s': %s", word, e)
+
+        logger.warning("microWakeWord: no built-in or custom model for wake word '%s' — skipped", word)
         return None
-    
-    async def _get_model_via_asset_manager(self, model_id: str) -> Optional[Path]:
-        """Download model via asset manager."""
-        try:
-            # Use asset manager to download model
-            model_path = await self.asset_manager.download_model("microwakeword", model_id)
-            return model_path
-        except Exception as e:
-            logger.warning(f"Asset manager download failed for model {model_id}: {e}")
-            return None
-    
+
     async def detect_wake_word(self, audio_data: AudioData) -> WakeWordResult:
-        """
-        Detect wake word using microWakeWord streaming inference.
-        
-        Args:
-            audio_data: Audio data to analyze (16kHz, 16-bit PCM)
-            
-        Returns:
-            WakeWordResult with detection status and metadata
-        """
-        if not self.interpreter:
-            return WakeWordResult(
-                detected=False,
-                confidence=0.0,
-                timestamp=audio_data.timestamp
-            )
-        
-        try:
-            # Convert audio data to numpy array
-            if isinstance(audio_data.data, bytes):
-                audio_array = np.frombuffer(audio_data.data, dtype=np.int16)
-            else:
-                audio_array = np.array(audio_data.data, dtype=np.int16)
-            
-            # Ensure correct sample rate
-            if audio_data.sample_rate != 16000:
-                logger.warning(f"Audio sample rate {audio_data.sample_rate} != 16000, resampling needed")
-                # For now, just log warning - proper resampling would require additional deps
-            
-            # Convert to float32 and normalize
-            audio_float = audio_array.astype(np.float32) / 32768.0
-            
-            # Extract MFCC features (simplified - in production would use micro_speech preprocessor)
-            features = self._extract_features(audio_float)
-            
-            if features is None:
-                return WakeWordResult(detected=False, confidence=0.0, timestamp=audio_data.timestamp)
-            
-            # Update feature buffer (sliding window)
-            self.feature_buffer = np.roll(self.feature_buffer, -1, axis=0)
-            self.feature_buffer[-1] = features
-            
-            # Run inference
-            confidence = await self._run_inference()
-            
-            # Apply detection logic (require multiple consecutive detections)
-            self.detection_buffer.append(confidence > self.threshold)
-            if len(self.detection_buffer) > self.detection_window_size:
-                self.detection_buffer.pop(0)
-            
-            # Check if we have enough consecutive detections
-            detected = (len(self.detection_buffer) >= self.detection_window_size and 
-                       all(self.detection_buffer))
-            
-            if detected:
-                logger.debug(f"Wake word detected with confidence {confidence:.3f}")
-                # Clear detection buffer to avoid repeated triggers
-                self.detection_buffer.clear()
-            
-            return WakeWordResult(
-                detected=detected,
-                confidence=confidence,
-                word=self.wake_words[0] if detected and self.wake_words else None,
-                timestamp=audio_data.timestamp,
-                metadata={
-                    'provider': 'microwakeword',
-                    'inference_time_ms': self.inference_time_ms,
-                    'consecutive_detections': sum(self.detection_buffer),
-                    'model_path': await self._get_model_path()
-                }
-            )
-            
-        except Exception as e:
-            logger.error(f"microWakeWord detection failed: {e}")
-            return WakeWordResult(
-                detected=False,
-                confidence=0.0,
-                timestamp=audio_data.timestamp
-            )
-    
-    def _extract_features(self, audio: np.ndarray) -> Optional[np.ndarray]:
-        """
-        Extract MFCC features from audio.
-        
-        Note: This is a simplified implementation. Production usage should use
-        the micro_speech preprocessor for consistency with microWakeWord training.
-        """
-        try:
-            # This is a placeholder - real implementation would use:
-            # - micro_speech preprocessor from TensorFlow
-            # - 40 MFCC features over 30ms windows
-            # - 10ms stride
-            # - Noise suppression and AGC
-            
-            # For now, return dummy features matching expected shape
-            # In production, integrate with tensorflow/lite/micro/examples/micro_speech
-            if len(audio) < 480:  # 30ms at 16kHz
-                return None
-            
-            # Simplified feature extraction (placeholder)
-            # Real implementation should use micro_speech preprocessor
-            features = np.random.random(self.num_mfcc_features).astype(np.float32)
-            
-            # Apply some basic processing to make it more realistic
-            features = features * 0.1 - 0.05  # Center around 0
-            
-            return features
-            
-        except Exception as e:
-            logger.error(f"Feature extraction failed: {e}")
-            return None
-    
-    async def _run_inference(self) -> float:
-        """Run TensorFlow Lite inference on current feature buffer."""
-        import time
-        
-        start_time = time.time()
-        
-        try:
-            # Prepare input tensor
-            input_data = np.expand_dims(self.feature_buffer, axis=0)  # Add batch dimension
-            
-            # Set input tensor
-            self.interpreter.set_tensor(self.input_details[0]['index'], input_data)
-            
-            # Run inference
-            self.interpreter.invoke()
-            
-            # Get output
-            output_data = self.interpreter.get_tensor(self.output_details[0]['index'])
-            
-            # Extract confidence (assuming output is probability)
-            confidence = float(output_data[0][0]) if output_data.size > 0 else 0.0
-            
-            # Update performance metrics
-            self.inference_time_ms = (time.time() - start_time) * 1000
-            self.total_inferences += 1
-            
-            return confidence
-            
-        except Exception as e:
-            logger.error(f"Inference failed: {e}")
-            return 0.0
-    
+        """Stream PCM through every detector in 10 ms chunks; report the first wake-word hit."""
+        if not self._detectors or self._features is None:
+            return WakeWordResult(detected=False, confidence=0.0, timestamp=audio_data.timestamp)
+
+        self._pcm_buffer.extend(self._to_pcm_bytes(audio_data.data))
+
+        detected_word: Optional[str] = None
+        while len(self._pcm_buffer) >= _CHUNK_BYTES:
+            chunk = bytes(self._pcm_buffer[:_CHUNK_BYTES])
+            del self._pcm_buffer[:_CHUNK_BYTES]
+            for features in self._features.process_streaming(chunk):
+                for word, detector in zip(self._detector_words, self._detectors):
+                    if detector.process_streaming(features):
+                        detected_word = word
+                        break
+                if detected_word:
+                    break
+            if detected_word:
+                break
+
+        if detected_word is None:
+            return WakeWordResult(detected=False, confidence=0.0, timestamp=audio_data.timestamp)
+
+        # Reset streaming state so the same utterance can't re-trigger immediately.
+        self._reset_streams()
+        return WakeWordResult(
+            detected=True, confidence=1.0, word=detected_word, timestamp=audio_data.timestamp,
+            metadata={"provider": "microwakeword", "wake_word": detected_word},
+        )
+
+    @staticmethod
+    def _to_pcm_bytes(data: Any) -> bytes:
+        """Coerce AudioData payload to 16-bit mono PCM bytes (numpy-free fast path for bytes)."""
+        if isinstance(data, (bytes, bytearray)):
+            return bytes(data)
+        np = safe_import('numpy')
+        if np is not None:
+            return np.asarray(data, dtype=np.int16).tobytes()
+        return bytes(data)
+
+    def _reset_streams(self) -> None:
+        self._pcm_buffer.clear()
+        for detector in self._detectors:
+            detector.reset()
+        if self._features is not None:
+            self._features.reset()
+
     def get_supported_wake_words(self) -> List[str]:
-        """Get list of wake words supported by available models."""
-        return list(self.available_models.keys())
-    
-    
+        """Built-in catalog plus any custom words that resolved to a detector."""
+        builtin = sorted(set(_BUILTIN_ALIASES))
+        return sorted(set(builtin) | set(self._detector_words))
+
     def get_supported_sample_rates(self) -> List[int]:
-        """Get list of supported sample rates for microWakeWord (Phase 3)."""
-        # microWakeWord is specifically designed for 16kHz audio
-        # The micro_speech preprocessor expects 16kHz input
         return [16000]
-    
+
     def get_default_sample_rate(self) -> int:
-        """Get default sample rate for microWakeWord (Phase 3)."""
-        # microWakeWord is optimized for 16kHz audio processing
         return 16000
-    
+
     def supports_resampling(self) -> bool:
-        """Check if microWakeWord supports automatic resampling (Phase 3)."""
-        # microWakeWord requires exactly 16kHz - resampling should be handled externally
-        # The micro_speech preprocessor is very specific about sample rate requirements
+        # The micro frontend expects exactly 16 kHz — resampling is handled upstream in the pipeline.
         return False
-    
+
     def get_default_channels(self) -> int:
-        """Get default number of channels for microWakeWord (Phase 3)."""
-        # microWakeWord processes mono audio only
         return 1
-    
+
     def get_capabilities(self) -> Dict[str, Any]:
-        """Get microWakeWord provider capabilities."""
         capabilities = super().get_capabilities()
         capabilities.update({
             "custom_models": True,
-            "tensorflow_lite": True,
-            "microcontroller_optimized": True,
             "streaming": True,
             "offline": True,
             "low_power": True,
-            "asset_management": True,
-            "huggingface_models": True,  # For future implementation
-            "feature_extraction": "mfcc",
+            "unified_with_esp32": True,   # same artifact runs on-device and server-side
             "sample_rates": [16000],
             "formats": ["pcm16"],
-            "languages": ["custom"],  # Depends on trained models
-            "inference_framework": "tensorflow_lite",
+            "inference_framework": "pymicro-wakeword (tflite)",
             "model_format": ".tflite",
-            "quantization": True,
-            "real_time": True
         })
         return capabilities
-    
-    def get_performance_stats(self) -> Dict[str, Any]:
-        """Get performance statistics."""
-        return {
-            "total_inferences": self.total_inferences,
-            "average_inference_time_ms": self.inference_time_ms,
-            "feature_buffer_size": self.feature_buffer_size,
-            "model_loaded": self.interpreter is not None,
-            "model_path": None  # Will be async, handled in metadata
-        }
-    
-    # Asset configuration methods (TODO #4 Phase 1)
-    @classmethod
-    def _get_default_extension(cls) -> str:
-        """microWakeWord uses .tflite models"""
-        return ".tflite"
-    
-    @classmethod
-    def _get_default_directory(cls) -> str:
-        """microWakeWord models directory"""
-        return "microwakeword"
-    
-    @classmethod
-    def _get_default_credentials(cls) -> List[str]:
-        """microWakeWord doesn't need credentials"""
-        return []
-    
-    @classmethod
-    def _get_default_cache_types(cls) -> List[str]:
-        """microWakeWord uses models cache"""
-        return ["models", "runtime"]
-    
-    @classmethod
-    def _get_default_model_urls(cls) -> Dict[str, str]:
-        """microWakeWord model URLs"""
-        return {
-            "micro_speech": "https://github.com/tensorflow/tflite-micro/raw/main/tensorflow/lite/micro/examples/micro_speech/micro_speech.tflite"
-        }
-    
-    # Build dependency methods (TODO #5 Phase 1)
+
+    async def cleanup(self) -> None:
+        for detector in self._detectors:
+            try:
+                detector.close()
+            except Exception:
+                pass
+        self._detectors = []
+        self._detector_words = []
+        self._features = None
+        self._pcm_buffer.clear()
+        logger.info("microWakeWord cleaned up")
+
+    # --- Build / asset metadata -----------------------------------------------------------------
     @classmethod
     def get_python_dependencies(cls) -> List[str]:
-        """microWakeWord requires TensorFlow Lite and numpy"""
-        return ["numpy>=1.21.0", "tflite-runtime>=2.12.0"]
-        
+        """pymicro-wakeword bundles its own tflite C lib + the micro frontend (no tflite-runtime)."""
+        return ["pymicro-wakeword>=2.0.0"]
+
     @classmethod
     def get_platform_dependencies(cls) -> Dict[str, List[str]]:
-        """microWakeWord has no system dependencies - pure Python/TensorFlow Lite"""
-        return {
-            "linux.ubuntu": [],
-            "linux.alpine": [],
-            "macos": [],
-            "windows": []
-        }
-        
+        return {"linux.ubuntu": [], "linux.alpine": [], "macos": [], "windows": []}
+
     @classmethod
     def get_platform_support(cls) -> List[str]:
-        """microWakeWord supports all platforms"""
+        """64-bit only — the WB7/armv7 satellite wakes on-device, never server-side here."""
         return ["linux.ubuntu", "linux.alpine", "macos", "windows"]
-    
-    async def cleanup(self) -> None:
-        """Clean up microWakeWord resources."""
-        if self.interpreter:
-            # TensorFlow Lite interpreter doesn't need explicit cleanup
-            self.interpreter = None
-            self.input_details = None
-            self.output_details = None
-            
-        # Clear buffers
-        self.feature_buffer = np.zeros((self.feature_buffer_size, self.num_mfcc_features), dtype=np.float32)
-        self.detection_buffer.clear()
-        
-        logger.info("microWakeWord cleaned up") 
+
+    @classmethod
+    def _get_default_extension(cls) -> str:
+        return ".tflite"
+
+    @classmethod
+    def _get_default_directory(cls) -> str:
+        return "microwakeword"
+
+    @classmethod
+    def _get_default_credentials(cls) -> List[str]:
+        return []
+
+    @classmethod
+    def _get_default_cache_types(cls) -> List[str]:
+        return ["models"]
+
+    @classmethod
+    def _get_default_model_urls(cls) -> Dict[str, str]:
+        """No hardcoded URLs — built-ins ship inside pymicro-wakeword; custom models are
+        deployment-supplied (trained per ESP32 unit via microwakeword.com)."""
+        return {}

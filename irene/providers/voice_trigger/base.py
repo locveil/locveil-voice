@@ -19,7 +19,7 @@ class VoiceTriggerProvider(ProviderBase):
     Base class for voice trigger/wake word detection providers.
     
     Implements the common interface for wake word detection engines
-    like OpenWakeWord, Picovoice Porcupine, etc.
+    like OpenWakeWord and microWakeWord.
     """
     
     def __init__(self, config: Dict[str, Any]):
