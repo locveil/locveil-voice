@@ -11,6 +11,12 @@ physical identity** (room + devices), and the server runs the full pipeline and 
 
 **Server-first design.** The in-repo `ESP32/` firmware spec (rev 2, Jul 2025) is **stale** and treated as
 *inspiration only*. This document defines the contract the **server** expects; the firmware is (re)written to match.
+_QUAL-19 (2026-06-09) reviewed the `ESP32/` tree:_ a real-but-incomplete ~5k-LOC skeleton (solid state machine /
+I2S / WiFi-TLS-WebSocket / TFLite-Micro wake-word integration, but won't link — absent embedded model+certs,
+`kitchen/main/CMakeLists.txt:9-12`; ES8311 codec + display are stubs). **Kept in-repo as quarantined reference**
+(not buildable firmware). On-device wake **and** VAD are the **microWakeWord + microVAD "micro" stack** (ESPHome
+`micro_wake_word` with `vad:` gating, TFLite-Micro) — the same model artifacts run server-side via the `pymicro-*`
+libs (`onnx_inference_layer.md` §11). Evidence + keep/fix/cut: `docs/review/esp32_wakeword_review.md`.
 
 ## 1. Transport
 - **WebSocket over TLS (`wss`)**, mutual-TLS terminated by an **nginx reverse-proxy** in front of the Irene

@@ -281,9 +281,11 @@ the pyproject extra that `uv sync` resolves in the per-arch build — not in a p
 ## 11. VAD + wake-word — standalone 64-bit (local-mic) scenario
 
 This is the **only** path where Irene runs its own VAD + voice-trigger (the WB7 path delegates both to the ESP32, §10).
-It is therefore **64-bit-only** — none of this enters the armv7 image. Today's `openwakeword`/`microwakeword`
-*providers* are hallucinated cruft (English-only model lists, stub feature extraction — QUAL-19), so this is a
-**greenfield rebuild**; the `VoiceTriggerProvider` ABC port stays.
+It is therefore **64-bit-only** — none of this enters the armv7 image. _Premise corrected by QUAL-19 (2026-06-09):_
+`openwakeword` is **functional** (not hallucinated); only `microwakeword` was a stub — and it's **fixable, not
+greenfield**, because OHF-Voice now ships server-side Python libs (`pymicro-wakeword`/`pymicro-vad`/`pymicro-features`,
+Apache-2.0) that bundle the micro frontend + tflite inference + a precompiled tflite C lib. The `VoiceTriggerProvider`
+ABC port stays. Full evidence + keep/fix/cut: `docs/review/esp32_wakeword_review.md`; implementation = **QUAL-20**.
 
 ### 11.1 Wake-word — two providers, mutually exclusive via toml (decided 2026-06-04)
 Exactly **one** is active, selected by the voice-trigger component's `default_provider` (the existing single-active
@@ -291,15 +293,22 @@ pattern — **no fallback list** for wake-word; the two are alternatives, not a 
 
 | Provider | Runtime | Why it's here | Russian story |
 |---|---|---|---|
-| `openwakeword` | **ONNX** (onnxruntime — stays in the no-torch ONNX-family image) | Best multilingual custom-training UX (20–30 langs via synthetic TTS / voice-conversion; LiveKit fork = single-YAML). Tiny ONNX model. | Custom-trained phrase; experimental quality (English-biased embedding). |
-| `microwakeword` | **tflite** (`tflite-runtime`) | **Unifies with the ESP32** — same training tool, one wake-word pipeline for the whole project; server-side tflite from the same trained model. | Custom-trained phrase; training is "advanced-user" difficult upstream. |
+| `openwakeword` | **ONNX** (onnxruntime — stays in the no-torch ONNX-family image) | Functional today. Multilingual custom-training UX. The no-custom-model **quick-start / alternative**. | Custom-trained phrase; experimental quality (English-biased embedding). |
+| `microwakeword` | **tflite** via **`pymicro-wakeword`** (bundles a precompiled tflite C lib) | **Unifies with the ESP32** — the *same* custom `.tflite` artifact runs on-device (TFLite-Micro) AND server-side via `pymicro-wakeword.from_config`. The **primary** for the satellite fleet. | Custom-train per ESP32 unit (microwakeword.com); same artifact loads server-side. |
 
-- **Both rebuilt properly** (cut the hallucinated stubs). Each declares its own deps via the contribution principle (§7):
-  `openwakeword` → python extra `wake-onnx` (`openwakeword`, `onnxruntime`); `microwakeword` → `wake-tflite`
-  (`tflite-runtime`). Both **64-bit only** (`get_platform_support` excludes armv7).
+- `microwakeword` is a **thin wrapper over `pymicro-wakeword`** (NOT a from-scratch DSP port — the micro frontend is a
+  bundled dep). `openwakeword` stays functional + gets polish (ONNX default, custom `model_path`). Deps via the
+  contribution principle (§7): `openwakeword` → extra `wake-onnx` (`openwakeword`, `onnxruntime`); `microwakeword` →
+  `wake-tflite` (`pymicro-wakeword`, which carries its own tflite lib — no `tflite-runtime`). Both **64-bit only**
+  (`get_platform_support` excludes armv7; the WB7 wakes on-device).
+- **Uniform config (QUAL-19):** wake-word selection stays **per-provider** (consistent with ASR/LLM model selection)
+  with an **identical `WakeWordSpec = {name, model, threshold, language}`** sub-schema across both providers. `name` =
+  provider-agnostic identity (→ room/satellite mapping); `model` = AssetManager-resolved artifact ref; `threshold` ↔
+  oWW `threshold` / µWW `probability_cutoff`. Provider-specifics (`inference_framework`; `sliding_window_size`) stay in
+  the provider block. Invariant #4: config-ui gets a `wake_words` array editor.
 - **Future swap-in:** `sherpa-onnx KWS` is the architectural ideal (zero-training open-vocabulary via `text2token`, joins
-  the shared sherpa layer) but has **no Russian base model today** (only zh/en/zh+en) — training a Zipformer KWS is not
-  "easily trained". The ABC port lets us add it as a third provider if/when a Russian KWS base model lands.
+  the shared sherpa layer) but has **no Russian base model today** (only zh/en/zh+en). The ABC port lets us add it as a
+  third provider if/when a Russian KWS base model lands.
 
 ### 11.2 VAD — two impls, mutually exclusive via toml (decided 2026-06-04)
 VAD is currently a **util** (`irene/utils/vad.py`), not a selectable seam. Promote it to a small VAD provider/port with
@@ -309,10 +318,15 @@ VAD is currently a **util** (`irene/utils/vad.py`), not a selectable seam. Promo
 |---|---|---|
 | `energy` | today's `irene/utils/vad.py` | dependency-free; keep, but **bug-fix/improve** it (per user). The default. |
 | `silero` | **SileroVAD-ONNX via sherpa-onnx** | more robust in noise; **joins the shared sherpa layer** (same thread/CPU policy). Opt-in. |
+| `microvad` | **microVAD via `pymicro-vad`** (added by QUAL-19, 2026-06-09) | tiny; **shares the `pymicro-features` micro frontend** with `microwakeword` and matches the ESP32 on-device VAD. Opt-in. |
 
-- Exactly one active (mutually exclusive), `energy` default. `silero` reuses the sherpa runtime already present for ASR
-  on 64-bit — no torch, no extra runtime.
-- 64-bit only (the WB7 ESP32 does VAD on-device).
+- Exactly one active (mutually exclusive), `energy` default. **Runtime coherence picks the opt-in:** `silero` reuses the
+  sherpa runtime (loaded for sherpa ASR); `microvad` reuses the tflite family (loaded when `microwakeword` is the active
+  wake provider) and its frontend. Not rivals on accuracy — pick the one whose runtime is already resident.
+- 64-bit only (the WB7 ESP32 does VAD on-device — see the unified micro stack below).
+- **Unified "micro" stack (QUAL-19):** `microwakeword` + `microVAD` share one frontend + one model-artifact ecosystem and
+  run *identically* on the ESP32 (on-device, TFLite-Micro via ESPHome's `micro_wake_word` `vad:` gating) and server-side
+  (via the `pymicro-*` libs). This is the realized "one pipeline, device + server" goal. Implementation = **QUAL-20**.
 
 ---
 

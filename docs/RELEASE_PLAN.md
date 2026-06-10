@@ -94,7 +94,7 @@ Living findings behind the tasks (Invariant #5). `[x]` = exists; others are prod
 | `qual29_choices_decisions.md` | QUAL-29 interactive CHOICE canonical-model decisions (5 cases + parallel-set map + build plan) | QUAL-29 |
 | `declared_param_audit.md` | audit: 19 declared-but-unconsumed donation params across 11 handlers (Bucket A dead / B bypassed) | QUAL-34, QUAL-11 |
 | `streaming_api_review.md` `[x]` | AsyncAPI streaming-API tooling — Hybrid: replace renderer / keep+improve generator | QUAL-17 ✓, QUAL-18 |
-| `esp32_wakeword_review.md` | ESP32 + wakeword keep/fix/cut | QUAL-19/20 |
+| `esp32_wakeword_review.md` `[x]` | ESP32 + wakeword keep/fix/cut + microWakeWord upstream study | QUAL-19 ✓, QUAL-20 |
 | `docker_build_review.md` `[x]` | Docker/build verification (entry-point renames, armv7 base, build-analyzer drift) | BUILD-5, BUILD-3 |
 | `docs/design/mqtt_integration.md` `[x]` (DONE 2026-06-06; bridge contract AGREED) | smart-home integration — bridge is the single device authority, Irene speaks canonical commands | ARCH-7/8 |
 | `docs/design/ws_esp32_transport.md` `[x]` | WS streaming-input driving adapter + ESP32 satellite transport | ARCH-6 |
@@ -325,7 +325,10 @@ See `docs/review/phase1_architecture_map.md` §5.
       markers; Invariant #4 via `SherpaOnnxASRProviderSchema`. (PR-4) **VAD engine seam** — `VADEngine` ABC port +
       `energy` (existing, unchanged) / `silero` (SileroVAD-ONNX via sherpa-onnx) **toml-selected, mutually exclusive**,
       64-bit only; hexagon-clean (workflows injects the asset path; utils stays core-free per ARCH-12 #9); 11 seam tests.
-      29 unit tests total; 0 net suite regressions. **Remaining: PR-5 wake-word — PARKED 2026-06-04.** Reconciliation
+      29 unit tests total; 0 net suite regressions. **PR-5 wake-word — SUBSUMED BY QUAL-20 (2026-06-09, per QUAL-19).** The wake-word greenfield is now owned end-to-end
+      by QUAL-20 (fix backend µWW via `pymicro-wakeword` + openWakeWord polish + uniform `WakeWordSpec` + server-side
+      microVAD + cut Porcupine + armv7 config). ARCH-10's residual scope here is closed; see `esp32_wakeword_review.md`.
+      _Original PARKED note (2026-06-04) retained for history:_ Reconciliation
       (contradicts the design's "both hallucinated" premise): **`openwakeword` is functional** (real upstream model URLs,
       real `predict()`, English catalog) — *not* a stub; **`microwakeword` is the real stub** (`_extract_features` returns
       `np.random`, hallucinated `*_v1.0` catalog, 404 model URL, training removed `886d4d1` — QUAL-19); **Porcupine** =
@@ -896,18 +899,38 @@ See `docs/review/phase1_architecture_map.md` §5.
       official `@asyncapi/web-component` at `/asyncapi`, delete the bespoke renderer (≈ −900 LOC); **(2)** fix the
       lossy `_clean_property_for_asyncapi` union/nullable handling; **(3, scoped separately)** emit AsyncAPI 3.0 +
       binary message bindings for ESP32 frames; **(4)** retire/repoint the docstring `x-` extension parser.
-- [ ] **QUAL-19** [ESP32] (P2, last pre-release) — Full review & questioning of the ESP32 + wakeword story:
-      ESP32 firmware subsystem (ESP-IDF nodes/common/tools, embedded microWakeWord model **not committed**,
-      binary-WS audio streaming) — functional vs aspirational; the backend **microWakeWord provider is largely a
-      placeholder** (stub feature extraction; depends on trained models but training was removed at `886d4d1`;
-      HF model download = **TODO11, still Open**; ASSET-2 also confirmed its hardcoded `micro_speech.tflite` URL
-      (`microwakeword.py:436`, github tflite-micro raw) is **404/moved** — a TF demo model, not a real wakeword model);
-      openWakeWord (works) vs microWakeWord (broken/redundant?);
-      residual training dead-code; armv7/embedded build viability (`Dockerfile.armv7`, `embedded-armv7`); ESP32
-      docs accuracy. Intersects ASSET-2 (wakeword model URLs). Done when: `docs/review/esp32_wakeword_review.md`
-      exists with a **keep/fix/cut** recommendation per piece {ESP32 firmware, microWakeWord, armv7, training refs}.
-- [ ] **QUAL-20** [ESP32] (P-TBD) — Act on QUAL-19 (complete TODO11 + real feature extraction, OR cut/archive
-      microWakeWord + ESP32 + residual training refs; reconcile armv7; close TODO11 accordingly).
+- [x] **QUAL-19** [ESP32] (P2, last pre-release) — **DONE 2026-06-09** (interactive review session + upstream study).
+      Deliverable `docs/review/esp32_wakeword_review.md` — keep/fix/cut per piece {ESP32 firmware, on-device wake+VAD,
+      backend microWakeWord, openWakeWord, Porcupine, server VAD, armv7, training refs}. **Key findings:** (1) the
+      design's "both server wake providers hallucinated" premise was **wrong** — `openwakeword` works; only
+      `microwakeword` is a stub. (2) **Upstream microWakeWord now ships server-side Python libs**
+      (`pymicro-wakeword`/`pymicro-vad`/`pymicro-features`, Apache-2.0, maintained) bundling the micro frontend +
+      tflite inference + a precompiled tflite C lib → the backend provider is **fixable as a thin wrapper, not a DSP
+      hand-port**, and `from_config` loads **custom** `.tflite`+manifest (the per-unit RU plan). (3) microWakeWord +
+      microVAD are **one "micro" stack** running identically on the ESP32 (TFLite-Micro) and server-side from the
+      **same artifact** — the "one pipeline, device+server" goal is now real. **Decisions:** ESP32 firmware = keep as
+      quarantined reference; backend µWW = FIX via pymicro-wakeword; openWakeWord = keep, demote to quick-start;
+      Porcupine = CUT; add server-side **microVAD** as a 3rd `VADEngine`; armv7 = no server wake (on-device); training
+      refs = cut in-repo. **Config:** uniform wake-word selection stays **per-provider** (consistent with ASR/LLM) via
+      a shared `WakeWordSpec={name,model,threshold,language}` sub-schema. **De-tangle (Invariant #6):** QUAL-20 now owns
+      the whole wake+microVAD rebuild; **ARCH-10 PR-5 is subsumed by QUAL-20**. Design folded into
+      `onnx_inference_layer.md` §11 + `ws_esp32_transport.md`. _Original spec:_ Full review & questioning of the ESP32 +
+      wakeword story (firmware functional-vs-aspirational; backend microWakeWord placeholder; openWakeWord vs
+      microWakeWord; armv7; docs; TODO11). Intersects ASSET-2.
+- [ ] **QUAL-20** `[release]` [ESP32] (P-TBD) — **Act on QUAL-19 — wake-word + microVAD rebuild (redefined 2026-06-09;
+      subsumes ARCH-10 PR-5).** 64-bit-only (armv7 wakes on-device). Per `esp32_wakeword_review.md` "Agreed plan":
+      **(1)** backend `microwakeword` = thin wrapper over **`pymicro-wakeword`** (delete the np.random `_extract_features`
+      + manual feature-buffer/tflite plumbing/consecutive-detection, `microwakeword.py:237-330`; stream 10 ms/160-sample
+      16 kHz chunks); one instance per wake-word entry via `from_config`/explicit ctor; **(2)** `wake-tflite` extra
+      (`pymicro-wakeword`, carries its tflite C lib → drop `tflite-runtime`), 64-bit markers; **(3)** openWakeWord
+      polish (ONNX default, `wake-onnx` extra, custom `model_path`); **(4)** uniform per-provider **`WakeWordSpec=
+      {name,model,threshold,language}`** sub-schema across both providers + config-ui `wake_words` array editor
+      (Invariant #4); **(5)** server-side **`microvad`** `VADEngine` over **`pymicro-vad`**, toml-selectable beside
+      energy/silero (extends the ARCH-10 PR-4 seam); **(6)** cut Porcupine orphan schema; fix `embedded-armv7.toml`
+      (no server wake provider; on-device); cut in-repo training refs + reconcile ESP32 docs; **(7)** assets =
+      deployment-supplied custom models (optional `from_builtin` English dev quick-start), close TODO11; **(8)** tests
+      (builtin-model detection + `from_config` custom smoke + microVAD seam). **Verify at build:** `libtensorflowlite_c`
+      wheel platform coverage (x86_64/aarch64). WB7 hw re-val stays with ARCH-10 completion.
 - [x] **QUAL-21** (P1) — **Prod bug (`ComponentConfig` field drift) — RESOLVED BY REMOVAL. DONE 2026-06-03.** The
       `irene-settings` Gradio runner (`settings_runner.py`, 462 LOC) constructed `ComponentConfig(audio_output=…,
       microphone=…, web_api=…)` — fields that no longer exist (mic/web moved to `config.inputs.*` /

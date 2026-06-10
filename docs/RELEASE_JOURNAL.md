@@ -26,6 +26,21 @@ newest entries near the top of each dated section.
   multi-slot via successive rounds). No donation/config/REST contract touched → config-ui unaffected. New
   `test_qual31_slot_filling.py` (4); QUAL-30's 3 still green; pyright 0, 9/9 contracts, suite 83=83 FAILED (0 net
   regression, +4 new passing).
+- **QUAL-19 done — ESP32 + wake-word review (interactive session + upstream study).** Produced
+  `docs/review/esp32_wakeword_review.md` with keep/fix/cut per piece. Two findings reshaped the plan: (1) the design's
+  "both server wake providers hallucinated" premise was wrong — `openwakeword` works, only `microwakeword` is a stub;
+  (2) OHF-Voice now ships maintained server-side Python libs (`pymicro-wakeword`/`pymicro-vad`/`pymicro-features`,
+  Apache-2.0) that bundle the micro frontend + tflite inference + a precompiled tflite C lib — so the broken backend
+  provider is **fixable as a thin wrapper, not a DSP hand-port**, and `from_config` loads custom `.tflite`+manifest (the
+  per-unit Russian plan). microWakeWord + microVAD are one "micro" stack that runs identically on the ESP32 (TFLite-Micro
+  via ESPHome `micro_wake_word` `vad:` gating) and server-side from the **same artifact** — the long-stated "one
+  pipeline, device+server" goal is now real. Decisions: firmware = keep as quarantined reference (real-but-incomplete
+  ~5k-LOC skeleton, won't link); backend µWW = fix via pymicro-wakeword; openWakeWord = keep/demote to quick-start;
+  Porcupine = cut; add server-side microVAD as a 3rd VADEngine; armv7 = no server wake (on-device); training refs = cut.
+  Config: uniform wake-word selection stays **per-provider** (consistent with ASR/LLM) via a shared
+  `WakeWordSpec={name,model,threshold,language}`. **Scope changes (Invariant #8, user-approved in session):** QUAL-20
+  redefined to the concrete rebuild and now **subsumes ARCH-10 PR-5** (one owner for the wake-word work). Folded into
+  `onnx_inference_layer.md` §11 + `ws_esp32_transport.md`.
 - **Filed QUAL-44** (`[deferred]`, enhancement split from QUAL-31): answer-vs-new-command arbitration on a clarifying
   turn — QUAL-31's resume pre-check unconditionally combines the next turn as the answer, so a user who barks a new
   command instead gets a garbled combined utterance. Bounded today by one-shot consumption + idle expiry; the task adds
