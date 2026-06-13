@@ -657,9 +657,10 @@ See `docs/review/phase1_architecture_map.md` §5.
       `recorded_output` (not bit-exact — LLM non-determinism); **two replay modes** `--local` (default; run through the
       replayer's pipeline + mismatch report — the VAD-tuning case) / `--reproduce` (apply the trace's captured
       **config subset**); models out of scope for now (dev system is a superset of testers'). Trigger = runner `--trace`
-      now → `[trace]` TOML (config-ui) later, **save every request**; **retire-and-replace `vad_recording_test`** (port
-      the mic→VAD harness, base64 not WAV, fix the `to_canonical` ordering). Slices §12; open questions §13.
-      _Design session continues before implementation._
+      now → `[trace]` TOML (config-ui) later, **save every request**. CLI playback (D-11..14): **listen** via the audio
+      component (OS output), **`--step`** (pause per stage), **`--record-out`** a second trace (tester's + local replay
+      for comparison); `vad_recording_test` **deleted** once its harness is ported (base64 not WAV, fix `to_canonical`).
+      D-1..D-14. Slices §12; open questions §13. _Design session continues before implementation._
 
 ### Code Quality & Review (QUAL)
 - [x] **QUAL-1** — Phase-0 static baseline (ruff/pyright/vulture/validators/import-graph). → `docs/review/phase0_static_baseline.md` (6e39886)

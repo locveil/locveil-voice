@@ -148,6 +148,20 @@ degrade-and-report) is a future concern, captured below. Note `seed_context` has
 room/devices may not exist locally, so under `--local` it is just seeded state, under `--reproduce` another
 mismatch to report.
 
+**Playback UX (the CLI tool).**
+- **Listen** — reuse the **audio component** (the `sounddevice`/`aplay`/… playback providers) on the OS/system
+  output device (the audio provider's configured device, or the OS default — "system settings"). Decode the
+  base64 → play from a memory buffer (no temp WAV; base64-everywhere holds). Two listen points: the recorded
+  **input utterance**, and a `--local` re-run's live **TTS reply** when `wants_audio`. Audio is offered, never
+  forced (a `play` command / `--play`).
+- **`--step`** — pause at each **stage boundary** (the same boundaries the trace instruments), print the
+  stage's input/output/timing, allow `play`/`inspect`, then resume on a keypress (`c` = run to the end). Needs
+  one **async pause hook** at the workflow's stage transitions, reached via the `current_trace` contextvar
+  (no-op when not stepping) — `record_stage` itself stays synchronous.
+- **`--record-out <file>`** — run the replay **with capture on** and save a **second trace** (default
+  `capture_level` = the source trace's). So replaying a tester's trace yields *their* trace + *your* local
+  replay trace — two self-contained, comparable files (plus the `recorded_output` diff) to hand over for analysis.
+
 **Determinism caveat (baked in):** ASR is ~deterministic for the same audio; **LLM is not** (temperature),
 and time/device state move on. So replay reproduces the **input + starting state**, then diffs — it is a
 **regression/tuning aid, not bit-exact reproduction**. Seeding the context is what makes context-dependent
@@ -178,8 +192,8 @@ harness** and saves per-segment audio (raw / normalised / 16 kHz). **Decision: r
 meaningful parts into the capture layer (the mic-stream + `voice_segment_handler` harness, the WAV writer
 becomes **base64 — no WAV files**), **fix the `to_canonical` ordering** (it VADs on raw 44.1 kHz; production
 VADs on canonical 16 kHz), and add what it lacks (`vad_frames`, the structured self-contained JSON, replay).
-The tool is then either deleted or kept as a thin convenience wrapper ("trace one mic session at
-`capture_level=segmenter`, then read `vad_frames`"). _(Open: delete vs thin-wrapper — confirm in review.)_
+**The tool is deleted once ported** — the trace system (capture `capture_level=segmenter` on a mic session,
+then read `vad_frames`) fully covers its purpose, so there's no second mic-capture path to maintain.
 
 ## 11. Decisions (LOCKED 2026-06-13, design session)
 
@@ -201,6 +215,14 @@ The tool is then either deleted or kept as a thin convenience wrapper ("trace on
   as overrides; honour what the replayer can, report what it can't). The envelope therefore carries a captured
   **config subset** (audio/vad/asr/nlu), not just a digest. Model availability is **out of scope for now** (the
   dev system is a superset of testers' setups).
+- **D-11** **Listening reuses the audio component** (`sounddevice`/`aplay`/… on the OS/system output device) —
+  decode base64 → play from memory (no temp WAV); the input utterance + a `--local` re-run's TTS reply. No new
+  playback mechanism.
+- **D-12** The CLI is **`--step`-able** — pause at each stage boundary (print in/out/timing, allow listen/inspect,
+  resume on keypress) via one **async pause hook** reached through the `current_trace` contextvar.
+- **D-13** The CLI can **`--record-out`** a second trace of a replay run (same capture machinery; default
+  `capture_level` = the source's), so a tester's trace + the local replay are two comparable files for analysis.
+- **D-14** `vad_recording_test` is **deleted** once its harness is ported (no second mic-capture path).
 
 ## 12. Implementation slices (ARCH-19, TBD ordering)
 
@@ -210,13 +232,15 @@ The tool is then either deleted or kept as a thin convenience wrapper ("trace on
 3. **Capture levels:** `utterance` + `segmenter` (`vad_frames` + windowed audio from the `VoiceSegmenter`) +
    `raw` (ws/file now; the live-mic rolling buffer behind `--trace-raw-mic`); ported from `vad_recording_test`.
 4. **Handlers** emit `trace_event` at their key steps (device command, LLM, timer).
-5. **Replay** tool (`replay_trace.py`) — seed + re-inject + diff; optional `/trace/replay`.
-6. **Retire `vad_recording_test`**; tests; user/dev docs (PR-6 style) + a diagram if warranted.
+5. **Replay** tool (`replay_trace.py`) — `TraceInput` (stream levels) / `process_audio_input` (utterance), seed
+   + re-inject + diff; `--local`/`--reproduce`; **listen** (audio component), **`--step`** (async pause hook),
+   **`--record-out`** a second trace; optional `/trace/replay`.
+6. **Delete `vad_recording_test`**; tests; user/dev docs (PR-6 style) + a diagram if warranted.
 
 ## 13. Open questions (for the next design round)
 
 - Replay surface: CLI tool only, or also a `/trace/replay` endpoint?
-- `vad_recording_test`: delete outright, or keep as a thin wrapper?
+- ~~`vad_recording_test`: delete vs wrapper~~ — **resolved (D-14): deleted** once ported.
 - ~~`config_digest`: hash vs subset~~ — **resolved (D-10): capture a config *subset*** (+ a digest for quick
   equality), since cross-system `--reproduce` can't replay from a hash.
 - **Model-availability fallback** (deferred — the superset assumption holds for now): when a `--reproduce`
