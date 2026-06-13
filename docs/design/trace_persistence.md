@@ -36,8 +36,10 @@ base64 everywhere, consistent with the rest of the system).
                 "wants_audio":false,"session_id":"…","room":"kitchen"},
     "canonical": {"rate":16000,"format":"pcm16","channels":1},
     "seed_context": { … },             // the "before" context snapshot — replay seeds a fresh context from it
-    "config_digest": "sha256:…",
-    "provider_models": {"asr":"vosk-ru-0.22","nlu":"hybrid"}
+    "config_subset": {                 // the settings that SHAPED this run — enough to reproduce OR to diff
+      "audio": {…}, "vad": {…}, "asr": {…}, "nlu": {…} },   // (a hash alone can't be replayed-from)
+    "config_digest": "sha256:…",       // quick equality check against the replayer's config
+    "provider_models": {"asr":"vosk-ru-0.22","nlu":"hybrid"}   // for the cross-system mismatch report (models aren't embeddable)
   },
 
   "execution": {                       // today's export_trace() — SANITISED (redacted/truncated), for reading
@@ -120,6 +122,32 @@ A CLI tool `irene/tools/replay_trace.py` (a `/trace/replay` endpoint is optional
 rebuild `input` + `request` → **seed a fresh `UnifiedConversationContext` from `seed_context`** → re-inject at
 the `capture_level`'s entry point → run with a fresh trace → **diff the new output against `recorded_output`**.
 
+**Where it re-enters (the audio source is not a microphone).** The workflow entry points are source-agnostic
+(`process_audio_input(AudioData)`, `process_audio_stream(AsyncIterator[AudioData])`), so replay just constructs
+the audio and calls them. The level picks the entry:
+- **`segmenter` / `raw`** → replay *through* VAD/negotiate, i.e. as a **stream** → `process_audio_stream`. Model
+  the source as a lightweight **`TraceInput`** (an `InputPort` adapter — "the microphone, sourced from the trace
+  file"): it decodes the base64 frames, yields them, and carries the envelope's `request` context. This reuses
+  the whole input→workflow(→output) seam and composes with the ARCH-16 multi-input daemon ("attach a replay
+  input"). The replay tool can drive `TraceInput` directly without standing up the full `InputManager`.
+- **`utterance`** → the *pre-segmented* path (skip VAD), exactly like `/asr/transcribe`: one bounded `AudioData`
+  → `process_audio_input`. Not a stream, so it bypasses `TraceInput`.
+
+**Two replay modes (cross-system).** The audio is self-contained (base64), so the *input* is portable — but
+config and models are not. A trace from a tester with a different config is replayed one of two ways:
+- **`--reproduce`** ("what did *their* system do?") — apply the trace's `config_subset` as the replay config;
+  use `provider_models` + `config_digest` to **detect + report** what the replayer can't honour.
+- **`--local`** (default — "their utterance failed; how does *my* pipeline / my VAD settings handle it?", the
+  VAD-tuning case) — ignore the trace's config, run the audio through the local pipeline, and emit a
+  **config/model mismatch report** (trace's settings vs the replayer's) so the difference is visible.
+
+`--local` always works (no dependency on the sender's setup); `--reproduce` is faithful only when the same
+models are installed. **For now the model gap is moot** — the dev/notebook system is a *superset* of what
+testers/hand-picked users run, so the models are always present; a model-availability fallback (fail vs
+degrade-and-report) is a future concern, captured below. Note `seed_context` has the same texture — a tester's
+room/devices may not exist locally, so under `--local` it is just seeded state, under `--reproduce` another
+mismatch to report.
+
 **Determinism caveat (baked in):** ASR is ~deterministic for the same audio; **LLM is not** (temperature),
 and time/device state move on. So replay reproduces the **input + starting state**, then diffs — it is a
 **regression/tuning aid, not bit-exact reproduction**. Seeding the context is what makes context-dependent
@@ -166,6 +194,13 @@ The tool is then either deleted or kept as a thin convenience wrapper ("trace on
   every request** while on; retention manual in v1.
 - **D-8** **Retire-and-replace `vad_recording_test`**, porting its harness (base64, not WAV) + fixing the
   `to_canonical` ordering.
+- **D-9** Replay's audio source = a lightweight **`TraceInput`** (`InputPort`) for the `segmenter`/`raw` stream
+  levels; the `utterance` level reuses `process_audio_input` (pre-segmented). The entry point follows the level.
+- **D-10** **Two replay modes** — `--local` (default; run the audio through the replayer's pipeline, emit a
+  config/model **mismatch report** — the VAD-tuning case) and `--reproduce` (apply the trace's **`config_subset`**
+  as overrides; honour what the replayer can, report what it can't). The envelope therefore carries a captured
+  **config subset** (audio/vad/asr/nlu), not just a digest. Model availability is **out of scope for now** (the
+  dev system is a superset of testers' setups).
 
 ## 12. Implementation slices (ARCH-19, TBD ordering)
 
@@ -182,6 +217,9 @@ The tool is then either deleted or kept as a thin convenience wrapper ("trace on
 
 - Replay surface: CLI tool only, or also a `/trace/replay` endpoint?
 - `vad_recording_test`: delete outright, or keep as a thin wrapper?
-- `config_digest`: full config hash, or a captured subset (audio/vad/asr/nlu sections)?
+- ~~`config_digest`: hash vs subset~~ — **resolved (D-10): capture a config *subset*** (+ a digest for quick
+  equality), since cross-system `--reproduce` can't replay from a hash.
+- **Model-availability fallback** (deferred — the superset assumption holds for now): when a `--reproduce`
+  trace needs a model the replayer lacks, fail clearly vs degrade-to-a-local-provider-and-report?
 - Save policy beyond v1 (on-error / recent-N ring) — when, and what retention/cleanup for `traces_dir`?
 - Cross-cut with ARCH-15 observe: should a saved trace also be emitted on the event bus, or stay file-only?

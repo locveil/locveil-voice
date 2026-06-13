@@ -649,13 +649,17 @@ See `docs/review/phase1_architecture_map.md` §5.
       `docs/design/trace_persistence.md`; design session ongoing). Persist an utterance-execution trace to a
       **self-contained JSON** (audio **base64 inline, no WAV**) so it can be **listened to** AND **replayed** through the
       pipeline (regression + VAD tuning). Adds an opt-in save+replay layer over today's ephemeral `TraceContext` (normal
-      traffic unchanged). LOCKED decisions D-1..D-8: 3 configurable **capture levels** (utterance / segmenter+`vad_frames`
+      traffic unchanged). LOCKED decisions D-1..D-10: 3 configurable **capture levels** (utterance / segmenter+`vad_frames`
       / raw; live-mic raw behind `--trace-raw-mic`); a **`current_trace` contextvar in `core`** (hexagon-clean — domain
       already imports core) as the spine for a **`TraceLogger`** (configurable threshold + exception traces) and handler
-      **`trace_event()`**; replay **seeds a fresh context from `seed_context`** + **diffs** vs `recorded_output` (not
-      bit-exact — LLM non-determinism); trigger = runner `--trace` now → `[trace]` TOML (config-ui) later, **save every
-      request**; **retire-and-replace `vad_recording_test`** (port the mic→VAD harness, base64 not WAV, fix the
-      `to_canonical` ordering). Slices §12; open questions §13. _Design session continues before implementation._
+      **`trace_event()`**; replay's audio source = a lightweight **`TraceInput`** (`InputPort`) for the stream levels
+      (utterance reuses `process_audio_input`), **seeds a fresh context from `seed_context`** + **diffs** vs
+      `recorded_output` (not bit-exact — LLM non-determinism); **two replay modes** `--local` (default; run through the
+      replayer's pipeline + mismatch report — the VAD-tuning case) / `--reproduce` (apply the trace's captured
+      **config subset**); models out of scope for now (dev system is a superset of testers'). Trigger = runner `--trace`
+      now → `[trace]` TOML (config-ui) later, **save every request**; **retire-and-replace `vad_recording_test`** (port
+      the mic→VAD harness, base64 not WAV, fix the `to_canonical` ordering). Slices §12; open questions §13.
+      _Design session continues before implementation._
 
 ### Code Quality & Review (QUAL)
 - [x] **QUAL-1** — Phase-0 static baseline (ruff/pyright/vulture/validators/import-graph). → `docs/review/phase0_static_baseline.md` (6e39886)
