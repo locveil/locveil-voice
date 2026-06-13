@@ -11,6 +11,19 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+### 2026-06-13
+- **ARCH-19 filed — Trace persistence + playback (design DRAFT).** Design session: persist an utterance-execution
+  trace to a **self-contained JSON** (audio **base64 inline, no WAV**) so it can be listened to AND replayed through
+  the pipeline (regression + VAD tuning), as an opt-in save+replay layer over today's ephemeral `TraceContext`.
+  Grounded the analysis in the live code: traces are ephemeral (per-request, GC'd; opt-in `/trace*` only; per-trace
+  caps; no store), `_sanitize_for_trace` redacts/truncates/1 MB-caps (right for display, lossy for replay), and the
+  orchestrator already half-stashes the trace for handlers. Locked D-1..D-8 (3 capture levels incl. per-frame
+  `vad_frames` + a live-mic-raw flag; a hexagon-clean `current_trace` contextvar in `core` as the spine for a
+  `TraceLogger` + handler `trace_event`; seed-context + diff replay; runner `--trace`→`[trace]` TOML). Found
+  `irene/tools/vad_recording_test.py` reusable (mic→VAD harness) → **retire-and-replace** (base64 not WAV, fix the
+  `to_canonical` ordering it predates). Deliverable `docs/design/trace_persistence.md` (§12 slices, §13 open
+  questions); ledger ARCH-19 `[deferred]`. Design session continues.
+
 ### 2026-06-10
 - **ARCH-18 PR-6 — user-facing docs + diagrams (FINAL); ARCH-18 COMPLETE.** Rewrote `docs/guides/vad.md` for the
   provider family + `[vad.providers.*]` nested config (component knobs vs per-engine tables, microvad

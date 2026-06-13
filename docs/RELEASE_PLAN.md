@@ -101,6 +101,7 @@ Living findings behind the tasks (Invariant #5). `[x]` = exists; others are prod
 | `docs/design/onnx_inference_layer.md` `[x]` (complete 2026-06-04; ASR/platform/build + VAD/wake-word all resolved) | shared sherpa-onnx inference layer — ASR-centric; WB7 armv7 feasibility proven on hardware | ARCH-9/10 |
 | `docs/design/io_architecture.md` (DRAFT 2026-06-07) | symmetric configurable hexagonal I/O — format-vs-input, OutputPort + modality matrix, daemon multiplexing, event-bus delivery+observation, F&F via OutputManager, runners-as-presets | ARCH-14/15 |
 | `docs/design/audio_pipeline.md` `[x]` (2026-06-10) | audio I/O negotiation+transformation seam (input twin of ARCH-15) — VAD provider family, canonical transform-once + derived/fatal negotiation, pre-roll contract, AudioTranscoder/VoiceSegmenter/AudioNegotiator, symmetric in+out, traced | ARCH-17 ✓, ARCH-18 |
+| `docs/design/trace_persistence.md` (DRAFT 2026-06-13) | persist utterance traces to self-contained JSON (base64 audio) for listen + pipeline replay (regression + VAD tuning) — capture levels, `current_trace` contextvar, TraceLogger, handler `trace_event`, seed+diff replay | ARCH-19 |
 | `config-ui/docs/donation_editor_ux.md` | human-friendly donations editor design | UI-1/2/3 |
 
 ---
@@ -644,6 +645,17 @@ See `docs/review/phase1_architecture_map.md` §5.
       sink). Stale-term sweep across guides/architecture clean. Invariant #4:
       the `[vad.providers.*]` schema change updates config-ui in the same PR (PR-2). VAD providers wrap the existing
       energy/silero/microvad engines (no new ML). **ARCH-18 COMPLETE — all of PR-1..6 + the input-path unification done.**
+- [ ] **ARCH-19** [TRACE] (P-TBD) `[deferred]` — **Trace persistence + playback** (design DRAFT 2026-06-13,
+      `docs/design/trace_persistence.md`; design session ongoing). Persist an utterance-execution trace to a
+      **self-contained JSON** (audio **base64 inline, no WAV**) so it can be **listened to** AND **replayed** through the
+      pipeline (regression + VAD tuning). Adds an opt-in save+replay layer over today's ephemeral `TraceContext` (normal
+      traffic unchanged). LOCKED decisions D-1..D-8: 3 configurable **capture levels** (utterance / segmenter+`vad_frames`
+      / raw; live-mic raw behind `--trace-raw-mic`); a **`current_trace` contextvar in `core`** (hexagon-clean — domain
+      already imports core) as the spine for a **`TraceLogger`** (configurable threshold + exception traces) and handler
+      **`trace_event()`**; replay **seeds a fresh context from `seed_context`** + **diffs** vs `recorded_output` (not
+      bit-exact — LLM non-determinism); trigger = runner `--trace` now → `[trace]` TOML (config-ui) later, **save every
+      request**; **retire-and-replace `vad_recording_test`** (port the mic→VAD harness, base64 not WAV, fix the
+      `to_canonical` ordering). Slices §12; open questions §13. _Design session continues before implementation._
 
 ### Code Quality & Review (QUAL)
 - [x] **QUAL-1** — Phase-0 static baseline (ruff/pyright/vulture/validators/import-graph). → `docs/review/phase0_static_baseline.md` (6e39886)
