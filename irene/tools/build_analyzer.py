@@ -808,7 +808,7 @@ class IreneBuildAnalyzer:
         
         # ALSA vs PulseAudio conflicts (example)
         has_alsa = any(p in audio_providers for p in ["aplay"])
-        has_pulse = any(p in audio_providers for p in ["sounddevice", "audioplayer"])
+        has_pulse = any(p in audio_providers for p in ["sounddevice"])
         
         if has_alsa and has_pulse:
             result.warnings.append("Both ALSA and PulseAudio providers enabled - may cause conflicts")

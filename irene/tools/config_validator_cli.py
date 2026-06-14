@@ -230,7 +230,7 @@ class ConfigValidatorCLI:
                     "required_components": ["tts", "audio", "asr", "voice_trigger", "nlu"],
                     "required_providers": {
                         "tts": ["elevenlabs", "silero_v3", "silero_v4"],
-                        "audio": ["sounddevice", "audioplayer"],
+                        "audio": ["sounddevice", "aplay"],
                         "asr": ["whisper", "vosk"],
                         "voice_trigger": ["openwakeword", "microwakeword"]
                     }

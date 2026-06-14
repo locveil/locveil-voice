@@ -132,20 +132,6 @@ class SoundDeviceProviderSchema(AudioProviderSchema):
     volume: float = Field(default=1.0, ge=0.0, le=1.0, description="Playback volume")
 
 
-class AudioPlayerProviderSchema(AudioProviderSchema):
-    """AudioPlayer provider configuration schema"""
-    volume: float = Field(default=0.8, ge=0.0, le=1.0, description="Volume level")
-    fade_in: bool = Field(default=False, description="Enable fade-in")
-    fade_out: bool = Field(default=True, description="Enable fade-out")
-    device: Optional[int] = Field(default=None, description="Audio output device (not supported - uses system default)")
-
-
-class SimpleAudioProviderSchema(AudioProviderSchema):
-    """SimpleAudio provider configuration schema"""
-    volume: float = Field(default=1.0, ge=0.0, le=1.0, description="Playback volume")
-    device: Optional[int] = Field(default=None, description="Audio output device (not supported - uses system default)")
-
-
 class APlayProviderSchema(AudioProviderSchema):
     """APlay provider configuration schema"""  
     device: str = Field(default="default", description="ALSA device name for audio output")

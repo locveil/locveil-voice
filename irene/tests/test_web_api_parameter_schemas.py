@@ -152,7 +152,7 @@ class TestWebAPIParameterSchemaIntegration:
         """Test Audio providers endpoint returns auto-generated parameter schemas"""
         providers = {
             "sounddevice": MockProvider("sounddevice", "audio"),
-            "audioplayer": MockProvider("audioplayer", "audio"),
+            "aplay": MockProvider("aplay", "audio"),
             "console": MockProvider("console", "audio")
         }
         
@@ -173,7 +173,7 @@ class TestWebAPIParameterSchemaIntegration:
             assert isinstance(parameters, dict)
             
             # Audio providers should have device/volume parameters (after Phase 6 alignment)
-            if provider_name in ["sounddevice", "audioplayer"]:
+            if provider_name in ["sounddevice", "aplay"]:
                 print(f"Audio {provider_name} parameters: {list(parameters.keys())}")
                 
                 # After Phase 6, should use 'device' (not 'device_id')

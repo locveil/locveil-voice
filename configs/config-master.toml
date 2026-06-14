@@ -177,7 +177,7 @@ preload_models = true              # Preload AI models during provider initializ
 # ============================================================
 [audio]
 enabled = true                      # Enable audio component
-default_provider = "console"        # Default provider: "console", "sounddevice", "audioplayer", "aplay"
+default_provider = "console"        # Default provider: "console", "sounddevice", "aplay"
 fallback_providers = ["console"]    # Fallback providers in order
 concurrent_playback = false         # Allow multiple audio streams simultaneously
 # ARCH-18: optional pin of the canonical INTERNAL pipeline format. Omit (commented) to auto-derive from the
@@ -203,20 +203,6 @@ enabled = false                     # Enable sounddevice provider
 device = -1                        # Audio output device ID for playback
 sample_rate = 44100                # Audio sample rate
 volume = 1.0                       # Playback volume (0.0-1.0)
-
-# AudioPlayer Provider (Python audioplayer library)
-[audio.providers.audioplayer]
-enabled = false                     # Enable audioplayer provider
-volume = 0.8                       # Volume level (0.0-1.0)
-fade_in = false                    # Enable fade-in effect
-fade_out = true                    # Enable fade-out effect
-# device = ""                      # Audio output device (not supported - uses system default)
-
-# SimpleAudio Provider (Python simpleaudio library)
-[audio.providers.simpleaudio]
-enabled = false                     # Enable simpleaudio provider
-volume = 1.0                       # Playback volume (0.0-1.0)
-# device = ""                      # Audio output device (not supported - uses system default)
 
 # Aplay Provider (Linux ALSA)
 [audio.providers.aplay]

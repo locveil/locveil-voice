@@ -1641,7 +1641,7 @@ async def test_audio_playback_capability() -> Dict[str, Any]:
         logger.debug(f"Device detection failed: {e}")
     
     # Test library availability
-    libraries = ['sounddevice', 'audioplayer', 'simpleaudio', 'pygame']
+    libraries = ['sounddevice', 'miniaudio']
     for lib in libraries:
         try:
             __import__(lib)

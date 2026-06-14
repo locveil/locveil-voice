@@ -150,8 +150,8 @@ class AutoSchemaRegistry:
                 # TTS providers
                 ConsoleProviderSchema, ElevenLabsProviderSchema, SileroV3ProviderSchema, 
                 SileroV4ProviderSchema, VoskTTSProviderSchema, PyttSXProviderSchema,
-                # Audio providers  
-                SoundDeviceProviderSchema, AudioPlayerProviderSchema, SimpleAudioProviderSchema, APlayProviderSchema, ConsoleAudioProviderSchema,
+                # Audio providers
+                SoundDeviceProviderSchema, APlayProviderSchema, ConsoleAudioProviderSchema,
                 # ASR providers
                 WhisperProviderSchema, VoskASRProviderSchema, GoogleCloudProviderSchema, SherpaOnnxASRProviderSchema,
                 # LLM providers
@@ -179,8 +179,6 @@ class AutoSchemaRegistry:
                 "audio": {
                     "console": ConsoleAudioProviderSchema,
                     "sounddevice": SoundDeviceProviderSchema,
-                    "audioplayer": AudioPlayerProviderSchema,
-                    "simpleaudio": SimpleAudioProviderSchema,
                     "aplay": APlayProviderSchema,
                 },
                 "asr": {

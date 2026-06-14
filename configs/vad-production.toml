@@ -107,9 +107,9 @@ api_key = "${ELEVENLABS_API_KEY}"   # Required: API key from environment (set EL
 
 [audio]
 enabled = true
-default_provider = "audioplayer"  # Production audio provider
+default_provider = "sounddevice"  # Production audio provider (streamable; ARCH-20)
 
-[audio.providers.audioplayer]
+[audio.providers.sounddevice]
 enabled = true
 
 # ============================================================

@@ -61,7 +61,7 @@ class AudioComponent(Component, AudioPlugin, WebAPIPlugin, AudioPort):
     @property
     def optional_dependencies(self) -> list[str]:
         """All audio provider dependencies are optional"""
-        return ["sounddevice", "soundfile", "numpy", "audioplayer", "simpleaudio", "termcolor"]
+        return ["sounddevice", "soundfile", "numpy", "miniaudio", "termcolor"]
         
     @property
     def enabled_by_default(self) -> bool:

@@ -56,7 +56,7 @@ class TestMasterConfigFieldAlignment:
             audio_providers = master_config["audio"]["providers"]
             
             # Test specific audio providers that should have device field
-            device_providers = ["sounddevice", "audioplayer", "aplay"]
+            device_providers = ["sounddevice", "aplay"]
             
             for provider_name in device_providers:
                 if provider_name in audio_providers:
@@ -145,8 +145,8 @@ class TestMasterConfigFieldAlignment:
         # Test key providers that had field alignment in Phase 6
         test_cases = [
             ("audio", "sounddevice"),
-            ("audio", "audioplayer"),
-            ("llm", "openai"), 
+            ("audio", "aplay"),
+            ("llm", "openai"),
             ("llm", "anthropic"),
         ]
         

@@ -723,10 +723,9 @@ export const ConfigWidget: React.FC<ConfigWidgetProps & {
   }
   
   // Audio output device field detection
-  if (name === 'device_id' && path && path.some((p: string) => 
-    p.includes('audio') || p.includes('tts') || p.includes('sounddevice') || 
-    p.includes('aplay') || p.includes('console') || p.includes('audioplayer') || 
-    p.includes('simpleaudio')
+  if (name === 'device_id' && path && path.some((p: string) =>
+    p.includes('audio') || p.includes('tts') || p.includes('sounddevice') ||
+    p.includes('aplay') || p.includes('console') || p.includes('miniaudio')
   )) {
     return <AudioOutputSelectWidget {...props} />;
   }

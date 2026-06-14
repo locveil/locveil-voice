@@ -119,7 +119,7 @@ class TestParameterSchemaUnification:
         # Test field name alignment between config and runtime for key providers
         test_cases = [
             ("audio", "sounddevice"),
-            ("audio", "audioplayer"), 
+            ("audio", "aplay"),
             ("tts", "elevenlabs"),
             ("llm", "openai"),
             ("voice_trigger", "openwakeword"),
