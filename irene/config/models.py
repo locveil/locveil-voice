@@ -470,6 +470,28 @@ class MonitoringConfig(BaseModel):
     # All functionality available through /monitoring/* endpoints (WebAPIPlugin integration)
 
 
+class TraceConfig(BaseModel):
+    """Trace persistence configuration (ARCH-19).
+
+    Opt-in save+replay layer over the ephemeral per-request TraceContext. The trigger now is
+    the runner `--trace` / `--trace-raw-mic` flag (which flips `enabled` / `capture_raw_mic`);
+    this section is the config-ui-editable home for the same knobs (D-7). Per D-17 the policy is
+    save-EVERY-request whenever tracing is enabled — there is no ring/on-error knob; retention is
+    manual. Normal traffic is unaffected when `enabled` is False (zero overhead)."""
+    enabled: bool = Field(default=False, description="Save a self-contained trace for every request (D-7/D-17)")
+    capture_level: Literal["utterance", "segmenter", "raw"] = Field(
+        default="utterance",
+        description="Which audio is captured + where a replay re-enters: utterance (ASR-onward) | segmenter (VAD-onward, adds vad_frames) | raw (negotiate-onward)")
+    capture_raw_mic: bool = Field(
+        default=False,
+        description="Enable the heavier always-on rolling buffer needed for raw-level capture of the LIVE mic (--trace-raw-mic)")
+    log_threshold: LogLevel = Field(default=LogLevel.INFO, description="Minimum log level captured into a trace's logs[] (exceptions are always captured)")
+    traces_dir: Optional[str] = Field(default=None, description="Where trace files land; defaults to <assets_root>/traces when unset")
+    max_stages: int = Field(default=100, ge=1, description="Per-trace cap on recorded pipeline stages (safety)")
+    max_data_size_mb: int = Field(default=10, ge=1, description="Per-trace cap on total sanitised stage data (safety)")
+    max_log_records: int = Field(default=500, ge=1, description="Per-trace cap on captured log records (safety)")
+
+
 # ============================================================
 # NLU ANALYSIS COMPONENT CONFIGURATION
 # ============================================================
@@ -913,7 +935,12 @@ class AssetConfig(BaseModel):
     @property
     def temp_audio_dir(self) -> Path:
         return self.temp_root / "audio"
-    
+
+    @property
+    def traces_root(self) -> Path:
+        # ARCH-19: default home for saved utterance traces (overridable via [trace] traces_dir)
+        return self.assets_root / "traces"
+
     def model_post_init(self, __context):
         """Create directories after initialization if auto_create_dirs is True"""
         if self.auto_create_dirs:
@@ -1250,6 +1277,7 @@ class CoreConfig(BaseSettings):
     vad: VADConfig = Field(default_factory=VADConfig, description="Voice Activity Detection component configuration")
     monitoring: MonitoringConfig = Field(default_factory=MonitoringConfig, description="Monitoring component configuration (Phase 5 unified metrics system)")
     nlu_analysis: NLUAnalysisConfig = Field(default_factory=NLUAnalysisConfig, description="NLU Analysis component configuration (Phase 2)")
+    trace: TraceConfig = Field(default_factory=TraceConfig, description="Trace persistence configuration (ARCH-19)")
     
     
     # Language and locale — SINGLE SOURCE OF TRUTH (QUAL-36).

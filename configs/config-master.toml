@@ -627,6 +627,23 @@ language_detection_threshold = 0.8   # Language detection confidence threshold
 # All analysis functionality accessible via /nlu_analysis/* endpoints
 
 # ============================================================
+# TRACE PERSISTENCE (ARCH-19) - opt-in save + replay
+# ============================================================
+# Off by default (zero overhead). Enable per-run with the `--trace` runner flag, or set
+# `enabled = true` here. Per D-17 the policy is save-EVERY-request while on; there is no
+# ring/on-error mode and retention is manual. Files land in `traces_dir` (default:
+# <assets.assets_root>/traces). See docs/design/trace_persistence.md.
+[trace]
+enabled = false                      # Save a self-contained trace for every request
+capture_level = "utterance"          # utterance | segmenter (adds vad_frames) | raw
+capture_raw_mic = false              # Capture pre-canonical LIVE mic audio (raw level; heavier)
+log_threshold = "INFO"               # Min log level captured into a trace (exceptions always captured)
+# traces_dir = "/var/lib/irene/traces"  # Override; defaults to <assets_root>/traces when unset
+max_stages = 100                     # Per-trace cap on recorded pipeline stages (safety)
+max_data_size_mb = 10                # Per-trace cap on total sanitised stage data (safety)
+max_log_records = 500                # Per-trace cap on captured log records (safety)
+
+# ============================================================
 # WORKFLOWS - Processing Pipelines (Two-Level Configuration)
 # ============================================================
 # Two-level hierarchy:

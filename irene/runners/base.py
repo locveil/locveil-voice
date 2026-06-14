@@ -100,7 +100,11 @@ class BaseRunner(ABC):
             
             # 6. Create and validate configuration
             config = await self._create_and_validate_config(parsed_args)
-            
+
+            # 6b. Install the global trace logging handler (ARCH-19). Inert unless a trace is
+            # active, so it is safe to install regardless of whether tracing is enabled.
+            self._install_trace_logger(config)
+
             # 7. Create and start assistant core
             self.core = build_core(config, config_path=parsed_args.config)
             
@@ -169,6 +173,18 @@ class BaseRunner(ABC):
             help="Enable debug logging"
         )
         
+        # Tracing options (ARCH-19) — opt-in save+replay; off by default, zero overhead when off
+        parser.add_argument(
+            "--trace",
+            action="store_true",
+            help="Save a self-contained execution trace for every request (under <assets_root>/traces)"
+        )
+        parser.add_argument(
+            "--trace-raw-mic",
+            action="store_true",
+            help="Also capture the pre-canonical LIVE mic audio (raw level; heavier rolling buffer). Implies --trace"
+        )
+
         # Utility options
         parser.add_argument(
             "--check-deps",
@@ -188,6 +204,24 @@ class BaseRunner(ABC):
             enable_console=True
         )
     
+    def _install_trace_logger(self, config: CoreConfig) -> None:
+        """Install the ARCH-19 TraceLogger on the root logger (once), configured from [trace].
+
+        The handler is inert unless a per-request trace is active, so it is installed
+        unconditionally; its level + record cap come from config so they stay tunable.
+        """
+        from ..core.trace_context import TraceLogger
+        tcfg = getattr(config, "trace", None)
+        level = getattr(logging, tcfg.log_threshold.value, logging.INFO) if tcfg else logging.INFO
+        max_records = tcfg.max_log_records if tcfg else 500
+        root = logging.getLogger()
+        for handler in root.handlers:
+            if isinstance(handler, TraceLogger):
+                handler.setLevel(level)
+                handler.max_records = max_records
+                return
+        root.addHandler(TraceLogger(level=level, max_records=max_records))
+
     async def _handle_utility_options(self, args: argparse.Namespace) -> Optional[int]:
         """Handle utility options that should exit early"""
         if args.check_deps:
@@ -224,10 +258,17 @@ class BaseRunner(ABC):
             config.log_level = LogLevel.DEBUG
         elif args.log_level:
             config.log_level = LogLevel(args.log_level)
-        
+
+        # ARCH-19: --trace / --trace-raw-mic flip the trace section before startup (D-7).
+        # The startup flag is the only gate (D-17): when on, every request is saved.
+        if getattr(args, "trace", False) or getattr(args, "trace_raw_mic", False):
+            config.trace.enabled = True
+        if getattr(args, "trace_raw_mic", False):
+            config.trace.capture_raw_mic = True
+
         # Validate configuration
         await self._validate_runner_config(config, args)
-        
+
         return config
     
     async def _validate_runner_config(self, config: CoreConfig, args: argparse.Namespace) -> None:

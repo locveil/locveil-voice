@@ -675,7 +675,7 @@ class AutoSchemaRegistry:
             'system', 'inputs', 'outputs', 'components',  # Core sections first
             'tts', 'audio', 'asr', 'llm',      # Main components
             'voice_trigger', 'nlu', 'nlu_analysis', 'text_processor', 'intent_system',  # Advanced components
-            'vad', 'monitoring',               # Utility components
+            'vad', 'monitoring', 'trace',      # Utility components
             'assets', 'workflows'              # System components
         ]
         
@@ -709,6 +709,7 @@ class AutoSchemaRegistry:
             'intent_system': '🎯 Intent System',
             'vad': '🔊 Voice Activity Detection',
             'monitoring': '📊 Monitoring',
+            'trace': '🧪 Trace Persistence',
             'assets': '📁 Asset Management',
             'workflows': '⚡ Workflows'
         }

@@ -18,6 +18,7 @@ import hashlib
 import json
 import logging
 import time
+import traceback
 import uuid
 from contextlib import contextmanager
 from contextvars import ContextVar
@@ -68,6 +69,40 @@ def trace_event(label: str, data: Optional[Dict[str, Any]] = None, *, handler: s
     trace.add_handler_event(handler=handler, label=label, data=data or {})
 
 
+class TraceLogger(logging.Handler):
+    """A global logging handler that appends records to the ACTIVE trace (D-4, ARCH-19 slice 2).
+
+    Installed once on the root logger at startup; inert unless `current_trace` is set + enabled,
+    so it costs nothing on normal traffic. Captures records at/above its level **plus full
+    exception stack traces**, each tagged with the trace's current stage + `t_ms`, and is bounded
+    by `max_records` so a chatty request can't blow the file up. Never raises out of `emit`.
+    """
+
+    def __init__(self, level: int = logging.INFO, max_records: int = 500):
+        super().__init__(level=level)
+        self.max_records = max_records
+
+    def emit(self, record: logging.LogRecord) -> None:
+        trace = current_trace.get()
+        if trace is None or not trace.enabled:
+            return
+        if len(trace.logs) >= self.max_records:
+            return
+        try:
+            exc_text = None
+            if record.exc_info:
+                exc_text = "".join(traceback.format_exception(*record.exc_info))
+            trace.add_log(
+                level=record.levelname,
+                logger_name=record.name,
+                stage=getattr(trace, "current_stage", None),
+                message=record.getMessage(),
+                exc_text=exc_text,
+            )
+        except Exception:  # logging must never crash the app
+            self.handleError(record)
+
+
 class TraceContext:
     """
     Context object for collecting detailed pipeline execution traces
@@ -114,6 +149,7 @@ class TraceContext:
         # Call-sites for some of these land in later slices (config→2, vad→3, logs→2, seed→5);
         # the fields + recorders exist now so the envelope schema is complete from slice 1.
         self.capture_level: str = "utterance"          # utterance | segmenter | raw (D-2)
+        self.current_stage: Optional[str] = None        # set at stage boundaries; tags TraceLogger records (slice 2; precise wiring in a later slice)
         self._input: Optional[Dict[str, Any]] = None   # faithful input: kind + format + audio_base64/text
         self._request: Optional[Dict[str, Any]] = None  # provider/language/skip_*/session/room/wants_audio
         self._canonical: Optional[Dict[str, Any]] = None  # canonical audio contract (rate/format/channels)

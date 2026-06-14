@@ -8,6 +8,7 @@ supporting both voice assistant mode (with wake words) and continuous mode.
 import asyncio
 import logging
 import time
+from pathlib import Path
 from typing import Dict, Any, Optional, AsyncIterator, List, Union
 from enum import Enum
 
@@ -468,9 +469,10 @@ class WorkflowManager:
         # Reflect the derived session id (RequestContext forbids "default"/empty → mints a real one)
         session_id = context.session_id
 
-        # ARCH-19 slice 1 — bind the trace to the ambient contextvar for this request, and
-        # capture the faithful replay envelope (input + request + recorded_output) at the boundary.
+        # ARCH-19 — when startup tracing is on, mint a trace so this request is saved (D-7/D-17);
+        # bind it to the ambient contextvar and capture the faithful replay envelope at the boundary.
         # `trace_scope` is no-op-safe when trace_context is None.
+        trace_context = self._maybe_create_trace(trace_context)
         if trace_context and trace_context.enabled:
             trace_context.record_input("text", text=text)
             trace_context.record_request(self._replay_request(context))
@@ -483,6 +485,7 @@ class WorkflowManager:
                 "intent": result.metadata.get("intent_name") if result.metadata else None})
         if trace_context and trace_context.enabled:
             trace_context.record_output(result)
+        self._save_trace_if_enabled(trace_context)
         # (QUAL-28) F&F actions are registered in the store by the launch — no write-back needed.
         return result
 
@@ -498,6 +501,42 @@ class WorkflowManager:
             "room": getattr(context, "room_name", None),
             "client_id": getattr(context, "client_id", None),
         }
+
+    # --- ARCH-19 slice 2: save-every-request when tracing is enabled at startup (D-7/D-17) ---
+
+    def _trace_enabled(self) -> bool:
+        tcfg = getattr(self.config, "trace", None)
+        return bool(tcfg and tcfg.enabled)
+
+    def _maybe_create_trace(self, trace_context: Optional[TraceContext]) -> Optional[TraceContext]:
+        """When global tracing is on and the caller passed none, mint one so the request is saved.
+
+        An explicitly-passed trace (e.g. the /trace endpoint) is honoured as-is.
+        """
+        if trace_context is not None or not self._trace_enabled():
+            return trace_context
+        tcfg = self.config.trace
+        trace = TraceContext(enabled=True, max_stages=tcfg.max_stages,
+                             max_data_size_mb=tcfg.max_data_size_mb)
+        trace.capture_level = tcfg.capture_level
+        return trace
+
+    def _traces_dir(self) -> Path:
+        tcfg = self.config.trace
+        if tcfg.traces_dir:
+            return Path(tcfg.traces_dir).expanduser()
+        return self.config.assets.traces_root
+
+    def _save_trace_if_enabled(self, trace_context: Optional[TraceContext]) -> None:
+        """Persist the trace to <traces_dir>/<request_id>.json — only when startup tracing is on."""
+        if trace_context is None or not trace_context.enabled or not self._trace_enabled():
+            return
+        try:
+            out = self._traces_dir() / f"{trace_context.request_id}.json"
+            trace_context.to_file(out)
+            logger.debug(f"Saved trace {trace_context.request_id} → {out}")
+        except Exception as e:
+            logger.error(f"Failed to save trace {trace_context.request_id}: {e}")
 
     async def _publish_pipeline_event(self, event_type: EventType, context, payload: Dict[str, Any]) -> None:
         """Publish a canonical pipeline event onto the bus (ARCH-15 PR-6), if one is wired.
@@ -580,8 +619,10 @@ class WorkflowManager:
             # Reflect the derived session id (RequestContext forbids "default"/empty → mints a real one)
             session_id = context.session_id
 
-            # ARCH-19 slice 1 — capture the faithful replay input (FULL audio inline, no cap)
-            # + request, bind the trace to the ambient contextvar, then capture the oracle output.
+            # ARCH-19 — mint a trace when startup tracing is on (save-every-request, D-7/D-17),
+            # capture the faithful replay input (FULL audio inline, no cap) + request, bind the
+            # trace to the ambient contextvar, then capture the oracle output.
+            trace_context = self._maybe_create_trace(trace_context)
             if trace_context and trace_context.enabled:
                 trace_context.record_input(
                     "audio",
@@ -608,9 +649,10 @@ class WorkflowManager:
                     "intent": result.metadata.get("intent_name") if result.metadata else None})
             if trace_context and trace_context.enabled:
                 trace_context.record_output(result)
+            self._save_trace_if_enabled(trace_context)
             # (QUAL-28) F&F actions are registered in the store by the launch — no write-back needed.
             return result
-            
+
         except Exception as e:
             logger.error(f"Audio processing error in WorkflowManager: {e}")
             
@@ -627,7 +669,9 @@ class WorkflowManager:
                     },
                     processing_time_ms=0.0
                 )
-            
+            # Persist the trace even on the error path (it carries the error stage).
+            self._save_trace_if_enabled(trace_context)
+
             # Return error result
             return IntentResult(
                 text=f"Audio processing failed: {str(e)}",

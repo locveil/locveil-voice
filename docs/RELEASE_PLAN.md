@@ -691,8 +691,16 @@ See `docs/review/phase1_architecture_map.md` §5.
       `trace_event()` + the faithful `replay` envelope on `TraceContext` (`record_input`/`record_request`/
       `record_canonical`/`record_seed_context`/`record_config`→digest/`record_output` + `handler_events`/`logs`/
       `vad_frames` holders) + `build_envelope`/`to_file` (§2 JSON); contextvar + input/request/output capture wired
-      at the two `WorkflowManager` request boundaries; 15 new tests; 9/9 import contracts kept. Remaining slices
-      2–6 (config+TraceLogger+`--trace`, capture levels, handler `trace_event` call-sites, replay tool, delete
+      at the two `WorkflowManager` request boundaries; 15 new tests; 9/9 import contracts kept. **Slice 2
+      (TraceLogger + `[trace]` config + `--trace`) DONE 2026-06-14:** global `TraceLogger` handler (inert unless a
+      trace is active; captures records ≥ `log_threshold` + exception tracebacks, bounded by `max_log_records`)
+      installed once at runner startup; new `[trace]` `CoreConfig` section (`TraceConfig`: enabled/capture_level/
+      capture_raw_mic/log_threshold/traces_dir/caps) + `AssetConfig.traces_root` default + auto-registry section
+      order/title; `--trace`/`--trace-raw-mic` runner flags flip it; **save-every-request** wired into both
+      `WorkflowManager` batch boundaries (`_maybe_create_trace`→`to_file(<traces_dir>/<request_id>.json)`), gated
+      solely on the startup flag (D-17). `config-master.toml` gains `[trace]`; config-ui builds clean with **zero
+      changes** (schema-driven sections — Invariant #4 ✓). 16 new tests; 9/9 contracts kept. Remaining slices 3–6
+      (capture levels + live-mic/stream path, handler `trace_event` call-sites, replay tool, delete
       `vad_recording_test`).
 - [x] **ARCH-20** [AUDIO] (P-TBD) `[deferred]` — **DONE 2026-06-14 (PR-1..4).** Streamable audio output: real
       `play_stream`, new self-contained `miniaudio` provider, unstreamable providers dropped, TTS local playback

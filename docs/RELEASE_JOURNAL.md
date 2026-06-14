@@ -12,6 +12,25 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-14
+- **ARCH-19 slice 2 — TraceLogger + `[trace]` config + `--trace` flag + save-every-request.** Made `--trace`
+  actually produce trace files. New **`TraceLogger`** (`core/trace_context.py`): a global `logging.Handler` installed
+  once at runner startup (`base.py._install_trace_logger`, after config build), **inert unless `current_trace` is set
+  + enabled**, capturing records ≥ `log_threshold` **plus full exception tracebacks**, stage-tagged via the trace's
+  `current_stage`, bounded by `max_log_records` — never raises out of `emit`. New **`[trace]` `CoreConfig` section**
+  (`TraceConfig`: `enabled`/`capture_level`/`capture_raw_mic`/`log_threshold`/`traces_dir` + safety caps) +
+  `AssetConfig.traces_root` (`<assets_root>/traces` default) + an auto-registry order/title (`🧪 Trace Persistence`).
+  **`--trace` / `--trace-raw-mic`** runner flags flip `enabled`/`capture_raw_mic` before startup (D-7). **Save-every-
+  request** (D-17) wired into both `WorkflowManager` batch boundaries: `_maybe_create_trace` mints a trace when startup
+  tracing is on and none was passed, and after the turn `_save_trace_if_enabled` writes the §2 envelope to
+  `<traces_dir>/<request_id>.json` (also on the audio error path); the save gate is **solely** the startup flag, so an
+  explicit `/trace` endpoint call on a non-tracing instance still doesn't spam disk. `config-master.toml` gains a
+  documented `[trace]` block (Invariant #2). **Invariant #4: config-ui builds with ZERO changes** — its config UI is
+  schema-driven (`Object.keys(config)` + the auto-registry order endpoint, generic `ConfigSection`), so the new section
+  surfaces automatically; verified `npm run check` + `npm run build` green. Slice boundary: the live-mic/`process_audio_
+  stream` path is deliberately NOT traced yet — its capture is slice 3 (capture levels + rolling buffer). New
+  `test_trace_logger_and_save.py` (16 tests, green); 9/9 import contracts kept; the 7 pre-existing failures
+  (3 component-trace + 4 config-validation) are TEST-2 baseline drift, verified net-zero by stash. ARCH-19 stays `[ ]`
+  (2 of 6 slices).
 - **ARCH-19 slice 1 (spine) — the faithful `replay` envelope + ambient access.** Built the data spine the rest of
   ARCH-19 hangs off, all in `core` (no new architecture edge — `core` is already imported by the domain; 9/9 import
   contracts kept, no `TYPE_CHECKING`). In `core/trace_context.py`: the `current_trace` **contextvar** + a
