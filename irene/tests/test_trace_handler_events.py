@@ -63,22 +63,53 @@ class TestTimerHandlerEvents(unittest.TestCase):
         self.assertEqual(trace.handler_events, [])
 
 
+class TestBaseActionLaunched(unittest.TestCase):
+    """The generic F&F-launch event fires once at the base choke point (covers all F&F handlers)."""
+
+    def _handler_with_stubbed_launch(self):
+        async def _fake_launch(*a, **k):
+            return {"action_name": k.get("action_name"), "domain": k.get("domain")}
+        h = object.__new__(TimerIntentHandler)         # any concrete handler inherits the base method
+        h.execute_fire_and_forget_action = _fake_launch
+        return h
+
+    def test_action_launched_recorded(self):
+        h = self._handler_with_stubbed_launch()
+        ctx = SimpleNamespace(client_id="kitchen", room_name="Кухня", session_id="s1",
+                              request_source="voice")
+
+        async def _noop():
+            return True
+
+        trace = TraceContext(enabled=True)
+        with trace_scope(trace):
+            asyncio.run(h.execute_fire_and_forget_with_context(
+                _noop, action_name="timer_7", domain="timers", context=ctx))
+        ev = next(e for e in trace.handler_events if e["label"] == "action_launched")
+        self.assertEqual(ev["data"], {"domain": "timers", "action": "timer_7"})
+
+
 class TestInstrumentationPresent(unittest.TestCase):
     """Guard against silent removal of the call-sites during future edits."""
 
     def test_modules_call_trace_event(self):
         from ..intents.handlers import (
-            timer, conversation, text_enhancement_handler, translation_handler,
+            base, timer, conversation, text_enhancement_handler, translation_handler,
+            provider_control_handler, speech_recognition_handler, system,
         )
         for mod, min_calls in [
+            (base, 1),                       # generic action_launched at the F&F choke point
             (timer, 3),                      # set, cancel, stop
             (conversation, 2),               # reference, conversation
             (text_enhancement_handler, 3),   # enhance, improve, correct
             (translation_handler, 2),        # translate_text, translate_specific
+            (provider_control_handler, 1),   # provider_switch
+            (speech_recognition_handler, 1), # asr provider_switch
+            (system, 1),                     # language_switch
         ]:
             src = inspect.getsource(mod)
             self.assertGreaterEqual(
-                src.count("trace_event("), min_calls + 0,  # +import line not counted (no parens)
+                src.count("trace_event("), min_calls,  # import line has no parens → not counted
                 f"{mod.__name__} lost trace_event call-sites")
 
 

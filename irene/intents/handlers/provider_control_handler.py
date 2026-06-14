@@ -9,6 +9,7 @@ import logging
 from typing import List, Dict, Optional
 
 from .base import IntentHandler
+from ...core.trace_context import trace_event  # ARCH-19 (D-5): opt-in, no-op when no trace is active
 from ..models import Intent, IntentResult
 from ..context_models import UnifiedConversationContext
 from ..ports import ComponentControlRegistryPort
@@ -198,7 +199,9 @@ class ProviderControlIntentHandler(IntentHandler):
         try:
             # All components now use set_default_provider()
             success = component.set_default_provider(provider_name)
-            
+            trace_event("provider_switch", {"component": component_type, "provider": provider_name,
+                                            "success": bool(success)}, handler="provider_control")
+
             if success:
                 message = self._get_template("provider_switched", language, component_type=component_type, provider_name=provider_name)
             else:

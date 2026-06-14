@@ -13,7 +13,7 @@ from ...core.metadata import EntryPointMetadata
 from ...core.notifications import get_notification_service, NotificationService
 from ...core.metrics import get_metrics_collector, MetricsCollector
 from ...core.debug_tools import get_action_debugger, ActionDebugger, InspectionLevel
-from ...core.trace_context import TraceContext
+from ...core.trace_context import TraceContext, trace_event
 
 logger = logging.getLogger(__name__)
 
@@ -111,7 +111,7 @@ class IntentHandler(EntryPointMetadata, ABC):
         action coroutine is free to take its own ``session_id`` kwarg without any collision.
         """
         physical_id = resolve_physical_id(context.client_id, context.room_name, context.session_id)
-        return await self.execute_fire_and_forget_action(
+        result = await self.execute_fire_and_forget_action(
             action_func,
             action_name=action_name,
             domain=domain,
@@ -124,6 +124,13 @@ class IntentHandler(EntryPointMetadata, ABC):
             retry_delay=retry_delay,
             **kwargs
         )
+        # ARCH-19 (D-5): trace EVERY fire-and-forget launch uniformly at this choke point — covers
+        # timer, voice_synthesis, audio_playback and any future F&F handler. The action itself runs
+        # in a detached task (where the contextvar is a stale snapshot), so the event is recorded
+        # here in the synchronous request path. No-op when no trace is active.
+        trace_event("action_launched", {"domain": domain, "action": action_name},
+                    handler=getattr(self, "name", "") or type(self).__name__)
+        return result
     
     @abstractmethod
     async def execute(self, intent: Intent, context: UnifiedConversationContext) -> IntentResult:

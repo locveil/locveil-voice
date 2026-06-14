@@ -13,19 +13,25 @@ newest entries near the top of each dated section.
 
 ### 2026-06-14
 - **ARCH-19 slice 4 — handler `trace_event()` call-sites (D-5).** Wired the opt-in `trace_event()` helper (from
-  slice 1; reads the `current_trace` contextvar, which is bound around handler execution in both the batch and
-  streaming paths) at the implemented handler key steps: **timer** `_handle_set_timer`/`_handle_cancel_timer`/
-  `_handle_stop_timer` (`timer_set`/`timer_cancel`/`timer_stop`) and the **7 LLM call-sites** — `conversation.py`
-  (`generate_response` ×2: reference + conversation), `text_enhancement_handler.py` (`enhance_text` ×3: improve/
-  improve+focus/grammar) and `translation_handler.py` (`enhance_text` ×2). Each records a small structured
-  `handler_events` entry (method/task/sizes); `timer_set` lives in the synchronous request path, NOT inside the
-  detached `_run_timer` F&F task (the contextvar there is a creation-time snapshot of an already-saved trace).
-  Purely additive — the domain→core import edge already existed (`handlers/base.py` imports `core.trace_context`),
-  so all 9 import contracts hold. **Device-command events deferred (Invariant #8 reconciliation):** there is no real
-  MQTT/device send call-site to instrument — the device handlers are stubs/port delegations pending the
-  bridge/MQTT layer (ARCH-7/8); since `trace_event` is no-op + opt-in, those + other handlers can adopt it
-  incrementally with zero risk. New `test_trace_handler_events.py` (4 tests: behavioral timer-cancel + a
-  call-site-presence regression guard); handler suites net-zero (14 pre-existing TEST-2 failures, verified by stash).
+  slice 1; reads the `current_trace` contextvar, bound around handler execution in both the batch and streaming
+  paths) by a consistent rule rather than ad-hoc per handler. **(1) Every fire-and-forget launch is traced once,
+  generically, at the base choke point** — `IntentHandler.execute_fire_and_forget_with_context` now emits
+  `action_launched {domain, action}`, so **timer, voice_synthesis, audio_playback and any future F&F handler** are
+  covered without per-site edits. **(2) Synchronous side-effects get explicit events:** timer `_handle_set_timer`/
+  `_handle_cancel_timer`/`_handle_stop_timer` (`timer_set` carries the duration the generic event can't / `timer_cancel`
+  / `timer_stop`), the **7 LLM call-sites** — `conversation.py` (`generate_response` ×2), `text_enhancement_handler.py`
+  (`enhance_text` ×3), `translation_handler.py` (`enhance_text` ×2) — and the provider/ASR/language switches
+  (`provider_control._switch_component_provider`, `speech_recognition._handle_switch_asr_provider`,
+  `system._handle_language_switch`). **Deliberately NOT instrumented:** the pure-compute handlers (datetime, greetings,
+  random) and read-only `system_service` queries — their only "step" is the response text, already in `recorded_output`;
+  events there would be noise. Launch events sit in the synchronous request path, NOT inside the detached F&F tasks
+  (the contextvar there is a stale creation-time snapshot of an already-saved trace — the timer-fire lesson). Purely
+  additive — the domain→core import edge already existed (`handlers/base.py` imports `core.trace_context`), so all 9
+  import contracts hold. **Device-command MQTT events deferred (Invariant #8):** no real send/publish call-site exists
+  yet — device handlers are stubs/port delegations pending the bridge/MQTT layer (ARCH-7/8). _(This corrects an initial
+  under-scope that stopped at §6's three named examples; broadened to every handler with a genuine key step.)_ New
+  `test_trace_handler_events.py` (6 tests: behavioral timer-cancel + base `action_launched` + a call-site-presence
+  regression guard across 8 modules); handler suites net-zero (21 pre-existing TEST-2 failures, verified by stash).
   Invariant #4 N/A. ARCH-19 stays `[ ]` (4 of 6 slices).
 - **ARCH-19 slice 3 — capture levels (utterance / segmenter+vad_frames / raw) + the streaming path.** Brought the
   live-mic/ESP32 `process_audio_stream` path under tracing, with a user-approved scope decision (Invariant #8 — the

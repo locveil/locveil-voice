@@ -14,6 +14,7 @@ from ...__version__ import __version__
 from pydantic import BaseModel
 
 from .base import IntentHandler
+from ...core.trace_context import trace_event  # ARCH-19 (D-5): opt-in, no-op when no trace is active
 from ..models import Intent, IntentResult
 from ..context_models import UnifiedConversationContext
 
@@ -342,7 +343,9 @@ class SystemIntentHandler(IntentHandler):
             # Fallback: update context directly
             context.language = target_language
             context.user_preferences['language'] = target_language
-        
+
+        trace_event("language_switch", {"target_language": target_language}, handler="system")
+
         # Announce the switch IN the target language (template keyed by target_language).
         response = self._get_template("language_changed", target_language)
         

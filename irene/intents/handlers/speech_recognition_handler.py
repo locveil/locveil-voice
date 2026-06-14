@@ -9,6 +9,7 @@ import logging
 from typing import List, Dict, Optional
 
 from .base import IntentHandler
+from ...core.trace_context import trace_event  # ARCH-19 (D-5): opt-in, no-op when no trace is active
 from ..models import Intent, IntentResult
 from ..context_models import UnifiedConversationContext
 from ..ports import ASRPort
@@ -123,7 +124,9 @@ class SpeechRecognitionIntentHandler(IntentHandler):
         language = context.language
         
         success = asr_component.set_default_provider(provider_name)
-        
+        trace_event("provider_switch", {"component": "asr", "provider": provider_name,
+                                        "success": bool(success)}, handler="speech_recognition")
+
         if success:
             message = self._get_template("provider_switched", language, provider_name=provider_name)
         else:

@@ -223,6 +223,8 @@ class TimerIntentHandler(IntentHandler):
                 session_id=context.session_id,
                 timer_id=timer_id
             )
+            # (The launch itself is traced generically as `action_launched` in the base F&F helper;
+            # this adds the timer-specific detail the generic event can't carry.)
             trace_event("timer_set", {"duration_s": duration_seconds, "timer_id": timer_id},
                         handler="timer")
 

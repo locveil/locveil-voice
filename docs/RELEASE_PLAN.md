@@ -711,13 +711,18 @@ See `docs/review/phase1_architecture_map.md` §5.
       `resolve_traces_dir`/`replay_request`) lifted into `core.trace_context` and reused by `WorkflowManager` + the
       workflow. 12 new tests; 9/9 contracts kept; VAD/audio suites net-zero (15 pre-existing TEST-2 failures). **Slice 4
       (handler `trace_event` call-sites, D-5) DONE 2026-06-14:** opt-in `trace_event()` (the slice-1 contextvar helper,
-      bound during handler execution in both paths) wired at the implemented key steps — **timer** set/cancel/stop
-      (`timer.py`) + the **7 LLM call-sites** (`conversation` ×2, `text_enhancement` ×3, `translation` ×2). Purely
-      additive; the domain→core import edge already exists (`base.py`), 9/9 contracts kept. **Device-command events
+      bound during handler execution in both paths) wired by rule — **every fire-and-forget launch traced once
+      generically (`action_launched {domain,action}`) at the base choke point `execute_fire_and_forget_with_context`**
+      (covers timer, voice_synthesis, audio_playback + any future F&F handler without per-site edits), **plus explicit
+      events for synchronous side-effects:** timer set/cancel/stop, the **7 LLM call-sites** (`conversation` ×2,
+      `text_enhancement` ×3, `translation` ×2), and provider/ASR/language switches (`provider_control`,
+      `speech_recognition`, `system.language_switch`). Pure-compute handlers (datetime/greetings/random, read-only
+      system_service) deliberately NOT instrumented — no key step beyond the response text already in `recorded_output`.
+      F&F actions run in detached tasks (stale contextvar snapshot) → launch events live in the synchronous request
+      path. Purely additive; domain→core edge pre-existed (`base.py`), 9/9 contracts kept. **Device-command MQTT events
       deferred (Invariant #8): no real send/publish call-site exists yet** — device handlers are stubs/ports pending the
-      MQTT/bridge layer (ARCH-7/8); `trace_event` is no-op + opt-in so more handlers can adopt it incrementally. 4 new
-      tests; handler suites net-zero (14 pre-existing TEST-2 failures). Remaining slices 5–6 (replay tool, delete
-      `vad_recording_test`).
+      bridge layer (ARCH-7/8). 6 new tests; handler suites net-zero (21 pre-existing TEST-2 failures). Remaining slices
+      5–6 (replay tool, delete `vad_recording_test`).
 - [x] **ARCH-20** [AUDIO] (P-TBD) `[deferred]` — **DONE 2026-06-14 (PR-1..4).** Streamable audio output: real
       `play_stream`, new self-contained `miniaudio` provider, unstreamable providers dropped, TTS local playback
       wired through the streaming path. **PR-1** dropped `audioplayer` (file-only) + `simpleaudio` (archived,
