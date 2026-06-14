@@ -919,3 +919,57 @@ class TraceContext:
             # Enhanced summary
             "summary": "; ".join(changes_summary) if changes_summary else "No significant changes detected"
         }
+
+
+# ----------------------------------------------------------------------------
+# ARCH-19 — shared create/save helpers (used by both the batch boundary in
+# WorkflowManager and the per-utterance streaming path in the workflow). Configs
+# are duck-typed (attributes read, not imported) so `core` keeps no edge to config.
+# ----------------------------------------------------------------------------
+
+def replay_request(context: Any) -> Dict[str, Any]:
+    """The faithful request envelope (ARCH-19 §2) scraped off a RequestContext."""
+    return {
+        "source": getattr(context, "source", None),
+        "session_id": getattr(context, "session_id", None),
+        "wants_audio": getattr(context, "wants_audio", None),
+        "skip_wake_word": getattr(context, "skip_wake_word", None),
+        "skip_asr": getattr(context, "skip_asr", None),
+        "room": getattr(context, "room_name", None),
+        "client_id": getattr(context, "client_id", None),
+    }
+
+
+def make_trace(trace_config: Any) -> Optional["TraceContext"]:
+    """Mint an enabled TraceContext from `[trace]` config, or None when tracing is off (D-17)."""
+    if not trace_config or not getattr(trace_config, "enabled", False):
+        return None
+    trace = TraceContext(enabled=True,
+                         max_stages=trace_config.max_stages,
+                         max_data_size_mb=trace_config.max_data_size_mb)
+    trace.capture_level = trace_config.capture_level
+    return trace
+
+
+def resolve_traces_dir(trace_config: Any, assets_config: Any) -> Path:
+    """Where trace files land: `[trace] traces_dir` override, else `<assets_root>/traces`."""
+    override = getattr(trace_config, "traces_dir", None) if trace_config else None
+    if override:
+        return Path(override).expanduser()
+    return assets_config.traces_root
+
+
+def save_trace(trace: Optional["TraceContext"], trace_config: Any, assets_config: Any) -> Optional[Path]:
+    """Persist a trace to `<traces_dir>/<request_id>.json` — only when startup tracing is on (D-17)."""
+    if trace is None or not trace.enabled:
+        return None
+    if not trace_config or not getattr(trace_config, "enabled", False):
+        return None
+    try:
+        out = resolve_traces_dir(trace_config, assets_config) / f"{trace.request_id}.json"
+        trace.to_file(out)
+        logger.debug(f"Saved trace {trace.request_id} → {out}")
+        return out
+    except Exception as e:
+        logger.error(f"Failed to save trace {trace.request_id}: {e}")
+        return None

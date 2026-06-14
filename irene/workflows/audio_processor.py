@@ -45,7 +45,12 @@ class VoiceSegment:
     chunk_count: int
     combined_audio: Optional[AudioData] = None
     metadata: Dict[str, Any] = field(default_factory=dict)
-    
+    # ARCH-19 (segmenter/raw capture levels) — per-frame VAD verdicts spanning this segment's
+    # window (pre-roll → voice-ended): {t_ms, is_voice, energy, threshold}. Empty unless the
+    # segmenter was built with collect_vad_frames=True (startup --trace gate). Lets a replay see
+    # where VAD fired over the audio and tune [vad.providers.*].
+    vad_frames: List[Dict[str, Any]] = field(default_factory=list)
+
     @property
     def duration_seconds(self) -> float:
         """Get duration in seconds"""
@@ -128,15 +133,23 @@ class VoiceSegmenter:
     - Performance monitoring and metrics
     """
     
-    def __init__(self, vad_config: VADConfig):
+    def __init__(self, vad_config: VADConfig, collect_vad_frames: bool = False):
         """
         Initialize the universal audio processor.
-        
+
         Args:
             vad_config: VAD configuration object
+            collect_vad_frames: ARCH-19 — when True, retain per-frame VAD verdicts and attach
+                them to each completed VoiceSegment (segmenter/raw trace levels). Gated at startup
+                by the --trace flag so production traffic pays nothing.
         """
         self.config = vad_config
         self.vad_state = VoiceActivityState.SILENCE
+
+        # ARCH-19: per-frame VAD verdict ring (absolute frame timestamps); sliced per segment on
+        # completion. Bounded so a long silence can't grow it unbounded.
+        self._collect_vad_frames = collect_vad_frames
+        self._vad_verdicts: List[Dict[str, Any]] = []
         
         # Select the VAD provider via entry-points discovery (ARCH-18 PR-2) — replaces the engine
         # if-else; `[vad] default_provider` picks energy / silero / microvad.
@@ -265,7 +278,20 @@ class VoiceSegmenter:
             
             # Perform VAD on the audio chunk
             vad_result = self.vad_engine.process_frame(audio_data)
-            
+
+            # ARCH-19: retain the per-frame verdict (absolute ts) for the segmenter/raw trace
+            # levels; sliced to the segment window on completion. Off (no cost) unless --trace.
+            if self._collect_vad_frames:
+                self._vad_verdicts.append({
+                    "ts": audio_data.timestamp,
+                    "is_voice": bool(vad_result.is_voice),
+                    "energy": float(vad_result.energy_level),
+                    "threshold": float(getattr(vad_result, "adaptive_threshold", 0.0)),
+                })
+                cap = (self.buffer_size_limit or 0) + (self.pre_buffer_size or 64) + 64
+                if len(self._vad_verdicts) > cap:
+                    self._vad_verdicts = self._vad_verdicts[-cap:]
+
             # Update metrics (Phase 1: Unified metrics integration)
             processing_time = (time.time() - start_time) * 1000
             self.metrics_collector.record_vad_chunk_processed(processing_time, vad_result.is_voice)
@@ -399,10 +425,27 @@ class VoiceSegmenter:
             duration = time.time() - self.voice_segment_start_time if self.voice_segment_start_time else 0
             logger.debug(f"Voice segment active: {len(self.voice_buffer)} chunks, {duration:.1f}s duration")
     
+    def _collect_segment_vad_frames(self, start_ts: float, end_ts: float) -> List[Dict[str, Any]]:
+        """Slice the retained VAD verdicts to this segment's window, re-based to t_ms from start.
+
+        Returns [] when not collecting. Consumes the used (and now-stale older) verdicts so the
+        ring doesn't carry a finished segment's frames into the next one.
+        """
+        if not self._collect_vad_frames or not self._vad_verdicts:
+            return []
+        frames = [
+            {"t_ms": round(max(0.0, (v["ts"] - start_ts)) * 1000),
+             "is_voice": v["is_voice"], "energy": v["energy"], "threshold": v["threshold"]}
+            for v in self._vad_verdicts if start_ts <= v["ts"] <= end_ts
+        ]
+        # drop everything up to and including this segment's end
+        self._vad_verdicts = [v for v in self._vad_verdicts if v["ts"] > end_ts]
+        return frames
+
     async def _handle_voice_ended(self) -> Optional[VoiceSegment]:
         """
         Handle voice end - create complete voice segment.
-        
+
         Returns:
             Complete VoiceSegment object
         """
@@ -450,7 +493,11 @@ class VoiceSegmenter:
         
         # Combine audio chunks into single AudioData
         voice_segment.combined_audio = await self._combine_audio_buffer(self.voice_buffer)
-        
+
+        # ARCH-19: attach the per-frame VAD verdicts spanning this segment (segmenter/raw levels)
+        voice_segment.vad_frames = self._collect_segment_vad_frames(
+            voice_segment.start_timestamp, end_timestamp)
+
         # Update metrics (Phase 1: Unified metrics integration)
         self.metrics_collector.record_vad_voice_segment(total_duration_ms)
         
@@ -697,14 +744,16 @@ class AudioProcessorInterface:
     while maintaining backward compatibility.
     """
     
-    def __init__(self, vad_config: VADConfig):
+    def __init__(self, vad_config: VADConfig, collect_vad_frames: bool = False):
         """
         Initialize audio processor interface.
-        
+
         Args:
             vad_config: VAD configuration object
+            collect_vad_frames: ARCH-19 — retain per-frame VAD verdicts on each VoiceSegment
+                (segmenter/raw trace levels). Defaults off; set from the startup --trace gate.
         """
-        self.processor = VoiceSegmenter(vad_config)
+        self.processor = VoiceSegmenter(vad_config, collect_vad_frames=collect_vad_frames)
         self.vad_config = vad_config  # Store config for normalization settings
         
     async def process_audio_pipeline(self, 

@@ -20,7 +20,7 @@ from .base import Workflow, RequestContext
 from .audio_processor import AudioProcessorInterface, VoiceSegment
 from ..core.audio_negotiator import AudioNegotiator
 from ..core.metrics import get_metrics_collector
-from ..core.trace_context import TraceContext
+from ..core.trace_context import TraceContext, make_trace, save_trace, trace_scope, replay_request
 from ..intents.models import AudioData, IntentResult
 from ..intents.context_models import UnifiedConversationContext
 from ..utils.audio_helpers import test_audio_playback_capability, calculate_audio_buffer_size
@@ -69,6 +69,12 @@ class UnifiedVoiceAssistantWorkflow(Workflow):
         self.audio_negotiator: Optional[AudioNegotiator] = None
         # ARCH-20: local TTS playback path ("file" | "stream"); set from config.audio in initialize()
         self._playback_mode: str = "file"
+        # ARCH-19: per-utterance trace capture for the streaming path (set from config in initialize()).
+        self._trace_config = None
+        self._assets_config = None
+        self._capture_raw: bool = False          # raw level → buffer pre-canonical mic frames
+        self._raw_frame_buffer: List[AudioData] = []
+        self._raw_buffer_max_s: float = 0.0
 
         # Pipeline stage flags - will be configured from config in initialize()
         self._voice_trigger_enabled = False
@@ -168,9 +174,19 @@ class UnifiedVoiceAssistantWorkflow(Workflow):
             
             vad_config = config.vad if hasattr(config, 'vad') else None
             if vad_config and vad_config.enabled:
-                self.audio_processor_interface = AudioProcessorInterface(vad_config)
+                # ARCH-19: read the trace config once at startup (D-17 — the gate is the startup flag).
+                self._trace_config = getattr(config, 'trace', None)
+                self._assets_config = getattr(config, 'assets', None)
+                level = getattr(self._trace_config, 'capture_level', 'utterance') if (
+                    self._trace_config and self._trace_config.enabled) else None
+                collect_vad_frames = level in ('segmenter', 'raw')
+                self._capture_raw = (level == 'raw')
+                self._raw_buffer_max_s = vad_config.max_segment_duration_s + 2.0
+                self.audio_processor_interface = AudioProcessorInterface(
+                    vad_config, collect_vad_frames=collect_vad_frames)
                 self.logger.info(f"VAD audio processor initialized: provider={vad_config.default_provider}, "
-                               f"max_segment={vad_config.max_segment_duration_s}s")
+                               f"max_segment={vad_config.max_segment_duration_s}s"
+                               + (f", trace capture_level={level}" if level else ""))
                 # ARCH-18: use the SHARED audio negotiator (built on core at startup, injected as a component)
                 # — the mic/web boundary and the ASR /transcribe endpoint share the same instance.
                 self.audio_negotiator = self.get_component('audio_negotiator')
@@ -188,11 +204,70 @@ class UnifiedVoiceAssistantWorkflow(Workflow):
         self.initialized = True
 
     async def _canonical_stream(self, audio_stream):
-        """Wrap a capture stream so each frame is transformed to the canonical format once (ARCH-18)."""
+        """Wrap a capture stream so each frame is transformed to the canonical format once (ARCH-18).
+
+        ARCH-19 (raw level): when raw capture is on, buffer each PRE-canonical (native-rate) frame
+        into a bounded rolling buffer before transforming, so a completed segment can be reconstructed
+        at its original rate (the VAD-tuning "what did the mic actually hear" case).
+        """
         negotiator = self.audio_negotiator
         assert negotiator is not None  # only wrapped when a negotiator exists
         async for frame in audio_stream:
+            if self._capture_raw:
+                self._buffer_raw_frame(frame)
             yield await negotiator.to_canonical(frame)
+
+    def _buffer_raw_frame(self, frame: AudioData) -> None:
+        """Append a native-rate frame to the rolling raw buffer, trimming by total duration."""
+        self._raw_frame_buffer.append(frame)
+        # Trim oldest frames once the buffer exceeds the bound (segment max + margin).
+        def _dur_s(f: AudioData) -> float:
+            denom = max(1, (f.channels or 1) * 2) * max(1, f.sample_rate or 1)
+            return len(f.data) / denom
+        total = sum(_dur_s(f) for f in self._raw_frame_buffer)
+        while len(self._raw_frame_buffer) > 1 and total > self._raw_buffer_max_s:
+            total -= _dur_s(self._raw_frame_buffer.pop(0))
+
+    def _capture_segment_input(self, trace: TraceContext, voice_segment: VoiceSegment) -> None:
+        """Record a completed VoiceSegment into the trace per the capture level (ARCH-19 §3).
+
+        utterance/segmenter → the assembled canonical 16 kHz segment; raw → the pre-canonical audio
+        reconstructed from the rolling buffer (falls back to the segment when no raw frames cover it).
+        Always records the canonical contract; attaches the segment's vad_frames (segmenter/raw).
+        """
+        combined = voice_segment.combined_audio
+        audio_bytes, fmt = None, None
+        if self._capture_raw:
+            audio_bytes, fmt = self._raw_audio_for_segment(voice_segment)
+        if audio_bytes is None:  # utterance/segmenter, or raw with no buffered frames
+            audio_bytes = combined.data if combined else b""
+            fmt = ({"rate": combined.sample_rate, "channels": combined.channels,
+                    "format": getattr(combined, "format", "pcm16")} if combined else {})
+        trace.record_input("audio", audio_bytes=audio_bytes, audio_format=fmt,
+                           capture_level=trace.capture_level)
+        if combined is not None:
+            trace.record_canonical(combined.sample_rate, getattr(combined, "format", "pcm16"),
+                                   combined.channels)
+        for fr in voice_segment.vad_frames:
+            trace.add_vad_frame(t_ms=fr["t_ms"], is_voice=fr["is_voice"],
+                                energy=fr["energy"], threshold=fr["threshold"])
+
+    def _raw_audio_for_segment(self, voice_segment: VoiceSegment):
+        """Reconstruct the pre-canonical audio for a segment from the rolling buffer.
+
+        Returns (audio_bytes, format_dict) or (None, None) when no raw frames cover the window
+        (e.g. no negotiator / already-canonical input) — the caller then falls back to the segment.
+        """
+        start_ts, end_ts = voice_segment.start_timestamp, voice_segment.end_timestamp
+        frames = [f for f in self._raw_frame_buffer if start_ts <= f.timestamp <= end_ts]
+        # consume everything up to the segment end so the next utterance starts clean
+        self._raw_frame_buffer = [f for f in self._raw_frame_buffer if f.timestamp > end_ts]
+        if not frames:
+            return None, None
+        audio_bytes = b"".join(f.data for f in frames)
+        first = frames[0]
+        return audio_bytes, {"rate": first.sample_rate, "channels": first.channels,
+                             "format": getattr(first, "format", "pcm16")}
 
     async def process_text_input(self, text: str, context: RequestContext,
                                 trace_context: Optional[TraceContext] = None) -> IntentResult:
@@ -514,16 +589,30 @@ class UnifiedVoiceAssistantWorkflow(Workflow):
                     asr_text = result['result']
                     if asr_text and asr_text.strip():
                         self.logger.info(f"✅ VAD-ASR result: '{asr_text}'")
-                        
+
+                        # ARCH-19: one trace per utterance (D-17). Capture the segment as the faithful
+                        # replay input, bind it to the ambient contextvar for NLU/intent + TraceLogger,
+                        # then record the oracle output and save. No-op when tracing is off.
+                        trace = make_trace(self._trace_config)
+                        if trace is not None:
+                            self._capture_segment_input(trace, voice_segment)
+                            trace.record_request(replay_request(context))
+
                         # Process through unified pipeline
-                        pipeline_result = await self._process_pipeline(
-                            input_data=asr_text,
-                            context=context,
-                            conversation_context=conversation_context
-                        )
-                        
+                        with trace_scope(trace):
+                            pipeline_result = await self._process_pipeline(
+                                input_data=asr_text,
+                                context=context,
+                                conversation_context=conversation_context,
+                                trace_context=trace,
+                            )
+
+                        if trace is not None:
+                            trace.record_output(pipeline_result)
+                            save_trace(trace, self._trace_config, self._assets_config)
+
                         yield pipeline_result
-                        
+
                         # Reset wake word state for next interaction
                         if result['mode'] == 'command_after_wake':
                             wake_word_detected = False

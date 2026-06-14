@@ -699,9 +699,18 @@ See `docs/review/phase1_architecture_map.md` §5.
       order/title; `--trace`/`--trace-raw-mic` runner flags flip it; **save-every-request** wired into both
       `WorkflowManager` batch boundaries (`_maybe_create_trace`→`to_file(<traces_dir>/<request_id>.json)`), gated
       solely on the startup flag (D-17). `config-master.toml` gains `[trace]`; config-ui builds clean with **zero
-      changes** (schema-driven sections — Invariant #4 ✓). 16 new tests; 9/9 contracts kept. Remaining slices 3–6
-      (capture levels + live-mic/stream path, handler `trace_event` call-sites, replay tool, delete
-      `vad_recording_test`).
+      changes** (schema-driven sections — Invariant #4 ✓). 16 new tests; 9/9 contracts kept. **Slice 3 (capture
+      levels + streaming path) DONE 2026-06-14 (user-approved scope: one-trace-per-utterance + all 3 levels incl.
+      raw live-mic):** `VoiceSegment.vad_frames` + `VoiceSegmenter` per-frame verdict collection (gated by a startup
+      `collect_vad_frames` flag), sliced to each segment's window on completion; the streaming path now mints **one
+      trace per VoiceSegment** — `_capture_segment_input` records the assembled canonical segment (utterance/segmenter)
+      or the pre-canonical audio reconstructed from a bounded **raw rolling buffer** in `_canonical_stream` (raw level,
+      via `--trace-raw-mic` → `capture_level=raw`), attaches `vad_frames`, binds the contextvar around `_process_pipeline`,
+      records the oracle + saves. The legacy `vad_recording_test` 44.1 kHz-VAD bug is inherently fixed (capture runs
+      in the real canonical pipeline — VAD sees 16 kHz). Shared create/save helpers (`make_trace`/`save_trace`/
+      `resolve_traces_dir`/`replay_request`) lifted into `core.trace_context` and reused by `WorkflowManager` + the
+      workflow. 12 new tests; 9/9 contracts kept; VAD/audio suites net-zero (15 pre-existing TEST-2 failures). Remaining
+      slices 4–6 (handler `trace_event` call-sites, replay tool, delete `vad_recording_test`).
 - [x] **ARCH-20** [AUDIO] (P-TBD) `[deferred]` — **DONE 2026-06-14 (PR-1..4).** Streamable audio output: real
       `play_stream`, new self-contained `miniaudio` provider, unstreamable providers dropped, TTS local playback
       wired through the streaming path. **PR-1** dropped `audioplayer` (file-only) + `simpleaudio` (archived,

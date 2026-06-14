@@ -264,7 +264,10 @@ class BaseRunner(ABC):
         if getattr(args, "trace", False) or getattr(args, "trace_raw_mic", False):
             config.trace.enabled = True
         if getattr(args, "trace_raw_mic", False):
+            # The raw-mic flag is self-contained: enable the heavier rolling buffer AND select the
+            # raw capture level (its whole purpose is "trace what the mic actually heard").
             config.trace.capture_raw_mic = True
+            config.trace.capture_level = "raw"
 
         # Validate configuration
         await self._validate_runner_config(config, args)

@@ -12,6 +12,26 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-14
+- **ARCH-19 slice 3 — capture levels (utterance / segmenter+vad_frames / raw) + the streaming path.** Brought the
+  live-mic/ESP32 `process_audio_stream` path under tracing, with a user-approved scope decision (Invariant #8 — the
+  design left the streaming trace lifecycle underspecified): **one trace per utterance** (per `VoiceSegment`), and
+  **all three capture levels incl. the raw live-mic rolling buffer** in this commit. Mechanics: `VoiceSegment` gains a
+  `vad_frames` field; `VoiceSegmenter` retains per-frame VAD verdicts (is_voice/energy/threshold + absolute ts) when
+  built with `collect_vad_frames=True` — gated at startup by `--trace` + `capture_level ∈ {segmenter,raw}` so production
+  pays nothing — and `_collect_segment_vad_frames` slices them to each segment's window (re-based to t_ms, pruned).
+  The workflow derives the gate from `[trace]` config at init, threads `collect_vad_frames` through
+  `AudioProcessorInterface`, and for raw level buffers **pre-canonical native-rate frames** in `_canonical_stream`
+  into a duration-bounded rolling buffer (`_buffer_raw_frame`), reconstructing a segment's original-rate audio on
+  completion (`_raw_audio_for_segment`, falls back to the canonical segment when no raw frames cover it). Per utterance,
+  `_process_audio_pipeline` now mints a trace, `_capture_segment_input` records the right audio for the level + the
+  canonical contract + the vad_frames, binds it via `trace_scope` around `_process_pipeline` (so NLU/intent/TraceLogger
+  attach), records the oracle output, and saves. The legacy `vad_recording_test` "VAD on raw 44.1 kHz" bug is **inherently
+  fixed** — capture runs inside the real canonical pipeline, so VAD sees 16 kHz (§10/§3). De-dup: the create/save
+  helpers (`make_trace`/`save_trace`/`resolve_traces_dir`/`replay_request`) were lifted into `core.trace_context`
+  (configs duck-typed → no new edge) and `WorkflowManager`'s slice-2 methods now delegate to them. `--trace-raw-mic`
+  made self-contained (also selects `capture_level=raw`). New `test_trace_capture_levels.py` (12 tests, green); 9/9
+  import contracts kept; the VAD/audio suites are net-zero (15 pre-existing TEST-2 failures, verified by stash).
+  Invariant #4 N/A (no config-schema/endpoint change). ARCH-19 stays `[ ]` (3 of 6 slices).
 - **ARCH-19 slice 2 — TraceLogger + `[trace]` config + `--trace` flag + save-every-request.** Made `--trace`
   actually produce trace files. New **`TraceLogger`** (`core/trace_context.py`): a global `logging.Handler` installed
   once at runner startup (`base.py._install_trace_logger`, after config build), **inert unless `current_trace` is set

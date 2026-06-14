@@ -12,7 +12,9 @@ from pathlib import Path
 from typing import Dict, Any, Optional, AsyncIterator, List, Union
 from enum import Enum
 
-from .trace_context import TraceContext, trace_scope
+from .trace_context import (
+    TraceContext, trace_scope, make_trace, save_trace, resolve_traces_dir, replay_request,
+)
 from .interfaces.workflow import WorkflowPort
 from ..intents.context_models import RequestContext, InputFormat
 from .event_bus import EventType, PipelineEvent
@@ -489,54 +491,29 @@ class WorkflowManager:
         # (QUAL-28) F&F actions are registered in the store by the launch — no write-back needed.
         return result
 
-    @staticmethod
-    def _replay_request(context: 'RequestContext') -> Dict[str, Any]:
-        """The faithful request envelope (ARCH-19 §2) scraped off the RequestContext."""
-        return {
-            "source": getattr(context, "source", None),
-            "session_id": getattr(context, "session_id", None),
-            "wants_audio": getattr(context, "wants_audio", None),
-            "skip_wake_word": getattr(context, "skip_wake_word", None),
-            "skip_asr": getattr(context, "skip_asr", None),
-            "room": getattr(context, "room_name", None),
-            "client_id": getattr(context, "client_id", None),
-        }
+    # `_replay_request` kept as a thin alias over the shared core helper (call sites unchanged).
+    _replay_request = staticmethod(replay_request)
 
-    # --- ARCH-19 slice 2: save-every-request when tracing is enabled at startup (D-7/D-17) ---
-
-    def _trace_enabled(self) -> bool:
-        tcfg = getattr(self.config, "trace", None)
-        return bool(tcfg and tcfg.enabled)
+    # --- ARCH-19 slice 2/3: save-every-request when tracing is enabled at startup (D-7/D-17).
+    # Create/save logic lives in core.trace_context (shared with the streaming path); these are
+    # thin config-bound wrappers. ---
 
     def _maybe_create_trace(self, trace_context: Optional[TraceContext]) -> Optional[TraceContext]:
         """When global tracing is on and the caller passed none, mint one so the request is saved.
 
         An explicitly-passed trace (e.g. the /trace endpoint) is honoured as-is.
         """
-        if trace_context is not None or not self._trace_enabled():
+        if trace_context is not None:
             return trace_context
-        tcfg = self.config.trace
-        trace = TraceContext(enabled=True, max_stages=tcfg.max_stages,
-                             max_data_size_mb=tcfg.max_data_size_mb)
-        trace.capture_level = tcfg.capture_level
-        return trace
+        return make_trace(getattr(self.config, "trace", None))
 
     def _traces_dir(self) -> Path:
-        tcfg = self.config.trace
-        if tcfg.traces_dir:
-            return Path(tcfg.traces_dir).expanduser()
-        return self.config.assets.traces_root
+        return resolve_traces_dir(getattr(self.config, "trace", None), self.config.assets)
 
     def _save_trace_if_enabled(self, trace_context: Optional[TraceContext]) -> None:
-        """Persist the trace to <traces_dir>/<request_id>.json — only when startup tracing is on."""
-        if trace_context is None or not trace_context.enabled or not self._trace_enabled():
-            return
-        try:
-            out = self._traces_dir() / f"{trace_context.request_id}.json"
-            trace_context.to_file(out)
-            logger.debug(f"Saved trace {trace_context.request_id} → {out}")
-        except Exception as e:
-            logger.error(f"Failed to save trace {trace_context.request_id}: {e}")
+        """Persist the trace — only when startup tracing is on (delegates to core.save_trace)."""
+        save_trace(trace_context, getattr(self.config, "trace", None),
+                   getattr(self.config, "assets", None))
 
     async def _publish_pipeline_event(self, event_type: EventType, context, payload: Dict[str, Any]) -> None:
         """Publish a canonical pipeline event onto the bus (ARCH-15 PR-6), if one is wired.
