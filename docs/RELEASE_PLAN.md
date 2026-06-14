@@ -219,6 +219,10 @@ See `docs/review/phase1_architecture_map.md` §5.
       (ARCH-1..5 ✓).** _Note (2026-06-02): the `core→inputs/workflows/components.base` edges were left unenforced here
       as "composition-root behavior" — that reclassification is **REVOKED → ARCH-11** (fix via DI + add the contract)._
 - [x] **ARCH-6** [WS] (P1) — **DONE 2026-06-03 (transport + identity activation + SCC-2); device-half relocated to QUAL-35.**
+      **★ ARCH-22 (2026-06-14):** the WS transport is consolidated into **`docs/design/esp32_satellite.md`** (which supersedes
+      `ws_esp32_transport.md`). The intertwined "return channel" (WS audio response to the device) landed as the ARCH-22
+      reply channel `/ws/audio/reply` (esp32_satellite.md §4.2), and the `register` handshake was extended on
+      `ClientRegistration` with `audio_out`/`name`/`primary_room`/`covered_rooms`/`firmware_version`/`model_version` (D-14).
       Built the **WS streaming-input DRIVING adapter** `/ws/audio` (`webapi_router.py`): registration handshake →
       `ClientRegistry` → stream raw PCM → **full** pipeline (`process_audio_input`, `skip_wake_word=True` since wake is
       on-device) → response frame. The handshake threads `client_id`/`room_name`/`device_context` into `client_context`,
@@ -259,8 +263,13 @@ See `docs/review/phase1_architecture_map.md` §5.
       "typed accessor IS the replacement" swap — atomic, no broken window); **(c)** the `room_context` resolve-or-clarify
       policy (with QUAL-30). QUAL-11 left the seam clean (resolvers degrade gracefully; duplicate device path unified;
       `_resolution_failed` markers). Pairs with **QUAL-35** (T2/T3 NLU for the complex device commands MQTT needs).
-- [ ] **QUAL-45** [WS][ESP32] (P2) `[deferred]` — **ESP32 audio-streaming protocol: end-of-utterance signal + on-device
-      VAD/wake contract.** Filed from the ARCH-18 endpoint reconciliation (2026-06-10). The **server already** consumes a
+- [x] **QUAL-45** [WS][ESP32] (P2) `[deferred]` — **DONE (design) 2026-06-14 — SUBSUMED BY ARCH-22.** The ESP32
+      audio-streaming protocol (end-of-utterance + on-device VAD/wake contract) is now fully specified in
+      **`docs/design/esp32_satellite.md`** — wire protocol §4 (`{"type":"end"}` device hint + server-authoritative ASR
+      endpointing, D-5/D-6), the on-device microWakeWord+microVAD contract (D-9/D-10), and the single-mic/no-server-VAD
+      split (D-11). The *firmware* implementation of the end-of-utterance signaling rides the **tracked firmware rewrite**
+      (esp32_satellite.md §14), not this task. _Original below._ **ESP32 audio-streaming protocol: end-of-utterance signal
+      + on-device VAD/wake contract.** Filed from the ARCH-18 endpoint reconciliation (2026-06-10). The **server already** consumes a
       `{"type":"end"}` control frame on `/ws/audio` to bound an utterance (one session = one utterance = one ASR;
       `webapi_router.py:824-835`) and ARCH-18 makes that path skip server VAD+wake (they run on-device). **Device-side TODO
       (ESP32 review):** define + implement the firmware's end-of-utterance signaling (emit `{"type":"end"}` at on-device
@@ -286,7 +295,10 @@ See `docs/review/phase1_architecture_map.md` §5.
       `ClientRegistry`). Substrate for **QUAL-35** (T2/T3 device NLU + the relocated `entity_type`/`_is_device_entity`→
       declarative resolver swap). Implementation = ARCH-8. **Design extended 2026-06-07 (ARCH-15 PR-9.1):**
       `mqtt_integration.md` §13 reconciles the seam shapes with the I/O architecture (bridge = `OutputPort`, see ARCH-8).
-- [ ] **ARCH-8** [MQTT] (P-TBD) — **UNBLOCKED 2026-06-06** (contract AGREED); **RECONCILED with the I/O architecture
+- [ ] **ARCH-8** [MQTT] (P-TBD) — **★ ARCH-22 (2026-06-14):** the **voice-confirmation of actuation** feature (T-B,
+      `docs/design/esp32_satellite.md` §10) rides this task — a sequenced `DEVICE_COMMAND → bridge rich DeliveryResult →
+      derive text → SPEECH to the origin device` (opt-in `confirm_actuation_by_voice`; device-transparent, reply via
+      ARCH-21). Implement it with ARCH-8's rich `DeliveryResult`. _Orig:_ **UNBLOCKED 2026-06-06** (contract AGREED); **RECONCILED with the I/O architecture
       2026-06-07 (ARCH-15 PR-9.1) — build against `mqtt_integration.md` §13**: bridge actuation is a **request/response
       `OutputPort`** returning the rich `DeliveryResult` (echo/error), `device_command` is a delivery **modality**
       capability-routed to the `designate(DEVICE_COMMAND,"bridge")` output, `DeviceCatalogPort` stays a read port, Flow-1
@@ -303,7 +315,9 @@ See `docs/review/phase1_architecture_map.md` §5.
       (No "everywhere" fan-out — "выключи свет везде" = an Actuate against the `global` `all_lights` aggregate device, on
       PR-4's path.) PR-2+ integrate as the bridge's slice comes online. Broad
       device coverage + T2/T3 NLU = QUAL-35.
-- [x] **ARCH-9** [INFER] — **✓ DONE 2026-06-04** (design deliverable `docs/design/onnx_inference_layer.md` complete; all
+- [x] **ARCH-9** [INFER] — **✓ DONE 2026-06-04.** **★ ARCH-22 (2026-06-14):** the §10/§11 WB7-satellite-vs-standalone
+      VAD+wake split is folded into **`docs/design/esp32_satellite.md`** (D-11 inference split; D-9/D-10 micro stack). _Orig:_
+      (design deliverable `docs/design/onnx_inference_layer.md` complete; all
       open questions resolved — sherpa one-provider ASR, WB7 armv7 feasibility proven on hardware, two build corrections,
       AssetManager+warm-up, contribution-principle invariant, and VAD+wake-word for **both** scenarios: WB7=ESP32-satellite
       delegated, standalone-64bit = two mutually-exclusive wake-word providers + two mutually-exclusive VAD impls.
@@ -701,7 +715,9 @@ See `docs/review/phase1_architecture_map.md` §5.
       Gates: Invariant #4 (audio provider list → config-ui), `dependency_validator`/`build_analyzer` (extra changes),
       update `docs/guides/audio.md` provider table. _(Research findings in the 2026-06-13 journal; `console` stub
       kept/retired per taste — not an audio output.)_
-- [x] **ARCH-21** [AUDIO][TTS] (P-TBD) `[deferred]` — **DONE 2026-06-14 (PR-1..5).** Streaming TTS +
+- [x] **ARCH-21** [AUDIO][TTS] (P-TBD) `[deferred]` — **DONE 2026-06-14 (PR-1..5).** **★ ARCH-22:** the deferred
+      reply-channel **device-half** handoff landed in ARCH-22 — `/ws/audio/reply` + `CallbackReplyChannel` pair the PR-5
+      `RemoteAudioOutput` to the device (esp32_satellite.md §4.2; `d8b1c70`). _Orig:_ Streaming TTS +
       output-seam delivery unification. **PR-5 server seam** (`outputs/remote_audio.py`: `RemoteAudioOutput`
       `OutputPort` + `ReplyChannel` Protocol) lands the reply-to-device (D-4) delivery — `origin_key==physical_id`
       routes via the existing `OutputManager` origin-pairing, `synthesize_to_stream`→conform to the **device's**
@@ -744,7 +760,7 @@ See `docs/review/phase1_architecture_map.md` §5.
       physical id + remote `AudioSink` `OutputPort` + `OutputManager` origin routing), built protocol-agnostic +
       fake-client-tested, with the device protocol + F&F-offline policy finalized in the ESP32 design session
       (`ws_esp32_transport.md`/QUAL-45). Open questions §6.
-- [ ] **ARCH-22** [ESP32][WS] (P-TBD) `[deferred]` — **DOING — full ESP32 review + consolidated design session**
+- [x] **ARCH-22** [ESP32][WS] (P-TBD) `[deferred]` — **DONE 2026-06-14 — full ESP32 review + consolidated design session**
       (started 2026-06-14; deliverable `docs/design/esp32_satellite.md` — being written interactively). **Container/umbrella**
       that (a) reviews the current implementation (firmware draft **+** backend contract), (b) consolidates the ESP32 design
       topics scattered across the ledger, and (c) folds in the user's not-in-ledger inputs — producing **ONE** consolidated
@@ -777,8 +793,20 @@ See `docs/review/phase1_architecture_map.md` §5.
       implemented in the repo at **`nginx/`** (Ansible playbook + EC home-CA + two-zone nginx [:80 bootstrap / :443
       mTLS] + `esp32-provision` approval CLI; CSR-approval flow proven end-to-end with openssl). **Plane A (Irene
       voice pipeline) is COMPLETE for ESP32** (#1 reply channel, #2 register; #3 → ARCH-10). Amends D-13 (models =
-      Plane-B nginx static, not Irene AssetManager) + D-17 (approval = WB7 CLI, not config-ui). _Next: Phase 5
-      (ledger closure)._
+      Plane-B nginx static, not Irene AssetManager) + D-17 (approval = WB7 CLI, not config-ui). **Phase 5 (closure) DONE
+      2026-06-14:** closed QUAL-45 (subsumed); amended ARCH-6/7-via-ARCH-8/ARCH-9/ARCH-10/ARCH-21/QUAL-19/QUAL-20/QUAL-35
+      with `esp32_satellite.md` pointers; filed ARCH-23 (firmware rewrite). **ARCH-22 deliverables complete** (review +
+      consolidated design doc + Plane-A backend + Plane-B `nginx/` + closure); the firmware rewrite is ARCH-23, #3 is ARCH-10.
+- [ ] **ARCH-23** [ESP32] (P-TBD) `[deferred]` — **ESP32 firmware rewrite (ESP-IDF + PlatformIO).** Build the headless
+      voice-satellite firmware to the ARCH-22 contract (**`docs/design/esp32_satellite.md`**), replacing the quarantined
+      `ESP32/firmware/` draft (rev 2, inspiration only — its protocol predates the backend; UI/output/codec are stubs). Per
+      D-1..D-18: board + digital I2S mic + MAX98357A speaker, half-duplex (D-2/D-7); ESP-IDF/PlatformIO not Arduino (D-3);
+      the wire protocol §4 (register → PCM → `{"type":"end"}`; reply channel `speak_begin`/PCM/`speak_end`); ported
+      microWakeWord on `esp-tflite-micro` with the **TFLite-Micro micro-features frontend** + µVAD (D-9, NOT the draft's
+      MFCC/energy VAD); models in a flash data-partition, runtime-loaded (D-12); two-stage SoftAP→STA provisioning + the
+      device admin UI + CSR submission (D-16/D-17, against Plane-B `nginx/`); config-preserving OTA (D-18). Likely a separate
+      firmware repo eventually (per `esp32_wakeword_review.md` quarantine). Substantial standalone C++ effort; tracked here so
+      it's not an orphan finding. Depends on hardware selection finalised (mic/speaker parts) + the Plane-B controller deploy.
 
 ### Code Quality & Review (QUAL)
 - [x] **QUAL-1** — Phase-0 static baseline (ruff/pyright/vulture/validators/import-graph). → `docs/review/phase0_static_baseline.md` (6e39886)
@@ -1109,6 +1137,9 @@ See `docs/review/phase1_architecture_map.md` §5.
       lossy `_clean_property_for_asyncapi` union/nullable handling; **(3, scoped separately)** emit AsyncAPI 3.0 +
       binary message bindings for ESP32 frames; **(4)** retire/repoint the docstring `x-` extension parser.
 - [x] **QUAL-19** [ESP32] (P2, last pre-release) — **DONE 2026-06-09** (interactive review session + upstream study).
+      **★ ARCH-22 (2026-06-14):** the **device-side** of the micro stack is now designed in `docs/design/esp32_satellite.md`
+      (D-9 ported microWakeWord on ESP-IDF with the TFLite-Micro micro-features frontend + µVAD; D-10 the same `.tflite`
+      manifest artifact device+server) — the realization of this review's "one pipeline, device + server" goal.
       Deliverable `docs/review/esp32_wakeword_review.md` — keep/fix/cut per piece {ESP32 firmware, on-device wake+VAD,
       backend microWakeWord, openWakeWord, Porcupine, server VAD, armv7, training refs}. **Key findings:** (1) the
       design's "both server wake providers hallucinated" premise was **wrong** — `openwakeword` works; only
@@ -1126,7 +1157,9 @@ See `docs/review/phase1_architecture_map.md` §5.
       `onnx_inference_layer.md` §11 + `ws_esp32_transport.md`. _Original spec:_ Full review & questioning of the ESP32 +
       wakeword story (firmware functional-vs-aspirational; backend microWakeWord placeholder; openWakeWord vs
       microWakeWord; armv7; docs; TODO11). Intersects ASSET-2.
-- [x] **QUAL-20** `[release]` [ESP32] (P-TBD) — **DONE 2026-06-09 — wake-word + microVAD rebuild (5 commits
+- [x] **QUAL-20** `[release]` [ESP32] (P-TBD) — **★ ARCH-22 (2026-06-14):** server-side micro stack stays as built; the
+      **device-side** µWW/µVAD design + the shared-artifact contract are in `docs/design/esp32_satellite.md` D-9/D-10.
+      **DONE 2026-06-09 — wake-word + microVAD rebuild (5 commits
       `bb5382e`·`a980448`·`e00f918`·`be52e0e`·this).** All 8 agreed items landed, each commit green (pyright 0, 9/9
       contracts, config/dep/build gates, 0 net suite regression; config-ui check+build+vitest green). **(1)** backend
       `microwakeword` is now a thin adapter over **`pymicro-wakeword`** (np.random stub + hand-rolled tflite plumbing
@@ -1453,7 +1486,12 @@ _Apply to every remediation task below (from the 4 review docs + QUAL-25/26). So
       missing-required) → flows through the existing `_clarify` boundary; vs clamp to the declared `default_value`.
       Today `get_param` either clamps-to-default (silent) or raises `MissingRequiredParameter` (mislabeling an invalid
       required value as "missing") — fix the distinction here. Refs: `declared_param_audit.md`, QUAL-11, QUAL-30, QUAL-33, Q6/Q7.
-- [ ] **QUAL-35** `[release]` [PEX][MQTT] (P-TBD) — **Declarative NLU tiers T2 + T3 — MUST-HAVE for smart-home/MQTT
+- [ ] **QUAL-35** `[release]` [PEX][MQTT] (P-TBD) — **★ ARCH-22 (2026-06-14) supplies the multi-room resolution SPEC
+      (D-15, `docs/design/esp32_satellite.md`):** no room → primary; a covered room in the utterance → that room; a known
+      (catalog) room NOT covered → spoken error "this room is not managed by this device". Needs the bridge catalog
+      (ARCH-8) for the global room set + RU-morphology room matching. ARCH-22 already **carries** `primary_room`/
+      `covered_rooms` on `ClientRegistration` (D-14); this task implements the resolver that consumes them. _Orig:_
+      **Declarative NLU tiers T2 + T3 — MUST-HAVE for smart-home/MQTT
       (gated on ARCH-7/8). Split out of QUAL-11 (2026-06-03, user).** _ARCH-15 PR-9.2 note: the device handlers QUAL-35
       authors **emit a `device_command`-modality result delivered via the OutputManager to the designated bridge
       `OutputPort`** and await its rich `DeliveryResult` (echo/error → spoken confirm; `param_invalid` → clarify) — per

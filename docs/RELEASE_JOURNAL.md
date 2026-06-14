@@ -12,6 +12,15 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-14
+- **ARCH-22 Phase 5 — ledger closure; ARCH-22 DONE.** Closed **QUAL-45** (ESP32 audio-streaming protocol — *design*
+  subsumed by ARCH-22 / `esp32_satellite.md`; firmware impl rides the rewrite). Amended every ARCH-22-touched task with
+  explicit `esp32_satellite.md` pointers: **ARCH-6** (transport consolidated; reply channel + register extension realized),
+  **ARCH-9** (§10/§11 split folded → D-9/D-10/D-11), **ARCH-10** (owns the deferred streaming-endpoint #3 / D-6), **ARCH-21**
+  (reply-channel device-half landed), **QUAL-19/QUAL-20** (device-side micro stack D-9/D-10), **QUAL-35** (the multi-room
+  resolution SPEC D-15 + the carried `primary_room`/`covered_rooms`), **ARCH-8** (the T-B voice-confirmation feature rides
+  it). Filed **ARCH-23** (ESP32 firmware rewrite, `[deferred]`) so the standalone C++ effort is tracked, not an orphan
+  finding. **ARCH-22 marked DONE** — its deliverables (implementation review + consolidated design doc + Plane-A backend +
+  Plane-B `nginx/` + closure) are complete; the firmware rewrite is ARCH-23 and the streaming-endpoint is ARCH-10.
 - **ARCH-22 Plane A / Plane B split + Plane B implemented (`nginx/`).** WB7 SSH recon (root@192.168.110.250) found a
   tiny armv7 controller (~1 GB RAM / 2 GB disk, nginx 1.18 w/ ssl+auth_request+dav, only `:80`, **no Irene container**
   — bridge/ui both stopped 10mo). Concluded (user-driven, pushed back where warranted) that the remaining Phase-4
