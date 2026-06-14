@@ -23,6 +23,12 @@
         state: present
         update_cache: false
 
+    - name: Ensure nginx is started and enabled on boot
+      ansible.builtin.service:
+        name: nginx
+        state: started
+        enabled: true
+
     - name: Create the private CA directory
       ansible.builtin.file:
         path: "{{ esp32_ca_dir }}"

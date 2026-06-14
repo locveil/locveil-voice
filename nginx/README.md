@@ -25,21 +25,59 @@ weight.
   with a CA-signed cert** can pull firmware/models. This is also where Irene's `/ws/audio*` is reverse-
   proxied **if Irene runs on this host** (commented in the template — Irene typically runs elsewhere).
 
-## Approval model (CSR-approval, D-17)
+## Approval model (CSR-approval, D-17) — the operator CLI
 
-A device's CSR is **not** auto-signed. The operator approves over SSH:
+A device's CSR is **never auto-signed**. Approval is a deliberate human step, done **over SSH** with the
+`esp32-provision` CLI. The CLI runs as **root**, which is *why it's a CLI and not a web page*: signing needs
+the CA private key (`/etc/esp32-ca/ca.key`, mode `600`, root-only). A web page served by nginx runs as
+`www-data` and cannot read that key — so a web "approve" button would require either weakening the key's
+permissions or running a root-privileged web CGI (more attack surface). The root CLI over SSH avoids both.
+(A future config-ui "Device Provisioning" view could call these same scripts via a thin endpoint — but the
+CLI is the v1 surface: simplest and most isolated for a once-per-device, crown-jewel operation.)
+
+### Commands
 
 ```sh
-esp32-provision list                 # show pending CSRs: client_id + subject + fingerprint
-esp32-provision approve kitchen_node # validate + sign with the home CA -> publish the cert
-esp32-provision revoke  kitchen_node # drop a pending CSR
+esp32-provision list                  # show every pending CSR: client_id, subject, pubkey SHA-256
+esp32-provision approve <client_id>   # review + sign with the home CA -> publish the device cert
+esp32-provision revoke  <client_id>   # drop a pending CSR (rejected / mistaken submission)
+esp32-provision status                # counts: pending vs issued
 ```
 
-The private CA key (`/etc/esp32-ca/ca.key`, mode 600, root-only) is **never** web-served and never leaves
-the controller. The signing scripts treat the CSR as untrusted input (the `client_id` is validated against
-`^[A-Za-z0-9_-]+$`; the CSR is signed by *file*, never interpolated into a shell). A future config-ui
-"Device Provisioning" view can call these same scripts via a thin endpoint — but the CLI is the v1 surface
-(simplest, most isolated for a once-per-device, crown-jewel operation).
+### Provisioning a new device — runbook
+
+1. **Flash + Stage-1** the device (WiFi creds + this controller's address). On first STA boot it generates an
+   EC keypair (private key **stays on the device**), builds a CSR, and `PUT`s it to
+   `http://<host>/esp32/provision/pending/<client_id>.csr`. It then polls
+   `http://<host>/esp32/provision/cert/<client_id>.crt` (404 until you approve).
+2. **See it arrive** — on the controller:
+   ```sh
+   ssh root@<controller>
+   esp32-provision list
+   #   PENDING  kitchen_node
+   #     subject:       CN = kitchen_node
+   #     pubkey-sha256: 5742d564e22c1143...a4a8e994
+   ```
+3. **Verify before signing.** Confirm the `client_id`/`CN` is the device you expect, and (ideally)
+   cross-check the `pubkey-sha256` against what the device shows in its admin UI. **Signing grants the device
+   mTLS access to firmware + models — only approve devices you recognise.**
+4. **Approve** (or reject):
+   ```sh
+   esp32-provision approve kitchen_node   # -> /srv/esp32/provision/cert/kitchen_node.crt
+   esp32-provision revoke  rogue_node     # -> drops the CSR, nothing signed
+   ```
+5. **Device finishes** — its next poll returns the cert; it stores it in NVS and connects the `:443` mTLS
+   endpoints. Done — re-provisioning only happens on a factory-reset.
+
+### Safety properties
+
+- The CA private key never leaves the controller and is never web-served (it lives in `/etc/esp32-ca`, outside
+  every web root).
+- The signing scripts treat the CSR as **untrusted input**: `client_id` must match `^[A-Za-z0-9_-]+$` (no path
+  traversal / shell injection), the CSR must self-verify (`openssl req -verify`) before signing, and it is
+  signed **by file** — never interpolated into a shell.
+- Nothing on the `:80` bootstrap zone is secret (a public CA cert, a CSR, a signed cert; the device key never
+  crosses it), so the **human approval is the only gate** — there is no bootstrap password to manage or leak.
 
 ## Keys
 
