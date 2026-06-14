@@ -40,6 +40,48 @@ class ReplyChannel(Protocol):
     async def send_audio(self, pcm: bytes, *, sample_rate: int, channels: int, sample_width: int) -> None: ...
 
 
+class CallbackReplyChannel:
+    """A `ReplyChannel` that emits the `speak_begin → PCM → speak_end` wire protocol (ARCH-22 §4.2)
+    via injected async callbacks, so the transport (a WebSocket) stays in the web layer and this stays
+    transport-agnostic + unit-testable.
+
+    Args:
+        contract: the device's declared output `AudioContract` (drives `to_sink`).
+        send_json: async callable sending a control frame (dict) — the WS `send_json`.
+        send_bytes: async callable sending a raw PCM chunk (bytes) — the WS `send_bytes`.
+        chunk_bytes: PCM is sent in frame-aligned blocks of ~this size.
+    """
+
+    def __init__(self, contract: AudioContract, send_json, send_bytes, *, chunk_bytes: int = 4096) -> None:
+        self._contract = contract
+        self._send_json = send_json
+        self._send_bytes = send_bytes
+        self._chunk_bytes = chunk_bytes
+        self._connected = True
+        self._seq = 0
+
+    @property
+    def contract(self) -> AudioContract:
+        return self._contract
+
+    def is_connected(self) -> bool:
+        return self._connected
+
+    def disconnect(self) -> None:
+        self._connected = False
+
+    async def send_audio(self, pcm: bytes, *, sample_rate: int, channels: int, sample_width: int) -> None:
+        self._seq += 1
+        seq = self._seq
+        await self._send_json({"type": "speak_begin", "rate": sample_rate, "channels": channels,
+                               "width": sample_width * 8, "seq": seq})
+        frame = max(1, channels * sample_width)
+        block = max(frame, (self._chunk_bytes // frame) * frame)
+        for i in range(0, len(pcm), block):
+            await self._send_bytes(pcm[i:i + block])
+        await self._send_json({"type": "speak_end", "seq": seq})
+
+
 class RemoteAudioOutput(OutputPort):
     """Speak a result back to a specific remote device over its reply channel (D-4)."""
 

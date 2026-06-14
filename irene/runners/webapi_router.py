@@ -838,10 +838,21 @@ def create_webapi_router(
                 audio = AudioData(data=bytes(frames), timestamp=time.time(), sample_rate=sample_rate,
                                   channels=1, metadata={"source": "ws_audio", "client_id": registration.client_id})
                 result = await core.workflow_manager.process_audio_input(
-                    audio_data=audio, session_id=session_id, wants_audio=wants_audio,
+                    audio_data=audio, session_id=session_id, wants_audio=False,
                     client_context=client_context)
                 await websocket.send_json({"type": "response", "text": result.text,
                                            "success": result.success, "metadata": result.metadata})
+                # ARCH-22: the SPOKEN reply goes back to the device's reply channel (/ws/audio/reply),
+                # never local playback — so process_audio_input runs with wants_audio=False and we route
+                # the SPEECH modality origin-paired via the OutputManager (reaches this client's
+                # RemoteAudioOutput, if its reply channel is connected; else it's dropped/fallback).
+                output_manager = getattr(core, "output_manager", None)
+                if (wants_audio and output_manager is not None
+                        and getattr(result, "should_speak", True) and (result.text or "")):
+                    from ..core.interfaces.output import OutputModality
+                    from ..intents.context_models import RequestContext
+                    reply_ctx = RequestContext(session_id=session_id, client_id=registration.client_id)
+                    await output_manager.deliver(result, reply_ctx, OutputModality.SPEECH)
         except WebSocketDisconnect:
             logger.debug(f"WS audio driving input disconnected (session {session_id})")
         except Exception as e:
@@ -949,6 +960,55 @@ def create_webapi_router(
         finally:
             output_manager.remove_output(client_id)
             logger.debug(f"WS output channel deregistered ({client_id})")
+
+    # ARCH-22 §4.2: the ESP32 reply channel. A satellite opens this WS and LISTENS; its `register-reply`
+    # carries client_id + its output AudioContract. The server pairs a RemoteAudioOutput (origin_key ==
+    # client_id) on the shared OutputManager, so a SPEECH result from that device routes back to it
+    # (synthesize_to_stream → conform to the device's contract → speak_begin/PCM/speak_end). Disconnect
+    # deregisters. The device-facing wire protocol is finalized in the firmware (esp32_satellite.md).
+    @router.websocket("/ws/audio/reply")
+    async def ws_audio_reply(websocket: WebSocket):
+        from fastapi import WebSocketDisconnect
+        from ..outputs.remote_audio import CallbackReplyChannel, RemoteAudioOutput
+        from ..utils.audio_negotiation import AudioContract
+
+        await websocket.accept()
+        output_manager = getattr(core, "output_manager", None)
+        negotiator = getattr(core, "audio_negotiator", None)
+        tts = core.component_manager.get_component('tts') if core.component_manager else None
+        if output_manager is None or negotiator is None or tts is None:
+            await websocket.send_json({"type": "error", "error": "reply channel unavailable"})
+            await websocket.close()
+            return
+
+        reg = json.loads(await websocket.receive_text())
+        client_id = reg.get("client_id")
+        if reg.get("type") != "register-reply" or not client_id:
+            await websocket.send_json({"type": "error",
+                                       "error": "first frame must be type=register-reply with client_id"})
+            await websocket.close()
+            return
+
+        ao = reg.get("audio_out") or {}
+        rate, ch = int(ao.get("rate", 22050)), int(ao.get("channels", 1))
+        contract = AudioContract([rate], rate, ["pcm16"], "pcm16", ch)
+        channel = CallbackReplyChannel(contract, websocket.send_json, websocket.send_bytes)
+        output = RemoteAudioOutput(client_id, channel, tts, negotiator)
+        await output_manager.add_output(client_id, output)
+        await websocket.send_json({"type": "registered", "client_id": client_id})
+        try:
+            while True:
+                msg = await websocket.receive()
+                if msg.get("type") == "websocket.disconnect":
+                    break
+        except WebSocketDisconnect:
+            pass
+        except Exception as e:
+            logger.error(f"WS audio reply channel error ({client_id}): {e}")
+        finally:
+            channel.disconnect()
+            output_manager.remove_output(client_id)
+            logger.debug(f"WS audio reply channel deregistered ({client_id})")
 
     # AsyncAPI documentation endpoints
     @router.get("/asyncapi", response_class=HTMLResponse, include_in_schema=False)
