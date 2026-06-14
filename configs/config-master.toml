@@ -177,7 +177,7 @@ preload_models = true              # Preload AI models during provider initializ
 # ============================================================
 [audio]
 enabled = true                      # Enable audio component
-default_provider = "console"        # Default provider: "console", "sounddevice", "aplay"
+default_provider = "console"        # Default provider: "console", "sounddevice", "aplay", "miniaudio"
 fallback_providers = ["console"]    # Fallback providers in order
 concurrent_playback = false         # Allow multiple audio streams simultaneously
 # ARCH-18: optional pin of the canonical INTERNAL pipeline format. Omit (commented) to auto-derive from the
@@ -208,6 +208,15 @@ volume = 1.0                       # Playback volume (0.0-1.0)
 [audio.providers.aplay]
 enabled = false                     # Enable aplay provider (Linux only)
 device = "default"                 # ALSA device name for audio output
+volume = 1.0                       # Playback volume (0.0-1.0)
+
+# Miniaudio Provider (self-contained, cross-platform streaming — no system libs)
+[audio.providers.miniaudio]
+enabled = false                     # Enable miniaudio provider
+# device = 0                        # Playback device id (omit for system default)
+sample_rate = 44100                # Output sample rate (Hz)
+channels = 2                       # Output channel count
+buffersize_msec = 200              # Device buffer size (ms)
 volume = 1.0                       # Playback volume (0.0-1.0)
 
 # ============================================================

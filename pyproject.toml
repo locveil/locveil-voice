@@ -237,6 +237,7 @@ irene-vosk = "irene.runners.vosk_runner:run_vosk"
 console = "irene.providers.audio.console:ConsoleAudioProvider"
 sounddevice = "irene.providers.audio.sounddevice:SoundDeviceAudioProvider"
 aplay = "irene.providers.audio.aplay:AplayAudioProvider"
+miniaudio = "irene.providers.audio.miniaudio:MiniaudioAudioProvider"
 
 [project.entry-points."irene.providers.tts"]
 console = "irene.providers.tts.console:ConsoleTTSProvider"

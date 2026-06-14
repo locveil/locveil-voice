@@ -96,3 +96,31 @@ async def test_component_play_stream_forwards_pcm_kwargs():
     await component.play_stream(b"\x10\x20\x30\x40", sample_rate=22050, channels=2, sample_width=2)
 
     assert captured == {"rate": 22050, "channels": 2, "width": 2, "pcm": b"\x10\x20\x30\x40"}
+
+
+def test_miniaudio_provider_metadata():
+    """Miniaudio provider declares itself with no system dependencies (ARCH-20)."""
+    from irene.providers.audio.miniaudio import MiniaudioAudioProvider
+
+    provider = MiniaudioAudioProvider({})
+    assert provider.get_provider_name() == "miniaudio"
+    assert provider.get_python_dependencies() == ["miniaudio>=1.59"]
+    # Self-contained: no system packages on any platform.
+    assert all(pkgs == [] for pkgs in provider.get_platform_dependencies().values())
+
+
+@pytest.mark.asyncio
+async def test_miniaudio_play_stream_empty_is_noop():
+    """An empty PCM stream short-circuits before any device is opened (device-safe)."""
+    from irene.providers.audio.miniaudio import MiniaudioAudioProvider
+
+    provider = MiniaudioAudioProvider({})
+    if not await provider.is_available():
+        pytest.skip("miniaudio not installed")
+
+    async def empty():
+        return
+        yield  # pragma: no cover - makes this an async generator
+
+    await provider.play_stream(empty(), sample_rate=16000, channels=1, sample_width=2)
+    assert provider.is_playing() is False

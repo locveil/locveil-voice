@@ -15,6 +15,7 @@ from typing import Optional
 from ..providers.audio import (
     SoundDeviceAudioProvider,
     AplayAudioProvider,
+    MiniaudioAudioProvider,
     ConsoleAudioProvider
 )
 
@@ -64,13 +65,15 @@ async def audio_provider_demo():
     print("This demo showcases the audio playback backends:")
     print("1. SoundDevice - Primary high-quality backend")
     print("2. Aplay - Linux ALSA command-line")
-    print("3. Console - Debug output (always available)")
+    print("3. Miniaudio - Self-contained cross-platform streaming")
+    print("4. Console - Debug output (always available)")
     print()
 
     # Create test audio providers with minimal config
     providers = [
         SoundDeviceAudioProvider({}),
         AplayAudioProvider({}),
+        MiniaudioAudioProvider({}),
         ConsoleAudioProvider({})
     ]
 
@@ -106,6 +109,7 @@ async def audio_provider_demo():
     print("Summary:")
     print("- SoundDevice: High-quality audio with device selection")
     print("- Aplay: Linux command-line audio (no Python deps)")
+    print("- Miniaudio: Self-contained streaming, no system libraries")
     print("- Console: Debug output for testing")
     print()
     print("✨ All providers implement the same AudioProvider interface")
@@ -122,6 +126,7 @@ async def audio_compatibility_test():
     providers = [
         ("SoundDevice", SoundDeviceAudioProvider({})),
         ("Aplay", AplayAudioProvider({})),
+        ("Miniaudio", MiniaudioAudioProvider({})),
         ("Console", ConsoleAudioProvider({}))
     ]
 

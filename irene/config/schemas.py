@@ -133,8 +133,17 @@ class SoundDeviceProviderSchema(AudioProviderSchema):
 
 
 class APlayProviderSchema(AudioProviderSchema):
-    """APlay provider configuration schema"""  
+    """APlay provider configuration schema"""
     device: str = Field(default="default", description="ALSA device name for audio output")
+    volume: float = Field(default=1.0, ge=0.0, le=1.0, description="Playback volume")
+
+
+class MiniaudioProviderSchema(AudioProviderSchema):
+    """Miniaudio provider configuration schema (self-contained streaming backend)"""
+    device: Optional[int] = Field(default=None, description="Playback device id (None = system default)")
+    sample_rate: int = Field(default=44100, description="Output sample rate (Hz)")
+    channels: int = Field(default=2, ge=1, le=2, description="Output channel count")
+    buffersize_msec: int = Field(default=200, ge=10, le=2000, description="Device buffer size (ms)")
     volume: float = Field(default=1.0, ge=0.0, le=1.0, description="Playback volume")
 
 
