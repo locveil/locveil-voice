@@ -24,12 +24,15 @@ class AudioSpeechOutput(OutputPort):
     """Speak a result on the local device via the TTS + audio components."""
 
     def __init__(self, tts_component, audio_component, *, origin: Optional[str] = None,
-                 name: str = "audio", temp_dir: str = "/tmp") -> None:
+                 name: str = "audio", temp_dir: str = "/tmp", playback_mode: str = "file") -> None:
         self._tts = tts_component
         self._audio = audio_component
         self._origin = origin
         self._name = name
         self._temp_dir = temp_dir
+        # ARCH-21: "stream" conforms to the sink and streams raw PCM (shared with the sync workflow
+        # path via the TTS component); "file" plays a temp WAV. Mirrors [audio] playback_mode.
+        self._playback_mode = playback_mode
 
     def supported_modalities(self) -> Set[OutputModality]:
         # A voice device speaks both spoken results and plain text (text → speech).
@@ -47,6 +50,12 @@ class AudioSpeechOutput(OutputPort):
             return DeliveryResult.ok(self._name, OutputModality.SPEECH)  # nothing to speak
         temp_path: Optional[Path] = None
         try:
+            # ARCH-21: stream mode conforms to the sink and streams raw PCM (shared path on the TTS
+            # component); degrades to file when streaming is unavailable (text-only provider / no
+            # negotiator). This keeps deferred F&F speech on the same path as sync replies.
+            if self._playback_mode == "stream" and await self._tts.synthesize_and_stream_to(self._audio, text):
+                return DeliveryResult.ok(self._name, OutputModality.SPEECH)
+
             temp_path = Path(self._temp_dir) / f"speech_{uuid.uuid4().hex}.wav"
             await self._tts.synthesize_to_file(text, temp_path)
             await self._audio.play_file(temp_path)

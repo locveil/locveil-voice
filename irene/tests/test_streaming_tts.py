@@ -94,3 +94,58 @@ async def test_component_delegates_to_selected_provider():
 
     assert (stream.sample_rate, stream.channels, stream.sample_width) == (44100, 2, 2)
     assert await collect_pcm(stream.frames) == pcm
+
+
+def _component_with_provider(provider, *, negotiator):
+    from types import SimpleNamespace
+
+    from irene.components.tts_component import TTSComponent
+
+    component = TTSComponent()
+    component.providers = {provider.get_provider_name(): provider}
+    component.default_provider = provider.get_provider_name()
+    component._lazy_loading_enabled = False
+    component.core = SimpleNamespace(audio_negotiator=negotiator)
+    return component
+
+
+class _PassThroughNegotiator:
+    async def to_sink(self, audio_data, sink=None, trace_context=None):
+        return audio_data
+
+
+@pytest.mark.asyncio
+async def test_synthesize_and_stream_to_streams_conformed_pcm():
+    """The shared stream path: synthesize -> to_sink -> audio.play_stream; returns True."""
+    pcm = b"\x01\x00\x02\x00" * 200
+    provider = _WavTTSProvider(pcm, rate=22050, channels=1, width=2)
+    component = _component_with_provider(provider, negotiator=_PassThroughNegotiator())
+
+    captured = {}
+
+    class _FakeAudio:
+        async def play_stream(self, data, *, sample_rate, channels, sample_width, **kw):
+            captured.update(data=data, rate=sample_rate, channels=channels, width=sample_width)
+
+    ok = await component.synthesize_and_stream_to(_FakeAudio(), "привет")
+
+    assert ok is True
+    assert captured == {"data": pcm, "rate": 22050, "channels": 1, "width": 2}
+
+
+@pytest.mark.asyncio
+async def test_synthesize_and_stream_to_returns_false_without_negotiator():
+    provider = _WavTTSProvider(b"\x00\x00" * 50, 16000, 1, 2)
+    component = _component_with_provider(provider, negotiator=None)
+
+    ok = await component.synthesize_and_stream_to(object(), "x")
+    assert ok is False
+
+
+@pytest.mark.asyncio
+async def test_synthesize_and_stream_to_returns_false_for_non_streamable_provider():
+    provider = _TextTTSProvider({})
+    component = _component_with_provider(provider, negotiator=_PassThroughNegotiator())
+
+    ok = await component.synthesize_and_stream_to(object(), "not audio")
+    assert ok is False

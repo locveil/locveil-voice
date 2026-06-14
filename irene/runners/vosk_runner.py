@@ -241,8 +241,11 @@ preload_models = true
         output_manager = getattr(self.core, "output_manager", None)
         if output_manager is not None and self.core.component_manager is not None:
             from ..outputs.audio import AudioSpeechOutput
+            # ARCH-21: deferred F&F speech uses the same file|stream path as sync replies
+            playback_mode = getattr(getattr(self.core.config, "audio", None), "playback_mode", "file")
             speech = AudioSpeechOutput(self.core.component_manager.get_component('tts'),
-                                       self.core.component_manager.get_component('audio'), name="audio")
+                                       self.core.component_manager.get_component('audio'), name="audio",
+                                       playback_mode=playback_mode)
             if await speech.is_available():
                 await output_manager.add_output("audio", speech)
                 output_manager.designate_conversational_fallback("audio")

@@ -452,6 +452,35 @@ class TTSComponent(Component, TTSPlugin, WebAPIPlugin, TTSPort):
                 logger.error(f"TTS provider {provider_name} streaming failed: {e}")
         return await self._stream_with_fallback(text, provider_name, **kwargs)
 
+    async def synthesize_and_stream_to(self, audio_component, text: str, **kwargs) -> bool:
+        """Synthesize ``text`` to PCM, conform DOWN to the output sink (§8), and stream it on
+        ``audio_component`` (ARCH-21). The shared local-speech *stream* path used by both the sync
+        workflow reply and the `AudioSpeechOutput` delivery port.
+
+        Returns ``False`` (the caller should fall back to file playback) when no audio negotiator is
+        wired or the selected provider can't produce a PCM stream (e.g. text-only console)."""
+        from ..intents.models import AudioData
+        from ..utils.audio_stream import collect_pcm
+
+        negotiator = getattr(self.core, "audio_negotiator", None)
+        if negotiator is None:
+            return False
+        try:
+            stream = await self.synthesize_to_stream(text, **kwargs)
+        except Exception as e:
+            # Includes NotImplementedError (text-only/MP3 providers) and the no-streamable-provider
+            # RuntimeError — any streaming failure means the caller should fall back to file playback.
+            logger.debug(f"TTS streaming unavailable ({e}); caller should use file playback")
+            return False
+
+        pcm = await collect_pcm(stream.frames)
+        producer = AudioData(data=pcm, timestamp=time.time(), sample_rate=stream.sample_rate,
+                             channels=stream.channels, format="pcm16")
+        conformed = await negotiator.to_sink(producer)
+        await audio_component.play_stream(conformed.data, sample_rate=conformed.sample_rate,
+                                          channels=conformed.channels, sample_width=stream.sample_width)
+        return True
+
     async def _stream_with_fallback(self, text: str, failed_provider: str, **kwargs) -> PCMStream:
         """Try fallback providers' streaming synthesis when the primary fails (ARCH-21)."""
         for fallback_provider in self.fallback_providers:

@@ -726,72 +726,46 @@ class UnifiedVoiceAssistantWorkflow(Workflow):
             raise
     
     async def _handle_tts_output(self, result: IntentResult, context: RequestContext):
-        """Handle TTS output using temp file coordination"""
+        """Handle TTS output: normalize the reply text, then play it locally (stream or file)."""
         if not (self.tts and self.audio and result.text):
             return
-            
-        # Generate unique temporary file path
-        temp_filename = f"tts_{uuid.uuid4().hex}.wav"
-        temp_path = self.temp_audio_dir / temp_filename
-        
+
+        # Normalize the response text for speech (QUAL-13 `tts_input` stage — numbers→words, symbols,
+        # optional RUNorm), THEN synthesize. Degrades to raw text on any error.
+        text_to_speak = result.text
+        if self.text_processor and self._text_processing_enabled:
+            try:
+                text_to_speak = await self.text_processor.process(result.text, stage="tts_input")
+            except Exception as e:
+                self.logger.warning(f"TTS text normalization failed, speaking raw: {e}")
+                text_to_speak = result.text
+
         try:
-            # Step 1: normalize the response text for speech (QUAL-13 `tts_input` stage — numbers→words,
-            # symbols, optional RUNorm), THEN synthesize. Previously TTS spoke raw text (no normalization
-            # ran on the response at all). Degrades to raw text on any error.
-            text_to_speak = result.text
-            if self.text_processor and self._text_processing_enabled:
-                try:
-                    text_to_speak = await self.text_processor.process(result.text, stage="tts_input")
-                except Exception as e:
-                    self.logger.warning(f"TTS text normalization failed, speaking raw: {e}")
-                    text_to_speak = result.text
-
-            self.logger.debug(f"Generating TTS audio: {temp_path}")
-            await self.tts.synthesize_to_file(text_to_speak, temp_path)
-
-            # Step 2: play it. ARCH-20 "stream" mode conforms DOWN to the output sink (§8) and plays raw
-            # PCM through the streaming backend; "file" mode plays the WAV directly. Stream mode degrades
-            # to file when the negotiator is absent or the file isn't WAV PCM (e.g. text-only providers).
-            if self._playback_mode == "stream" and self.audio_negotiator is not None:
-                await self._play_tts_stream(temp_path)
-            else:
-                self.logger.debug(f"Playing audio file: {temp_path}")
-                await self.audio.play_file(temp_path)
+            # ARCH-21: "stream" mode synthesizes straight to a PCM stream, conforms DOWN to the output
+            # sink (§8) and plays it through the streaming backend — no temp file. It degrades to "file"
+            # when the negotiator/stream is unavailable (e.g. text-only providers). "file" mode plays a
+            # temp WAV directly. The stream path is shared with AudioSpeechOutput (TTS component).
+            streamed = False
+            if self._playback_mode == "stream":
+                streamed = await self.tts.synthesize_and_stream_to(self.audio, text_to_speak)
+            if not streamed:
+                await self._play_tts_file(text_to_speak)
 
             self.logger.info(f"Successfully played TTS audio for: {result.text[:50]}...")
-            
         except Exception as e:
             self.logger.warning(f"TTS-Audio coordination failed: {e}")
-            
+
+    async def _play_tts_file(self, text: str) -> None:
+        """File-mode playout: synthesize to a temp WAV and play it directly, with mandatory cleanup."""
+        assert self.tts is not None and self.audio is not None
+        temp_path = self.temp_audio_dir / f"tts_{uuid.uuid4().hex}.wav"
+        try:
+            await self.tts.synthesize_to_file(text, temp_path)
+            await self.audio.play_file(temp_path)
         finally:
-            # Step 3: MANDATORY cleanup
             if temp_path.exists():
                 temp_path.unlink()
                 self.logger.debug(f"Cleaned up temp file: {temp_path}")
-
-    async def _play_tts_stream(self, temp_path) -> None:
-        """ARCH-20 stream mode: read the synthesized WAV, conform DOWN to the output sink (`to_sink`,
-        §8), and play raw PCM through the streaming backend. Falls back to `play_file` for non-WAV
-        output (e.g. text-only providers) so stream mode never regresses those."""
-        import wave
-        from ..utils.audio_stream import parse_wav
-
-        assert self.audio_negotiator is not None and self.audio is not None
-
-        try:
-            pcm, rate, channels, width = parse_wav(temp_path.read_bytes())
-        except (wave.Error, EOFError) as e:
-            self.logger.debug(f"TTS output not WAV PCM ({e}); falling back to play_file")
-            await self.audio.play_file(temp_path)
-            return
-
-        producer = AudioData(data=pcm, timestamp=time.time(), sample_rate=rate,
-                             channels=channels, format="pcm16")
-        conformed = await self.audio_negotiator.to_sink(producer)
-        self.logger.debug(
-            f"Streaming TTS PCM: {conformed.sample_rate} Hz / {conformed.channels} ch / {width * 8}-bit")
-        await self.audio.play_stream(conformed.data, sample_rate=conformed.sample_rate,
-                                     channels=conformed.channels, sample_width=width)
 
     async def _combine_audio_buffer(self, audio_buffer: List[AudioData]) -> AudioData:
         """Combine multiple AudioData objects into a single object"""
