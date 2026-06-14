@@ -13,15 +13,59 @@ Features:
 """
 
 import base64
+import dataclasses
+import hashlib
+import json
 import logging
 import time
 import uuid
+from contextlib import contextmanager
+from contextvars import ContextVar
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Iterator, List, Optional
 
 from ..intents.context_models import UnifiedConversationContext
 
 logger = logging.getLogger(__name__)
+
+# ARCH-19 slice 1 — ambient access to the live trace (D-3).
+# A process-global contextvar set at the request boundary (`trace_scope`) so the
+# TraceLogger and handler `trace_event()` can find the active trace without threading
+# it through every signature. Hexagon-clean: `core` is already imported by the domain
+# (handlers reach `core.metrics`/`core.client_registry` today), so this adds no new edge.
+current_trace: ContextVar[Optional["TraceContext"]] = ContextVar("current_trace", default=None)
+
+
+def get_current_trace() -> Optional["TraceContext"]:
+    """Return the trace bound to the current context, or None."""
+    return current_trace.get()
+
+
+@contextmanager
+def trace_scope(trace: Optional["TraceContext"]) -> Iterator[Optional["TraceContext"]]:
+    """Bind `trace` as the ambient `current_trace` for the duration of the block.
+
+    No-op-safe: a None trace simply binds None (so callers can wrap unconditionally).
+    Always resets the contextvar on exit, even on exception.
+    """
+    token = current_trace.set(trace)
+    try:
+        yield trace
+    finally:
+        current_trace.reset(token)
+
+
+def trace_event(label: str, data: Optional[Dict[str, Any]] = None, *, handler: str = "") -> None:
+    """Record a handler sub-step (D-5) on the active trace — a no-op when none is set.
+
+    Handlers call this unconditionally; it finds `current_trace` and appends a
+    `handler_events` record. Cheap and side-effect-free when tracing is off.
+    """
+    trace = current_trace.get()
+    if trace is None or not trace.enabled:
+        return
+    trace.add_handler_event(handler=handler, label=label, data=data or {})
 
 
 class TraceContext:
@@ -55,13 +99,32 @@ class TraceContext:
         self.stages: List[Dict[str, Any]] = []
         self.start_time = time.time()
         self.context_snapshots: Dict[str, Any] = {"before": None, "after": None}
-        
+
         # Phase 8: Production safety limits
         self.max_stages = max_stages
         self.max_data_size_bytes = max_data_size_mb * 1024 * 1024
         self._current_data_size = 0
         self._stages_dropped = 0
         self._data_size_exceeded = False
+
+        # ARCH-19 slice 1 — the un-sanitised `replay` envelope + the sidecar lists.
+        # `stages`/`context_snapshots` above stay the SANITISED human view (export_trace);
+        # everything below is FAITHFUL (un-redacted, un-truncated) so a saved trace is
+        # re-runnable + listenable. Populated by record_*; serialised by build_envelope/to_file.
+        # Call-sites for some of these land in later slices (config→2, vad→3, logs→2, seed→5);
+        # the fields + recorders exist now so the envelope schema is complete from slice 1.
+        self.capture_level: str = "utterance"          # utterance | segmenter | raw (D-2)
+        self._input: Optional[Dict[str, Any]] = None   # faithful input: kind + format + audio_base64/text
+        self._request: Optional[Dict[str, Any]] = None  # provider/language/skip_*/session/room/wants_audio
+        self._canonical: Optional[Dict[str, Any]] = None  # canonical audio contract (rate/format/channels)
+        self._seed_context: Optional[Dict[str, Any]] = None  # the "before" context, faithful (replay seeds from it)
+        self._config_subset: Optional[Dict[str, Any]] = None  # settings that shaped this run (D-10)
+        self._config_digest: Optional[str] = None      # quick equality check (sha256 of the subset)
+        self._provider_models: Optional[Dict[str, Any]] = None  # model ids for the cross-system mismatch report
+        self.recorded_output: Optional[Dict[str, Any]] = None  # the oracle a replay diffs against (D-6)
+        self.vad_frames: List[Dict[str, Any]] = []     # segmenter level only (slice 3)
+        self.logs: List[Dict[str, Any]] = []           # TraceLogger records (slice 2)
+        self.handler_events: List[Dict[str, Any]] = []  # trace_event() records (D-5)
     
     def record_stage(self, stage_name: str, input_data: Any, output_data: Any, 
                     metadata: Dict[str, Any], processing_time_ms: float) -> None:
@@ -477,6 +540,186 @@ class TraceContext:
             }
         }
     
+    # ------------------------------------------------------------------
+    # ARCH-19 slice 1 — faithful `replay` envelope recorders + save.
+    # These are FAITHFUL (no sanitiser): they store the full audio and the
+    # un-redacted settings so the trace is re-runnable. No-op when disabled.
+    # ------------------------------------------------------------------
+
+    def _t_ms(self) -> int:
+        """Milliseconds since the trace started — the timeline used by logs/events/frames."""
+        return int((time.time() - self.start_time) * 1000)
+
+    def record_input(self, kind: str, *, audio_bytes: Optional[bytes] = None,
+                     audio_format: Optional[Dict[str, Any]] = None, text: Optional[str] = None,
+                     capture_level: Optional[str] = None) -> None:
+        """Record the faithful replay input — the FULL utterance, not the 1 MB sanitiser cap.
+
+        `kind` is "audio" (base64 the bytes inline, no WAV) or "text".
+        """
+        if not self.enabled:
+            return
+        if capture_level:
+            self.capture_level = capture_level
+        if kind == "audio":
+            self._input = {
+                "kind": "audio",
+                "format": audio_format or {},
+                "audio_base64": base64.b64encode(audio_bytes or b"").decode("utf-8"),
+                "capture_level": self.capture_level,
+            }
+        else:
+            self._input = {"kind": "text", "text": text or ""}
+
+    def record_request(self, request: Dict[str, Any]) -> None:
+        """Record the request envelope (provider/language/skip_*/session/room/wants_audio)."""
+        if not self.enabled:
+            return
+        self._request = dict(request)
+
+    def record_canonical(self, rate: int, fmt: str, channels: int) -> None:
+        """Record the canonical audio contract a replay conforms to."""
+        if not self.enabled:
+            return
+        self._canonical = {"rate": rate, "format": fmt, "channels": channels}
+
+    def record_seed_context(self, context: "UnifiedConversationContext") -> None:
+        """Snapshot the 'before' context faithfully — replay seeds a fresh context from it (D-6)."""
+        if not self.enabled:
+            return
+        self._seed_context = self._seed_snapshot(context)
+
+    def record_config(self, config_subset: Dict[str, Any],
+                      provider_models: Optional[Dict[str, Any]] = None) -> None:
+        """Record the config subset that shaped this run (+ a digest for quick equality) (D-10)."""
+        if not self.enabled:
+            return
+        self._config_subset = self._json_safe(config_subset)
+        self._config_digest = self._digest(self._config_subset)
+        if provider_models is not None:
+            self._provider_models = self._json_safe(provider_models)
+
+    def record_output(self, result: Any) -> None:
+        """Record the oracle a replay diffs against — text/success/actions (D-6)."""
+        if not self.enabled:
+            return
+        self.recorded_output = {
+            "text": getattr(result, "text", None),
+            "success": bool(getattr(result, "success", False)),
+            "actions": getattr(result, "action_metadata", None) or [],
+        }
+
+    def add_handler_event(self, *, handler: str, label: str, data: Dict[str, Any]) -> None:
+        """Append a `trace_event()` record (used via the module-level `trace_event`)."""
+        if not self.enabled:
+            return
+        self.handler_events.append({
+            "t_ms": self._t_ms(), "handler": handler, "label": label,
+            "data": self._json_safe(data),
+        })
+
+    def add_log(self, *, level: str, logger_name: str, stage: Optional[str],
+                message: str, exc_text: Optional[str] = None) -> None:
+        """Append a TraceLogger record (call-site lands in slice 2; recorder lives here)."""
+        if not self.enabled:
+            return
+        self.logs.append({
+            "t_ms": self._t_ms(), "level": level, "logger": logger_name,
+            "stage": stage, "message": message, "exc_text": exc_text,
+        })
+
+    def add_vad_frame(self, *, t_ms: int, is_voice: bool, energy: float, threshold: float) -> None:
+        """Append a per-frame VAD verdict (segmenter level; call-site lands in slice 3)."""
+        if not self.enabled:
+            return
+        self.vad_frames.append({
+            "t_ms": t_ms, "is_voice": bool(is_voice), "energy": energy, "threshold": threshold,
+        })
+
+    def build_envelope(self) -> Dict[str, Any]:
+        """Assemble the self-contained §2 trace document (replay + execution + sidecars)."""
+        execution: Dict[str, Any] = {}
+        if self.enabled:
+            exported = self.export_trace()
+            execution = {
+                "pipeline_stages": exported.get("pipeline_stages", []),
+                "context_evolution": exported.get("context_evolution", {}),
+                "performance_metrics": exported.get("performance_metrics", {}),
+            }
+        envelope: Dict[str, Any] = {
+            "trace_version": 1,
+            "request_id": self.request_id,
+            "saved_at": datetime.now(timezone.utc).isoformat(),
+            "replay": {
+                "input": self._input,
+                "request": self._request,
+                "canonical": self._canonical,
+                "seed_context": self._seed_context,
+                "config_subset": self._config_subset,
+                "config_digest": self._config_digest,
+                "provider_models": self._provider_models,
+            },
+            "execution": execution,
+            "logs": self.logs,
+            "handler_events": self.handler_events,
+            "recorded_output": self.recorded_output,
+        }
+        # segmenter-level only — keep the key absent when empty (utterance/raw don't fill it)
+        if self.vad_frames:
+            envelope["vad_frames"] = self.vad_frames
+        return envelope
+
+    def to_file(self, path: Any) -> Path:
+        """Write the envelope as self-contained JSON. `path` is the destination file."""
+        out = Path(path)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(json.dumps(self.build_envelope(), ensure_ascii=False, indent=2),
+                       encoding="utf-8")
+        return out
+
+    @staticmethod
+    def _seed_snapshot(context: "UnifiedConversationContext") -> Dict[str, Any]:
+        """A faithful, JSON-safe snapshot of the conversation context for re-seeding on replay."""
+        try:
+            raw = dataclasses.asdict(context)
+        except Exception as e:  # not a dataclass / odd nested value — fall back to attributes
+            logger.warning(f"seed-context asdict failed ({e}); falling back to attribute scrape")
+            raw = {k: getattr(context, k, None) for k in (
+                "session_id", "client_id", "room_name", "language", "supported_languages",
+                "conversation_history", "handler_contexts", "state_context", "user_id",
+            )}
+        return TraceContext._json_safe(raw)
+
+    @staticmethod
+    def _digest(obj: Any) -> str:
+        """sha256 of the canonical JSON form, prefixed `sha256:` for quick equality checks."""
+        blob = json.dumps(obj, sort_keys=True, ensure_ascii=False, default=str).encode("utf-8")
+        return "sha256:" + hashlib.sha256(blob).hexdigest()
+
+    @staticmethod
+    def _json_safe(obj: Any) -> Any:
+        """Recursively coerce to JSON-serialisable values (enums→value, bytes→base64, etc.)."""
+        if obj is None or isinstance(obj, (bool, int, float, str)):
+            return obj
+        if isinstance(obj, dict):
+            return {str(k): TraceContext._json_safe(v) for k, v in obj.items()}
+        if isinstance(obj, (list, tuple, set)):
+            return [TraceContext._json_safe(v) for v in obj]
+        if isinstance(obj, bytes):
+            return base64.b64encode(obj).decode("utf-8")
+        if dataclasses.is_dataclass(obj) and not isinstance(obj, type):
+            return TraceContext._json_safe(dataclasses.asdict(obj))
+        value = getattr(obj, "value", None)  # Enum and similar
+        if value is not None and not callable(value):
+            return TraceContext._json_safe(value)
+        isoformat = getattr(obj, "isoformat", None)  # datetimes
+        if callable(isoformat):
+            try:
+                return isoformat()
+            except Exception:
+                pass
+        return str(obj)
+
     def _calculate_context_changes(self) -> Dict[str, Any]:
         """
         Enhanced context change analysis for UnifiedConversationContext

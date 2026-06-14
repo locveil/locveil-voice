@@ -687,7 +687,13 @@ See `docs/review/phase1_architecture_map.md` §5.
       (endpoint deferred); D-16 `--reproduce` fails clearly on a missing model (no degrade — that's `--local`); D-17
       save-all gated solely on the startup `--trace` flag (no ring/on-error, manual retention); D-18 trace stays
       file-only, lightweight `trace_saved` pointer-event once ARCH-15's bus exists. Slices §12 — **ready for
-      implementation.**
+      implementation.** **Slice 1 (spine) DONE 2026-06-14:** `current_trace` contextvar + `trace_scope` + no-op-safe
+      `trace_event()` + the faithful `replay` envelope on `TraceContext` (`record_input`/`record_request`/
+      `record_canonical`/`record_seed_context`/`record_config`→digest/`record_output` + `handler_events`/`logs`/
+      `vad_frames` holders) + `build_envelope`/`to_file` (§2 JSON); contextvar + input/request/output capture wired
+      at the two `WorkflowManager` request boundaries; 15 new tests; 9/9 import contracts kept. Remaining slices
+      2–6 (config+TraceLogger+`--trace`, capture levels, handler `trace_event` call-sites, replay tool, delete
+      `vad_recording_test`).
 - [x] **ARCH-20** [AUDIO] (P-TBD) `[deferred]` — **DONE 2026-06-14 (PR-1..4).** Streamable audio output: real
       `play_stream`, new self-contained `miniaudio` provider, unstreamable providers dropped, TTS local playback
       wired through the streaming path. **PR-1** dropped `audioplayer` (file-only) + `simpleaudio` (archived,

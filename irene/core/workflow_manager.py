@@ -11,7 +11,7 @@ import time
 from typing import Dict, Any, Optional, AsyncIterator, List, Union
 from enum import Enum
 
-from .trace_context import TraceContext
+from .trace_context import TraceContext, trace_scope
 from .interfaces.workflow import WorkflowPort
 from ..intents.context_models import RequestContext, InputFormat
 from .event_bus import EventType, PipelineEvent
@@ -468,14 +468,36 @@ class WorkflowManager:
         # Reflect the derived session id (RequestContext forbids "default"/empty → mints a real one)
         session_id = context.session_id
 
-        await self._publish_pipeline_event(EventType.INPUT_RECEIVED, context,
-                                           {"text": text, "format": "text"})
-        result = await unified_workflow.process_text_input(text, context, trace_context)
-        await self._publish_pipeline_event(EventType.RESULT_PRODUCED, context, {
-            "text": result.text, "success": result.success,
-            "intent": result.metadata.get("intent_name") if result.metadata else None})
+        # ARCH-19 slice 1 — bind the trace to the ambient contextvar for this request, and
+        # capture the faithful replay envelope (input + request + recorded_output) at the boundary.
+        # `trace_scope` is no-op-safe when trace_context is None.
+        if trace_context and trace_context.enabled:
+            trace_context.record_input("text", text=text)
+            trace_context.record_request(self._replay_request(context))
+        with trace_scope(trace_context):
+            await self._publish_pipeline_event(EventType.INPUT_RECEIVED, context,
+                                               {"text": text, "format": "text"})
+            result = await unified_workflow.process_text_input(text, context, trace_context)
+            await self._publish_pipeline_event(EventType.RESULT_PRODUCED, context, {
+                "text": result.text, "success": result.success,
+                "intent": result.metadata.get("intent_name") if result.metadata else None})
+        if trace_context and trace_context.enabled:
+            trace_context.record_output(result)
         # (QUAL-28) F&F actions are registered in the store by the launch — no write-back needed.
         return result
+
+    @staticmethod
+    def _replay_request(context: 'RequestContext') -> Dict[str, Any]:
+        """The faithful request envelope (ARCH-19 §2) scraped off the RequestContext."""
+        return {
+            "source": getattr(context, "source", None),
+            "session_id": getattr(context, "session_id", None),
+            "wants_audio": getattr(context, "wants_audio", None),
+            "skip_wake_word": getattr(context, "skip_wake_word", None),
+            "skip_asr": getattr(context, "skip_asr", None),
+            "room": getattr(context, "room_name", None),
+            "client_id": getattr(context, "client_id", None),
+        }
 
     async def _publish_pipeline_event(self, event_type: EventType, context, payload: Dict[str, Any]) -> None:
         """Publish a canonical pipeline event onto the bus (ARCH-15 PR-6), if one is wired.
@@ -558,17 +580,34 @@ class WorkflowManager:
             # Reflect the derived session id (RequestContext forbids "default"/empty → mints a real one)
             session_id = context.session_id
 
+            # ARCH-19 slice 1 — capture the faithful replay input (FULL audio inline, no cap)
+            # + request, bind the trace to the ambient contextvar, then capture the oracle output.
+            if trace_context and trace_context.enabled:
+                trace_context.record_input(
+                    "audio",
+                    audio_bytes=getattr(audio_data, "data", b""),
+                    audio_format={
+                        "rate": getattr(audio_data, "sample_rate", None),
+                        "channels": getattr(audio_data, "channels", None),
+                        "format": getattr(audio_data, "format", None),
+                    },
+                )
+                trace_context.record_request(self._replay_request(context))
+
             # Process audio through unified workflow with trace support.
             # `process_audio_input` is a concrete-only entry point (not part of
             # the WorkflowPort contract — see the port docstring), so resolve it
             # dynamically off the active workflow.
             process_audio_input = getattr(unified_workflow, "process_audio_input")
-            await self._publish_pipeline_event(EventType.INPUT_RECEIVED, context,
-                                               {"format": "audio"})
-            result = await process_audio_input(audio_data, context, trace_context)
-            await self._publish_pipeline_event(EventType.RESULT_PRODUCED, context, {
-                "text": result.text, "success": result.success,
-                "intent": result.metadata.get("intent_name") if result.metadata else None})
+            with trace_scope(trace_context):
+                await self._publish_pipeline_event(EventType.INPUT_RECEIVED, context,
+                                                   {"format": "audio"})
+                result = await process_audio_input(audio_data, context, trace_context)
+                await self._publish_pipeline_event(EventType.RESULT_PRODUCED, context, {
+                    "text": result.text, "success": result.success,
+                    "intent": result.metadata.get("intent_name") if result.metadata else None})
+            if trace_context and trace_context.enabled:
+                trace_context.record_output(result)
             # (QUAL-28) F&F actions are registered in the store by the launch — no write-back needed.
             return result
             

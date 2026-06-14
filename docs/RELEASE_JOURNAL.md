@@ -12,6 +12,23 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-14
+- **ARCH-19 slice 1 (spine) — the faithful `replay` envelope + ambient access.** Built the data spine the rest of
+  ARCH-19 hangs off, all in `core` (no new architecture edge — `core` is already imported by the domain; 9/9 import
+  contracts kept, no `TYPE_CHECKING`). In `core/trace_context.py`: the `current_trace` **contextvar** + a
+  `trace_scope()` set/reset CM + a no-op-safe **`trace_event()`** (D-3/D-5); and the **un-sanitised `replay`
+  envelope** on `TraceContext` — `record_input` (FULL audio base64 inline, *not* the 1 MB sanitiser cap),
+  `record_request`, `record_canonical`, `record_seed_context` (JSON-safe faithful snapshot via `asdict`+coerce),
+  `record_config` (subset + `sha256:` digest, D-10), `record_output` (the diff oracle, D-6), plus `handler_events`/
+  `logs`/`vad_frames` holders — serialised by `build_envelope`/`to_file` into the §2 self-contained JSON. The
+  existing `stages`/`context_snapshots` stay the SANITISED human view (`export_trace`); the envelope is the faithful
+  re-runnable twin. Wired the contextvar bind + input/request/output capture at the two `WorkflowManager` request
+  boundaries (`process_text_input`/`process_audio_input`); `trace_scope` is no-op-safe so the wrap is unconditional.
+  Reconciliation (Invariant #8): slice valid-as-written — all target names confirmed net-new; the orchestrator's
+  `_current_trace_context` stash left intact (its handler-migration is slice 4). The `record_config`/`record_seed_context`/
+  `vad_frames`/`logs` **recorders** land + are unit-tested now; their **call-sites** belong to later slices (config→2,
+  seed→5, vad→3, logs→2). New `irene/tests/test_trace_envelope.py` (15 tests, all green); existing 3 component-trace
+  failures are pre-existing TEST-2 baseline drift (verified net-zero by stash). Invariant #4 N/A (no contract change —
+  `/trace*` response shape untouched). ARCH-19 stays `[ ]` (1 of 6 slices).
 - **ARCH-19 — design session closed; §13 open questions all resolved (D-15..D-18).** Decided the four remaining
   trace-persistence design edges with the user, lifting the doc from DRAFT to design-COMPLETE: **D-15** replay surface
   = **CLI only for v1** (a `/trace/replay` endpoint is deferred, not dropped — the rich UX is terminal-native and the
