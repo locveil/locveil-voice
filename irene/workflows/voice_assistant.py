@@ -67,7 +67,9 @@ class UnifiedVoiceAssistantWorkflow(Workflow):
         self.audio_processor_interface = None
         # ARCH-18: derives the canonical audio format + transforms capture to it once at the boundary
         self.audio_negotiator: Optional[AudioNegotiator] = None
-        
+        # ARCH-20: local TTS playback path ("file" | "stream"); set from config.audio in initialize()
+        self._playback_mode: str = "file"
+
         # Pipeline stage flags - will be configured from config in initialize()
         self._voice_trigger_enabled = False
         self._asr_enabled = False
@@ -172,6 +174,9 @@ class UnifiedVoiceAssistantWorkflow(Workflow):
                 # ARCH-18: use the SHARED audio negotiator (built on core at startup, injected as a component)
                 # — the mic/web boundary and the ASR /transcribe endpoint share the same instance.
                 self.audio_negotiator = self.get_component('audio_negotiator')
+                # ARCH-20: local TTS playback path (file vs streaming)
+                audio_config = getattr(config, 'audio', None)
+                self._playback_mode = getattr(audio_config, 'playback_mode', 'file')
             else:
                 self.logger.error("VAD configuration missing or disabled. VAD processing is required for audio workflows.")
                 raise ConfigValidationError("VAD configuration is required for audio processing")
@@ -743,11 +748,16 @@ class UnifiedVoiceAssistantWorkflow(Workflow):
 
             self.logger.debug(f"Generating TTS audio: {temp_path}")
             await self.tts.synthesize_to_file(text_to_speak, temp_path)
-            
-            # Step 2: Audio plays the file
-            self.logger.debug(f"Playing audio file: {temp_path}")
-            await self.audio.play_file(temp_path)
-            
+
+            # Step 2: play it. ARCH-20 "stream" mode conforms DOWN to the output sink (§8) and plays raw
+            # PCM through the streaming backend; "file" mode plays the WAV directly. Stream mode degrades
+            # to file when the negotiator is absent or the file isn't WAV PCM (e.g. text-only providers).
+            if self._playback_mode == "stream" and self.audio_negotiator is not None:
+                await self._play_tts_stream(temp_path)
+            else:
+                self.logger.debug(f"Playing audio file: {temp_path}")
+                await self.audio.play_file(temp_path)
+
             self.logger.info(f"Successfully played TTS audio for: {result.text[:50]}...")
             
         except Exception as e:
@@ -758,7 +768,31 @@ class UnifiedVoiceAssistantWorkflow(Workflow):
             if temp_path.exists():
                 temp_path.unlink()
                 self.logger.debug(f"Cleaned up temp file: {temp_path}")
-    
+
+    async def _play_tts_stream(self, temp_path) -> None:
+        """ARCH-20 stream mode: read the synthesized WAV, conform DOWN to the output sink (`to_sink`,
+        §8), and play raw PCM through the streaming backend. Falls back to `play_file` for non-WAV
+        output (e.g. text-only providers) so stream mode never regresses those."""
+        import wave
+        from ..utils.audio_stream import parse_wav
+
+        assert self.audio_negotiator is not None and self.audio is not None
+
+        try:
+            pcm, rate, channels, width = parse_wav(temp_path.read_bytes())
+        except (wave.Error, EOFError) as e:
+            self.logger.debug(f"TTS output not WAV PCM ({e}); falling back to play_file")
+            await self.audio.play_file(temp_path)
+            return
+
+        producer = AudioData(data=pcm, timestamp=time.time(), sample_rate=rate,
+                             channels=channels, format="pcm16")
+        conformed = await self.audio_negotiator.to_sink(producer)
+        self.logger.debug(
+            f"Streaming TTS PCM: {conformed.sample_rate} Hz / {conformed.channels} ch / {width * 8}-bit")
+        await self.audio.play_stream(conformed.data, sample_rate=conformed.sample_rate,
+                                     channels=conformed.channels, sample_width=width)
+
     async def _combine_audio_buffer(self, audio_buffer: List[AudioData]) -> AudioData:
         """Combine multiple AudioData objects into a single object"""
         if not audio_buffer:

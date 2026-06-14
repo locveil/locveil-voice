@@ -14,7 +14,7 @@ Requires: pydantic>=2.0.0, pydantic-settings>=2.0.0
 
 import os
 import logging
-from typing import Optional, Any, Dict, List, Type
+from typing import Optional, Any, Dict, List, Literal, Type
 from pathlib import Path
 from ..__version__ import __version__
 
@@ -200,6 +200,11 @@ class AudioConfig(BaseModel):
     default_provider: Optional[str] = Field(default=None, description="Default audio provider")
     fallback_providers: List[str] = Field(default_factory=list, description="Fallback providers in order")
     concurrent_playback: bool = Field(default=False, description="Allow concurrent audio playback")
+    # ARCH-20: local TTS playback path. "file" = synthesize to a temp WAV and play_file (legacy).
+    # "stream" = synthesize, conform DOWN to the output sink (§8), and play_stream raw PCM through the
+    # streaming backend (no soundfile/WAV decode at playout); degrades to "file" for text-only providers
+    # or when the audio negotiator is not wired.
+    playback_mode: Literal["file", "stream"] = Field(default="file", description="Local TTS playback path: 'file' (play_file) or 'stream' (play_stream + sink conform)")
     # ARCH-18: optional operator pin of the negotiated canonical pipeline format (else auto-derived from
     # the input + consumer contracts). An infeasible pin is the same fatal startup error.
     canonical_rate: Optional[int] = Field(default=None, description="Pin the canonical pipeline sample rate (Hz); None = auto-derive")

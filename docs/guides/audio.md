@@ -6,28 +6,28 @@ interchangeable **playback providers**; which one you use depends on the platfor
 
 ## Playback providers
 
-`[audio]` selects among five, discovered via `irene.providers.audio`:
+`[audio]` selects among four, discovered via `irene.providers.audio`. Every real backend **streams** raw
+PCM straight to the device — there's no intermediate WAV file at playout:
 
 | Provider | Needs | Platforms | Notes |
 |---|---|---|---|
 | **console** | nothing | all | headless/testing stub; the default and the fallback |
-| **sounddevice** | `sounddevice`, `soundfile` + PortAudio & libsndfile | all | high-quality playback + device enumeration |
-| **audioplayer** | `audioplayer` | all | simple cross-platform playback |
-| **aplay** | ALSA `alsa-utils` | Linux only | shells out to the `aplay` binary |
-| **simpleaudio** | `simpleaudio` + ALSA libs | all | lightweight, WAV only |
+| **sounddevice** | `sounddevice`, `soundfile` + PortAudio & libsndfile | all | high-quality playback (`RawOutputStream`) + device enumeration |
+| **aplay** | ALSA `alsa-utils` | Linux only | shells out to `aplay`, streams raw PCM over stdin |
+| **miniaudio** | `miniaudio` | all | self-contained streaming — backends bundled in the wheel, **no system library** |
 
 ## Installation
 
-The playback engines ship behind the **`audio-output`** extra (sounddevice, soundfile, audioplayer, plus
-numpy/librosa). Their system libraries aren't pip-installable — add them per platform:
+The playback engines ship behind the **`audio-output`** extra (sounddevice, soundfile, miniaudio, plus
+numpy/librosa). `sounddevice` and `aplay` need a system library; `miniaudio` brings its own:
 
 - **sounddevice** — PortAudio + libsndfile: `libportaudio2 libsndfile1` (Debian/Ubuntu), `portaudio
   libsndfile` (Alpine/macOS).
 - **aplay** — `alsa-utils`.
-- **simpleaudio** — `libasound2` (Ubuntu) / `alsa-lib` (Alpine). It is currently commented out of the extra
-  over a build issue; install it yourself if you want it.
+- **miniaudio** — nothing. Its WASAPI / CoreAudio / ALSA backends are compiled into the wheel, so it works
+  cross-platform (including Raspberry Pi) with no system package.
 
-`console` needs nothing — which is why a fresh, model-free deployment still "speaks" (to the log).
+`console` needs nothing either — which is why a fresh, model-free deployment still "speaks" (to the log).
 
 ## Configuration
 
@@ -40,6 +40,7 @@ enabled = true
 default_provider = "sounddevice"
 fallback_providers = ["console"]
 concurrent_playback = false
+playback_mode = "file"           # "file" = play the synthesized WAV; "stream" = conform + stream raw PCM
 # output_rate = 44100              # optional: override the playback sink rate (else the provider's, else CD)
 # output_channels = 2             # optional: override the playback sink channels
 ```
@@ -47,6 +48,11 @@ concurrent_playback = false
 `components.audio = true` turns the component on; `[audio]` picks the provider and a fallback (`console` is
 the safe fallback everywhere). Note **TTS requires Audio** — enabling `[tts]` without `[audio]` is rejected
 at startup.
+
+`playback_mode` chooses how a TTS reply reaches the speaker: `file` synthesizes to a temp WAV and hands the
+file to the provider; `stream` conforms the audio **down to the sink** (below) and streams the raw PCM through
+the provider's streaming backend. `stream` degrades to `file` automatically for text-only providers (e.g.
+`console`) or if the audio negotiator isn't wired, so it's always safe to enable.
 
 ## Sample rates & hardware
 
@@ -69,7 +75,8 @@ can target a specific one. (Only raw PCM/WAV is handled today; MP3/FLAC are not.
 - **No sound** — confirm `components.audio` is on and `default_provider` isn't `console`; check the OS can
   play at all (`aplay test.wav`, `pactl list sinks`).
 - **"No module / library" on startup** — the provider's system package is missing (PortAudio, libsndfile or
-  ALSA, above), or the `audio-output` extra wasn't installed.
+  ALSA, above), or the `audio-output` extra wasn't installed. (`miniaudio` needs no system package — if it
+  fails, the wheel itself didn't install.)
 - **Device not found / wrong output** — list devices (`aplay -l`, `pactl list`), select one, and make sure
   your user is in the `audio` group.
 - **Distorted or wrong-speed playback** — a sample-rate mismatch; the output conform-down handles a producer

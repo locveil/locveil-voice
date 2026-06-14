@@ -661,8 +661,23 @@ See `docs/review/phase1_architecture_map.md` §5.
       component (OS output), **`--step`** (pause per stage), **`--record-out`** a second trace (tester's + local replay
       for comparison); `vad_recording_test` **deleted** once its harness is ported (base64 not WAV, fix `to_canonical`).
       D-1..D-14. Slices §12; open questions §13. _Design session continues before implementation._
-- [ ] **ARCH-20** [AUDIO] (P-TBD) `[deferred]` — **Streamable audio output: implement real `play_stream`, add
-      `miniaudio`, drop the unstreamable providers.** Closes the file-only-output limitation ARCH-18/PR-4c deferred
+- [x] **ARCH-20** [AUDIO] (P-TBD) `[deferred]` — **DONE 2026-06-14 (PR-1..4).** Streamable audio output: real
+      `play_stream`, new self-contained `miniaudio` provider, unstreamable providers dropped, TTS local playback
+      wired through the streaming path. **PR-1** dropped `audioplayer` (file-only) + `simpleaudio` (archived,
+      WAV-buffer-only) end-to-end + bumped `sounddevice→0.5.x`/`soundfile→0.13`. **PR-2** replaced the file-only
+      stubs with a **raw-PCM `play_stream` contract** (`utils/audio_stream.py`: `collect_pcm`/`parse_wav`): real
+      `sounddevice` `RawOutputStream` (thread-blocking write) + `aplay` raw stdin (true incremental); REST
+      `/audio/stream` parses WAV→PCM, external contract unchanged. **PR-3** added the `miniaudio` provider
+      (`PlaybackDevice` + pull generator; `get_platform_dependencies()=={}` on every OS). **PR-4** added the
+      `[audio] playback_mode = "file" | "stream"` flag (default `file`); `stream` does synth→`parse_wav`→
+      `to_sink` (§8 conform-down)→`play_stream`, degrading to `play_file` for text-only providers / no negotiator.
+      **Reconciliation (Invariant #8):** all TTS providers are file-only at the provider level, so "stream mode"
+      reads back the synthesis WAV rather than a file-free synth path (a future per-provider enhancement); the
+      ledger's "wire **playback** through play_stream" is fully met. **`console` KEPT** (user 2026-06-14) as the
+      safe headless default + fallback; the original "retire console" step is dropped. Invariant #4 green
+      (config-ui check+build each PR); pyright 0 on all touched files; net-0 regression across PR-1..4 (81 =
+      baseline). Docs: `docs/guides/audio.md` rewritten (4-provider table, streaming, `playback_mode`). _Original
+      scope below._ Closes the file-only-output limitation ARCH-18/PR-4c deferred
       (intentionally, never task-tracked): research (2026-06-13) found **all five providers' `play_stream` are stubs**
       (buffer → temp WAV → `play_file`) — file-only is unimplemented code, not a library wall. Decision: **keep only
       streamable backends.** Scope — **(1)** implement **real** `play_stream`: **sounddevice** via `RawOutputStream`

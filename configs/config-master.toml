@@ -180,6 +180,7 @@ enabled = true                      # Enable audio component
 default_provider = "console"        # Default provider: "console", "sounddevice", "aplay", "miniaudio"
 fallback_providers = ["console"]    # Fallback providers in order
 concurrent_playback = false         # Allow multiple audio streams simultaneously
+playback_mode = "file"              # ARCH-20 local TTS playback: "file" (play_file) or "stream" (play_stream + sink conform)
 # ARCH-18: optional pin of the canonical INTERNAL pipeline format. Omit (commented) to auto-derive from the
 # input + consumer contracts (the default); an infeasible pin is a fatal startup error.
 # canonical_rate = 16000            # Pin the internal sample rate (Hz)

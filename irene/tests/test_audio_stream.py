@@ -124,3 +124,62 @@ async def test_miniaudio_play_stream_empty_is_noop():
 
     await provider.play_stream(empty(), sample_rate=16000, channels=1, sample_width=2)
     assert provider.is_playing() is False
+
+
+def _build_workflow_with_fakes(captured):
+    import logging
+
+    from irene.workflows.voice_assistant import UnifiedVoiceAssistantWorkflow
+
+    class _FakeAudio:
+        async def play_stream(self, pcm, *, sample_rate, channels, sample_width, **kw):
+            captured.update(pcm=pcm, rate=sample_rate, channels=channels, width=sample_width)
+
+        async def play_file(self, path):
+            captured["played_file"] = True
+
+    class _FakeNegotiator:  # pass-through sink conform
+        async def to_sink(self, audio_data, sink=None, trace_context=None):
+            return audio_data
+
+    wf = UnifiedVoiceAssistantWorkflow()
+    wf.audio = _FakeAudio()
+    wf.audio_negotiator = _FakeNegotiator()
+    wf.logger = logging.getLogger("test.workflow")
+    return wf
+
+
+@pytest.mark.asyncio
+async def test_workflow_stream_mode_parses_wav_and_play_streams(tmp_path):
+    """ARCH-20 stream mode: WAV -> PCM -> to_sink -> play_stream with the right format."""
+    captured = {}
+    wf = _build_workflow_with_fakes(captured)
+
+    pcm = b"\x01\x00\x02\x00\x03\x00\x04\x00" * 20
+    wav_path = tmp_path / "tts.wav"
+    with wave.open(str(wav_path), "wb") as w:
+        w.setnchannels(1)
+        w.setsampwidth(2)
+        w.setframerate(16000)
+        w.writeframes(pcm)
+
+    await wf._play_tts_stream(wav_path)
+
+    assert captured["pcm"] == pcm
+    assert (captured["rate"], captured["channels"], captured["width"]) == (16000, 1, 2)
+    assert "played_file" not in captured
+
+
+@pytest.mark.asyncio
+async def test_workflow_stream_mode_falls_back_to_play_file_for_non_wav(tmp_path):
+    """Text-only TTS output (not WAV) degrades to play_file rather than erroring."""
+    captured = {}
+    wf = _build_workflow_with_fakes(captured)
+
+    text_path = tmp_path / "tts.txt"
+    text_path.write_text("console tts output, not audio")
+
+    await wf._play_tts_stream(text_path)
+
+    assert captured.get("played_file") is True
+    assert "pcm" not in captured

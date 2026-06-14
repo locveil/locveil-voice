@@ -11,6 +11,38 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+### 2026-06-14
+- **ARCH-20 implemented — streamable audio output (PR-1..4).** Turned the file-only playback path into real
+  streaming and trimmed the provider set to streamable-only.
+  - **PR-1** removed `audioplayer` (file-only) and `simpleaudio` (archived, WAV-buffer-only) end-to-end —
+    provider files, entry-points, schemas, `auto_registry`, config-master blocks, `build_analyzer`/
+    `config_validator_cli`, the `audio_component`/`audio_helpers` probe lists, the demo, and three tests
+    (re-pointed to `aplay`). Bumped `sounddevice→0.5.0` / `soundfile→0.13.0` (input + output extras) and added
+    `miniaudio>=1.59` to the `audio-output` extra.
+  - **PR-2** replaced the stubs (collect→temp WAV→`play_file`) with a **PCM-only `play_stream` contract**
+    carrying `(sample_rate, channels, sample_width)`. New `irene/utils/audio_stream.py` (foundation, no upward
+    deps): `collect_pcm` (buffer-then-stream bridge), `parse_wav`/`is_wav`, `iter_frames`,
+    `width_to_alsa_format`. `sounddevice` now plays via `RawOutputStream` (blocking write on a worker thread,
+    no soundfile/WAV); `aplay` pipes raw PCM to `aplay -t raw -f S16_LE …` over stdin (genuinely incremental).
+    REST `POST /audio/stream` parses a posted WAV down to PCM (raw fallback) with its **external param contract
+    unchanged**, so no config-ui/OpenAPI regen was needed.
+  - **PR-3** added the `miniaudio` provider — pyminiaudio bundles its own WASAPI/CoreAudio/ALSA backends, so
+    `get_platform_dependencies()` is empty on every OS; real streaming via `PlaybackDevice` + a pull-based PCM
+    generator on a worker thread; `play_file` decodes wav/flac/mp3/ogg to PCM through the same path. Verified
+    against pyminiaudio 1.71. Gives ≥2 streamable backends on every OS (sounddevice + miniaudio; +aplay Linux).
+  - **PR-4** added `[audio] playback_mode = "file" | "stream"` (default `file`). `stream` does
+    synthesize→`parse_wav`→`AudioNegotiator.to_sink` (the §8 conform-down)→`play_stream`, and degrades to
+    `play_file` for text-only providers (e.g. `console`) or when the negotiator isn't wired. Rewrote
+    `docs/guides/audio.md` (four-provider table, streaming, `playback_mode`).
+  - **Reconciliation (Invariant #8):** all TTS providers are file-only at the provider level (even the existing
+    HTTP "streaming" sites synthesize to a temp WAV and read it back), so `stream` mode reads back the synthesis
+    WAV rather than a file-free synth path — a future per-provider enhancement. The ledger scope ("wire local
+    **playback** through `play_stream`") is fully met.
+  - **`console` kept** (user decision 2026-06-14) as the safe headless default + fallback; the originally
+    scoped "retire console" step was dropped.
+  - Throughout: pyright 0 on all touched files; config-ui `npm run check` + `build` green each PR (Invariant
+    #4); net-0 test regression (81 failed = baseline; +11 new tests in `test_audio_stream.py`).
+
 ### 2026-06-13
 - **ARCH-20 filed — streamable audio output (research + task).** Following up the file-only-output limitation
   ARCH-18/PR-4c deferred (intentionally, never task-tracked): checked all five audio providers — **every `play_stream`
