@@ -12,6 +12,17 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-14
+- **ARCH-21 PR-5 — reply-to-device server seam (ARCH-21 COMPLETE).** Added `outputs/remote_audio.py`:
+  `RemoteAudioOutput(OutputPort)` + a `ReplyChannel` Protocol. Reply-to-device (D-4) needs no new registry — an
+  output with `origin_key() == physical_id` is already routed by the `OutputManager` conversational
+  origin-pairing (`_origin_output`), so one `RemoteAudioOutput` per connected device is the whole model. `deliver`
+  runs the ARCH-21 producer (`synthesize_to_stream`) → conforms DOWN to the **device's** declared `AudioContract`
+  (`to_sink(producer, device_contract)`) → pushes raw PCM over the channel; an offline channel drops. Built
+  protocol-agnostic (the WS wire format isn't committed — `ReplyChannel` is the only coupling) and tested with a
+  fake channel + a real `OutputManager` proving origin routing (a result from device A reaches A's channel, not
+  B's). **Handoff:** the device-facing reply-channel WS endpoint, connect/disconnect registration, frame protocol,
+  and F&F-offline policy are owned by the ESP32 design session (`ws_esp32_transport.md` / QUAL-45). pyright 0;
+  net-0 regression (81 = baseline, +3 tests). ARCH-21 is complete (PR-1..5).
 - **ARCH-21 PR-4 + scope reconciliation (Invariant #8, user-approved).** Investigating PR-4 ("move the WS TTS
   delivery into a remote-sink OutputPort") found it infeasible as written: `ClientRegistry` holds only metadata
   (no live `WebSocket`), and `/ws/audio` replies text-only — so `OutputManager` has nothing to push audio to;

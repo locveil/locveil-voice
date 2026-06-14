@@ -106,11 +106,15 @@ callback, addressed when the remote-sink path (PR-4) lands.
 - **PR-4 — Delete the vestigial WS synthesis endpoints.** `/tts/stream` + `/tts/binary` are an untested
   request/response synthesis API that contradicts reply-to-device (D-4) — twins of the ASR `/stream`+`/binary`
   already deleted as ZERO-value. Remove the handlers + the orphaned WS-response schema cluster.
-- **PR-5 — Origin-addressed reply-to-device (server seam).** A reply-channel WS the device listens on + a live
-  reply-connection registry keyed by physical identity + a remote `AudioSink`/`OutputPort` that runs
-  `synthesize_to_stream` → conform to the **device's** contract → push over the reply channel + `OutputManager`
-  routing by origin. Built protocol-agnostic and unit-tested with a fake reply client; the device-facing
-  protocol + F&F-offline policy finalize in the ESP32 design session (`ws_esp32_transport.md` / QUAL-45).
+- **PR-5 — Origin-addressed reply-to-device (server seam) ✓.** `outputs/remote_audio.py`: `ReplyChannel`
+  Protocol + `RemoteAudioOutput(OutputPort)` — `origin_key() == physical_id`, so the **existing**
+  `OutputManager` conversational origin-pairing routes a result from a device straight to its output (no new
+  registry needed). `deliver` runs `synthesize_to_stream` → conform to the **device's** `AudioContract`
+  (`to_sink(producer, device_contract)`) → push over the channel; offline channel → drop. Built
+  protocol-agnostic, unit-tested with a fake reply client + a real `OutputManager` (origin routing). **Deferred
+  to the ESP32 design session** (`ws_esp32_transport.md` / QUAL-45): the device-facing reply-channel WS endpoint,
+  the connect/disconnect registration (`add_output`/`remove_output`), the wire frame protocol, and the
+  F&F-offline queue/retry policy.
 
 ## 6. Open questions
 

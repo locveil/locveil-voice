@@ -693,8 +693,17 @@ See `docs/review/phase1_architecture_map.md` §5.
       Gates: Invariant #4 (audio provider list → config-ui), `dependency_validator`/`build_analyzer` (extra changes),
       update `docs/guides/audio.md` provider table. _(Research findings in the 2026-06-13 journal; `console` stub
       kept/retired per taste — not an audio output.)_
-- [ ] **ARCH-21** [AUDIO][TTS] (P-TBD) `[deferred]` — **Streaming TTS + output-seam delivery unification**
-      (design DRAFT 2026-06-14, `docs/design/streaming_tts.md`). The **producer twin** of ARCH-20: that task made
+- [x] **ARCH-21** [AUDIO][TTS] (P-TBD) `[deferred]` — **DONE 2026-06-14 (PR-1..5).** Streaming TTS +
+      output-seam delivery unification. **PR-5 server seam** (`outputs/remote_audio.py`: `RemoteAudioOutput`
+      `OutputPort` + `ReplyChannel` Protocol) lands the reply-to-device (D-4) delivery — `origin_key==physical_id`
+      routes via the existing `OutputManager` origin-pairing, `synthesize_to_stream`→conform to the **device's**
+      `AudioContract`→push over the channel; built protocol-agnostic + fake-client/real-OutputManager tested. **★
+      Handoff:** the device-facing reply-channel WS endpoint + connect/disconnect registration + wire frame
+      protocol + F&F-offline policy are owned by the **ESP32 design session** (`ws_esp32_transport.md` / QUAL-45) —
+      ARCH-21 ships the server abstraction it plugs into. pyright 0, config-ui green, net-0 regression across all
+      5 PRs (81 = baseline). _Design + reframe below._
+      **Streaming TTS + output-seam delivery unification**
+      (design 2026-06-14, `docs/design/streaming_tts.md`). The **producer twin** of ARCH-20: that task made
       *playback* stream raw PCM, but the **TTS producer is file-only at the contract level** (only
       `TTSProvider.synthesize_to_file`), so ARCH-20 PR-4's `stream` mode is an **interim bridge**
       (`synthesize_to_file → parse_wav → to_sink → play_stream` — real conform + streaming backend, but **no
