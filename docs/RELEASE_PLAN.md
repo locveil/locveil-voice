@@ -319,6 +319,18 @@ See `docs/review/phase1_architecture_map.md` §5.
       from `config/__init__.py`. A v13 config now fails plainly at pydantic validation instead of silently morphing —
       correct for v15 (v13 is unsupported). No test depended on auto-migration (verified net-zero vs baseline); all shipped
       configs (config-master/minimal/api-only) load clean; re-exports intact; 9/9 import contracts. Invariant #4 N/A.
+- [x] **QUAL-49** [INFER] (P2) `[deferred]` — **DONE 2026-06-15.** Silero TTS model-id routing fix (surfaced from the
+      ARCH-24 asset-routing analysis; relates to **ARCH-24 T5** — done early). `silero_v3`/`silero_v4` were the **only**
+      providers that bypassed the AssetManager model-id router: they placed the model at `<dir>/<config:model_file>` with a
+      **shared default** (`v3_ru.pt`/`v4_ru.pt`), so two v3 languages — v3_ru/en/de/es all share the `silero/` dir — that
+      both left `model_file` at the default resolved to the **same file** (latent collision), inconsistent with the
+      sherpa/whisper/vosk `get_model_path(provider, model_id)` convention. **Fix:** route the path via
+      `get_model_path("silero_v{3,4}", model_id)` (→ `silero/<id>.pt` / `silero_v4/<id>.pt`, distinct per model_id); derive
+      `model_url` from the selected model_id's descriptor (legacy torch.hub-fallback safety); route the download through the
+      real provider name (`download_model("silero_v4", model_id)`, not the non-existent `"silero"` fallback that silently
+      failed into the legacy path + a copy hack). Explicit `model_file` still honored as an override (back-compat). New
+      `test_silero_routing.py` (4 tests incl. the anti-collision property). **Invariant #4 N/A** (TTS provider config is
+      free-form `Dict[str,Any]`, `models.py:191` — not schema/config-ui-typed). Gates: suite 935 green, pyright 0, contracts 9/9.
 - [x] **ARCH-7** [MQTT] — **✓ DONE 2026-06-06** (design session; deliverable `docs/design/mqtt_integration.md`, and the
       cross-project bridge contract AGREED with the user in the bridge session — `wb-mqtt-bridge/docs/
       voice_integration_contract_draft.md`, status AGREED 2026-06-06). **Approach REDEFINED (Invariant #8(d), approved):**

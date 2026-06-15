@@ -59,8 +59,17 @@ class SileroV3TTSProvider(TTSProvider):
         directory_name = asset_config.get("directory_name", "silero_v3")
         self.model_path = self.asset_manager.config.models_root / directory_name
             
-        self.model_url = config.get("model_url", "https://models.silero.ai/models/tts/ru/v3_1_ru.pt")
-        self.model_file = self.model_path / config.get("model_file", "v3_ru.pt")
+        # Model selection is model_id-routed (consistent with sherpa/whisper/vosk): the file lands at
+        # get_model_path("silero_v3", model_id) -> silero/<model_id>.pt, so the v3 languages
+        # (v3_ru/v3_en/v3_de/v3_es) never collide on a shared default. `model_file` is still honored
+        # as an explicit path override; `model_url` defaults to the selected model_id's descriptor URL.
+        self.model_id = config.get("model", "v3_ru")
+        _model_urls = self._get_default_model_urls()
+        self.model_url = config.get("model_url", _model_urls.get(self.model_id, _model_urls["v3_ru"]))
+        self.model_file = (
+            self.model_path / config["model_file"] if config.get("model_file")
+            else self.asset_manager.get_model_path("silero_v3", self.model_id)
+        )
         # QUAL-38: number-spelling language matches the loaded MODEL (default model is Russian).
         self.language = config.get("language", "ru")
         self.default_speaker = config.get("default_speaker", "xenia")
@@ -286,7 +295,7 @@ class SileroV3TTSProvider(TTSProvider):
             
             try:
                 # Try asset manager download first
-                downloaded_path = await self.asset_manager.download_model("silero", "v3_ru")
+                downloaded_path = await self.asset_manager.download_model("silero_v3", self.model_id)
                 if downloaded_path != self.model_file:
                     # Copy to expected location if different
                     import shutil

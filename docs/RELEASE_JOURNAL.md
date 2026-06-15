@@ -12,6 +12,13 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-15
+- **QUAL-49 — silero model-id routing fix.** The ARCH-24 asset-routing analysis (how multi-model providers route models
+  to subfolders) found silero v3/v4 were the only providers bypassing the `get_model_path(provider, model_id)` router —
+  flat `<dir>/<config:model_file>` with a shared default, so v3 languages could collide on one file. Fixed: route via
+  `get_model_path("silero_v{3,4}", model_id)`, model_url from the descriptor, download via the real provider name (drops
+  the `"silero"`-fallback + copy hack). `test_silero_routing.py` (4). Inv #4 N/A (free-form provider config). Suite 935
+  green, pyright 0, contracts 9/9. Relates to ARCH-24 T5 (done early). _(Also confirmed sherpa already subfolders by
+  model_id — `sherpa_onnx/<model_id>/`; the routing lives in the AssetManager, not the provider.)_
 - **ARCH-24 formally started — T1 finished (code).** Task-start reconciliation (Inv #8): T1 = case (b) partially
   addressed (the `model_type=whisper` branch + tiny/base packs + their tests already shipped under ARCH-10 PR-2, confirmed
   in `onnx_inference_layer.md`); narrowed to "add the `whisper-small` pack + test" (user-approved "we do the rest of T1").
