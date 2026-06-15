@@ -32,6 +32,18 @@ newest entries near the top of each dated section.
   (`trace_context` 76%, `trace_input` 89%), new wiring is thin (`replay_trace`/`voice_runner` 34%). Suite still at its
   baseline (82 failed / 472 passed / 15 skipped — the ±1 is a coverage-perturbed timing benchmark, not a regression).
   Next: Phase B triage + risk-ranked worklist, then the workflow.
+- **TEST-4 DONE — parameter-extraction coverage (the P1 residual).** Covered TEST-4's named scope: **the 8
+  ParameterTypes** via `HybridKeywordMatcherProvider._extract_by_type` — INTEGER/FLOAT/BOOLEAN/CHOICE(fuzzy
+  surface→canonical)/DURATION/STRING branches plus the DATETIME/ENTITY fallthrough — and `_convert_and_validate_parameter`
+  (the shared `coerce`) + `validate_config` (`test_param_extraction_coverage.py`); and **the 4 entity resolvers**
+  Temporal (HH:MM / ru+en duration / relative) and Quantity (number + unit inference) as pure parsers, plus Device/Location
+  **graceful-degradation** with no asset loader (`test_entity_resolver_coverage.py`). Reconciliation (Invariant #8): the
+  `parameter_extraction_review.md` flagged a **P0 fatal-crash** in Device/Location `resolve()` when the asset loader is
+  unwired — verified that QUAL-11 P0 #4 **already fixed it** (`_load_device_types` now returns `{}` with a warn-once), so
+  the tests assert the degradation rather than a bug to surface. Coverage: `hybrid_keyword_matcher` **0%→19%**,
+  `entity_resolver` **62%→79%**, `donations` 87%→89%; overall 52.6%→53.1%. 18 tests; no product bugs surfaced; suite
+  green (918 passed under cov / 0 failed). The donation-driven `recognize()` pipeline (the bulk of hybrid's 675 stmts)
+  and the dead-code-heavy `spacy_provider` (21%) are out of scope — integration-level / review-confirmed dead.
 - **TEST-3 DONE — fire-and-forget lifecycle coverage.** The action store (`ClientRegistry`, 76%) + the happy
   launch→complete path were already covered by `test_action_store.py`; the gap was the `IntentHandler` F&F machinery
   (`handlers/base.py` 45%). Added `test_fire_and_forget_coverage.py` (11 hermetic tests — minimal concrete handler via

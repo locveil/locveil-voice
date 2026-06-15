@@ -1868,12 +1868,16 @@ _Apply to every remediation task below (from the 4 review docs + QUAL-25/26). So
       launch→complete→error→cancel→cleanup is now exercised). Hermetic (object.__new__ handler, fresh patched
       ClientRegistry, asyncio.run). No product bugs surfaced. The deferred-result *delivery routing* through the
       OutputManager (ARCH-15) stays integration/smoke-level. Suite green (901 passed, plain pytest).
-- [ ] **TEST-4** [PEX] (P1) — _(coverage goal for TEST-7)_ Parameter-extraction coverage (user-flagged as key):
-      the 8 ParameterTypes, the 4 entity resolvers, pattern matching; rebuild around `test_parameter_schema_unification`/
-      `test_context_aware_nlu`/`test_cascading_nlu`/`test_web_api_parameter_schemas`. **PARTIAL after TEST-7 Phase C/D** —
-      the recognition *cascade* is covered (`nlu_component` 59%, the rewritten cascading/param-schema tests), but the
-      extraction internals proper are NOT: **`hybrid_keyword_matcher.py` is at 0%**, `spacy_provider` 21%, and the
-      8 ParameterTypes / 4 entity resolvers are unexercised. Kept open — the genuine residual P1 coverage gap.
+- [x] **TEST-4** [PEX] (P1) — **DONE 2026-06-15.** Parameter-extraction coverage. Its named scope is now covered:
+      **the 8 ParameterTypes** via `HybridKeywordMatcher._extract_by_type` (INTEGER/FLOAT/BOOLEAN/CHOICE/DURATION/STRING
+      branches + DATETIME/ENTITY fallthrough) + `_convert_and_validate_parameter`/`validate_config`
+      (`test_param_extraction_coverage.py`), and **the 4 entity resolvers** Temporal/Quantity (pure parsers, full) +
+      Device/Location (graceful degradation with no asset loader — verifies the QUAL-11 P0 #4 fix; the review's old
+      fatal-crash is gone) (`test_entity_resolver_coverage.py`). 18 tests; `hybrid_keyword_matcher` 0%→19%,
+      `entity_resolver` 62%→79%, `donations` 87%→89%. No product bugs surfaced. The remaining ~80% of
+      `hybrid_keyword_matcher` (the donation-driven keyword/fuzzy `recognize()` pipeline) needs loaded donations + spaCy
+      and is integration/smoke-level — out of TEST-4's "8 ParameterTypes / 4 resolvers / pattern-matching" unit scope;
+      `spacy_provider` (21%) is mostly the review-confirmed dead Matcher/EntityRuler code (not worth chasing).
 - [ ] **TEST-5** [TXTPROC] (P2) — _(coverage goal for TEST-7)_ Text-processor / normalizer coverage, after QUAL-12/13.
       **NOT done** — not a TEST-7 Phase-D target; `text_processor_component.py` is at 29%. Kept open.
 - [x] **TEST-8** [PORTS] (P1) — **DONE 2026-06-15 (TEST-7 Phase D).** All 5 capability handlers now covered through
