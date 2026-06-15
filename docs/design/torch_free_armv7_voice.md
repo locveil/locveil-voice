@@ -164,8 +164,9 @@ build-analyzer fixes installed deps from the baked config, standalone is built w
 override can switch *providers* (not just params) without a rebuild.
 
 **Provider work each image needs (ARCH-24):** standalone → **none** (existing torch Whisper + Silero v4); aarch64 → **T1**
-(sherpa-Whisper) **+ T2** (`piper` + `piper_ruaccent`); armv7 → **T2** (`piper` only). So **T1's sole consumer is aarch64**;
-**T2 serves both satellites**.
+(sherpa-Whisper — **already implemented**, just needs a `whisper-small` pack + on-device verify) **+ T2** (`piper` +
+`piper_ruaccent`); armv7 → **T2** (`piper` only). So **T2 (Piper) is the real new provider work**; T1 is a pack entry +
+verification; standalone needs nothing new.
 
 **Verify on aarch64 before committing:** (a) `sherpa-onnx`/`sherpa-onnx-core ≥1.13` aarch64 wheel installs on glibc 2.31
 (very likely — aarch64 wheels are manylinux2014/2.17); (b) Whisper-small RTF on the A53 (no WB8 to benchmark yet).
@@ -190,9 +191,14 @@ override can switch *providers* (not just params) without a rebuild.
 
 ## 7. Work threads (for ARCH-24 when scheduled)
 
-- **T1** Whisper-in-sherpa (**sole consumer = the aarch64 satellite**; armv7 uses vosk-small, standalone keeps
-  torch-Whisper): extend `sherpa_onnx` ASR to load Whisper-small int8 (config `model_type`). Verify Russian parity. The
-  existing torch `whisper.py` provider **stays** — it's the standalone image's ASR.
+- **T1** Whisper-in-sherpa — **ALREADY IMPLEMENTED** (discovered 2026-06-15). The `sherpa_onnx` ASR provider already
+  branches on `model_type`: `vosk-transducer`→`from_transducer`, **`whisper`→`from_whisper`** (`sherpa_onnx.py:128-143`),
+  with `whisper-tiny`/`whisper-base` packs declared (`:358-372`). It is **ONE provider with a `model_type` discriminator —
+  NOT a separate provider, NOT a base/derived split** (branch surface ~3 points: build closure + language list + streaming
+  flag; the decode loop / numpy-free audio conversion / asset download / policy are all shared). **Remaining for the
+  aarch64 satellite:** add a `whisper-small` pack to `_get_default_model_urls()` + **verify on-device** (Russian parity,
+  A53 RTF). The torch `whisper.py` provider **stays** as the standalone image's ASR (its caching is the openai-whisper
+  library's, not the Silero pattern — so it does **not** need `TorchModelCache`).
 - **T2** **Two** Piper TTS providers (sherpa `OfflineTts`/VITS) + a `ru_RU` voice asset:
   - **`PiperTTSProvider`** (entry point `piper`) — base; espeak-ng phonemization; `get_platform_support()` = all incl.
     `armv7l`; deps = the already-shipped sherpa-onnx runtime. This is the WB7 TTS.
@@ -211,6 +217,20 @@ override can switch *providers* (not just params) without a rebuild.
   **Prerequisite: T1 (for aarch64) + T2 (for both satellites) implemented FIRST** — a baked config can't name
   `piper`/Whisper-in-sherpa before the provider exists. Then (interactive) config per target → Dockerfile design
   (baked-in vs mounted volumes, ports, `/dev/snd`, entrypoint) → per-image workflow. This is **BUILD-3** in the ledger.
+
+- **T5 (shared-runtime helpers — refactor, triggered by T2; for sherpa AND torch).** **Not** a generic engine abstraction
+  — the per-library APIs don't unify and ORT is bundled inside sherpa, so a grand abstraction is correctly absent. The
+  shared seam that *does* generalize (model-asset management via `get_asset_manager()`) is already abstracted. T5 closes the
+  **narrow, intra-runtime** gaps:
+  - **Sherpa:** Piper-via-sherpa makes the sherpa family = ASR + VAD + TTS (3 consumers). Extract a thin
+    `SherpaSession`/`InferencePolicy` helper (resolve model-dir from the asset manager + apply the platform thread policy +
+    build off the event loop) and fold in `SherpaInferencePolicy` (today only in `sherpa_onnx.py:39-57`) + the silero VAD
+    (which currently **ignores** the policy and hardcodes sherpa defaults — `utils/vad_silero.py:52-58`), so `num_threads`
+    is set consistently across all sherpa providers on the A7/A53. Introduce **with T2**, not by copying the boilerplate a
+    third time. (Session construction stays per-provider — `from_transducer`/`from_whisper`/`OfflineTts`/`VAD` don't unify.)
+  - **Torch:** optional `TorchModelCache` for `silero_v3`/`silero_v4` — near-identical copy-pasted class-level
+    `_model_cache` + lock + `_get_or_load_cached_model` (~30 lines each). The torch `whisper.py` provider does **NOT** need
+    it (caching delegated to `whisper.load_model()`; one lazy instance, no manual cache/lock to dedupe).
 
 - **Open checks:** (a) ~~verify `sherpa-onnx==1.10.46` cp39 armv7 wheel exposes `OfflineTts`/VITS on the real WB7~~ —
   **✅ VERIFIED 2026-06-15 on 192.168.110.250.** Downloaded `sherpa_onnx-1.10.46-cp39-cp39-linux_armv7l.whl` (14.5 MB),

@@ -921,8 +921,13 @@ See `docs/review/phase1_architecture_map.md` §5.
       + mic/playback; WB7 Irene = **ASR/NLU/intent/TTS only** (no server VAD, no local audio, no `config-ui`), running as a
       container beside `wb-mqtt-bridge` + `wb-mqtt-ui` — three-container budget ≈ 410–570 MB of 712. **Thesis (revises ARCH-9
       for armv7 only — torch stays on 64-bit):**
-      drop torch from the default/armv7 build by (T1) folding **Whisper → sherpa-onnx** (`from_whisper`, same weights,
-      parity; 64-bit-focused — Whisper is barred from WB7 by disk+RAM, vosk-small stays the armv7 ASR), and (T2) **two Piper
+      drop torch from the default/armv7 build by (T1) **Whisper → sherpa-onnx — ALREADY IMPLEMENTED** (the `sherpa_onnx`
+      provider branches on `model_type`: `whisper`→`from_whisper`, `sherpa_onnx.py:128-143`; tiny/base packs declared). One
+      provider + `model_type` discriminator — NOT a separate provider, NOT a base/derived split. Remaining: add a
+      `whisper-small` pack + verify on aarch64. (Whisper barred from WB7 by RAM; vosk-small stays the armv7 ASR.) Plus a
+      **T5** refactor — when T2 lands, factor a thin `SherpaSession`/`InferencePolicy` helper shared by the sherpa ASR/VAD/TTS
+      family (silero VAD currently ignores the thread policy) + optional `TorchModelCache` for silero_v3/v4 (torch `whisper.py`
+      doesn't need it). And (T2) **two Piper
       TTS providers** via sherpa `OfflineTts`/VITS (`ru_RU` voices): base **`piper`** (espeak-ng, all envs incl. armv7 — the
       WB7 TTS) + **`piper_ruaccent`** which **subclasses `piper`** and adds RUAccent stress preprocessing, **x86_64/aarch64
       only** (RUAccent needs the standalone onnxruntime wheel — armv7 ORT wall; same wall blocks vosk_tts). **Key finding:** no torch-free Silero TTS exists or

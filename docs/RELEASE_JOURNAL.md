@@ -12,6 +12,16 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-15
+- **ARCH-24: T1 found already-implemented; added T5 (shared-runtime helpers).** Code-read of `irene/providers/asr/
+  sherpa_onnx.py`: Whisper-via-sherpa is **already done** — the provider branches on `model_type` (`whisper`→`from_whisper`,
+  `:128-143`; tiny/base packs declared `:358-372`). It's ONE provider with a `model_type` discriminator (not a separate
+  provider, not a base/derived split — the branch surface is ~3 points; decode/audio/asset/policy all shared). So T1
+  shrinks to "add a whisper-small pack + verify on aarch64"; T2 (Piper) is the real new provider work. Also analysed the
+  "no common inference-engine abstraction" question: it's **mostly inherent + deliberate** (ARCH-9 abstracted assets, not
+  sessions; per-library APIs don't unify; ORT bundled in sherpa) with one **narrow intra-runtime gap** → filed **T5**:
+  factor a thin `SherpaSession`/`InferencePolicy` helper (sherpa ASR+VAD+TTS; silero VAD currently ignores the thread
+  policy) when T2 lands, + optional `TorchModelCache` for silero_v3/v4 (torch `whisper.py` doesn't need it — library-cached).
+  Also confirmed the **ESP32 reply channel is already implemented** (`outputs/remote_audio.py` `speak_begin→PCM→speak_end`).
 - **ARCH-24/BUILD-3 target matrix finalized — 3 images by architecture, torch in one.** Consolidated a run of decisions:
   (1) Dockerfiles split **by arch** — `Dockerfile.x86_64`→standalone full-voice, NEW `Dockerfile.aarch64`→WB8/Pi satellite,
   `Dockerfile.armv7`→WB7 satellite. (2) Researched **WB8.5 = aarch64** (Allwinner T507 Cortex-A53, 4 GB, Debian 11) →
