@@ -12,6 +12,14 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-15
+- **ARCH-24 formally started — T1 finished (code).** Task-start reconciliation (Inv #8): T1 = case (b) partially
+  addressed (the `model_type=whisper` branch + tiny/base packs + their tests already shipped under ARCH-10 PR-2, confirmed
+  in `onnx_inference_layer.md`); narrowed to "add the `whisper-small` pack + test" (user-approved "we do the rest of T1").
+  Read the backing review doc (Inv #5). Verified `csukuangfj/sherpa-onnx-whisper-small` live on HF (HTTP 200,
+  `small-{encoder,decoder}.int8.onnx` + `small-tokens.txt`) before wiring it. Added the `whisper-small` descriptor to
+  `sherpa_onnx.py` `_get_default_model_urls()` + `test_whisper_small_pack_for_aarch64`. Suite 931 passed / 0 failed (+1),
+  pyright 0, import contracts 9/9; Inv #4 N/A (no contract/schema/config-ui change), Inv #9 N/A (no TYPE_CHECKING). **T1
+  code-complete; the on-device verify (RU parity + A53 RTF) stays an open check — gated on WB8 hardware (none on hand).**
 - **ARCH-24: T1 found already-implemented; added T5 (shared-runtime helpers).** Code-read of `irene/providers/asr/
   sherpa_onnx.py`: Whisper-via-sherpa is **already done** — the provider branches on `model_type` (`whisper`→`from_whisper`,
   `:128-143`; tiny/base packs declared `:358-372`). It's ONE provider with a `model_type` discriminator (not a separate

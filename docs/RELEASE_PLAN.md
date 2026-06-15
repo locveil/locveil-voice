@@ -923,8 +923,10 @@ See `docs/review/phase1_architecture_map.md` §5.
       for armv7 only — torch stays on 64-bit):**
       drop torch from the default/armv7 build by (T1) **Whisper → sherpa-onnx — ALREADY IMPLEMENTED** (the `sherpa_onnx`
       provider branches on `model_type`: `whisper`→`from_whisper`, `sherpa_onnx.py:128-143`; tiny/base packs declared). One
-      provider + `model_type` discriminator — NOT a separate provider, NOT a base/derived split. Remaining: add a
-      `whisper-small` pack + verify on aarch64. (Whisper barred from WB7 by RAM; vosk-small stays the armv7 ASR.) Plus a
+      provider + `model_type` discriminator — NOT a separate provider, NOT a base/derived split. **`whisper-small` pack ADDED
+      2026-06-15** (`csukuangfj/sherpa-onnx-whisper-small`, int8, HF-verified live; + test `test_whisper_small_pack_for_aarch64`;
+      suite 931 green, pyright 0, contracts 9/9) → **T1 code-complete; only on-device verify (RU parity + A53 RTF) remains,
+      gated on WB8 hardware.** (Whisper barred from WB7 by RAM; vosk-small stays the armv7 ASR.) Plus a
       **T5** refactor — when T2 lands, factor a thin `SherpaSession`/`InferencePolicy` helper shared by the sherpa ASR/VAD/TTS
       family (silero VAD currently ignores the thread policy) + optional `TorchModelCache` for silero_v3/v4 (torch `whisper.py`
       doesn't need it). And (T2) **two Piper

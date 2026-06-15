@@ -91,6 +91,15 @@ class TestModelPacks:
         assert urls["whisper-base"]["members"] == ["encoder", "decoder", "tokens"]
         assert urls["whisper-base"]["repo"] == "csukuangfj/sherpa-onnx-whisper-base"
 
+    def test_whisper_small_pack_for_aarch64(self):
+        # ARCH-24 T1: the aarch64 satellite's ASR model. Same 3-member (no-joiner) whisper shape,
+        # int8-preferred; csukuangfj/sherpa-onnx-whisper-small ships small-{encoder,decoder}.int8.onnx.
+        urls = SherpaOnnxASRProvider._get_default_model_urls()
+        assert "whisper-small" in urls
+        assert urls["whisper-small"]["members"] == ["encoder", "decoder", "tokens"]
+        assert urls["whisper-small"]["repo"] == "csukuangfj/sherpa-onnx-whisper-small"
+        assert urls["whisper-small"]["prefer"] == "int8"
+
     def test_pick_files_whisper_3_members_int8(self):
         from irene.core.assets import AssetManager
         siblings = [

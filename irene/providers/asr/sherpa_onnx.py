@@ -370,6 +370,15 @@ class SherpaOnnxASRProvider(ASRProvider):
                 "prefer": "int8",
                 "size": "base multilingual",
             },
+            # The aarch64 satellite's ASR (ARCH-24): better Russian than tiny/base, fits the WB8/Pi
+            # 4 GB budget (~470 MB int8 on disk, ~0.8 GB RAM). Too big for the armv7 WB7 (vosk-small there).
+            "whisper-small": {
+                "type": "sherpa-pack",
+                "repo": "csukuangfj/sherpa-onnx-whisper-small",
+                "members": whisper,
+                "prefer": "int8",
+                "size": "small multilingual (~470 MB int8, 64-bit only)",
+            },
         }
 
     @classmethod

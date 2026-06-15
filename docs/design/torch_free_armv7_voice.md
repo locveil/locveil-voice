@@ -195,9 +195,11 @@ verification; standalone needs nothing new.
   branches on `model_type`: `vosk-transducer`→`from_transducer`, **`whisper`→`from_whisper`** (`sherpa_onnx.py:128-143`),
   with `whisper-tiny`/`whisper-base` packs declared (`:358-372`). It is **ONE provider with a `model_type` discriminator —
   NOT a separate provider, NOT a base/derived split** (branch surface ~3 points: build closure + language list + streaming
-  flag; the decode loop / numpy-free audio conversion / asset download / policy are all shared). **Remaining for the
-  aarch64 satellite:** add a `whisper-small` pack to `_get_default_model_urls()` + **verify on-device** (Russian parity,
-  A53 RTF). The torch `whisper.py` provider **stays** as the standalone image's ASR (its caching is the openai-whisper
+  flag; the decode loop / numpy-free audio conversion / asset download / policy are all shared). **`whisper-small` pack
+  ADDED 2026-06-15** (`sherpa_onnx.py` `_get_default_model_urls()` → `csukuangfj/sherpa-onnx-whisper-small`, int8;
+  HF-verified live — `small-{encoder,decoder}.int8.onnx` + `small-tokens.txt`; test `test_whisper_small_pack_for_aarch64`).
+  **T1 is now code-complete; only the on-device verify remains** (Russian parity + A53 RTF — gated on WB8 hardware, none on
+  hand). The torch `whisper.py` provider **stays** as the standalone image's ASR (its caching is the openai-whisper
   library's, not the Silero pattern — so it does **not** need `TorchModelCache`).
 - **T2** **Two** Piper TTS providers (sherpa `OfflineTts`/VITS) + a `ru_RU` voice asset:
   - **`PiperTTSProvider`** (entry point `piper`) — base; espeak-ng phonemization; `get_platform_support()` = all incl.
