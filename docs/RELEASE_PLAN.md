@@ -1878,8 +1878,17 @@ _Apply to every remediation task below (from the 4 review docs + QUAL-25/26). So
       `hybrid_keyword_matcher` (the donation-driven keyword/fuzzy `recognize()` pipeline) needs loaded donations + spaCy
       and is integration/smoke-level — out of TEST-4's "8 ParameterTypes / 4 resolvers / pattern-matching" unit scope;
       `spacy_provider` (21%) is mostly the review-confirmed dead Matcher/EntityRuler code (not worth chasing).
-- [ ] **TEST-5** [TXTPROC] (P2) — _(coverage goal for TEST-7)_ Text-processor / normalizer coverage, after QUAL-12/13.
-      **NOT done** — not a TEST-7 Phase-D target; `text_processor_component.py` is at 29%. Kept open.
+- [x] **TEST-5** [TXTPROC] (P2) — **DONE 2026-06-15.** Text-processor / normalizer coverage. The provider
+      (`UnifiedTextProcessor`) was already covered by `test_text_processing.py`; added `test_text_normalizers_coverage.py`
+      (11 tests) for the actual normalizers + the component's live methods: **NumberNormalizer** (ru digit→words,
+      no-number passthrough, empty), **PrepareNormalizer** (pure-Cyrillic fast passthrough / Latin→Cyrillic transcription /
+      inline number processing / `changeLatin=skip`), **RunormNormalizer** missing-dependency degradation (no model
+      download), and `TextProcessorComponent.process` no-provider passthrough + `convert_numbers_to_words`. **`text_normalizers.py`
+      25%→58%**; `text_processor_component` 29%→30%. Reconciliation (Invariant #8): the `text_processing_review.md`
+      "process() hardcodes the general stage" finding was fixed by **QUAL-13** (`process(..., stage="asr_output")` routes
+      by stage now). No product bugs surfaced. The remaining component % is the review-confirmed **dead** stage routing +
+      the broken text-processing WebAPI (a known QUAL-12 finding) + `RunormNormalizer`'s model path (offline hazard) —
+      deliberately not chased.
 - [x] **TEST-8** [PORTS] (P1) — **DONE 2026-06-15 (TEST-7 Phase D).** All 5 capability handlers now covered through
       their injected ports + the graceful-degradation-when-absent path (the QUAL-24 bug class): `text_enhancement` 99%,
       `speech_recognition` 97%, `translation` 97%, `audio_playback` 80%, `voice_synthesis` 65% (the residual is the

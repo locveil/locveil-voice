@@ -32,6 +32,20 @@ newest entries near the top of each dated section.
   (`trace_context` 76%, `trace_input` 89%), new wiring is thin (`replay_trace`/`voice_runner` 34%). Suite still at its
   baseline (82 failed / 472 passed / 15 skipped — the ±1 is a coverage-perturbed timing benchmark, not a regression).
   Next: Phase B triage + risk-ranked worklist, then the workflow.
+- **TEST-5 DONE — text-processor / normalizer coverage; ALL TEST- tasks now closed.** The provider
+  (`UnifiedTextProcessor`) was already covered (`test_text_processing.py`); added `test_text_normalizers_coverage.py`
+  (11 tests) for the actual normalizers (`utils/text_normalizers.py`) + the component's live methods: **NumberNormalizer**
+  (ru digit→words via the dependency-free path, no-number passthrough, empty), **PrepareNormalizer** (the pure-Cyrillic
+  fast-return / Latin→Cyrillic transcription / inline number processing / changeLatin=skip branches), **RunormNormalizer**
+  missing-dependency degradation (patched the `runorm` import to fail → returns input, never downloads the model), and
+  `TextProcessorComponent.process` no-provider passthrough + `convert_numbers_to_words` (+ its error degradation).
+  Reconciliation (Invariant #8): the review's "process() hardcodes the `general` stage / TTS gets no normalization"
+  headline was remediated by **QUAL-13** — `process(..., stage="asr_output")` routes by stage now — so tests target the
+  current code. `text_normalizers.py` **25%→58%**, `text_processor_component` 29%→30%, overall 53.1%→53.3%. No product
+  bugs surfaced. Deliberately not chased: the review-confirmed dead stage routing, the broken text-processing WebAPI
+  (QUAL-12 finding), and Runorm's model-download path (offline hazard). **With TEST-5 closed, every TEST- task (0–8) is
+  done** — suite green at 930 passed (plain pytest), overall coverage 45.6%→53.3% across TEST-7 Phases + the TEST-3/4/5
+  follow-ups.
 - **TEST-4 DONE — parameter-extraction coverage (the P1 residual).** Covered TEST-4's named scope: **the 8
   ParameterTypes** via `HybridKeywordMatcherProvider._extract_by_type` — INTEGER/FLOAT/BOOLEAN/CHOICE(fuzzy
   surface→canonical)/DURATION/STRING branches plus the DATETIME/ENTITY fallthrough — and `_convert_and_validate_parameter`
