@@ -299,8 +299,20 @@ See `docs/review/phase1_architecture_map.md` §5.
       **`tools/migrate_runners.py`** (legacy `runva_*.py`→v13 runners — already broken by the QUAL-46 rename, since it
       referenced `vosk_runner`/`VoskRunner`/`run_vosk`). Deleted both + removed the `irene-config-migrate`
       `[project.scripts]` entry. No tests/code referenced them (only two `docs/archive/*` historical mentions, left as
-      record). Package re-syncs clean; 9/9 import contracts. _Sibling still open: `tools/migrate_to_universal_plugins.py`
-      (another pre-v15 migrator) — not in scope here._
+      record). Package re-syncs clean; 9/9 import contracts. **Sweep extended 2026-06-15** — retired two more
+      standalone (un-imported, non-entry-point) migrators verified spent/obsolete: **`tools/migrate_to_universal_plugins.py`**
+      (old plugin→provider config migration; only refs were two `docs/archive/*` guides) and
+      **`scripts/migrate_donations_v11.py`** (QUAL-29 donation v1.0→v1.1 — **QUAL-29 is `[x]` and the assets are already
+      v1.1**: 13 `contract.json` + per-lang files, so the one-time migration is applied/spent). Surfaced a related
+      finding kept OUT of scope → **QUAL-48**: `irene/config/migration.py` is *live* v13→v14 runtime auto-migration.
+- [ ] **QUAL-48** [DFLOW] (P2) `[deferred]` — **OPEN (finding, 2026-06-15).** Evaluate removing the v13→v14 runtime
+      config-migration path. `irene/config/migration.py` (`migrate_config` + `ConfigurationCompatibilityChecker`) is
+      still wired into `config/manager.py:_dict_to_config` (line ~550), guarded by `requires_migration(data)` — it only
+      fires for a **v13-format** config, which on v15.0.0 should never occur. So it's almost certainly dead weight (the
+      last v13/v14 standalone migrators were retired in QUAL-47), but unlike those it is **live runtime code** wired into
+      every config load, so removing it is a deliberate code change (drop the import in `config/__init__.py` + `manager.py`,
+      delete the module, confirm no v13 config still in play) — not a tool deletion. Decide: keep as a v13 safety net, or
+      remove. NOT started — surfaced during the QUAL-47 sweep.
 - [x] **ARCH-7** [MQTT] — **✓ DONE 2026-06-06** (design session; deliverable `docs/design/mqtt_integration.md`, and the
       cross-project bridge contract AGREED with the user in the bridge session — `wb-mqtt-bridge/docs/
       voice_integration_contract_draft.md`, status AGREED 2026-06-06). **Approach REDEFINED (Invariant #8(d), approved):**

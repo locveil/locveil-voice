@@ -12,6 +12,21 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-15
+- **QUAL-47 (extended) — swept for stale migrators, retired two more; surfaced one live-code finding (QUAL-48).**
+  Broadened the verify-then-delete sweep across `tools/`, `irene/tools/`, `scripts/`. Retired two more standalone
+  migrators (neither an entry point, neither imported by any code or test): **`tools/migrate_to_universal_plugins.py`**
+  (migrates configs to the long-done "Universal Plugin + Provider" refactor — only references were two `docs/archive/*`
+  guides, left as record) and **`scripts/migrate_donations_v11.py`** (the QUAL-29 donation v1.0→v1.1 migration — verified
+  spent: QUAL-29 is `[x]` and the assets are already in the v1.1 layout, 13 `contract.json` + per-lang phrasing files).
+  Both deleted; no code/config references remain; package imports clean. The sweep also surfaced
+  **`irene/config/migration.py`** — v13→v14 migration utilities that are **NOT a tool**: they're live runtime code
+  imported by `config/__init__.py` + `config/manager.py` and invoked in `_dict_to_config` (guarded by
+  `ConfigurationCompatibilityChecker.requires_migration`, so it only fires for a v13-format config — never on v15). Per
+  the verify-before-delete discipline (it's wired into config loading, I didn't author it), I did **not** touch it —
+  filed it as **QUAL-48** `[deferred]` to decide keep-as-safety-net vs remove-as-code-change. Other tool files reviewed
+  and kept (active): `generate_schemas.py`, `dump_openapi.py`, `check_scope.py`, `build_analyzer`, `config_validator_cli`,
+  `dependency_validator`, `replay_trace`, `batch_cross_language_validation.py`. (`tools/test_vad_sibilant_fix.py` is a
+  one-off VAD debug script — left for now, not a migrator.)
 - **QUAL-47 — retired obsolete v13/v14 migration tools (QUAL-46 follow-up).** Verified-then-deleted, per the
   before-deleting discipline: confirmed the project is on **15.0.0**, both tools target long-past versions, and
   neither is imported by any runtime code or test. **`irene/tools/config_migrator.py`** (a v13→v14 config-file
