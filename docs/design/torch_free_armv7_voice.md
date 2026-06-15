@@ -1,8 +1,9 @@
 # Torch-free inference & the armv7 voice stack — ARCH-24 design notes
 
-**Status:** research/analysis session 2026-06-15 (**no code**). Captures findings + decisions-in-principle so we can
-resume later. Backs **ARCH-24**. Revises the ARCH-9 thesis ("whisper and silero stay first-class") **for the armv7
-target only** — torch stays fully supported on 64-bit installs.
+**Status:** research/analysis session 2026-06-15 (**no code**). Captures findings + decisions so we can resume later.
+Backs **ARCH-24**. Revises the ARCH-9 thesis ("whisper and silero stay first-class"): **torch is contained to the x86_64
+standalone image; both ARM satellites (armv7 WB7 + aarch64 WB8/Pi) are torch-free sherpa-onnx.** See **§5** for the
+canonical three-image matrix — it is the source of truth; §1–§4 are the supporting research.
 
 **Trigger:** the deferred torch/transformers Dependabot alerts (see commits `05aa763`/`4e05a38` — torch ×4, transformers
 ×1, protobuf/sentencepiece) prompted the question: *"torch is heavy ML machinery and we only do inference — are there
@@ -134,10 +135,49 @@ is the **64-bit** win (small/medium fit there).
 
 ---
 
-## 5. Decisions in principle (to confirm when we resume)
+## 5. Deployment matrix — the three images (BUILD-3, decided 2026-06-15) ★ source of truth
 
-1. **Whisper → sherpa-onnx** as a model option behind the existing `sherpa_onnx` provider. 64-bit-focused. **Agreed.**
-2. **Silero stays torch**, supported on 64-bit installs; **excluded from armv7** by packaging + a validated profile.
+Three Docker images, **split by architecture** (base image + wheels + system packages differ); the **role/providers** are
+set by the baked `CONFIG_PROFILE` fed to the build-analyzer. **torch is contained to one image** (x86_64 standalone); both
+ARM satellites are torch-free sherpa-onnx.
+
+| Image | Arch | Role | ASR | TTS | Stack | Config |
+|---|---|---|---|---|---|---|
+| **`Dockerfile.x86_64`** (repurpose) | x86_64 | **standalone** full-voice (`voice` runner: mic→VAD→wake→ASR→NLU→TTS→playback) | **torch Whisper** (existing) | **Silero v4** (existing) | **torch** — only torch image | **baked default + external override** (built "full"-deps so an override reaches any provider) |
+| **`Dockerfile.aarch64`** (NEW) | aarch64 — **WB8.5 / Pi** | satellite-server (ASR+TTS for ESP32) | **Whisper-small via sherpa** (T1) | **Piper + RUAccent** (T2) | **sherpa**, torch-free | **baked** `embedded-aarch64.toml` |
+| **`Dockerfile.armv7`** | armv7 — **WB7** | satellite-server (ASR+TTS for ESP32) | vosk-small (sherpa) | **Piper-direct** (T2) | **sherpa**, torch-free | **baked** `embedded-armv7.toml` (redo) |
+
+**WB8.5 hardware (researched 2026-06-15, spec-only — no WB8 on hand):** Allwinner **T507, quad Cortex-A53 @ 1.5 GHz,
+aarch64 (64-bit)**, 2/4 GB LPDDR4 (**4 GB** target), Debian 11 / glibc 2.31, 16–64 GB eMMC + writable `/mnt/data`, **no NPU**
+(CPU inference only). Verdict: WB8 is aarch64 → the **armv7 ORT wall does not apply** (Microsoft ships onnxruntime aarch64
+wheels) **and torch aarch64 wheels exist** (`torch-2.7.1-…-manylinux_2_28_aarch64`, installs on glibc 2.31). So torch
+*could* run on WB8 — but it is **deliberately excluded** there (footprint + A53 latency): the aarch64 satellite runs the
+same torch-free sherpa stack as armv7, just with **bigger models** (Whisper-small + RUAccent) that WB7 can't fit.
+
+**Two satellites, one role:** aarch64 and armv7 are the *same* satellite-server (ESP32 owns VAD/VT/audio; Irene =
+ASR→NLU→intent→TTS, streams PCM back). They differ only in model allowance. standalone (x86_64) is the lone different
+role (full local pipeline, torch). The two satellites share most of their config — differ mainly in the model picks above.
+
+**Config strategy:** the two satellites **bake** their profile (build-analyzer reads it at build time → a minimal,
+immutable appliance image). standalone **bakes a default + lets a mounted/env config override it** — and since the
+build-analyzer fixes installed deps from the baked config, standalone is built with a **generous/full dep set** so an
+override can switch *providers* (not just params) without a rebuild.
+
+**Provider work each image needs (ARCH-24):** standalone → **none** (existing torch Whisper + Silero v4); aarch64 → **T1**
+(sherpa-Whisper) **+ T2** (`piper` + `piper_ruaccent`); armv7 → **T2** (`piper` only). So **T1's sole consumer is aarch64**;
+**T2 serves both satellites**.
+
+**Verify on aarch64 before committing:** (a) `sherpa-onnx`/`sherpa-onnx-core ≥1.13` aarch64 wheel installs on glibc 2.31
+(very likely — aarch64 wheels are manylinux2014/2.17); (b) Whisper-small RTF on the A53 (no WB8 to benchmark yet).
+
+---
+
+## 6. Decisions in principle (updated 2026-06-15)
+
+1. **Whisper → sherpa-onnx** (T1) — the **aarch64 satellite's** ASR (Whisper-small int8). Sole consumer; armv7 uses
+   vosk-small, standalone keeps torch-Whisper. **Agreed.**
+2. **Silero v4 stays torch — and only in the x86_64 standalone image.** Excluded from *both* ARM satellites (armv7 by the
+   no-wheel wall; aarch64 by choice — footprint + A53 latency), enforced by packaging + the T3 validator.
 3. **Two Piper TTS providers** via sherpa-onnx `OfflineTts` (not one provider with an optional stage):
    (a) **`piper`** — plain VITS + espeak-ng phonemization, **all environments incl. armv7** (the WB7 TTS);
    (b) **`piper_ruaccent`** — **subclasses `piper`**, injects RUAccent stress/ё preprocessing before synth, overriding
@@ -148,10 +188,11 @@ is the **64-bit** win (small/medium fit there).
    on** + wiring the ESP32 reply-channel transport — *not* by adding local mic/playback. Runs **dockerized** beside
    `wb-mqtt-bridge` + `wb-mqtt-ui`.
 
-## 6. Work threads (for ARCH-24 when scheduled)
+## 7. Work threads (for ARCH-24 when scheduled)
 
-- **T1** Whisper-in-sherpa: extend `sherpa_onnx` ASR to load Whisper int8 models (config `model_type`), retire torch
-  from `whisper.py` path (or keep `whisper` provider as a 64-bit alias). Verify Russian parity.
+- **T1** Whisper-in-sherpa (**sole consumer = the aarch64 satellite**; armv7 uses vosk-small, standalone keeps
+  torch-Whisper): extend `sherpa_onnx` ASR to load Whisper-small int8 (config `model_type`). Verify Russian parity. The
+  existing torch `whisper.py` provider **stays** — it's the standalone image's ASR.
 - **T2** **Two** Piper TTS providers (sherpa `OfflineTts`/VITS) + a `ru_RU` voice asset:
   - **`PiperTTSProvider`** (entry point `piper`) — base; espeak-ng phonemization; `get_platform_support()` = all incl.
     `armv7l`; deps = the already-shipped sherpa-onnx runtime. This is the WB7 TTS.
@@ -162,14 +203,14 @@ is the **64-bit** win (small/medium fit there).
   `dependency_validator --platforms` to include armv7 so **any armv7 profile enabling a torch provider fails the build**;
   evolve the `embedded-armv7` profile from headless-ASR-satellite → **ASR+TTS satellite-server** (TTS synthesis on +
   stream PCM back to the ESP32; VAD/voice-trigger/mic/playback stay **off** — ESP32's job; no `config-ui`; lazy TTS load).
-- **T4 (packaging) → BUILD-3:** **three Docker images**, each one role + one config + one manual `workflow_dispatch`
-  buildx→GHCR workflow: **A** 64-bit satellite-server (x86_64 + aarch64 — servers/WB8.5/Pi, bigger models: Whisper small/med
-  + Piper`_ruaccent`), **B** armv7 WB7 satellite-server (vosk-small + `piper`-direct, no torch — redo `embedded-armv7.toml`),
-  **C** NEW `Dockerfile.standalone` full local `voice` runner (mic→…→playback, audio passthrough, arch TBD). A & B share the
-  satellite-server role (ESP32 owns VAD/VT/audio); differ only by HW tier + model allowance. **Prerequisite: T1 + T2
-  providers must be implemented FIRST** — the config/Dockerfile sessions reference `piper`/Whisper-in-sherpa, which must
-  exist before a config can name them. Then (interactive) config per target → Dockerfile design (baked-in vs mounted
-  volumes, ports, `/dev/snd`, entrypoint) → per-image workflow. This is **BUILD-3** in the ledger — see it for running scope.
+- **T4 (packaging) → BUILD-3:** **three Docker images, split by architecture** (canonical matrix = **§5**):
+  `Dockerfile.x86_64`→**standalone** (torch: Whisper + Silero v4), **NEW `Dockerfile.aarch64`**→**WB8/Pi satellite**
+  (sherpa: Whisper-small + Piper+RUAccent), `Dockerfile.armv7`→**WB7 satellite** (sherpa: vosk-small + Piper-direct).
+  Config: **bake** for the two satellites; **baked default + external override** (full-dep build) for standalone. Each
+  image gets one manually-triggerable (`workflow_dispatch`) buildx→GHCR workflow (bridge `v<date>-<sha>`+`latest` style).
+  **Prerequisite: T1 (for aarch64) + T2 (for both satellites) implemented FIRST** — a baked config can't name
+  `piper`/Whisper-in-sherpa before the provider exists. Then (interactive) config per target → Dockerfile design
+  (baked-in vs mounted volumes, ports, `/dev/snd`, entrypoint) → per-image workflow. This is **BUILD-3** in the ledger.
 
 - **Open checks:** (a) ~~verify `sherpa-onnx==1.10.46` cp39 armv7 wheel exposes `OfflineTts`/VITS on the real WB7~~ —
   **✅ VERIFIED 2026-06-15 on 192.168.110.250.** Downloaded `sherpa_onnx-1.10.46-cp39-cp39-linux_armv7l.whl` (14.5 MB),
@@ -178,13 +219,13 @@ is the **64-bit** win (small/medium fit there).
   Matcha/Kokoro configs. The "one sherpa-onnx engine carries both ASR and TTS on WB7" premise **holds on the real hardware.**
   (b) Piper medium vs "low" RTF on the A7 — still TODO; (c) on-device RAM peak with both models loaded — still TODO.
 
-## 7. Dependabot linkage
+## 8. Dependabot linkage
 
-Completing T1+T2 (drop torch from the default/armv7 build) is the real resolution for the deferred **torch ×4** and
-**transformers ×1** alerts (and the protobuf/sentencepiece weight) — far cleaner than risky major bumps. Until then
-those alerts stay deferred (low/medium, only reachable via the opt-in ML extras).
+The two **ARM satellite images** (armv7 + aarch64) are torch-free, so they carry **none** of the deferred torch ×4 /
+protobuf/sentencepiece alerts. torch survives **only in the x86_64 standalone image** (existing Whisper + Silero v4) —
+acceptable per the user's stance (torch is fine on the big standalone install). So the alerts aren't "resolved" so much as
+**contained to one image**; they stay deferred (low/medium, opt-in ML extras only).
 
-**Caveat on transformers:** the new `piper_ruaccent` provider's `ruaccent` dep pulls `transformers` back in (torch-free,
-np-tokenization only) on 64-bit — so `ruaccent` *replaces* `runorm` as the reason transformers exists. The transformers
-alert is **fully** cleared only if `ruaccent` is kept out of the default-CI extra set; the **armv7/default build stays
-transformers-free regardless** (it uses plain `piper`).
+**transformers:** `piper_ruaccent`'s `ruaccent` dep pulls `transformers` back in (torch-free, np-tokenization only) on the
+**aarch64 satellite** (and any standalone override that enables it) — `ruaccent` *replaces* `runorm` as the reason
+transformers exists. The **armv7 image stays transformers-free** (plain `piper`); aarch64 carries it by design.

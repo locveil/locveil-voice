@@ -12,6 +12,15 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-15
+- **ARCH-24/BUILD-3 target matrix finalized — 3 images by architecture, torch in one.** Consolidated a run of decisions:
+  (1) Dockerfiles split **by arch** — `Dockerfile.x86_64`→standalone full-voice, NEW `Dockerfile.aarch64`→WB8/Pi satellite,
+  `Dockerfile.armv7`→WB7 satellite. (2) Researched **WB8.5 = aarch64** (Allwinner T507 Cortex-A53, 4 GB, Debian 11) →
+  Whisper-on-sherpa is feasible there, and **torch aarch64 wheels exist** (verified on PyPI) but torch is **deliberately
+  excluded** from aarch64. (3) **Per-target stacks:** standalone = torch (Whisper + Silero v4); both ARM satellites =
+  torch-free sherpa (aarch64: Whisper-small + Piper+RUAccent; armv7: vosk-small + Piper-direct). (4) Provider work — T1's
+  sole consumer is aarch64; T2 serves both satellites; standalone needs no new providers (supersedes the "64-bit optional"
+  framing). (5) **Config strategy** — bake for the two satellites; baked-default + external override (full-dep build) for
+  standalone. All recorded in the design doc (new §5 "Deployment matrix" = source of truth) + BUILD-3. No implementation.
 - **BUILD-3 reopened as ARCH-24's packaging thread — three Docker images.** Coupled the deferred Docker-build task to
   ARCH-24 now the architecture has settled. Three targets, each = one role + one config + one manual `workflow_dispatch`
   workflow: **A** 64-bit satellite-server (x86_64/aarch64 — WB8.5/Pi, bigger models), **B** armv7 WB7 satellite-server

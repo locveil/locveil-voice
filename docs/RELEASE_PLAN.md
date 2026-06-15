@@ -1953,12 +1953,17 @@ _Apply to every remediation task below (from the 4 review docs + QUAL-25/26). So
 - [ ] **BUILD-3** (P2) — **SCOPE EXPANDED 2026-06-15 — now the packaging thread of ARCH-24** (the architecture has settled,
       so image contents are decidable). **Three image targets, each = one role + one config + one manually-triggerable
       (`workflow_dispatch`) buildx→GHCR workflow** (mirroring the bridge's `v<date>-<sha>`+`latest` tagging):
-      **(A) server (64-bit: x86_64 + aarch64 — servers, WB8.5, Pi)** — `Dockerfile.x86_64`; **satellite-server** role (ASR+TTS
-      for ESP32, no local audio), **same role as B** but roomier HW → bigger models (Whisper small/med, Piper+RUAccent); new
-      config. **(B) embedded (armv7 — WB7)** — `Dockerfile.armv7`; satellite-server, constrained (vosk-small ASR + Piper-direct
-      TTS, sherpa-onnx only, no torch); **redo `embedded-armv7.toml`** (current stub is bad). **(C) standalone (arch TBD →
-      Session 4)** — **NEW `Dockerfile.standalone`**; full local `voice` runner (mic→VAD→wake→ASR→NLU→TTS→playback) with audio
-      device passthrough; new config. **ORDERING (corrected 2026-06-15): the interactive sessions come AFTER the ARCH-24
+      **Split by ARCHITECTURE (canonical matrix: `docs/design/torch_free_armv7_voice.md` §5); torch contained to ONE image:**
+      **(standalone) `Dockerfile.x86_64`** (repurpose) — x86_64 full local `voice` runner (mic→VAD→wake→ASR→NLU→TTS→playback);
+      **torch** stack — existing torch Whisper + **Silero v4**; config = **baked default + external override** (built full-deps
+      so an override reaches any provider). **(aarch64) NEW `Dockerfile.aarch64`** — WB8.5/Pi satellite-server; **sherpa**
+      (torch-free): **Whisper-small via sherpa** + **Piper+RUAccent**; **baked** `embedded-aarch64.toml`. **(armv7)
+      `Dockerfile.armv7`** — WB7 satellite-server; **sherpa** (torch-free): vosk-small + **Piper-direct**; **baked**
+      `embedded-armv7.toml` (redo — current stub is bad). The two ARM satellites are the same role (ESP32 owns VAD/VT/audio),
+      differing only in model allowance. **WB8.5 = aarch64** (Allwinner T507 Cortex-A53, 4 GB, Debian 11): torch *runs* there
+      (aarch64 wheels exist) but is **deliberately excluded** (footprint + A53 latency) — sherpa with bigger models instead.
+      Provider work: standalone = **none** (existing torch providers); aarch64 = **T1+T2**; armv7 = **T2** → **T1's sole
+      consumer is aarch64**. **ORDERING (corrected 2026-06-15): the interactive sessions come AFTER the ARCH-24
       providers are implemented** — a config can't reference `default_provider="piper"` (or a Whisper-in-sherpa model) before
       the provider exists, and a Dockerfile/image can't be built/booted around providers that aren't there. Sequence:
       **(prereq) implement ARCH-24 T1 (Whisper→sherpa) + T2 (`piper`/`piper_ruaccent`) providers → then (0 ✓ targets locked
