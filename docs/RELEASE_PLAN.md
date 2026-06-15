@@ -1815,10 +1815,15 @@ _Apply to every remediation task below (from the 4 review docs + QUAL-25/26). So
       zone (`workflow_manager` 20%, `core/components` 20%, `context` 25%, `asr_component` 25%, `nlu_component` 38%,
       `orchestrator` 41%, `voice_assistant` 48%), while new pure-logic is well-covered (`trace_context` 76%,
       `trace_input` 89%) but new wiring is thin (`replay_trace` 34%, `voice_runner` 34%). Suite baseline restored at
-      82 failed / 472 passed / 15 skipped (the ±1 is a coverage-perturbed timing benchmark). **NEXT: Phase B** —
-      triage the ~6 failure clusters into a delete/rewrite/fix worklist + risk-rank the cold spine for coverage, then
-      run the workflow for C/D. Done when: 100% green + the Tier-1 cold subsystems covered (risk-based, confirmed by
-      pytest-cov).
+      82 failed / 472 passed / 15 skipped (the ±1 is a coverage-perturbed timing benchmark). **Phase B DONE
+      2026-06-15 → `docs/review/test7_triage.md`:** triaged all 82 failures into ~28 delete / ~50 rewrite / 3 fix-code,
+      and risk-ranked the cold spine into Tiers (Tier-1 = `workflow_manager` 20%, `core/components` 20%, `nlu_component`
+      38%, `context` 25%, `voice_assistant` 48%, `asr_component` 25%, + the 5 capability handlers/TEST-8). Biggest
+      cluster (phase4 contextual, 21) = DELETE (built on the deleted perf-manager; behavior re-covered fresh). 3
+      real-bug suspects surfaced: a machine-specific `device_id = 7` hardcoded in `config-master.toml` (Invariant #2),
+      `llm.console` empty param schema, and a VAD-requirement error-message contract (touches QUAL-46). **NEXT: Phase
+      C/D = the multi-agent workflow** (green the suite per-cluster, then coverage-fill per Tier-1 module). Done when:
+      100% green + Tier-1 cold subsystems covered (confirmed by pytest-cov).
 - [ ] **TEST-6** (P2) — _(folded into TEST-7)_ Restore ASR provider-fallback + resampling coverage (the 7 phase7
       tests skipped in TEST-1 called the removed `_handle_sample_rate_mismatch`; feature lives in
       `AudioProcessor.resample_audio_data`).

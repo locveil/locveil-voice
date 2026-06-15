@@ -32,6 +32,21 @@ newest entries near the top of each dated section.
   (`trace_context` 76%, `trace_input` 89%), new wiring is thin (`replay_trace`/`voice_runner` 34%). Suite still at its
   baseline (82 failed / 472 passed / 15 skipped — the ±1 is a coverage-perturbed timing benchmark, not a regression).
   Next: Phase B triage + risk-ranked worklist, then the workflow.
+- **TEST-7 Phase B — triage worklist + risk-ranked coverage (`docs/review/test7_triage.md`).** Captured one-line
+  tracebacks for all 82 failures and clustered them by root-cause signature → verdicts: **~28 delete, ~50 rewrite,
+  3 fix-code.** Deletes are the pre-refactor "phase" scaffolding (the 21-strong phase4 contextual cluster — all 16
+  `'NoneType' has no attribute 'active_actions'` failures live there — built on the deleted `ContextualCommandPerformanceManager`;
+  phase1/6 integration; the unbuilt-ARCH-8 device/location-resolution cases; a removed text-processor module). Rewrites
+  are drift-to-current-contract (NLU `entities['provider']`→recognition-provider, `Intent(session_id=…)` signature,
+  VAD metrics dict-vs-object + `energy_threshold` moved under `[vad.providers.energy]`, spaCy mock-vs-MagicMock,
+  ARCH-19 trace-internal drift in `component_trace_integration`). Verdict-driving rule applied throughout: does the
+  behavior still exist? Surfaced **3 fix-code suspects** (the TEST-1/2-style real-bug finds): `config-master.toml`
+  hardcodes a machine-specific `device_id = 7` in the canonical reference (Invariant #2); the `llm.console` stub has an
+  empty parameter schema; and a VAD-requirement error message that touches the QUAL-46 path. Also produced the
+  risk-ranked coverage table (gap × churn × hot-path × defect-history): Tier-1 = `workflow_manager` (20%/15 commits),
+  `core/components` (20%), `nlu_component` (38%/603 stmts/16 commits), `context` (25%), `voice_assistant` (48%/most-churned),
+  `asr_component` (25%), and the 5 capability-port handlers (TEST-8, unverified after QUAL-24). This worklist is the
+  input to the Phase C/D multi-agent workflow.
 - **QUAL-47 (final sweep item) — retired the dead `test_vad_sibilant_fix.py` debug script + its orphaned config.**
   Verified-then-deleted: `tools/test_vad_sibilant_fix.py` was **already broken** — it imported
   `UniversalAudioProcessor` from `workflows.audio_processor`, a class renamed to `VoiceSegmenter` in the ARCH-18
