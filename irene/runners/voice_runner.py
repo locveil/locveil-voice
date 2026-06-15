@@ -1,9 +1,14 @@
 """
-VOSK Runner - Thin wrapper for VOSK speech recognition
+Voice Runner - the standalone-microphone, full voice-assistant pipeline.
 
-Modern async architecture thin wrapper that validates TOML configuration
-and delegates to the existing ASR component + VOSK provider system.
-Uses asset management for model downloads and component system for processing.
+A thin, fully **configuration-driven** runner: it forces microphone-only input and ensures the
+voice stack is on, then delegates to the standard component system. The ASR engine is whatever the
+config selects (`[asr] default_provider` — vosk / whisper / sherpa_onnx / …); the runner has no
+hardcoded model. Wake word and VAD are honoured from config too. End to end it is:
+
+    Microphone → [VAD] → [Voice Trigger, if configured] → ASR → Text → NLU → Intent → Response (TTS)
+
+It also speaks deferred fire-and-forget results (a voice-set timer) back on the device.
 Now using BaseRunner for unified patterns.
 """
 
@@ -21,19 +26,18 @@ from .base import BaseRunner, RunnerConfig
 logger = logging.getLogger(__name__)
 
 
+def check_voice_dependencies() -> bool:
+    """Check the runner's own hard dependency: microphone capture (sounddevice).
 
-
-def check_vosk_dependencies() -> bool:
-    """Check if VOSK dependencies are available"""
+    The ASR engine's dependencies are the configured provider's concern — validate those with
+    `irene-dependency-validate` — so this runner stays model-agnostic.
+    """
     try:
-        import vosk  # type: ignore
         import sounddevice as sd  # type: ignore  # noqa: F401  # availability probe
-        print("✅ VOSK dependencies available")
-        print(f"   VOSK version: {getattr(vosk, '__version__', 'unknown')}")
-        print(f"   Sounddevice available: yes")
+        print("✅ Microphone capture available (sounddevice)")
         return True
     except ImportError as e:
-        print(f"❌ VOSK dependencies missing: {e}")
+        print(f"❌ Microphone capture unavailable: {e}")
         print("💡 Install with: uv add irene-voice-assistant[audio-input]")
         return False
 
@@ -49,26 +53,26 @@ def list_audio_devices():
     print_audio_devices()
 
 
-class VoskRunner(BaseRunner):
+class VoiceRunner(BaseRunner):
     """
-    VOSK Speech Recognition Runner - Thin Wrapper
-    
+    Voice Runner - the full voice-assistant pipeline from a local microphone.
+
     This runner ALWAYS uses microphone input only, regardless of config file settings.
     It overrides any input configuration to ensure only microphone input is enabled.
-    
-    Validates TOML configuration for VOSK setup and delegates to the
-    existing ASR component + VOSK provider system. Uses asset management
-    for model downloads and component system for speech processing.
+
+    Everything else is **config-driven**: the ASR engine is `[asr] default_provider` (no hardcoded
+    model), wake word runs if `voice_trigger` is configured, and VAD segments the stream. The runner
+    validates the config is coherent for a microphone pipeline and delegates to the component system.
     Now using BaseRunner for unified patterns.
     """
-    
+
     def __init__(self):
         runner_config = RunnerConfig(
-            name="VOSK",
-            description="VOSK Speech Recognition Mode (microphone input only)",
+            name="Voice",
+            description="Voice assistant mode — microphone input, config-driven ASR",
             requires_config_file=True,
             supports_interactive=False,
-            required_dependencies=["vosk", "sounddevice"]
+            required_dependencies=["sounddevice"]
         )
         super().__init__(runner_config)
     
@@ -82,30 +86,30 @@ class VoskRunner(BaseRunner):
         )
     
     def _get_usage_examples(self) -> str:
-        """Get usage examples for VOSK runner"""
+        """Get usage examples for the voice runner"""
         return """
 Examples:
   %(prog)s                           # Use configuration from config.toml (microphone input only)
   %(prog)s --config my-config.toml   # Use specific configuration file (microphone input only)
   %(prog)s --list-devices            # List available audio devices
-  %(prog)s --check-deps              # Check VOSK dependencies
+  %(prog)s --check-deps              # Check microphone-capture dependency
 
-Note: VOSK runner always uses microphone input only, regardless of config file settings.
+Note: the voice runner always uses microphone input only, regardless of config file settings.
+The ASR engine is whatever [asr] default_provider selects — there is no hardcoded model.
         """
-    
+
     async def _check_dependencies(self, args: argparse.Namespace) -> bool:
-        """Check VOSK runner dependencies"""
+        """Check the runner's hard dependency (microphone capture). ASR-provider deps are the
+        component system's concern, so this stays model-agnostic."""
         if args.check_deps:
-            return check_vosk_dependencies()
-        
-        # For normal operation, check that VOSK is available
+            return check_voice_dependencies()
+
         try:
-            import vosk  # type: ignore  # noqa: F401  # availability probe
             import sounddevice as sd  # type: ignore  # noqa: F401  # availability probe
             return True
         except ImportError:
             if not args.quiet:
-                print("❌ VOSK dependencies missing")
+                print("❌ Microphone capture unavailable (sounddevice)")
                 print("💡 Install with: uv add irene-voice-assistant[audio-input]")
             return False
     
@@ -117,63 +121,66 @@ Note: VOSK runner always uses microphone input only, regardless of config file s
         return None
     
     async def _modify_config_for_runner(self, config: CoreConfig, args: argparse.Namespace) -> CoreConfig:
-        """Modify configuration for VOSK-specific needs"""
-        # VOSK Runner ALWAYS forces microphone-only input configuration
-        # This overrides any input configuration from the config file
+        """Force the microphone-only input + ensure the voice stack is on (model-agnostic)."""
+        # The voice runner ALWAYS forces microphone-only input, overriding the config file.
         config.inputs.microphone = True
         config.inputs.web = False
         config.inputs.cli = False
         config.inputs.default_input = "microphone"
-        
+
         # Enable microphone system capability
         config.system.microphone_enabled = True
-        
-        # Ensure ASR component is enabled for VOSK operation
-        config.components.asr = True
-        
-        # Enable required components for voice processing
-        config.components.audio = True  # For potential TTS responses
-        config.components.intent_system = True  # For processing recognized speech
-        config.components.text_processor = True  # For text processing pipeline
-        config.components.nlu = True  # For natural language understanding
-        
+
+        # Ensure the voice stack components are on (the ASR *provider* stays config-driven).
+        config.components.asr = True            # speech recognition (engine = [asr] default_provider)
+        config.components.audio = True          # for spoken (TTS) responses
+        config.components.intent_system = True  # for acting on recognized speech
+        config.components.text_processor = True # text-processing pipeline
+        config.components.nlu = True            # natural-language understanding
+
+        # VAD is structurally required by the streaming mic pipeline (the workflow raises if it's
+        # off), so force it on here for consistency with the components above — otherwise a VAD-off
+        # config fails deep in workflow init instead of here. (voice_trigger is left to config: the
+        # runner auto-skips the wake word when it's absent — see _start_voice_audio_workflow.)
+        config.vad.enabled = True
+
         return config
-    
+
     async def _validate_runner_specific_config(self, config: CoreConfig, args: argparse.Namespace) -> List[str]:
-        """Validate VOSK-specific configuration requirements"""
+        """Validate the config is coherent for a microphone voice pipeline — provider-agnostic."""
         errors = []
-        
-        # Check ASR component enabled
+
+        # ASR must be on, with a configured + enabled provider (whichever one).
         if not config.components.asr:
             errors.append("ASR component must be enabled (components.asr = true)")
-        
-        # Check ASR configuration
         if not config.asr.enabled:
             errors.append("ASR component must be enabled (asr.enabled = true)")
-        
-        if config.asr.default_provider != "vosk":
-            errors.append(f"ASR default provider must be 'vosk', got '{config.asr.default_provider}' (asr.default_provider = \"vosk\")")
-        
-        # Check VOSK provider enabled
-        vosk_config = config.asr.providers.get("vosk", {})
-        if not vosk_config.get("enabled", False):
-            errors.append("VOSK ASR provider must be enabled (asr.providers.vosk.enabled = true)")
-        
-        # Check microphone input enabled
+
+        provider = config.asr.default_provider
+        if not provider:
+            errors.append("An ASR provider must be selected (asr.default_provider = \"<provider>\")")
+        else:
+            provider_cfg = config.asr.providers.get(provider, {})
+            if not provider_cfg:
+                available = ", ".join(config.asr.providers.keys()) or "none"
+                errors.append(f"ASR provider '{provider}' has no [asr.providers.{provider}] config "
+                              f"(available: {available})")
+            elif not provider_cfg.get("enabled", False):
+                errors.append(f"ASR provider '{provider}' must be enabled "
+                              f"(asr.providers.{provider}.enabled = true)")
+
+        # Microphone input + capability
         if not config.inputs.microphone:
             errors.append("Microphone input must be enabled (inputs.microphone = true)")
-        
         if not config.inputs.microphone_config.enabled:
             errors.append("Microphone input config must be enabled (inputs.microphone_config.enabled = true)")
-        
-        # Check system capabilities
         if not config.system.microphone_enabled:
             errors.append("System microphone capability must be enabled (system.microphone_enabled = true)")
-        
+
         return errors
     
     def _get_configuration_example(self) -> Optional[str]:
-        """Get example configuration for VOSK runner"""
+        """Get example configuration for the voice runner (provider shown is an example)."""
         return """
 [components]
 asr = true
@@ -184,20 +191,23 @@ microphone_enabled = true
 [inputs]
 microphone = true
 
+[vad]
+enabled = true                 # required by the microphone pipeline
+
 [asr]
 enabled = true
-default_provider = "vosk"
+default_provider = "vosk"      # or whisper / sherpa_onnx / … — the runner is model-agnostic
 
-[asr.providers.vosk]
+[asr.providers.vosk]           # …match this table to your chosen default_provider
 enabled = true
 default_language = "ru"
 preload_models = true
 
-# Note: VOSK runner always uses microphone input only.
+# Note: the voice runner always uses microphone input only.
 # Other input configurations will be overridden."""
     
     async def _post_core_setup(self, args: argparse.Namespace) -> None:
-        """VOSK-specific setup after core is started"""
+        """Voice-runner setup after core is started"""
         # Ensure microphone input is started (guaranteed activation)
         if self.core and self.core.input_manager:
             # Check if microphone source exists and start it if not already active
@@ -205,31 +215,33 @@ preload_models = true
                 if "microphone" not in self.core.input_manager._active_sources:
                     success = await self.core.input_manager.start_source("microphone")
                     if success:
-                        logger.info("✅ Explicitly started microphone input for VOSK")
+                        logger.info("✅ Explicitly started microphone input")
                     else:
                         logger.warning("⚠️ Failed to start microphone input - check hardware/permissions")
                 else:
                     logger.info("✅ Microphone input already active")
             else:
                 logger.error("❌ Microphone input source not available - check configuration and hardware")
-        
-        # CRITICAL FIX: Start audio workflow for VOSK processing
-        await self._start_vosk_audio_workflow()
-        
+
+        # Start the audio workflow (with intelligent wake-word handling)
+        await self._start_voice_audio_workflow()
+
         if not args.quiet:
-            print("🎤 VOSK speech recognition active (microphone input only)")
-            print("   Microphone input → VOSK ASR → Intent processing")
+            asr_provider = getattr(getattr(self.core, "config", None), "asr", None)
+            provider_name = getattr(asr_provider, "default_provider", "?") if asr_provider else "?"
+            print(f"🎤 Voice assistant active (microphone input only, ASR = {provider_name})")
+            print(f"   Microphone → VAD → [wake word] → ASR → Intent processing")
             print("💻 Input mode: Microphone only (other inputs disabled)")
             print("   Press Ctrl+C to stop")
             print("=" * 60)
-    
-    async def _start_vosk_audio_workflow(self) -> None:
+
+    async def _start_voice_audio_workflow(self) -> None:
         """
-        Start audio workflow for VOSK processing with intelligent wake word handling.
-        
-        This method fixes the core issue where audio gets stuck in wake word detection
-        when voice_trigger component is disabled. It automatically sets skip_wake_word=True
-        when voice_trigger is not available, ensuring audio flows directly to ASR.
+        Start the audio workflow with intelligent wake word handling.
+
+        Audio gets stuck in wake-word detection when the voice_trigger component is disabled, so
+        this sets skip_wake_word=True when voice_trigger is not available, letting audio flow
+        directly to ASR. When voice_trigger IS configured, the wake word runs ahead of ASR.
         """
         if not self.core or not self.core.workflow_manager:
             logger.error("❌ Core or workflow manager not available for VOSK audio processing")
@@ -263,16 +275,16 @@ preload_models = true
         # This prevents the audio processing from getting stuck in the wake word waiting loop
         skip_wake_word = not voice_trigger_available
         
-        logger.info(f"🔧 VOSK audio workflow configuration:")
+        logger.info(f"🔧 Voice audio workflow configuration:")
         logger.info(f"   Voice trigger available: {voice_trigger_available}")
         logger.info(f"   Skip wake word detection: {skip_wake_word}")
         logger.info(f"   Audio flow: Microphone → {'Direct ASR' if skip_wake_word else 'Voice Trigger → ASR'}")
-        
+
         try:
             # Get microphone input source
             mic_input = self.core.input_manager._sources.get("microphone")
             if not mic_input:
-                logger.error("❌ Microphone input source not found for VOSK workflow")
+                logger.error("❌ Microphone input source not found for the voice workflow")
                 return
             
             # Get audio stream from microphone input
@@ -281,45 +293,45 @@ preload_models = true
             # Start audio processing through workflow manager with intelligent skip_wake_word setting
             async for result in self.core.workflow_manager.process_audio_stream(
                 audio_stream=audio_stream,
-                session_id=SessionManager.generate_session_id("vosk"),
+                session_id=SessionManager.generate_session_id("voice"),
                 skip_wake_word=skip_wake_word,  # Key fix: bypass wake word when voice_trigger disabled
                 wants_audio=True,
-                client_context={"source": "vosk_runner", "runner": "vosk"}
+                client_context={"source": "voice_runner", "runner": "voice"}
             ):
                 # Process results as they come in
                 if result.text and result.text.strip():
-                    logger.info(f"✅ VOSK processed: '{result.text}'")
+                    logger.info(f"✅ Recognized: '{result.text}'")
                     if result.action_metadata:
                         logger.debug(f"📋 Action metadata: {result.action_metadata}")
                 
         except Exception as e:
-            logger.error(f"❌ Failed to start VOSK audio workflow: {e}")
+            logger.error(f"❌ Failed to start the voice audio workflow: {e}")
             raise
-    
+
     async def _execute_runner_logic(self, args: argparse.Namespace) -> int:
-        """Execute VOSK runner logic"""
+        """Execute voice runner logic"""
         try:
-            # The audio workflow is already running in _start_vosk_audio_workflow()
+            # The audio workflow is already running in _start_voice_audio_workflow()
             # Just keep the system running while processing audio
             while self.core and self.core.is_running:
                 await asyncio.sleep(1.0)
             return 0
-            
+
         except KeyboardInterrupt:
             if not args.quiet:
-                print("\n\n🛑 VOSK speech recognition stopped")
+                print("\n\n🛑 Voice assistant stopped")
             return 0
 
 
-def run_vosk() -> int:
-    """Entry point for VOSK runner"""
+def run_voice() -> int:
+    """Entry point for the voice runner"""
     try:
-        runner = VoskRunner()
+        runner = VoiceRunner()
         return asyncio.run(runner.run())
     except KeyboardInterrupt:
-        print("\n👋 VOSK runner stopped")
+        print("\n👋 Voice runner stopped")
         return 0
 
 
 if __name__ == "__main__":
-    sys.exit(run_vosk()) 
+    sys.exit(run_voice())

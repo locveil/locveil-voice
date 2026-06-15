@@ -11,6 +11,30 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+### 2026-06-15
+- **QUAL-46 — vosk runner generalized into a config-driven voice runner.** Analysis (no-code, requested) found the
+  `VoskRunner` was already a full end-to-end microphone pipeline (mic → VAD → [wake word, if configured] → ASR → text
+  → NLU → intent → spoken reply, + deferred F&F speech), but **artificially coupled to vosk** by exactly two gates: an
+  `import vosk` dependency probe (failed startup without the package) and a config-validation rule that errored unless
+  `asr.default_provider == "vosk"`. The processing path itself never touched vosk — it delegates to the generic ASR
+  component — so the coupling was vestigial. **Removed both gates:** the runner now declares only `sounddevice` as its
+  hard dep (microphone capture) and validates *any* configured + enabled ASR provider; the chosen provider's own deps
+  are the component system's job (`irene-dependency-validate`). **Renamed** throughout — `vosk_runner.py`→`voice_runner.py`
+  (via `git mv`, history preserved), `VoskRunner`→`VoiceRunner`, `run_vosk`→`run_voice`, and the entry points
+  `irene-vosk`→`irene-voice` (both the `[project.scripts]` and `[project.entry-points."irene.runners"]` registrations)
+  plus the `runners/__init__` exports — a clean rename with no back-compat alias (pre-release). **Fixed a latent VAD
+  inconsistency** spotted in the analysis: the streaming mic path *requires* VAD (the workflow raises if it's off), yet
+  the runner force-enabled asr/audio/intent/text_processor/nlu but not vad — so a VAD-off config failed deep in workflow
+  init with an opaque error. The runner now also forces `vad.enabled=True` (consistent with the other components);
+  `voice_trigger` stays purely config-driven (the runner already auto-skips the wake word when it's absent). Docs: added
+  a "Voice (microphone)" run-mode section to `QUICKSTART.md` (config-driven ASR, the `python -m` and installed-script
+  forms, `--list-devices`/`--check-deps`/`--trace`) — this also closes the earlier doc-gap where the runner was
+  undocumented. New `test_voice_runner.py` (8 tests: provider-agnostic validation across vosk/whisper/sherpa_onnx/
+  google_cloud + the force-rules incl. VAD). 9/9 import contracts kept; runner/vad suites net-zero (4 pre-existing
+  TEST-2 failures, verified by stash); no test imported the old module (only a same-named scenario function). Invariant
+  #4 N/A. Left untouched: the v13-era `tools/migrate_runners.py` (maps the old runner name as a v13→v14 migration target;
+  obsolete, flagged for retirement alongside `config_migrator`).
+
 ### 2026-06-14
 - **ARCH-19 slice 6 — retire `vad_recording_test` + user docs; ARCH-19 COMPLETE.** Deleted
   `irene/tools/vad_recording_test.py` and its `irene-vad-recording-test` entry point (D-8/D-14). Its purpose was

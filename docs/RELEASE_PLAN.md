@@ -275,6 +275,24 @@ See `docs/review/phase1_architecture_map.md` §5.
       (ESP32 review):** define + implement the firmware's end-of-utterance signaling (emit `{"type":"end"}` at on-device
       VAD silence; **default = end of WS session** if a firmware doesn't send it), plus the on-device VAD/wake contract the
       server now assumes. Doc: `docs/review/esp32_wakeword_review.md` + `docs/design/ws_esp32_transport.md`.
+- [x] **QUAL-46** [IO] (P2) `[deferred]` — **DONE 2026-06-15.** Generalize the vosk runner into a config-driven
+      **voice runner** (follows ARCH-15's "runners-as-presets — config, not code"). The old `VoskRunner` was a full
+      end-to-end mic pipeline (mic → VAD → [wake] → ASR → NLU → intent → TTS) but **artificially gated to vosk** by
+      two checks — an `import vosk` dependency probe and a validation rule forcing `asr.default_provider == "vosk"` —
+      while the actual processing path was already provider-agnostic (delegates to the ASR component). **Removed both
+      gates:** the runner now requires only `sounddevice` (its real dep — mic capture) and validates *any* configured
+      + enabled ASR provider (vosk/whisper/sherpa_onnx/google_cloud); ASR-provider deps are the component system's
+      concern (`irene-dependency-validate`). **Renamed** `vosk_runner.py`→`voice_runner.py`, `VoskRunner`→`VoiceRunner`,
+      `run_vosk`→`run_voice`, entry points `irene-vosk`→`irene-voice` + the `irene.runners` discovery entry + the
+      `runners/__init__` exports (clean rename, no alias — pre-release). **Fixed the latent VAD inconsistency:** the mic
+      pipeline structurally requires VAD (the workflow raises if it's off) yet the runner forced asr/audio/nlu/etc but
+      not vad — now it forces `vad.enabled=True` too, so a VAD-off config fails clearly in the runner, not deep in
+      workflow init. (`voice_trigger` stays config-driven — the runner auto-skips the wake word when it's absent.)
+      Docs: new "Voice (microphone)" section in `QUICKSTART.md` (config-driven ASR, both invocation forms, `--trace`).
+      New `test_voice_runner.py` (8 tests: provider-agnostic validation + the force-rules incl. VAD). 9/9 import
+      contracts; runner/vad suites net-zero (4 pre-existing TEST-2 failures). Invariant #4 N/A (no config schema/endpoint
+      change — purely a runner gate + rename). _Note: the v13-era `tools/migrate_runners.py` still maps the old name as
+      a v13→v14 migration target; left untouched (obsolete, like `config_migrator` — flagged separately)._
 - [x] **ARCH-7** [MQTT] — **✓ DONE 2026-06-06** (design session; deliverable `docs/design/mqtt_integration.md`, and the
       cross-project bridge contract AGREED with the user in the bridge session — `wb-mqtt-bridge/docs/
       voice_integration_contract_draft.md`, status AGREED 2026-06-06). **Approach REDEFINED (Invariant #8(d), approved):**

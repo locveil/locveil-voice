@@ -222,7 +222,7 @@ irene-replay-trace = "irene.tools.replay_trace:main"
 # Main runners
 irene-cli = "irene.runners.cli:run_cli"
 irene-webapi = "irene.runners.webapi_runner:run_webapi"
-irene-vosk = "irene.runners.vosk_runner:run_vosk"
+irene-voice = "irene.runners.voice_runner:run_voice"
 
 # ============================================================
 # ENTRY-POINTS CATALOG - Provider Discovery System
@@ -321,7 +321,7 @@ web = "irene.inputs.web:WebInput"
 
 [project.entry-points."irene.runners"]
 cli = "irene.runners.cli:CLIRunner"
-vosk = "irene.runners.vosk_runner:VoskRunner"
+voice = "irene.runners.voice_runner:VoiceRunner"
 webapi = "irene.runners.webapi_runner:WebAPIRunner"
 
 [tool.setuptools.packages.find]

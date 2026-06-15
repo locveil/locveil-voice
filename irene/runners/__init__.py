@@ -6,17 +6,17 @@ Replaces legacy runva_*.py files with modern async architecture.
 """
 
 from .cli import CLIRunner, run_cli
-from .vosk_runner import VoskRunner, run_vosk
+from .voice_runner import VoiceRunner, run_voice
 from .webapi_runner import WebAPIRunner, run_webapi
 
 __all__ = [
     # Runner classes
     "CLIRunner",
-    "VoskRunner",
+    "VoiceRunner",
     "WebAPIRunner",
 
     # Entry point functions
     "run_cli",
-    "run_vosk",
+    "run_voice",
     "run_webapi",
 ] 

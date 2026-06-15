@@ -70,6 +70,19 @@ curl -X POST http://localhost:8000/execute/command -H 'Content-Type: application
 ```
 Interactive API docs: open `http://localhost:8000/docs`.
 
+### Voice (microphone)
+The full spoken pipeline from a local microphone — **Microphone → VAD → [wake word] → ASR → intent →
+spoken reply**:
+```bash
+uv run python -m irene.runners.voice_runner -c configs/development.toml   # or the installed `irene-voice`
+```
+It always uses microphone-only input (other inputs are overridden), but is otherwise **config-driven**:
+the ASR engine is whatever **`[asr] default_provider`** selects (`vosk` / `whisper` / `sherpa_onnx` / …)
+— there's no hardcoded model. The wake word runs only if `voice_trigger` is configured (otherwise audio
+goes straight to ASR), and VAD is required (the runner turns it on). This needs a **voice-capable config
+plus the matching ASR model installed**, so it's heavier than the text flows above. Useful flags:
+`--list-devices` (pick a microphone), `--check-deps`, and `--trace` (see [tracing & replay](guides/tracing.md)).
+
 ### config-ui (browser config editor)
 Needs the WebAPI backend running (step above), which it talks to at `http://localhost:8000`.
 ```bash
