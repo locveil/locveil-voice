@@ -12,6 +12,12 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-15
+- **ARCH-24 gating check VERIFIED on the real WB7 — sherpa-onnx 1.10.46 does TTS.** The whole "one ONNX engine for both
+  ASR + TTS on armv7" plan hung on whether the pinned `sherpa-onnx==1.10.46` armv7 wheel exposes `OfflineTts` (the box's
+  glibc 2.31 blocks the newer `sherpa-onnx-core` wheels, so 1.10.46 is the ceiling). Tested directly without touching the
+  system Python: downloaded `sherpa_onnx-1.10.46-cp39-cp39-linux_armv7l.whl` (14.5 MB), unzipped, imported via PYTHONPATH —
+  the `.so` **loads and runs** on glibc 2.31/Cortex-A7 and exposes `OfflineRecognizer` **and** `OfflineTts` +
+  `OfflineTtsVitsModelConfig` (Piper/VITS) + Matcha/Kokoro configs. Cleaned up the throwaway dir. Gate ✅; doc + ledger updated.
 - **WB7 controller investigation + SprutHub stopped → ARCH-24 budget reconciled.** Diagnosed the controller's memory:
   the elephant was **SprutHub** (Java hub under `/mnt/data/makesimple`, ~352 MB RSS = 59% of used RAM); Node-RED was a
   red herring (not installed/running). Per the user's plan (bridge + dockerized Irene will run on WB7, SprutHub retired),

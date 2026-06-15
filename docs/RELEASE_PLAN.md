@@ -929,10 +929,11 @@ See `docs/review/phase1_architecture_map.md` §5.
       replacement, accepting weaker espeak-ng Russian stress (RUAccent closes the gap on 64-bit). (T3) add `armv7l` to the
       provider platform taxonomy + extend CI `dependency_validator --platforms` so any armv7 profile enabling a torch provider
       **fails the build**, and evolve the `embedded-armv7` profile from headless-ASR-satellite → **ASR+TTS satellite-server**
-      (TTS synthesis on + stream PCM back to the ESP32; VAD/voice-trigger/mic/playback stay off — ESP32's job). **Must-check
-      before committing:** that `sherpa-onnx==1.10.46` cp39 armv7 wheel exposes `OfflineTts`/VITS on
-      the real WB7. Completing T1+T2 is the clean resolution for the deferred **torch ×4 / transformers ×1** Dependabot alerts
-      (commits 05aa763/4e05a38) — no risky major bumps. **No code until scheduled + green-lit.**
+      (TTS synthesis on + stream PCM back to the ESP32; VAD/voice-trigger/mic/playback stay off — ESP32's job). **Gating
+      check ✅ VERIFIED 2026-06-15 on the real WB7:** `sherpa-onnx==1.10.46` cp39 armv7l wheel imports + the `.so` runs on
+      glibc 2.31/Cortex-A7 and exposes both `OfflineRecognizer` and `OfflineTts`/`OfflineTtsVitsModelConfig` (Piper) — the
+      one-engine premise holds. Completing T1+T2 is the clean resolution for the deferred **torch ×4 / transformers ×1**
+      Dependabot alerts (commits 05aa763/4e05a38) — no risky major bumps. **No code until scheduled + green-lit.**
 
 ### Code Quality & Review (QUAL)
 - [x] **QUAL-1** — Phase-0 static baseline (ruff/pyright/vulture/validators/import-graph). → `docs/review/phase0_static_baseline.md` (6e39886)
