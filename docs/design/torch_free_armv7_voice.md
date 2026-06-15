@@ -166,9 +166,10 @@ is the **64-bit** win (small/medium fit there).
   buildx→GHCR workflow: **A** 64-bit satellite-server (x86_64 + aarch64 — servers/WB8.5/Pi, bigger models: Whisper small/med
   + Piper`_ruaccent`), **B** armv7 WB7 satellite-server (vosk-small + `piper`-direct, no torch — redo `embedded-armv7.toml`),
   **C** NEW `Dockerfile.standalone` full local `voice` runner (mic→…→playback, audio passthrough, arch TBD). A & B share the
-  satellite-server role (ESP32 owns VAD/VT/audio); differ only by HW tier + model allowance. Delivered via interactive
-  sessions (config per target → Dockerfile design: baked-in vs mounted volumes, ports, `/dev/snd`, entrypoint → per-image
-  workflow). This is **BUILD-3** in the ledger — see it for the running scope.
+  satellite-server role (ESP32 owns VAD/VT/audio); differ only by HW tier + model allowance. **Prerequisite: T1 + T2
+  providers must be implemented FIRST** — the config/Dockerfile sessions reference `piper`/Whisper-in-sherpa, which must
+  exist before a config can name them. Then (interactive) config per target → Dockerfile design (baked-in vs mounted
+  volumes, ports, `/dev/snd`, entrypoint) → per-image workflow. This is **BUILD-3** in the ledger — see it for running scope.
 
 - **Open checks:** (a) ~~verify `sherpa-onnx==1.10.46` cp39 armv7 wheel exposes `OfflineTts`/VITS on the real WB7~~ —
   **✅ VERIFIED 2026-06-15 on 192.168.110.250.** Downloaded `sherpa_onnx-1.10.46-cp39-cp39-linux_armv7l.whl` (14.5 MB),

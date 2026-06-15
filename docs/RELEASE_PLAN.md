@@ -1958,9 +1958,13 @@ _Apply to every remediation task below (from the 4 review docs + QUAL-25/26). So
       config. **(B) embedded (armv7 — WB7)** — `Dockerfile.armv7`; satellite-server, constrained (vosk-small ASR + Piper-direct
       TTS, sherpa-onnx only, no torch); **redo `embedded-armv7.toml`** (current stub is bad). **(C) standalone (arch TBD →
       Session 4)** — **NEW `Dockerfile.standalone`**; full local `voice` runner (mic→VAD→wake→ASR→NLU→TTS→playback) with audio
-      device passthrough; new config. **Delivered via interactive sessions:** (0 ✓ targets locked 2026-06-15) → (1–3) config
-      per target → (4) Dockerfile design (baked-in vs mounted: models/config/assets/logs volumes, ports, `/dev/snd`, entrypoint,
-      extras) → (5) per-image workflow. Carries forward the BUILD-5 Dockerfile fixes (armv7 Debian base, `intent_validator`
+      device passthrough; new config. **ORDERING (corrected 2026-06-15): the interactive sessions come AFTER the ARCH-24
+      providers are implemented** — a config can't reference `default_provider="piper"` (or a Whisper-in-sherpa model) before
+      the provider exists, and a Dockerfile/image can't be built/booted around providers that aren't there. Sequence:
+      **(prereq) implement ARCH-24 T1 (Whisper→sherpa) + T2 (`piper`/`piper_ruaccent`) providers → then (0 ✓ targets locked
+      2026-06-15) → (1–3, interactive) config per target → (4, interactive) Dockerfile design (baked-in vs mounted:
+      models/config/assets/logs volumes, ports, `/dev/snd`, entrypoint, extras) → (5) per-image workflow.** Carries forward
+      the BUILD-5 Dockerfile fixes (armv7 Debian base, `intent_validator`
       removal) for real build/boot verification on hardware. _Original deferred note below._ **DEFERRED to the release phase
       (decided 2026-06-01): Docker builds are an end-stage
       task**, after the architecture/code work settles (image contents, extras, and armv7 viability all depend on
