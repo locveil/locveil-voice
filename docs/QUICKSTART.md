@@ -106,11 +106,33 @@ npm run dev          # opens a Vite dev server (printed URL, usually http://loca
 - **Voice/ASR** end-to-end unless you deliberately use `development.toml` + install models.
 - **Docker** packaging (release-phase item).
 
-## 6. Known state (so you can calibrate)
-- The **automated test suite has ~83 known failures** — these are *stale tests* from the recent architecture refactors (the suite rewrite is tracked separately) plus the unbuilt smart-home tests. They are **not** functional bugs in the running software; the user-facing flows above are verified working (see `irene/tests/test_smoke_e2e.py`).
-- If a **core text flow** (greeting, time, timer, conversation, a WebAPI endpoint, or config-ui editing) misbehaves — **that** is worth reporting.
+## 6. Tests & coverage
 
-## 7. Reporting findings
+Run the backend test suite (it's green, and a hard CI gate):
+```bash
+uv run --extra dev python -m pytest irene/tests/
+```
+
+**Coverage needs a one-time sqlite shim.** Coverage (`pytest --cov`) keeps its data in a SQLite file,
+but the CPython this project runs on (the same build `wb-mqtt-bridge` uses) is compiled **without** the
+stdlib `_sqlite3` module — so `coverage.py` can't start and you'd see `No module named '_sqlite3'`. We
+ship `pysqlite3-binary` and a tiny installer that aliases it onto `sqlite3` at interpreter startup. Run
+it **once after `uv sync`** — a sync rewrites the venv, so re-run it whenever you (re)create the venv:
+```bash
+bash scripts/install_sqlite_shim.sh                                   # enables coverage on this Python
+uv run --extra dev python -m pytest irene/tests/ --cov=irene --cov-report=term
+```
+You only need it for **coverage** runs — plain `pytest` never touches SQLite, so it works without the
+shim. And on a Python that already has stdlib `sqlite3`, the installer is a harmless no-op (the shim
+checks first and only aliases when native sqlite is missing).
+
+## 7. Known state (so you can calibrate)
+- The **test suite is green** (~890 passing) and enforced in CI (`backend-health`); the user-facing
+  flows above are verified working (see `irene/tests/test_smoke_e2e.py`).
+- If a **core text flow** (greeting, time, timer, conversation, a WebAPI endpoint, or config-ui editing)
+  misbehaves — **that** is worth reporting.
+
+## 8. Reporting findings
 For each issue, include: the **mode** (CLI / WebAPI / config-ui), the **config** used (`-c …`), the
 **exact input** (command or request), what you **expected** vs **saw**, and the relevant **log lines**
 (`logs/irene.log`). A copy-pasteable repro beats a description.
