@@ -344,6 +344,23 @@ See `docs/review/phase1_architecture_map.md` §5.
       (which wants keyword→llm NLU — providers-before-configs). When low-confidence/missing-param: hand to the conversation
       handler's CLARIFYING multi-turn (already in place — `conversation.py` `ConversationState.CLARIFYING` + QUAL-37
       targeted clarification; verify it elicits a **missing required parameter**, not just domain-level specificity).
+      **Design (confirmed 2026-06-15):** grounding **1(b)** — the prompt carries the **live bridge catalog +
+      identity/session/context**, so the LLM resolves entities directly. **Confidence is DERIVED, not the LLM's
+      self-rating:** (i) intent ∈ donation set [hard gate], (ii) fraction of **required params that resolve** against
+      catalog/context [the real signal], (iii) an **evidence span** the LLM must quote [anti-hallucination]; LLM
+      self-report/logprobs are a weak prior only. **Commands** accept only if intent-valid + evidence + ALL required params
+      resolved (missing → CLARIFYING; unresolvable / no-evidence → abstain); **queries** accept on intent-valid + evidence.
+      **Structured JSON** output. **DEPENDS ON QUAL-52** (built on the reworked, budget-aware, structured-output LLM component).
+- [ ] **QUAL-52** [LLM] (P2) — **LLM component rework: real token budgets + budget-aware prompting + structured output**
+      (surfaced 2026-06-15; **prerequisite for QUAL-50**). Today's LLM handling uses arbitrary/meaningless config knobs and
+      is **token-budget-blind** on both input and output. Rework `llm_component` + the providers
+      (deepseek/openai/anthropic/console) + the LLM config schema: **(1)** real **per-model token budgets** (context window +
+      max output) from actual model capabilities, not the current placeholder values; **(2)** **budget-aware prompting** —
+      measure input tokens, trim/scope oversized context (esp. the QUAL-50 catalog → relevant rooms/capabilities) to fit the
+      input budget, cap output; **(3)** first-class **structured/JSON output** (today only `generate_response` text exists);
+      **(4)** **drop the unneeded fine-tuning** (temperature etc.). **Invariant #4:** LLMConfig/provider-schema changes touch
+      config-ui — update it in the same change. Relates to QUAL-15/16 (the broken `console`-LLM fallback + unused
+      `fallback_providers` — fix or fold in).
 - [ ] **QUAL-51** [NLU][LLM] (P2) — **Prompt-tightening session for QUAL-50** (+ keyword-matcher config improvement).
       Interactive prompt-engineering once QUAL-50 lands: the classifier's system prompt (intent taxonomy + parameter
       extraction + a clean **abstain/confidence** contract so it doesn't hallucinate commands), few-shot examples, and

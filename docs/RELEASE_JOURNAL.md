@@ -12,6 +12,12 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-15
+- **QUAL-50 design confirmed + filed QUAL-52 (LLM component rework) as its prerequisite.** Confidence is **derived**, not
+  the LLM's self-rating: intent ∈ donation-set [gate] + fraction of required params that resolve against catalog/context +
+  an evidence span the LLM must quote; commands need ALL required params resolved (missing → CLARIFYING; unresolvable →
+  abstain), queries are lenient. Grounding 1(b): the prompt carries the live catalog + identity/session/context. Structured
+  JSON output. User flagged today's LLM handling as crude + token-budget-blind → **QUAL-52** (real per-model budgets +
+  budget-aware prompting + structured output + drop fine-tuning) **first**, then QUAL-50 → QUAL-51 → resume armv7 config.
 - **ARCH-24 T4 (armv7 config session) — VAD made mic-conditional + filed QUAL-50/51.** Started the armv7 config session
   (deriving from config-master, the existing profiles being stale). Two findings corrected the plan: (1) **VAD** — the
   unified workflow hardcoded "VAD required for all audio" and raised if `[vad]` disabled; per the user (a MUST + correct),
