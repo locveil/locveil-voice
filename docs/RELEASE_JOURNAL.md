@@ -12,6 +12,19 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-15
+- **ARCH-24 T4 (armv7 config session) — VAD made mic-conditional + filed QUAL-50/51.** Started the armv7 config session
+  (deriving from config-master, the existing profiles being stale). Two findings corrected the plan: (1) **VAD** — the
+  unified workflow hardcoded "VAD required for all audio" and raised if `[vad]` disabled; per the user (a MUST + correct),
+  VAD is mandatory **only when microphone input is enabled** (mic streams raw ~23 ms chunks needing segmentation;
+  web/ESP32 deliver bounded utterances → no server VAD). `voice_assistant.py` init now gates the raise on
+  `system.microphone_enabled` and leaves `audio_processor_interface=None` when mic-off; `test_vad_phase3.py` reframed
+  (raises only with mic on; no-raise+None when mic off). Suite 971 green. (The runtime no-VAD bounded→ASR path is ESP32
+  integration, ARCH-22/23.) (2) **NLU** — spaCy has no armv7 wheel, so on a missed command we want an **LLM *classifier***
+  fallback (recovers fuzzy commands), not just the conversation chat fallback (which doesn't execute). Filed **QUAL-50**
+  (`LLMNLUProvider` — last NLU-cascade resort; deliberately revises the QUAL-15/16 LLM-free-NLU stance, last-resort only)
+  + **QUAL-51** (prompt-tightening session for the classifier + keyword-matcher config). Confirmed the multi-turn
+  clarification exists (`conversation.py` `ConversationState.CLARIFYING` + QUAL-37). **The armv7 config now depends on
+  QUAL-50** (providers-before-configs), so the config session pauses there.
 - **ARCH-24 T5 PR2 — TorchModelCache (T5 COMPLETE).** Extracted the silero v3/v4 copy-pasted model cache (class-level
   dict + `asyncio.Lock` + `_get_or_load_cached_model`) to `utils/torch_model_cache.TorchModelCache` (async, lock-guarded
   `get_or_load`: loads once per key, serializes concurrent first loads). Both silero providers now hold

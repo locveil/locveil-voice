@@ -167,18 +167,28 @@ class UnifiedVoiceAssistantWorkflow(Workflow):
         self.audio = self.components.get('audio')  # Optional - for audio output
         self.context_manager = self.components['context_manager']  # Required
         
-        # Initialize VAD processor interface (required for all audio processing)
+        # VAD is mandatory ONLY when microphone input is enabled: the mic streams raw ~23 ms chunks that
+        # must be segmented. Web/ESP32 inputs deliver bounded, already-endpointed utterances (the satellite
+        # gated + endpointed on-device), so the satellite-server runs with no server-side VAD (ARCH-24 T4).
         try:
-            # Get VAD configuration from injected config component
             config = self.get_component('config')
             if not config:
                 raise ConfigValidationError("Configuration not available in workflow")
-            
+
             vad_config = config.vad if hasattr(config, 'vad') else None
+            sys_config = getattr(config, 'system', None)
+            mic_enabled = bool(getattr(sys_config, 'microphone_enabled', False))
+
+            # Not VAD-specific — needed by any audio path (mic, web, ESP32).
+            self._trace_config = getattr(config, 'trace', None)
+            self._assets_config = getattr(config, 'assets', None)
+            # ARCH-18: the SHARED audio negotiator (mic/web boundary + the ASR /transcribe endpoint).
+            self.audio_negotiator = self.get_component('audio_negotiator')
+            audio_config = getattr(config, 'audio', None)
+            self._playback_mode = getattr(audio_config, 'playback_mode', 'file')  # ARCH-20
+
             if vad_config and vad_config.enabled:
                 # ARCH-19: read the trace config once at startup (D-17 — the gate is the startup flag).
-                self._trace_config = getattr(config, 'trace', None)
-                self._assets_config = getattr(config, 'assets', None)
                 level = getattr(self._trace_config, 'capture_level', 'utterance') if (
                     self._trace_config and self._trace_config.enabled) else None
                 collect_vad_frames = level in ('segmenter', 'raw')
@@ -189,15 +199,13 @@ class UnifiedVoiceAssistantWorkflow(Workflow):
                 self.logger.info(f"VAD audio processor initialized: provider={vad_config.default_provider}, "
                                f"max_segment={vad_config.max_segment_duration_s}s"
                                + (f", trace capture_level={level}" if level else ""))
-                # ARCH-18: use the SHARED audio negotiator (built on core at startup, injected as a component)
-                # — the mic/web boundary and the ASR /transcribe endpoint share the same instance.
-                self.audio_negotiator = self.get_component('audio_negotiator')
-                # ARCH-20: local TTS playback path (file vs streaming)
-                audio_config = getattr(config, 'audio', None)
-                self._playback_mode = getattr(audio_config, 'playback_mode', 'file')
+            elif mic_enabled:
+                self.logger.error("VAD is required when microphone input is enabled.")
+                raise ConfigValidationError("VAD is required when microphone input is enabled")
             else:
-                self.logger.error("VAD configuration missing or disabled. VAD processing is required for audio workflows.")
-                raise ConfigValidationError("VAD configuration is required for audio processing")
+                # No microphone — bounded utterances (web/ESP32) go straight to ASR; no segmentation.
+                self.audio_processor_interface = None
+                self.logger.info("VAD disabled — no microphone input; bounded utterances go straight to ASR")
         except Exception as e:
             self.logger.error(f"Failed to initialize VAD processor: {e}")
             raise

@@ -4,11 +4,13 @@ VAD ↔ workflow integration contracts (TEST-7 rewrite).
 These assert the CURRENT public/port behaviour of `UnifiedVoiceAssistantWorkflow`'s VAD wiring,
 not the pre-refactor internals the old Phase-3 script poked at. The contract today (QUAL-46 / ARCH-18):
 
-- VAD is ALWAYS required for audio workflows — it is configured from an injected `config` COMPONENT
-  (`workflow.get_component('config').vad`), not from a `_vad_processing_enabled` flag (that attribute
-  is gone) and not from `UnifiedVoiceAssistantWorkflowConfig.enable_vad_processing`.
-- `initialize()` fails loud when the config component is absent ("Configuration not available in
-  workflow") or when VAD is disabled/missing ("VAD configuration is required for audio processing").
+- VAD is configured from an injected `config` COMPONENT (`workflow.get_component('config').vad`),
+  not from a `_vad_processing_enabled` flag (gone) or `UnifiedVoiceAssistantWorkflowConfig.enable_vad_processing`.
+- VAD is mandatory ONLY when microphone input is enabled (ARCH-24 T4): the mic streams raw chunks that
+  must be segmented. With no microphone (web/ESP32 deliver bounded utterances), VAD is optional and
+  `initialize()` leaves `audio_processor_interface = None`.
+- `initialize()` fails loud when the config component is absent ("Configuration not available") or when
+  VAD is disabled **while a microphone is enabled** ("VAD is required when microphone input is enabled").
 - `AudioProcessorInterface.get_metrics()` returns a plain dict (no `.average_processing_time_ms`
   attribute access — metrics are dict-keyed now).
 """
@@ -53,12 +55,16 @@ class _MockIntentOrchestrator:
         return IntentResult(text="ok", confidence=0.9)
 
 
-def _config_component(*, vad_enabled: bool = True) -> SimpleNamespace:
-    """A stand-in for the injected `config` component the workflow reads VAD from."""
-    return SimpleNamespace(vad=VADConfig(enabled=vad_enabled))
+def _config_component(*, vad_enabled: bool = True, mic_enabled: bool = False) -> SimpleNamespace:
+    """A stand-in for the injected `config` component the workflow reads VAD + system from."""
+    return SimpleNamespace(
+        vad=VADConfig(enabled=vad_enabled),
+        system=SimpleNamespace(microphone_enabled=mic_enabled),
+    )
 
 
-def _workflow(*, with_config: bool = True, vad_enabled: bool = True) -> UnifiedVoiceAssistantWorkflow:
+def _workflow(*, with_config: bool = True, vad_enabled: bool = True,
+              mic_enabled: bool = False) -> UnifiedVoiceAssistantWorkflow:
     """Build a workflow with the required components wired (and optionally the config component)."""
     workflow = UnifiedVoiceAssistantWorkflow()
     components = {
@@ -71,7 +77,7 @@ def _workflow(*, with_config: bool = True, vad_enabled: bool = True) -> UnifiedV
         "text_processor": None,
     }
     if with_config:
-        components["config"] = _config_component(vad_enabled=vad_enabled)
+        components["config"] = _config_component(vad_enabled=vad_enabled, mic_enabled=mic_enabled)
     workflow.components = components
     return workflow
 
@@ -115,20 +121,26 @@ async def test_initialize_raises_when_config_component_missing():
     assert workflow.audio_processor_interface is None
 
 
-async def test_initialize_raises_when_vad_disabled():
-    """VAD disabled in the injected config → fail loud; the error names the VAD requirement.
-
-    NOTE (TEST-7 §3 fix-code candidate): this is the QUAL-46 VAD-required path. The current
-    message "VAD configuration is required for audio processing" correctly names VAD, so the
-    assertion is rewritten to it — no product regression observed.
-    """
-    workflow = _workflow(with_config=True, vad_enabled=False)
+async def test_initialize_raises_when_vad_disabled_and_mic_enabled():
+    """VAD disabled WITH microphone input → fail loud (ARCH-24 T4): the mic streams raw chunks that
+    must be segmented, so VAD is mandatory whenever a microphone is enabled."""
+    workflow = _workflow(with_config=True, vad_enabled=False, mic_enabled=True)
 
     with pytest.raises(ConfigValidationError) as exc:
         await workflow.initialize(_stage_config())
 
     assert "VAD" in str(exc.value)
-    assert "required" in str(exc.value).lower()
+    assert "microphone" in str(exc.value).lower()
+
+
+async def test_initialize_ok_when_vad_disabled_and_no_microphone():
+    """ARCH-24 T4 satellite-server: no microphone (web/ESP32 deliver bounded utterances) → VAD is
+    optional; initialize must NOT raise, and the audio processor interface stays None."""
+    workflow = _workflow(with_config=True, vad_enabled=False, mic_enabled=False)
+
+    await workflow.initialize(_stage_config())
+
+    assert workflow.audio_processor_interface is None
 
 
 async def test_initialize_requires_no_workflow_config():

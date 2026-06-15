@@ -331,6 +331,25 @@ See `docs/review/phase1_architecture_map.md` §5.
       failed into the legacy path + a copy hack). Explicit `model_file` still honored as an override (back-compat). New
       `test_silero_routing.py` (4 tests incl. the anti-collision property). **Invariant #4 N/A** (TTS provider config is
       free-form `Dict[str,Any]`, `models.py:191` — not schema/config-ui-typed). Gates: suite 935 green, pyright 0, contracts 9/9.
+- [ ] **QUAL-50** [NLU][LLM] (P2) — **LLM NLU classifier as a cascade fallback provider** (decided 2026-06-15 in the
+      ARCH-24 T4 armv7 config session). New `LLMNLUProvider(NLUProvider)`: when the deterministic providers (keyword +
+      spaCy-on-64-bit) don't recognize an utterance, ask the **LLM to classify** it into a known intent **and extract its
+      parameters** (intent taxonomy sourced from the donation/bridge catalog) — recovering fuzzy *commands* the keyword
+      matcher misses. Slots into `provider_cascade_order` **after** keyword/spaCy (last NLU resort, before the
+      `conversation.general` fallback). **Deliberately revises the QUAL-15/16 "NLU is LLM-free" stance — but only as a
+      last-resort fallback**: the deterministic path stays primary and offline still works (keyword → conversation
+      templates). Needs `[llm]` enabled with a provider (cloud = HTTP, so armv7-viable, but adds online dependency + latency
+      for fuzzy commands). Full provider integration (the PR2 lesson): `LLMNLUProviderSchema` registered +
+      `[nlu.providers.llm]` config-master block + `get_supported_architectures()`. **Gates the ARCH-24 T4 armv7 config**
+      (which wants keyword→llm NLU — providers-before-configs). When low-confidence/missing-param: hand to the conversation
+      handler's CLARIFYING multi-turn (already in place — `conversation.py` `ConversationState.CLARIFYING` + QUAL-37
+      targeted clarification; verify it elicits a **missing required parameter**, not just domain-level specificity).
+- [ ] **QUAL-51** [NLU][LLM] (P2) — **Prompt-tightening session for QUAL-50** (+ keyword-matcher config improvement).
+      Interactive prompt-engineering once QUAL-50 lands: the classifier's system prompt (intent taxonomy + parameter
+      extraction + a clean **abstain/confidence** contract so it doesn't hallucinate commands), few-shot examples, and
+      feeding the learnings back into the `hybrid_keyword_matcher` donations/patterns (so the cheap deterministic layer
+      catches more, reserving the LLM for genuine fuzz). Also tune the clarification prompts (ask-for-missing-param /
+      be-more-specific). Depends on QUAL-50.
 - [x] **ARCH-7** [MQTT] — **✓ DONE 2026-06-06** (design session; deliverable `docs/design/mqtt_integration.md`, and the
       cross-project bridge contract AGREED with the user in the bridge session — `wb-mqtt-bridge/docs/
       voice_integration_contract_draft.md`, status AGREED 2026-06-06). **Approach REDEFINED (Invariant #8(d), approved):**
