@@ -32,6 +32,25 @@ newest entries near the top of each dated section.
   (`trace_context` 76%, `trace_input` 89%), new wiring is thin (`replay_trace`/`voice_runner` 34%). Suite still at its
   baseline (82 failed / 472 passed / 15 skipped — the ±1 is a coverage-perturbed timing benchmark, not a regression).
   Next: Phase B triage + risk-ranked worklist, then the workflow.
+- **TEST-7 Phase D — coverage fill 45.6% → 52.3% (13-agent workflow; recovered from a mid-run crash).** Fanned out
+  one agent per Tier-1 target — the cold spine (`workflow_manager`, `core/components`, `nlu_component`, `context`,
+  `voice_assistant`, `asr_component`), the 5 capability-port handlers (TEST-8), and the new-code wiring
+  (`replay_trace`, `voice_runner`) — each writing a new `test_<module>_coverage.py` of characterization tests at the
+  seam, instructed to be hermetic (`asyncio.run`, no global-state pollution — the Phase-C lesson) and to SURFACE (never
+  fix) any product bug. The main loop crashed before the workflow's verifier ran, so its result/findings were lost, but
+  all 13 files were written to the tree. Recovered by hand: confirmed all 13 collect + are substantial + genuine
+  (spot-checked `context` = eviction/dual-clock/room-injection, `workflow_manager` = trace helpers/event publishing,
+  `nlu` = language detection — real behavior, not coverage-padding). The new tests EXPOSED one more latent
+  `asyncio.get_event_loop().run_until_complete` anti-pattern (in the pre-existing `test_clarification.py` — passed
+  alone, failed in-suite once an `asyncio.run` test closed the loop first); fixed it → `asyncio.run`, same class as the
+  Phase-C `no_intent_clarification` fix. **Result: 888 passed / 0 failed / 7 skipped; overall coverage 52.3%
+  (+6.7).** Standout gains on the new-code wiring (`voice_runner` 34→85%, `replay_trace` 34→82%) and spine
+  (`core/components` 20→56%, `nlu_component` 38→59%, `voice_assistant` 48→72%, `asr_component` 25→46%); residual-cold
+  are `workflow_manager` (29%) + `context` (31%) whose deep pipeline paths need a booted core (smoke territory).
+  **No product bugs surfaced** (transcripts show no findings; no bug-skips in the files). 9/9 import contracts; no
+  product code touched. _Lesson banked: the per-agent isolation check missed the order-dependency; the full-suite
+  green run (and a workflow-level full-suite gate) is what catches it — and the crash cost us the verifier that would
+  have._
 - **TEST-7 Phase C — suite to 100% green (82 → 0 failed).** Ran a 19-agent workflow + verifier per the locked plan
   (delete stale / rewrite drifted to current contracts / SURFACE-never-fix product code). Deleted 4 stale pre-refactor
   files (phase4 ×3 + phase6, built on the removed `ContextualCommandPerformanceManager`) and rewrote 13 drifted

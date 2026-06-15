@@ -64,7 +64,9 @@ async def _loader() -> IntentAssetLoader:
 def test_get_param_raises_structured_missing_required():
     """The typed accessor raises a structured exception carrying the param + description."""
     import asyncio
-    loader = asyncio.get_event_loop().run_until_complete(_loader())
+    # asyncio.run, not get_event_loop(): the latter raises "no current event loop" once another
+    # async test has closed the thread's loop (order-dependent — passed alone, failed in-suite).
+    loader = asyncio.run(_loader())
     h = _handler(loader)
     intent = Intent(name="demo.set", entities={}, confidence=0.9, raw_text="x")
     with pytest.raises(MissingRequiredParameter) as ei:

@@ -1837,8 +1837,18 @@ _Apply to every remediation task below (from the 4 review docs + QUAL-25/26). So
       deprecated-names list + cleaned the machine-specific `device_id = 7` to the `None` default in `config-master`;
       (b) `llm.console` is a *registered* offline-floor stub (entry-point exists) with no runtime params by design →
       exempted declared stubs in the schema test (like text-processors) + rewrote the stale phantom test (console is no
-      longer unregistered; uses a genuinely-unregistered name to keep phantom-detection covered). **NEXT: Phase D**
-      (risk-ranked coverage fill via the workflow).
+      longer unregistered; uses a genuinely-unregistered name to keep phantom-detection covered). **Phase D
+      (coverage fill) DONE 2026-06-15 via a 13-agent workflow:** new characterization tests at the seams for the Tier-1
+      spine + 5 capability handlers + new-code wiring (~329 tests, 13 `test_*_coverage.py` files). **Overall coverage
+      45.6% → 52.3%.** Big gains: `voice_runner` 34→85%, `replay_trace` 34→82%, `voice_assistant` 48→72%,
+      `core/components` 20→56%, `nlu_component` 38→59%, `asr_component` 25→46%. Residual-cold (deep pipeline paths that
+      need a booted core — smoke territory, not unit): `workflow_manager` 20→29%, `context` 25→31%. **No product bugs
+      surfaced** (agents covered clearly-correct behavior; nothing to decide). The workflow run crashed mid-flight (lost
+      its verifier/result), recovered by hand: all 13 files were written + genuine (spot-checked, not gamed); fixed one
+      latent `asyncio.get_event_loop()` anti-pattern the new tests EXPOSED in `test_clarification.py` (same class as the
+      Phase-C `no_intent_clarification` fix). **Suite 100% green (888 passed / 0 failed / 7 skipped); 9/9 contracts; no
+      product code changed.** Optional follow-up: a deep-path round for `workflow_manager`/`context` (or accept as
+      integration-level).
 - [ ] **TEST-6** (P2) — _(folded into TEST-7)_ Restore ASR provider-fallback + resampling coverage (the 7 phase7
       tests skipped in TEST-1 called the removed `_handle_sample_rate_mismatch`; feature lives in
       `AudioProcessor.resample_audio_data`).
