@@ -12,6 +12,13 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-15
+- **ARCH-24 T2 started — PR1: asset-layer `.tar.bz2` support (Piper prerequisite).** Piper TTS voices ship as k2-fsa
+  `.tar.bz2` (model.onnx + tokens.txt + `espeak-ng-data/`; both ru voices irina/ruslan verified live at the k2-fsa
+  release). `_extract_archive` only dispatched .tar/.tar.gz/.tgz (and `Path.suffix` on `foo.tar.bz2` is `.bz2`), header
+  check knew gzip not bzip2 → a Piper voice would fail "Unsupported archive format". Extended dispatch (full-name match +
+  bzip2 `BZh`/xz magic; tarfile `r:*` decompresses). New `test_asset_extract.py`. **Env finding:** the custom dev/CI
+  CPython (/usr/local 3.11.4) was built **without `bz2`** (like `_sqlite3`) → bz2 tests `skipif`; Docker `python:3.11-slim`
+  has libbz2 so real extraction works. Suite 936 green / 9 skipped, pyright 0, contracts 9/9. Next: PR2 PiperTTSProvider.
 - **QUAL-49 — silero model-id routing fix.** The ARCH-24 asset-routing analysis (how multi-model providers route models
   to subfolders) found silero v3/v4 were the only providers bypassing the `get_model_path(provider, model_id)` router —
   flat `<dir>/<config:model_file>` with a shared default, so v3 languages could collide on one file. Fixed: route via

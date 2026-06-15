@@ -207,6 +207,12 @@ verification; standalone needs nothing new.
   - **`PiperRuAccentTTSProvider(PiperTTSProvider)`** (entry point `piper_ruaccent`) — overrides **only** the text-prep
     hook to run RUAccent (stress `+`/ё) before the inherited synth; adds the `ruaccent` dep; `get_platform_support()` =
     `x86_64`/`aarch64` **only** (armv7 ORT wall). Model load / synth / streaming all inherited from the base.
+  - **Sub-PRs:** **PR1 (asset layer) — DONE 2026-06-15:** `AssetManager._extract_archive` gained `.tar.bz2`/`.tar.xz`
+    support (Piper voices ship as k2-fsa `.tar.bz2`: model.onnx + tokens.txt + `espeak-ng-data/`) — `test_asset_extract.py`.
+    _Env note:_ the custom dev/CI CPython lacks the `bz2` module (like `_sqlite3`), so those tests `skipif`; the Docker
+    `python:3.11-slim` images have libbz2, so extraction works in the real deployment. **PR2** = `PiperTTSProvider` base
+    (sherpa `OfflineTts`, `synthesize_to_file`/`_to_stream`, voice packs via `download_model(extract=True)`). **PR3** =
+    `PiperRuAccentTTSProvider` subclass + `ruaccent`.
 - **T3** Platform taxonomy + validation: add `armv7l` to provider `get_platform_support()` taxonomy; extend the CI
   `dependency_validator --platforms` to include armv7 so **any armv7 profile enabling a torch provider fails the build**;
   evolve the `embedded-armv7` profile from headless-ASR-satellite → **ASR+TTS satellite-server** (TTS synthesis on +

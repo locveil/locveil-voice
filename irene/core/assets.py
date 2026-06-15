@@ -506,31 +506,38 @@ class AssetManager:
         target_dir.mkdir(parents=True, exist_ok=True)
         
         def extract_sync():
-            # Try to detect format from URL first, then from file
+            # Try to detect format from URL first, then from file. tar variants include .tar.bz2/.tbz2
+            # and .tar.xz/.txz — Piper TTS voices (ARCH-24 T2) ship as k2-fsa `.tar.bz2`; tarfile's
+            # `r:*` mode decompresses all of them transparently, so only the *dispatch* needs them.
+            _tar_exts = ['.tar', '.tar.gz', '.tgz', '.tar.bz2', '.tbz2', '.tar.xz', '.txz']
             archive_format = None
             if model_url:
                 if model_url.endswith('.zip'):
                     archive_format = 'zip'
-                elif any(model_url.endswith(ext) for ext in ['.tar', '.tar.gz', '.tgz']):
+                elif any(model_url.endswith(ext) for ext in _tar_exts):
                     archive_format = 'tar'
-            
-            # Fallback to file extension
+
+            # Fallback to file extension — match the full name, since Path.suffix is only the LAST
+            # component (`foo.tar.bz2`.suffix == '.bz2', which would miss the tar dispatch).
             if not archive_format:
-                if archive_path.suffix.lower() == '.zip':
+                name = archive_path.name.lower()
+                if name.endswith('.zip'):
                     archive_format = 'zip'
-                elif archive_path.suffix.lower() in ['.tar', '.tar.gz', '.tgz']:
+                elif any(name.endswith(ext) for ext in _tar_exts):
                     archive_format = 'tar'
-            
+
             # Try to detect by reading file header if still unknown
             if not archive_format:
                 try:
                     with open(archive_path, 'rb') as f:
-                        header = f.read(4)
-                        if header.startswith(b'PK'):  # ZIP file magic number
+                        header = f.read(6)
+                        if header.startswith(b'PK'):  # ZIP magic
                             archive_format = 'zip'
-                        elif header.startswith(b'\x1f\x8b'):  # GZIP magic number
+                        elif (header.startswith(b'\x1f\x8b')        # gzip
+                              or header.startswith(b'BZh')          # bzip2
+                              or header.startswith(b'\xfd7zXZ\x00')):  # xz
                             archive_format = 'tar'
-                except:
+                except Exception:
                     pass
             
             if archive_format == 'zip':
