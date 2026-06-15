@@ -10,7 +10,7 @@ from typing import Dict, Any, List, cast
 import logging
 
 from .base import LLMProvider
-from ...utils.llm_capabilities import output_budget
+from ...utils.llm_capabilities import output_budget, fit_messages
 
 logger = logging.getLogger(__name__)
 
@@ -159,6 +159,7 @@ class OpenAILLMProvider(LLMProvider):
         model = kwargs.get("model") or self.default_model  # Handle None model parameter
         max_tokens = output_budget(model, kwargs.get("max_tokens", self.max_tokens))
         temperature = kwargs.get("temperature", self.temperature)
+        messages = fit_messages(messages, model, max_tokens)  # QUAL-52: input within context window
         
         try:
             from openai import AsyncOpenAI  # type: ignore

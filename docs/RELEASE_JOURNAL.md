@@ -12,6 +12,12 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-15
+- **QUAL-52 PR2 — budget-aware prompting (dependency-free).** Added `estimate_tokens` (**utf-8 bytes/4** — accurate for
+  English, conservative for Cyrillic, no tiktoken so the path stays armv7-safe), `input_budget` (context_window × 0.9 −
+  reserved_output), and `fit_messages` (trim oldest non-system turns to fit; **always keep system + the final message**;
+  raise if the system prompt alone overflows — the QUAL-50 catalog must be scoped upstream, not blindly truncated). Wired
+  `fit_messages` into all 3 providers' `chat_completion` (the multi-turn / catalog path; single-shot `enhance_text`
+  untouched). `test_llm_budget.py` (5). Suite 981 green, pyright 0, contracts 9/9. Next PR3: structured/JSON output.
 - **QUAL-52 PR1 — real per-model LLM token budgets.** New `utils/llm_capabilities.py`: `ModelCapabilities`
   (context_window + max_output) for deepseek / gpt-4o / 4o-mini / 4 / 3.5 / claude-4.x + a conservative fallback;
   `output_budget(model, requested)` caps any request at the model's real `max_output` and defaults to it — replacing the

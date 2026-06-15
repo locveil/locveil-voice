@@ -15,7 +15,7 @@ import logging
 from typing import Dict, Any, List, cast
 
 from .base import LLMProvider
-from ...utils.llm_capabilities import output_budget
+from ...utils.llm_capabilities import output_budget, fit_messages
 
 logger = logging.getLogger(__name__)
 
@@ -82,11 +82,13 @@ class DeepSeekLLMProvider(LLMProvider):
         """Chat completion via DeepSeek. Raises on failure (the component falls back to console)."""
         from openai.types.chat import ChatCompletionMessageParam
         model = kwargs.get("model") or self.default_model
+        max_out = output_budget(model, kwargs.get("max_tokens", self.max_tokens))
+        messages = fit_messages(messages, model, max_out)  # QUAL-52: keep input within the context window
         client = self._client()
         response = await client.chat.completions.create(
             model=model,
             messages=cast(List[ChatCompletionMessageParam], messages),
-            max_tokens=output_budget(model, kwargs.get("max_tokens", self.max_tokens)),
+            max_tokens=max_out,
             temperature=kwargs.get("temperature", self.temperature),
         )
         return (response.choices[0].message.content or "").strip()

@@ -7,7 +7,7 @@ unknown/new models. No dependency — pure data + a lookup.
 """
 
 from dataclasses import dataclass
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 
 @dataclass(frozen=True)
@@ -59,3 +59,47 @@ def output_budget(model: str, requested: Optional[int] = None) -> int:
     if requested and requested > 0:
         return min(int(requested), cap)
     return cap
+
+
+def estimate_tokens(text: str) -> int:
+    """Approximate token count, dependency-free (QUAL-52 — no tiktoken, so the path stays armv7-safe).
+
+    **utf-8 bytes / 4**: accurate for English (1 byte/char ≈ chars/4) and naturally *conservative* for
+    Cyrillic (2 bytes/char ≈ chars/2), which tokenizes ~2× denser. It's a budget guard, not exact
+    accounting — over-estimating just trims a little more, never overflows.
+    """
+    if not text:
+        return 0
+    return len(text.encode("utf-8")) // 4 + 1
+
+
+def input_budget(model: str, reserved_output: int, margin: float = 0.9) -> int:
+    """Max input tokens that still leave room for `reserved_output` in `model`'s context window,
+    keeping a `margin` of headroom for the estimate's slack."""
+    usable = int(capabilities_for(model).context_window * margin)
+    return max(0, usable - reserved_output)
+
+
+def fit_messages(messages: List[Dict[str, str]], model: str, reserved_output: int,
+                 margin: float = 0.9) -> List[Dict[str, str]]:
+    """Trim oldest non-system messages so the estimated input fits `model`'s context budget (leaving
+    room for `reserved_output`). **System messages and the final message are always kept.** Raises if
+    the kept set still overflows — that means the prompt itself is too big and must be scoped upstream
+    (e.g. the QUAL-50 catalog reduced to the relevant rooms/capabilities), not blindly truncated."""
+    budget = input_budget(model, reserved_output, margin)
+
+    def total(msgs: List[Dict[str, str]]) -> int:
+        return sum(estimate_tokens(m.get("content", "")) for m in msgs)
+
+    if total(messages) <= budget:
+        return messages
+    system = [m for m in messages if m.get("role") == "system"]
+    rest = [m for m in messages if m.get("role") != "system"]
+    while len(rest) > 1 and total(system + rest) > budget:
+        rest.pop(0)  # drop the oldest non-system turn, keep the most recent + the final message
+    kept = system + rest
+    if total(kept) > budget:
+        raise ValueError(
+            f"LLM input exceeds the {model} budget ({total(kept)} > {budget} tokens) even after trimming "
+            f"history — reduce/scope the system prompt")
+    return kept
