@@ -11,6 +11,23 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+### 2026-06-16
+- **QUAL-52 PR4 — dropped the temperature / fine-tuning knobs.** Per "temperature and fine-tunings aren't needed": removed
+  `temperature` from the 3 LLM provider schemas, config-master, and the providers' config/kwargs plumbing (plus the dead
+  `top_p`/`frequency_penalty`/`presence_penalty` no provider ever read); each provider now uses a fixed module-level
+  `_LLM_TEMPERATURE = 0.0` — deterministic is what every LLM use here wants (ASR correction, translation, the QUAL-50
+  classifier). Whisper ASR's decoding `temperature` untouched (different concern). config-ui: no typed temperature field
+  (free-form params dict) → nothing to sync, openapi unchanged. Suite 982 green, pyright 0, contracts 9/9.
+- **QUAL-52 PR3 REVERTED — structured/JSON LLM output rested on a wrong premise.** PR3 added `generate_structured` +
+  `response_format` json_object plumbing as "the path the QUAL-50 NLU classifier returns through". On re-examination (you
+  flagged it) that's wrong: an NLU provider returns a **plain `Intent`** {name, entities, confidence}, identical to
+  keyword/spaCy — there is no place in the cascade for a bespoke structured object. Parameter extraction is the provider's
+  `extract_parameters` step; catalog grounding is the **shared** `ContextualEntityResolver` applied downstream to *every*
+  provider's Intent. So the LLM classifier needs only a plain text classification call + the existing extract/resolve — not
+  a generic JSON-dict capability on the component. Reverted `generate_structured`/`_parse_json_response`/the response_format
+  pass-through/`test_llm_structured.py` (commit `beb08e3`); kept PR1 (budgets) + PR2 (fit_messages) — independent and
+  correct. QUAL-50 design corrected in the ledger (plain Intent, raw spans not catalog IDs, no `LLMPort.generate_structured`).
+
 ### 2026-06-15
 - **QUAL-52 PR2 follow-up — `context_window` in config (you flagged: only the output side was defined).** PR1 put the
   output budget (`max_tokens` → model max) into config but the input `context_window` lived only in the code registry.
