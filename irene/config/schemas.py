@@ -227,7 +227,6 @@ class OpenAIProviderSchema(LLMProviderSchema):
     model: str = Field(default="gpt-4", description="Model to use")
     max_tokens: int = Field(default=16384, ge=1, description="Maximum tokens")
     context_window: int = Field(default=128000, description="Input context window (tokens); default = the model capability (QUAL-52)")
-    temperature: float = Field(default=0.3, ge=0.0, le=2.0, description="Temperature")
     target_language: str = Field(default="English", description="Target language for translation")
 
 
@@ -237,7 +236,6 @@ class AnthropicProviderSchema(LLMProviderSchema):
     model: str = Field(default="claude-3-haiku-20240307", description="Model to use")
     max_tokens: int = Field(default=8192, ge=1, description="Maximum tokens")
     context_window: int = Field(default=200000, description="Input context window (tokens); default = the model capability (QUAL-52)")
-    temperature: float = Field(default=0.3, ge=0.0, le=1.0, description="Temperature")
 
 
 class DeepSeekProviderSchema(LLMProviderSchema):
@@ -247,7 +245,6 @@ class DeepSeekProviderSchema(LLMProviderSchema):
     model: str = Field(default="deepseek-chat", description="Model: deepseek-chat (V3) | deepseek-reasoner (R1)")
     max_tokens: int = Field(default=8000, description="Maximum response tokens")
     context_window: int = Field(default=64000, description="Input context window (tokens); default = the model capability (QUAL-52)")
-    temperature: float = Field(default=0.3, description="Creativity level")
 
 
 class ConsoleLLMProviderSchema(LLMProviderSchema):
