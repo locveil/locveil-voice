@@ -12,6 +12,15 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-15
+- **ARCH-24: config-master + parameter schema for piper (Inv #2/#4 — gaps from PR2/T1).** User caught that PR2 added the
+  `piper` provider without the canonical `config-master.toml` block (it documents every provider — was 6/7 TTS) and that
+  T1's `whisper-small` pack wasn't in the sherpa `model` list. The completeness test (`test_parameter_schema_unification`)
+  enforces config-master↔schema alignment: adding the `[tts.providers.piper]` block first surfaced it as **orphaned** (no
+  registered schema). Fixed properly: new `PiperProviderSchema(TTSProviderSchema)` (voice/speaker_id/speed/num_threads/
+  preload_models) registered in `auto_registry`; added the config-master block (now **7/7 TTS** = all entry points) +
+  `whisper-small` to the sherpa `model` comment. **Inv #4:** config-ui builds + type-checks clean — it consumes providers
+  **dynamically** via the `/config/providers` endpoint (no per-provider typing in `openapi.gen.ts`), so the new provider is
+  additive. Gates: suite 943, schema-unification 14/14, pyright 0, contracts 9/9, config_validator valid.
 - **ARCH-24 T2 PR2 — PiperTTSProvider (base).** New `providers/tts/piper.py` + entry point `piper`: VITS via sherpa-onnx
   `OfflineTts` (the one armv7 ONNX engine), one provider with the `voice` chosen by config (irina/ruslan/denis/dmitri
   k2-fsa packs → `download_model(extract=True)` → `piper/<voice>/`, resolved recursively since the tarball nests).

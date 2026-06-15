@@ -173,6 +173,17 @@ sample_rate = 22050                # Audio sample rate
 voice_speed = 1.0                  # Voice speed multiplier (0.1-3.0)
 preload_models = true              # Preload AI models during provider initialization for faster startup
 
+# Piper TTS Provider (VITS via sherpa-onnx ONNX runtime; torch-free, runs on armv7 — ARCH-24)
+[tts.providers.piper]
+enabled = false                     # Enable Piper provider
+voice = "irina"                    # ru_RU voice: "irina" (female, best) | "ruslan" | "denis" | "dmitri"
+speaker_id = 0                     # Speaker id within the voice model (single-speaker → 0)
+speed = 1.0                        # Speech speed multiplier (length_scale; 0.1-3.0)
+num_threads = 0                    # onnxruntime threads (0 = auto: 2 on armv7, min(4,cpu) on 64-bit)
+preload_models = true              # Pay the onnxruntime graph-init at boot, off the first-utterance path
+# Note: espeak-ng phonemization is bundled in sherpa-onnx; for stronger Russian stress on 64-bit
+# use the `piper_ruaccent` provider instead (adds a RUAccent pass; not available on armv7).
+
 # ============================================================
 # AUDIO (PLAYBACK) COMPONENT CONFIGURATION
 # ============================================================
@@ -255,7 +266,7 @@ preload_models = true              # Preload AI models during provider initializ
 # The only ASR provider that runs on armv7 (Wirenboard 7) — no torch, no Kaldi.
 [asr.providers.sherpa_onnx]
 enabled = false                    # Enable sherpa-onnx provider
-model = "vosk-model-small-ru"      # Pack: vosk-model-small-ru | vosk-model-ru | vosk-model-small-streaming-ru | whisper-tiny | whisper-base
+model = "vosk-model-small-ru"      # Pack: vosk-model-small-ru | vosk-model-ru | vosk-model-small-streaming-ru | whisper-tiny | whisper-base | whisper-small (64-bit)
 model_type = "vosk-transducer"     # "vosk-transducer" | "whisper" (multilingual) | "vosk-streaming" (online/low-latency, 64-bit)
 default_language = "ru"            # Model language (alphacep VOSK packs are Russian)
 sample_rate = 16000                # Audio sample rate (Zipformer2 frontend is 16 kHz)

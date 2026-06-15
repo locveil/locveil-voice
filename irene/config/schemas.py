@@ -122,6 +122,15 @@ class PyttSXProviderSchema(TTSProviderSchema):
     voice_volume: float = Field(default=1.0, ge=0.0, le=1.0, description="Volume level")
 
 
+class PiperProviderSchema(TTSProviderSchema):
+    """Piper TTS provider configuration schema (ARCH-24: VITS via sherpa-onnx, torch-free, armv7)"""
+    voice: str = Field(default="irina", description="ru_RU voice: irina | ruslan | denis | dmitri")
+    speaker_id: int = Field(default=0, description="Speaker id within the voice model (single-speaker = 0)")
+    speed: float = Field(default=1.0, ge=0.1, le=3.0, description="Speech speed multiplier (length_scale)")
+    num_threads: int = Field(default=0, description="onnxruntime threads (0 = auto: armv7=2, else min(4,cores))")
+    preload_models: bool = Field(default=False, description="Preload model during init (pay graph-init at boot)")
+
+
 # ============================================================
 # AUDIO PROVIDER SCHEMAS
 # ============================================================

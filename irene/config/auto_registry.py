@@ -148,8 +148,8 @@ class AutoSchemaRegistry:
             # Import all provider schema classes
             from .schemas import (
                 # TTS providers
-                ConsoleProviderSchema, ElevenLabsProviderSchema, SileroV3ProviderSchema, 
-                SileroV4ProviderSchema, VoskTTSProviderSchema, PyttSXProviderSchema,
+                ConsoleProviderSchema, ElevenLabsProviderSchema, SileroV3ProviderSchema,
+                SileroV4ProviderSchema, VoskTTSProviderSchema, PyttSXProviderSchema, PiperProviderSchema,
                 # Audio providers
                 SoundDeviceProviderSchema, APlayProviderSchema, ConsoleAudioProviderSchema, MiniaudioProviderSchema,
                 # ASR providers
@@ -175,6 +175,7 @@ class AutoSchemaRegistry:
                     "silero_v4": SileroV4ProviderSchema,
                     "vosk": VoskTTSProviderSchema,
                     "pyttsx": PyttSXProviderSchema,
+                    "piper": PiperProviderSchema,
                 },
                 "audio": {
                     "console": ConsoleAudioProviderSchema,
