@@ -12,6 +12,14 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-15
+- **QUAL-47 (final sweep item) — retired the dead `test_vad_sibilant_fix.py` debug script + its orphaned config.**
+  Verified-then-deleted: `tools/test_vad_sibilant_fix.py` was **already broken** — it imported
+  `UniversalAudioProcessor` from `workflows.audio_processor`, a class renamed to `VoiceSegmenter` in the ARCH-18
+  refactor, so the script raised `ImportError` on load and could not run. Not an entry point, not imported by any
+  code or test; its only references were itself and one archive doc (`docs/archive/VAD_SIBILANT_FIX.md`, left as
+  record). Removed it plus its sole companion **`configs/vad-sibilant-fix.toml`** (a one-off test config referenced
+  by nothing else). No live references remain. The `tools/` dir now holds only active tooling
+  (`generate_schemas.py`).
 - **QUAL-48 — removed the v13→v14 runtime config-migration path (decision: remove).** The last v13/v14 relic after the
   QUAL-47 sweep. `irene/config/migration.py` (637 lines — `V13ToV14Migrator`, `migrate_config`,
   `ConfigurationCompatibilityChecker`, `create_migration_backup`) was *live* but guarded: `config/manager.py:_dict_to_config`
