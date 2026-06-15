@@ -6,6 +6,9 @@ import time
 import unittest
 from unittest.mock import MagicMock
 
+import pytest
+
+from ._perf import under_coverage
 from ..core.trace_context import TraceContext
 from ..intents.context_models import UnifiedConversationContext
 
@@ -21,6 +24,8 @@ class TestTraceContextPerformance(unittest.TestCase):
         self.mock_conversation_context.session_id = "test_session"
         self.mock_conversation_context.user_id = "test_user"
     
+    @pytest.mark.skipif(under_coverage(),
+                        reason="absolute wall-clock assertion unreliable under coverage instrumentation")
     def test_zero_overhead_when_disabled(self):
         """Test that TraceContext has zero overhead when disabled"""
         trace_context = TraceContext(enabled=False)
