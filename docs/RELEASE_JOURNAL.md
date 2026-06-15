@@ -12,6 +12,16 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-15
+- **QUAL-47 — retired obsolete v13/v14 migration tools (QUAL-46 follow-up).** Verified-then-deleted, per the
+  before-deleting discipline: confirmed the project is on **15.0.0**, both tools target long-past versions, and
+  neither is imported by any runtime code or test. **`irene/tools/config_migrator.py`** (a v13→v14 config-file
+  migrator) — removed the file and its `irene-config-migrate` `[project.scripts]` entry; not reused by
+  `config_validator_cli` or anything else. **`tools/migrate_runners.py`** (legacy `runva_*.py` → v13 runner mapper)
+  — removed; it was already **broken by QUAL-46** because it referenced `irene.runners.vosk_runner`/`VoskRunner`/
+  `run_vosk`, which no longer exist. Only references anywhere were two `docs/archive/*` historical notes, left as
+  record. Package re-syncs (entry points valid), the deleted modules import-fail as expected, no lingering code/config
+  references, 9/9 import contracts. One sibling migrator remains (`tools/migrate_to_universal_plugins.py`, also
+  pre-v15) — noted, not in scope.
 - **QUAL-46 — vosk runner generalized into a config-driven voice runner.** Analysis (no-code, requested) found the
   `VoskRunner` was already a full end-to-end microphone pipeline (mic → VAD → [wake word, if configured] → ASR → text
   → NLU → intent → spoken reply, + deferred F&F speech), but **artificially coupled to vosk** by exactly two gates: an

@@ -292,7 +292,15 @@ See `docs/review/phase1_architecture_map.md` §5.
       New `test_voice_runner.py` (8 tests: provider-agnostic validation + the force-rules incl. VAD). 9/9 import
       contracts; runner/vad suites net-zero (4 pre-existing TEST-2 failures). Invariant #4 N/A (no config schema/endpoint
       change — purely a runner gate + rename). _Note: the v13-era `tools/migrate_runners.py` still maps the old name as
-      a v13→v14 migration target; left untouched (obsolete, like `config_migrator` — flagged separately)._
+      a v13→v14 migration target; left untouched (obsolete, like `config_migrator` — flagged separately → QUAL-47)._
+- [x] **QUAL-47** [WS] (P2) `[deferred]` — **DONE 2026-06-15.** Retire the obsolete one-time migration tools (the
+      QUAL-46 follow-up). On v15.0.0, both target long-past versions and neither is imported by runtime code:
+      **`irene/tools/config_migrator.py`** (v13→v14 config migration; entry point `irene-config-migrate`) and
+      **`tools/migrate_runners.py`** (legacy `runva_*.py`→v13 runners — already broken by the QUAL-46 rename, since it
+      referenced `vosk_runner`/`VoskRunner`/`run_vosk`). Deleted both + removed the `irene-config-migrate`
+      `[project.scripts]` entry. No tests/code referenced them (only two `docs/archive/*` historical mentions, left as
+      record). Package re-syncs clean; 9/9 import contracts. _Sibling still open: `tools/migrate_to_universal_plugins.py`
+      (another pre-v15 migrator) — not in scope here._
 - [x] **ARCH-7** [MQTT] — **✓ DONE 2026-06-06** (design session; deliverable `docs/design/mqtt_integration.md`, and the
       cross-project bridge contract AGREED with the user in the bridge session — `wb-mqtt-bridge/docs/
       voice_integration_contract_draft.md`, status AGREED 2026-06-06). **Approach REDEFINED (Invariant #8(d), approved):**

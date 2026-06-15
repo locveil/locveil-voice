@@ -210,7 +210,6 @@ all = [
 
 [project.scripts]
 # Configuration and build management tools
-irene-config-migrate = "irene.tools.config_migrator:main"
 irene-config-validate = "irene.tools.config_validator_cli:main"
 irene-build-analyze = "irene.tools.build_analyzer:main"
 irene-dependency-validate = "irene.tools.dependency_validator:main"
