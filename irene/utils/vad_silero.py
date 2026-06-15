@@ -43,6 +43,7 @@ class SileroVADEngine(VADEngine):
         if self._vad is not None:
             return self._vad
         import sherpa_onnx
+        from .inference_policy import InferencePolicy
 
         if not (self._model_path.exists() and self._model_path.stat().st_size > 0):
             self._model_path.parent.mkdir(parents=True, exist_ok=True)
@@ -55,8 +56,9 @@ class SileroVADEngine(VADEngine):
         cfg.silero_vad.min_silence_duration = self.min_silence_s
         cfg.silero_vad.min_speech_duration = self.min_speech_s
         cfg.sample_rate = self.sample_rate
+        cfg.num_threads = InferencePolicy.for_platform().num_threads  # ARCH-24 T5: shared thread budget
         self._vad = sherpa_onnx.VoiceActivityDetector(cfg, buffer_size_in_seconds=30)
-        logger.info(f"SileroVAD engine ready (threshold={self.threshold})")
+        logger.info(f"SileroVAD engine ready (threshold={self.threshold}, threads={cfg.num_threads})")
         return self._vad
 
     def process_frame(self, audio_data: AudioData) -> VADResult:

@@ -257,8 +257,12 @@ verification; standalone needs nothing new.
     `SherpaSession`/`InferencePolicy` helper (resolve model-dir from the asset manager + apply the platform thread policy +
     build off the event loop) and fold in `SherpaInferencePolicy` (today only in `sherpa_onnx.py:39-57`) + the silero VAD
     (which currently **ignores** the policy and hardcodes sherpa defaults — `utils/vad_silero.py:52-58`), so `num_threads`
-    is set consistently across all sherpa providers on the A7/A53. Introduce **with T2**, not by copying the boilerplate a
-    third time. (Session construction stays per-provider — `from_transducer`/`from_whisper`/`OfflineTts`/`VAD` don't unify.)
+    is set consistently across all sherpa providers on the A7/A53. (Session construction stays per-provider —
+    `from_transducer`/`from_whisper`/`OfflineTts`/`VAD` don't unify.) **— DONE 2026-06-15 (PR1):** extracted the policy to
+    `utils/inference_policy.InferencePolicy`; sherpa ASR + Piper TTS + silero VAD (VAD now sets `cfg.num_threads`) all use
+    it; `SherpaInferencePolicy` kept as a back-compat alias; the duplicated `_num_threads` in piper removed.
+    `test_inference_policy.py`. (A full `SherpaSession` build-helper was deemed unnecessary — only the thread budget is
+    genuinely shared.) **PR2** = the torch cache below.
   - **Torch:** optional `TorchModelCache` for `silero_v3`/`silero_v4` — near-identical copy-pasted class-level
     `_model_cache` + lock + `_get_or_load_cached_model` (~30 lines each). The torch `whisper.py` provider does **NOT** need
     it (caching delegated to `whisper.load_model()`; one lazy instance, no manual cache/lock to dedupe).

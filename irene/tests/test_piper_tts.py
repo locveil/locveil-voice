@@ -7,7 +7,7 @@ and the base text-prep hook (which `piper_ruaccent` overrides in PR3).
 
 import asyncio
 
-from irene.providers.tts.piper import PiperTTSProvider, _float_to_pcm16, _num_threads
+from irene.providers.tts.piper import PiperTTSProvider, _float_to_pcm16
 
 
 def test_voice_descriptors_are_extractable_tarballs():
@@ -39,12 +39,6 @@ def test_float_to_pcm16_is_numpy_free_and_correct():
     assert _float_to_pcm16([0.0, 1.0, -1.0]) == le(0) + le(32767) + le(-32767)
     # out-of-range inputs clamp to the int16 limits (no overflow/wrap).
     assert _float_to_pcm16([2.0, -2.0]) == le(32767) + le(-32768)
-
-
-def test_num_threads_conservative_on_armv7(monkeypatch):
-    monkeypatch.setattr("irene.providers.tts.piper.platform.machine", lambda: "armv7l")
-    assert _num_threads() == 2          # headroom for the co-tenant bridge
-    assert _num_threads(override=3) == 3  # explicit override wins
 
 
 def test_resolve_pack_finds_nested_voice_files(tmp_path):

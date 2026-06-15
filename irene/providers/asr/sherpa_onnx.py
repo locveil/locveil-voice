@@ -24,37 +24,18 @@ import array
 import asyncio
 import io
 import logging
-import os
-import platform
 import wave
-from dataclasses import dataclass
 from typing import Any, AsyncIterator, Callable, Dict, List, Optional
 
 from .base import ASRProvider
+from ...utils.inference_policy import InferencePolicy
 
 logger = logging.getLogger(__name__)
 
 
-@dataclass
-class SherpaInferencePolicy:
-    """Platform-aware inference policy (decoupled per design §5.2b).
-
-    Not a shared session — sherpa-onnx sessions stay inside each provider — just the
-    thread/CPU budget the provider reads. armv7 stays conservative so it doesn't
-    oversubscribe the 4 Cortex-A7 cores while wb-mqtt-bridge runs on the same box.
-    """
-
-    num_threads: int
-    provider: str = "cpu"  # onnxruntime execution provider
-
-    @classmethod
-    def for_platform(cls, override: Optional[int] = None) -> "SherpaInferencePolicy":
-        if override and override > 0:
-            return cls(num_threads=int(override))
-        machine = platform.machine().lower()
-        if machine.startswith("armv7") or machine.startswith("armv6"):
-            return cls(num_threads=2)  # leave headroom for the co-tenant bridge
-        return cls(num_threads=min(4, os.cpu_count() or 2))
+# ARCH-24 T5: the inference policy moved to `utils.inference_policy` and is now shared by the
+# sherpa-onnx ASR, VAD and Piper-TTS providers. `SherpaInferencePolicy` kept as a back-compat alias.
+SherpaInferencePolicy = InferencePolicy
 
 
 class SherpaOnnxASRProvider(ASRProvider):
@@ -75,7 +56,7 @@ class SherpaOnnxASRProvider(ASRProvider):
         self.sample_rate: int = config.get("sample_rate", 16000)
         self.feature_dim: int = config.get("feature_dim", 80)
         self.decoding_method: str = config.get("decoding_method", "greedy_search")
-        self.policy = SherpaInferencePolicy.for_platform(config.get("num_threads"))
+        self.policy = InferencePolicy.for_platform(config.get("num_threads"))
         self._is_streaming = self.model_type in ("vosk-streaming", "vosk-streaming-transducer")
 
         self._recognizer: Any = None

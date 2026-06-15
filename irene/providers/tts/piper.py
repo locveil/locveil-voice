@@ -15,34 +15,23 @@ Design notes:
   the sherpa ASR provider).
 - one provider, the **voice** selected by config (like `sherpa_onnx` selects `model_type`).
 - the onnxruntime graph init is blocking — built off the event loop in `warm_up()`/first synth.
-- T5 will factor the thread policy + session build into a shared `SherpaInferencePolicy` helper
-  used by the sherpa ASR / VAD / TTS providers; kept local here to keep PR2 self-contained.
+- uses the shared `InferencePolicy` (utils.inference_policy) for the thread budget — consistent with
+  the sherpa-onnx ASR + VAD providers (ARCH-24 T5).
 """
 
 import array
 import asyncio
 import logging
-import os
-import platform
 import sys
 import wave
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Tuple
 
 from .base import TTSProvider
 from ...utils.audio_stream import PCMStream
+from ...utils.inference_policy import InferencePolicy
 
 logger = logging.getLogger(__name__)
-
-
-def _num_threads(override: Optional[int] = None) -> int:
-    """Platform-aware CPU budget for the sherpa-onnx session (mirrors the ASR provider; T5 unifies)."""
-    if override and override > 0:
-        return int(override)
-    machine = platform.machine().lower()
-    if machine.startswith("armv7") or machine.startswith("armv6"):
-        return 2  # leave headroom for the co-tenant bridge on the WB7
-    return min(4, os.cpu_count() or 2)
 
 
 def _float_to_pcm16(samples) -> bytes:
@@ -71,7 +60,7 @@ class PiperTTSProvider(TTSProvider):
         self.language: str = config.get("language", "ru")
         self.speaker_id: int = int(config.get("speaker_id", 0))
         self.speed: float = float(config.get("speed", 1.0))
-        self.num_threads: int = _num_threads(config.get("num_threads"))
+        self.num_threads: int = InferencePolicy.for_platform(config.get("num_threads")).num_threads
 
         self._tts: Any = None  # sherpa_onnx.OfflineTts, lazily built
 

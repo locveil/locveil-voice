@@ -12,6 +12,13 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-15
+- **ARCH-24 T5 PR1 — shared InferencePolicy.** Extracted the sherpa thread/CPU budget (was `SherpaInferencePolicy` in the
+  ASR provider, a duplicated `_num_threads` in piper, and ignored by silero VAD) to `utils/inference_policy.InferencePolicy`.
+  Now shared by sherpa ASR + Piper TTS + silero VAD (which now sets `cfg.num_threads` — sherpa's `VadModelConfig` has it).
+  `SherpaInferencePolicy` kept as a back-compat alias; piper's `_num_threads` removed. Decided a full `SherpaSession`
+  build-helper isn't worth it — the session APIs (`from_transducer`/`from_whisper`/`OfflineTts`/`VAD`) don't unify; only the
+  thread budget is shared. `test_inference_policy.py` (4). Suite 967 green, pyright 0, contracts 9/9 (utils→utils +
+  providers→utils legal), no-TYPE_CHECKING clean. Next: PR2 — `TorchModelCache` for silero v3/v4.
 - **ARCH-24 T3 PR2 — the armv7 build gate (T3 tooling COMPLETE).** `IreneBuildAnalyzer.validate_architecture(config,
   arch)` reuses the enabled-provider analysis + `get_supported_architectures()` to flag a profile enabling an
   arch-incapable provider; new `--arch` CLI flag exits nonzero on failure. Wired into `backend-health.yml`
