@@ -2,9 +2,15 @@
 
 **Status:** design AGREED 2026-06-06. The Irene-side design and the cross-project bridge contract are
 both reconciled — see
-[`voice_integration_contract_draft.md`](../../../wb-mqtt-bridge/docs/voice_integration_contract_draft.md)
+[`voice_integration_contract_draft.md`](../../../wb-mqtt-bridge/docs/design/voice_integration_contract_draft.md)
 (status AGREED 2026-06-06) in the sister repo for the definitive bridge shape. **ARCH-8 is
 unblocked**; implementation sliced in §10.
+>
+> **Reconciled 2026-06-15:** absorbed the bridge's **value-label translation layer** (bridge §P3.7 #26,
+> 2026-06-09 — postdates the AGREED contract) into the catalog/enum contract (§5a) — controllable enum
+> fields now project `{wire, canonical, labels}` triplets and device-enum resolution rides the QUAL-29
+> surface→canonical CHOICE mechanism. The cross-project contract doc moved to `docs/design/` and is being
+> updated bridge-side to match.
 
 > Supersedes `docs/archive/intent_mqtt.md` (the v13-era "MQTT intent handler with runtime method
 > generation" design — explicitly rejected, see §2).
@@ -142,6 +148,17 @@ UI-oriented). Irene pulls it on boot and builds the DeviceCatalog:
   label. (`device_name` widened string→`names:{…}` bridge-side; Irene just consumes `names`.)
 - **Capability-shaped & matches the write vocabulary**: Irene learns *"wb-mr6c_47, in Детская,
   supports `power`"* and speaks `power.on` back. One vocabulary end to end.
+- **Enum/CHOICE fields carry value-labels** *(bridge §P3.7 #26, reconciled 2026-06-15 — postdates the
+  AGREED contract).* A controllable enum field's `values` is a list of **`{wire, canonical, labels}`**
+  triplets, e.g. an HVAC `mode` field:
+  `{"name":"mode","values":[{"wire":"2","canonical":"cool","labels":{"ru":"охлаждение","en":"cool"}}, …]}`.
+  Irene matches the spoken **`labels`** in the active locale and sends the **`canonical`** token in the
+  command params (§5b); the bridge translates `canonical`→`wire` on the bus. `wire` is informational for
+  Irene (authoritative only on the bus). **This is the QUAL-29 surface→canonical CHOICE model applied to
+  device enums** — `labels` are the surfaces, `canonical` is the token — so ARCH-8/QUAL-35 device-enum
+  resolution reuses the existing extraction path, no new mechanism. _Caveat:_ the bridge's
+  `CatalogAction.params` introspection (type/min/max/choices) is still self-described as **owed work**, so
+  ARCH-8 should treat per-action param schemas as best-effort until the bridge fills them in.
 - **Sensors** = one read-only `sensor` capability with `fields` (no actions) — drives the **read**
   flow (§6), not actuation.
 - **One device, one room** (`room: Optional[str]` — *tightened from a multi-room draft 2026-06-06*).
@@ -322,7 +339,7 @@ for v1).
 
 - **Irene side:** ARCH-7 (this design) → ARCH-8 (implement, §10) + QUAL-35 (device NLU + handlers).
 - **Bridge side:** tracked in `wb-mqtt-bridge/docs/action_plan.md`; the requirements are drafted in
-  `wb-mqtt-bridge/docs/voice_integration_contract_draft.md` for the bridge session. ARCH-8 is blocked
+  `wb-mqtt-bridge/docs/design/voice_integration_contract_draft.md` for the bridge session. ARCH-8 is blocked
   on that work.
 
 ## 13. Reconciliation with the I/O architecture (ARCH-15) — the contract ARCH-8 builds against

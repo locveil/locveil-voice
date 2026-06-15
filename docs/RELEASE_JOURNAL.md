@@ -32,6 +32,22 @@ newest entries near the top of each dated section.
   (`trace_context` 76%, `trace_input` 89%), new wiring is thin (`replay_trace`/`voice_runner` 34%). Suite still at its
   baseline (82 failed / 472 passed / 15 skipped — the ±1 is a coverage-perturbed timing benchmark, not a regression).
   Next: Phase B triage + risk-ranked worklist, then the workflow.
+- **MQTT design reconciled with the bridge's value-label layer + moved-doc link fixed (both repos).** Validity check
+  (no-code analysis, requested): the bridge had ~40 commits since `mqtt_integration.md` was last updated (2026-06-07),
+  mostly hygiene — but two touch the contract. (1) The cross-project contract doc **moved**
+  (`wb-mqtt-bridge/docs/voice_integration_contract_draft.md` → `docs/design/…`), so the Irene doc's two links were stale.
+  (2) A **value-label translation layer** landed (bridge §P3.7 #26, 2026-06-09 — *postdates* both docs' AGREED-2026-06-06
+  status): `/system/catalog` now projects controllable enum fields' `values` as **`{wire, canonical, labels}`** triplets
+  (`CatalogValueLabel`) instead of bare strings, explicitly for voice — Irene matches the spoken `labels` in-locale and
+  posts the `canonical` token; the bridge translates `canonical`↔`wire`. The CORE contract is otherwise intact (canonical
+  `POST /devices/{id}/canonical`, `GET /system/catalog`, the `error.code` enum, the `bridge/catalog/version` nudge — all
+  unchanged). Reconciliations made: **Irene `mqtt_integration.md`** — fixed both links, added a top reconciliation note,
+  and a §5a value-label bullet (device-enum resolution rides the **QUAL-29 surface→canonical** CHOICE mechanism — no new
+  mechanism; flagged the bridge's still-"owed-work" param introspection as a best-effort caveat); **ARCH-8 ledger** —
+  a catalog-contract-amended pointer; **bridge `voice_integration_contract_draft.md`** (sister repo) — a "Value-labels
+  for controllable enum fields" §B subsection + a status-line amendment. The design's foundation was valid throughout;
+  it was just *behind* the bridge on enum handling. (Historical journal entries referencing the old contract-doc path
+  are frozen and left as-is.)
 - **TEST-5 DONE — text-processor / normalizer coverage; ALL TEST- tasks now closed.** The provider
   (`UnifiedTextProcessor`) was already covered (`test_text_processing.py`); added `test_text_normalizers_coverage.py`
   (11 tests) for the actual normalizers (`utils/text_normalizers.py`) + the component's live methods: **NumberNormalizer**

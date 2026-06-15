@@ -342,7 +342,11 @@ See `docs/review/phase1_architecture_map.md` §5.
 - [ ] **ARCH-8** [MQTT] (P-TBD) — **★ ARCH-22 (2026-06-14):** the **voice-confirmation of actuation** feature (T-B,
       `docs/design/esp32_satellite.md` §10) rides this task — a sequenced `DEVICE_COMMAND → bridge rich DeliveryResult →
       derive text → SPEECH to the origin device` (opt-in `confirm_actuation_by_voice`; device-transparent, reply via
-      ARCH-21). Implement it with ARCH-8's rich `DeliveryResult`. _Orig:_ **UNBLOCKED 2026-06-06** (contract AGREED); **RECONCILED with the I/O architecture
+      ARCH-21). Implement it with ARCH-8's rich `DeliveryResult`. **★ Catalog contract amended 2026-06-15:** the bridge's
+      `/system/catalog` now projects controllable enum fields' `values` as `{wire, canonical, labels}` triplets (bridge
+      §P3.7 #26) — ARCH-8's `DeviceCatalog` parses them and device-enum resolution rides the **QUAL-29 surface→canonical**
+      path (`labels`=surfaces, `canonical`=token; bridge translates `canonical`→`wire`). See `mqtt_integration.md` §5a.
+      _Orig:_ **UNBLOCKED 2026-06-06** (contract AGREED); **RECONCILED with the I/O architecture
       2026-06-07 (ARCH-15 PR-9.1) — build against `mqtt_integration.md` §13**: bridge actuation is a **request/response
       `OutputPort`** returning the rich `DeliveryResult` (echo/error), `device_command` is a delivery **modality**
       capability-routed to the `designate(DEVICE_COMMAND,"bridge")` output, `DeviceCatalogPort` stays a read port, Flow-1
