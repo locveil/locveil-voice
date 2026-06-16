@@ -40,7 +40,7 @@ class SystemConfig(BaseModel):
     
     # Service capabilities
     web_api_enabled: bool = Field(default=True, description="Enable web API service")
-    web_port: int = Field(default=8000, ge=1, le=65535, description="Web API server port")
+    web_port: int = Field(default=6000, ge=1, le=65535, description="Web API server port (8000 is taken by wb-mqtt-bridge)")
 
     # ARCH-15 PR-6b: gated observation tap (debug). Disabled unless a token is set. Localhost-only
     # by default — set observe_allow_remote=true to accept non-local connections (still token-gated).

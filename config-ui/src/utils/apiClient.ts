@@ -118,7 +118,7 @@ interface RequestOptions extends RequestInit {
 class IreneApiClient {
   private baseUrl: string;
 
-  constructor(baseUrl: string = 'http://localhost:8000') {
+  constructor(baseUrl: string = 'http://localhost:6000') {
     this.baseUrl = baseUrl;
   }
 

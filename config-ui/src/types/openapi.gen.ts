@@ -1700,7 +1700,11 @@ export interface paths {
         put?: never;
         /**
          * Play Audio Stream
-         * @description Play audio from raw data stream
+         * @description Play audio from raw data stream.
+         *
+         *     ARCH-20: playback is PCM-only. A posted WAV container is parsed down to its
+         *     PCM payload + format; otherwise the bytes are treated as raw 16-bit PCM at
+         *     the canonical 44.1 kHz / mono. (External contract unchanged — Invariant #4.)
          */
         post: operations["play_audio_stream_audio_stream_post"];
         delete?: never;
@@ -2606,6 +2610,38 @@ export interface components {
              * @default false
              */
             concurrent_playback: boolean;
+            /**
+             * Playback Mode
+             * @description Local TTS playback path: 'file' (play_file) or 'stream' (play_stream + sink conform)
+             * @default file
+             * @enum {string}
+             */
+            playback_mode: "file" | "stream";
+            /**
+             * Canonical Rate
+             * @description Pin the canonical pipeline sample rate (Hz); None = auto-derive
+             */
+            canonical_rate?: number | null;
+            /**
+             * Canonical Format
+             * @description Pin the canonical sample format ('pcm16'|'float32'); None = auto
+             */
+            canonical_format?: string | null;
+            /**
+             * Canonical Channels
+             * @description Pin the canonical channel count; None = auto
+             */
+            canonical_channels?: number | null;
+            /**
+             * Output Rate
+             * @description Override the output sink sample rate (Hz); None = provider/CD
+             */
+            output_rate?: number | null;
+            /**
+             * Output Channels
+             * @description Override the output sink channel count; None = provider/CD
+             */
+            output_channels?: number | null;
             /**
              * Providers
              * @description Provider-specific configurations
@@ -3623,6 +3659,8 @@ export interface components {
             system?: components["schemas"]["SystemConfig"];
             /** @description Input sources configuration */
             inputs?: components["schemas"]["InputConfig"];
+            /** @description Output delivery channels configuration */
+            outputs?: components["schemas"]["OutputConfig"];
             /** @description Component configuration */
             components?: components["schemas"]["ComponentConfig"];
             /** @description Asset management configuration */
@@ -3644,6 +3682,8 @@ export interface components {
             vad?: components["schemas"]["VADConfig"];
             monitoring?: components["schemas"]["MonitoringConfig"];
             nlu_analysis?: components["schemas"]["NLUAnalysisConfig"];
+            /** @description Trace persistence configuration (ARCH-19) */
+            trace?: components["schemas"]["TraceConfig"];
             /**
              * Default Language
              * @description Canonical default language (2-letter, e.g. 'ru'/'en'). Seeds new sessions and is the detection fallback — the single source of truth.
@@ -6551,6 +6591,34 @@ export interface components {
             language: string;
         };
         /**
+         * OutputConfig
+         * @description Output delivery-channel configuration — the symmetric twin of InputConfig.
+         *
+         *     Declares which output adapters the runners/composition register on the OutputManager and their
+         *     settings. The OutputManager + the adapters are the runtime hexagon (ARCH-15 PR-2..6); this is the
+         *     config surface that gates them (config-ui renders it as the `[outputs]` editor).
+         */
+        OutputConfig: {
+            /**
+             * Console
+             * @description Enable console (terminal) text output (CLI channel)
+             * @default true
+             */
+            console: boolean;
+            /**
+             * Console Prefix
+             * @description Prefix for console output lines
+             * @default 📝
+             */
+            console_prefix: string;
+            /**
+             * Web Push
+             * @description Enable the browser push channel (/ws/output) for deferred results
+             * @default true
+             */
+            web_push: boolean;
+        };
+        /**
          * PerformanceAnalyticsResponse
          * @description Response for performance analytics
          */
@@ -7395,10 +7463,21 @@ export interface components {
             web_api_enabled: boolean;
             /**
              * Web Port
-             * @description Web API server port
-             * @default 8000
+             * @description Web API server port (8000 is taken by wb-mqtt-bridge)
+             * @default 6000
              */
             web_port: number;
+            /**
+             * Observe Token
+             * @description Shared token for the /ws/observe debug tap; None disables it
+             */
+            observe_token?: string | null;
+            /**
+             * Observe Allow Remote
+             * @description Allow non-localhost observation-tap connections (still token-gated)
+             * @default false
+             */
+            observe_allow_remote: boolean;
         };
         /**
          * SystemHandlerConfig
@@ -8291,6 +8370,65 @@ export interface components {
             } | null;
         };
         /**
+         * TraceConfig
+         * @description Trace persistence configuration (ARCH-19).
+         *
+         *     Opt-in save+replay layer over the ephemeral per-request TraceContext. The trigger now is
+         *     the runner `--trace` / `--trace-raw-mic` flag (which flips `enabled` / `capture_raw_mic`);
+         *     this section is the config-ui-editable home for the same knobs (D-7). Per D-17 the policy is
+         *     save-EVERY-request whenever tracing is enabled — there is no ring/on-error knob; retention is
+         *     manual. Normal traffic is unaffected when `enabled` is False (zero overhead).
+         */
+        TraceConfig: {
+            /**
+             * Enabled
+             * @description Save a self-contained trace for every request (D-7/D-17)
+             * @default false
+             */
+            enabled: boolean;
+            /**
+             * Capture Level
+             * @description Which audio is captured + where a replay re-enters: utterance (ASR-onward) | segmenter (VAD-onward, adds vad_frames) | raw (negotiate-onward)
+             * @default utterance
+             * @enum {string}
+             */
+            capture_level: "utterance" | "segmenter" | "raw";
+            /**
+             * Capture Raw Mic
+             * @description Enable the heavier always-on rolling buffer needed for raw-level capture of the LIVE mic (--trace-raw-mic)
+             * @default false
+             */
+            capture_raw_mic: boolean;
+            /**
+             * @description Minimum log level captured into a trace's logs[] (exceptions are always captured)
+             * @default INFO
+             */
+            log_threshold: components["schemas"]["LogLevel"];
+            /**
+             * Traces Dir
+             * @description Where trace files land; defaults to <assets_root>/traces when unset
+             */
+            traces_dir?: string | null;
+            /**
+             * Max Stages
+             * @description Per-trace cap on recorded pipeline stages (safety)
+             * @default 100
+             */
+            max_stages: number;
+            /**
+             * Max Data Size Mb
+             * @description Per-trace cap on total sanitised stage data (safety)
+             * @default 10
+             */
+            max_data_size_mb: number;
+            /**
+             * Max Log Records
+             * @description Per-trace cap on captured log records (safety)
+             * @default 500
+             */
+            max_log_records: number;
+        };
+        /**
          * TranslateRequest
          * @description Request the LLM translation *service*: translate a handler's phrasing from one language to another.
          */
@@ -8536,7 +8674,11 @@ export interface components {
         };
         /**
          * VADConfig
-         * @description Voice Activity Detection configuration
+         * @description Voice Activity Detection — component config (ARCH-18).
+         *
+         *     Component-level fields are the *segmenter / pipeline* concerns; the per-engine knobs live under
+         *     `[vad.providers.<name>]` (energy / silero / microvad), like every other provider family. The set of
+         *     providers is the `irene.providers.vad` entry-points (no hand-maintained enum).
          */
         VADConfig: {
             /**
@@ -8546,89 +8688,17 @@ export interface components {
              */
             enabled: boolean;
             /**
-             * Energy Threshold
-             * @description RMS energy threshold for voice detection
-             * @default 0.01
+             * Default Provider
+             * @description VAD provider: 'energy' (built-in) | 'silero' (sherpa-onnx) | 'microvad' (pymicro-vad). 64-bit for the latter two.
+             * @default energy
              */
-            energy_threshold: number;
-            /**
-             * Sensitivity
-             * @description Detection sensitivity multiplier
-             * @default 0.5
-             */
-            sensitivity: number;
-            /**
-             * Voice Duration Ms
-             * @description Minimum voice duration in milliseconds
-             * @default 100
-             */
-            voice_duration_ms: number;
-            /**
-             * Silence Duration Ms
-             * @description Minimum silence duration to end voice segment in milliseconds
-             * @default 200
-             */
-            silence_duration_ms: number;
+            default_provider: string;
             /**
              * Max Segment Duration S
              * @description Maximum voice segment duration in seconds
              * @default 10
              */
             max_segment_duration_s: number;
-            /**
-             * Voice Frames Required
-             * @description Consecutive voice frames to confirm voice onset
-             * @default 2
-             */
-            voice_frames_required: number;
-            /**
-             * Silence Frames Required
-             * @description Consecutive silence frames to confirm voice end
-             * @default 5
-             */
-            silence_frames_required: number;
-            /**
-             * Use Zero Crossing Rate
-             * @description Enable Zero Crossing Rate analysis
-             * @default true
-             */
-            use_zero_crossing_rate: boolean;
-            /**
-             * Adaptive Threshold
-             * @description Enable adaptive threshold adjustment
-             * @default false
-             */
-            adaptive_threshold: boolean;
-            /**
-             * Noise Percentile
-             * @description Percentile for noise floor estimation
-             * @default 15
-             */
-            noise_percentile: number;
-            /**
-             * Voice Multiplier
-             * @description Multiplier above noise floor for voice threshold
-             * @default 3
-             */
-            voice_multiplier: number;
-            /**
-             * Vad Implementation
-             * @description VAD engine: 'energy' (built-in) or 'silero' (SileroVAD-ONNX via sherpa-onnx, 64-bit)
-             * @default energy
-             */
-            vad_implementation: string;
-            /**
-             * Silero Threshold
-             * @description SileroVAD speech probability threshold (only when vad_implementation='silero')
-             * @default 0.5
-             */
-            silero_threshold: number;
-            /**
-             * Silero Model Url
-             * @description SileroVAD ONNX model URL (downloaded once into the asset folder)
-             * @default https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/silero_vad.onnx
-             */
-            silero_model_url: string;
             /**
              * Processing Timeout Ms
              * @description Maximum processing time per frame in milliseconds
@@ -8659,6 +8729,15 @@ export interface components {
              * @default true
              */
             enable_fallback_to_original: boolean;
+            /**
+             * Providers
+             * @description Per-provider configuration ([vad.providers.energy|silero|microvad])
+             */
+            providers?: {
+                [key: string]: {
+                    [key: string]: unknown;
+                };
+            };
         };
         /**
          * ValidateRequest
@@ -8778,9 +8857,9 @@ export interface components {
             default_provider?: string | null;
             /**
              * Wake Words
-             * @description Wake words to detect
+             * @description Optional component-level wake-word override (QUAL-20); when set, injected into the active provider. Normally left empty — wake words are declared per-provider.
              */
-            wake_words?: string[];
+            wake_words?: components["schemas"]["WakeWordSpec"][];
             /**
              * Confidence Threshold
              * @description Detection confidence threshold
@@ -8992,6 +9071,40 @@ export interface components {
              * @description Current threshold
              */
             threshold: number;
+        };
+        /**
+         * WakeWordSpec
+         * @description A single wake word — the uniform unit shared by every voice-trigger provider (QUAL-20).
+         *
+         *     ``name`` is the provider-agnostic label (also the room/satellite identity key); ``model`` is an
+         *     artifact reference (a built-in catalog name, or a path to a custom ``.tflite``/``.onnx`` + manifest —
+         *     the per-ESP32-unit Russian model); ``threshold`` and ``language`` are the per-word knobs. Provider
+         *     mechanics (openWakeWord ``inference_framework``, microWakeWord ``sliding_window_size``) live on the
+         *     provider, not here — uniformity is the shared shape, not a merge of provider internals.
+         */
+        WakeWordSpec: {
+            /**
+             * Name
+             * @description Logical wake-word label, e.g. 'irene' (also the room/identity key)
+             */
+            name: string;
+            /**
+             * Model
+             * @description Model ref: a built-in catalog name or a path to a custom model/manifest
+             */
+            model: string;
+            /**
+             * Threshold
+             * @description Detection threshold (0.0-1.0)
+             * @default 0.8
+             */
+            threshold: number;
+            /**
+             * Language
+             * @description Wake-word language (2-letter), e.g. 'ru'
+             * @default en
+             */
+            language: string;
         };
         /**
          * WebInputConfig

@@ -3558,7 +3558,7 @@
           "Audio Playback"
         ],
         "summary": "Play Audio Stream",
-        "description": "Play audio from raw data stream",
+        "description": "Play audio from raw data stream.\n\nARCH-20: playback is PCM-only. A posted WAV container is parsed down to its\nPCM payload + format; otherwise the bytes are treated as raw 16-bit PCM at\nthe canonical 44.1 kHz / mono. (External contract unchanged — Invariant #4.)",
         "operationId": "play_audio_stream_audio_stream_post",
         "parameters": [
           {
@@ -5088,6 +5088,76 @@
             "description": "Allow concurrent audio playback",
             "default": false
           },
+          "playback_mode": {
+            "type": "string",
+            "enum": [
+              "file",
+              "stream"
+            ],
+            "title": "Playback Mode",
+            "description": "Local TTS playback path: 'file' (play_file) or 'stream' (play_stream + sink conform)",
+            "default": "file"
+          },
+          "canonical_rate": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Canonical Rate",
+            "description": "Pin the canonical pipeline sample rate (Hz); None = auto-derive"
+          },
+          "canonical_format": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Canonical Format",
+            "description": "Pin the canonical sample format ('pcm16'|'float32'); None = auto"
+          },
+          "canonical_channels": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Canonical Channels",
+            "description": "Pin the canonical channel count; None = auto"
+          },
+          "output_rate": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Output Rate",
+            "description": "Override the output sink sample rate (Hz); None = provider/CD"
+          },
+          "output_channels": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Output Channels",
+            "description": "Override the output sink channel count; None = provider/CD"
+          },
           "providers": {
             "additionalProperties": {
               "additionalProperties": true,
@@ -6469,6 +6539,10 @@
             "$ref": "#/components/schemas/InputConfig",
             "description": "Input sources configuration"
           },
+          "outputs": {
+            "$ref": "#/components/schemas/OutputConfig",
+            "description": "Output delivery channels configuration"
+          },
           "components": {
             "$ref": "#/components/schemas/ComponentConfig",
             "description": "Component configuration"
@@ -6517,6 +6591,10 @@
           },
           "nlu_analysis": {
             "$ref": "#/components/schemas/NLUAnalysisConfig"
+          },
+          "trace": {
+            "$ref": "#/components/schemas/TraceConfig",
+            "description": "Trace persistence configuration (ARCH-19)"
           },
           "default_language": {
             "type": "string",
@@ -10377,6 +10455,31 @@
         "title": "NumberConversionResponse",
         "description": "Response for number-to-words conversion"
       },
+      "OutputConfig": {
+        "properties": {
+          "console": {
+            "type": "boolean",
+            "title": "Console",
+            "description": "Enable console (terminal) text output (CLI channel)",
+            "default": true
+          },
+          "console_prefix": {
+            "type": "string",
+            "title": "Console Prefix",
+            "description": "Prefix for console output lines",
+            "default": "📝 "
+          },
+          "web_push": {
+            "type": "boolean",
+            "title": "Web Push",
+            "description": "Enable the browser push channel (/ws/output) for deferred results",
+            "default": true
+          }
+        },
+        "type": "object",
+        "title": "OutputConfig",
+        "description": "Output delivery-channel configuration — the symmetric twin of InputConfig.\n\nDeclares which output adapters the runners/composition register on the OutputManager and their\nsettings. The OutputManager + the adapters are the runtime hexagon (ARCH-15 PR-2..6); this is the\nconfig surface that gates them (config-ui renders it as the `[outputs]` editor)."
+      },
       "PerformanceAnalyticsResponse": {
         "properties": {
           "success": {
@@ -11497,8 +11600,26 @@
             "maximum": 65535.0,
             "minimum": 1.0,
             "title": "Web Port",
-            "description": "Web API server port",
-            "default": 8000
+            "description": "Web API server port (8000 is taken by wb-mqtt-bridge)",
+            "default": 6000
+          },
+          "observe_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Observe Token",
+            "description": "Shared token for the /ws/observe debug tap; None disables it"
+          },
+          "observe_allow_remote": {
+            "type": "boolean",
+            "title": "Observe Allow Remote",
+            "description": "Allow non-localhost observation-tap connections (still token-gated)",
+            "default": false
           }
         },
         "type": "object",
@@ -12708,6 +12829,74 @@
           }
         ]
       },
+      "TraceConfig": {
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled",
+            "description": "Save a self-contained trace for every request (D-7/D-17)",
+            "default": false
+          },
+          "capture_level": {
+            "type": "string",
+            "enum": [
+              "utterance",
+              "segmenter",
+              "raw"
+            ],
+            "title": "Capture Level",
+            "description": "Which audio is captured + where a replay re-enters: utterance (ASR-onward) | segmenter (VAD-onward, adds vad_frames) | raw (negotiate-onward)",
+            "default": "utterance"
+          },
+          "capture_raw_mic": {
+            "type": "boolean",
+            "title": "Capture Raw Mic",
+            "description": "Enable the heavier always-on rolling buffer needed for raw-level capture of the LIVE mic (--trace-raw-mic)",
+            "default": false
+          },
+          "log_threshold": {
+            "$ref": "#/components/schemas/LogLevel",
+            "description": "Minimum log level captured into a trace's logs[] (exceptions are always captured)",
+            "default": "INFO"
+          },
+          "traces_dir": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Traces Dir",
+            "description": "Where trace files land; defaults to <assets_root>/traces when unset"
+          },
+          "max_stages": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Max Stages",
+            "description": "Per-trace cap on recorded pipeline stages (safety)",
+            "default": 100
+          },
+          "max_data_size_mb": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Max Data Size Mb",
+            "description": "Per-trace cap on total sanitised stage data (safety)",
+            "default": 10
+          },
+          "max_log_records": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Max Log Records",
+            "description": "Per-trace cap on captured log records (safety)",
+            "default": 500
+          }
+        },
+        "type": "object",
+        "title": "TraceConfig",
+        "description": "Trace persistence configuration (ARCH-19).\n\nOpt-in save+replay layer over the ephemeral per-request TraceContext. The trigger now is\nthe runner `--trace` / `--trace-raw-mic` flag (which flips `enabled` / `capture_raw_mic`);\nthis section is the config-ui-editable home for the same knobs (D-7). Per D-17 the policy is\nsave-EVERY-request whenever tracing is enabled — there is no ring/on-error knob; retention is\nmanual. Normal traffic is unaffected when `enabled` is False (zero overhead)."
+      },
       "TranslateRequest": {
         "properties": {
           "source_language": {
@@ -13042,37 +13231,11 @@
             "description": "Enable VAD processing",
             "default": true
           },
-          "energy_threshold": {
-            "type": "number",
-            "maximum": 1.0,
-            "minimum": 0.0,
-            "title": "Energy Threshold",
-            "description": "RMS energy threshold for voice detection",
-            "default": 0.01
-          },
-          "sensitivity": {
-            "type": "number",
-            "maximum": 3.0,
-            "minimum": 0.1,
-            "title": "Sensitivity",
-            "description": "Detection sensitivity multiplier",
-            "default": 0.5
-          },
-          "voice_duration_ms": {
-            "type": "integer",
-            "maximum": 1000.0,
-            "minimum": 10.0,
-            "title": "Voice Duration Ms",
-            "description": "Minimum voice duration in milliseconds",
-            "default": 100
-          },
-          "silence_duration_ms": {
-            "type": "integer",
-            "maximum": 2000.0,
-            "minimum": 50.0,
-            "title": "Silence Duration Ms",
-            "description": "Minimum silence duration to end voice segment in milliseconds",
-            "default": 200
+          "default_provider": {
+            "type": "string",
+            "title": "Default Provider",
+            "description": "VAD provider: 'energy' (built-in) | 'silero' (sherpa-onnx) | 'microvad' (pymicro-vad). 64-bit for the latter two.",
+            "default": "energy"
           },
           "max_segment_duration_s": {
             "type": "integer",
@@ -13081,68 +13244,6 @@
             "title": "Max Segment Duration S",
             "description": "Maximum voice segment duration in seconds",
             "default": 10
-          },
-          "voice_frames_required": {
-            "type": "integer",
-            "minimum": 1.0,
-            "title": "Voice Frames Required",
-            "description": "Consecutive voice frames to confirm voice onset",
-            "default": 2
-          },
-          "silence_frames_required": {
-            "type": "integer",
-            "minimum": 1.0,
-            "title": "Silence Frames Required",
-            "description": "Consecutive silence frames to confirm voice end",
-            "default": 5
-          },
-          "use_zero_crossing_rate": {
-            "type": "boolean",
-            "title": "Use Zero Crossing Rate",
-            "description": "Enable Zero Crossing Rate analysis",
-            "default": true
-          },
-          "adaptive_threshold": {
-            "type": "boolean",
-            "title": "Adaptive Threshold",
-            "description": "Enable adaptive threshold adjustment",
-            "default": false
-          },
-          "noise_percentile": {
-            "type": "integer",
-            "maximum": 50.0,
-            "minimum": 1.0,
-            "title": "Noise Percentile",
-            "description": "Percentile for noise floor estimation",
-            "default": 15
-          },
-          "voice_multiplier": {
-            "type": "number",
-            "maximum": 10.0,
-            "minimum": 1.0,
-            "title": "Voice Multiplier",
-            "description": "Multiplier above noise floor for voice threshold",
-            "default": 3.0
-          },
-          "vad_implementation": {
-            "type": "string",
-            "title": "Vad Implementation",
-            "description": "VAD engine: 'energy' (built-in) or 'silero' (SileroVAD-ONNX via sherpa-onnx, 64-bit)",
-            "default": "energy"
-          },
-          "silero_threshold": {
-            "type": "number",
-            "maximum": 1.0,
-            "minimum": 0.0,
-            "title": "Silero Threshold",
-            "description": "SileroVAD speech probability threshold (only when vad_implementation='silero')",
-            "default": 0.5
-          },
-          "silero_model_url": {
-            "type": "string",
-            "title": "Silero Model Url",
-            "description": "SileroVAD ONNX model URL (downloaded once into the asset folder)",
-            "default": "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/silero_vad.onnx"
           },
           "processing_timeout_ms": {
             "type": "integer",
@@ -13177,11 +13278,20 @@
             "title": "Enable Fallback To Original",
             "description": "Try original audio if normalized version fails recognition",
             "default": true
+          },
+          "providers": {
+            "additionalProperties": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "object",
+            "title": "Providers",
+            "description": "Per-provider configuration ([vad.providers.energy|silero|microvad])"
           }
         },
         "type": "object",
         "title": "VADConfig",
-        "description": "Voice Activity Detection configuration"
+        "description": "Voice Activity Detection — component config (ARCH-18).\n\nComponent-level fields are the *segmenter / pipeline* concerns; the per-engine knobs live under\n`[vad.providers.<name>]` (energy / silero / microvad), like every other provider family. The set of\nproviders is the `irene.providers.vad` entry-points (no hand-maintained enum)."
       },
       "ValidateRequest": {
         "properties": {
@@ -13371,11 +13481,11 @@
           },
           "wake_words": {
             "items": {
-              "type": "string"
+              "$ref": "#/components/schemas/WakeWordSpec"
             },
             "type": "array",
             "title": "Wake Words",
-            "description": "Wake words to detect"
+            "description": "Optional component-level wake-word override (QUAL-20); when set, injected into the active provider. Normally left empty — wake words are declared per-provider."
           },
           "confidence_threshold": {
             "type": "number",
@@ -13668,6 +13778,41 @@
         ],
         "title": "VoiceTriggerSwitchResponse",
         "description": "Response for provider switch operation"
+      },
+      "WakeWordSpec": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Logical wake-word label, e.g. 'irene' (also the room/identity key)"
+          },
+          "model": {
+            "type": "string",
+            "title": "Model",
+            "description": "Model ref: a built-in catalog name or a path to a custom model/manifest"
+          },
+          "threshold": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Threshold",
+            "description": "Detection threshold (0.0-1.0)",
+            "default": 0.8
+          },
+          "language": {
+            "type": "string",
+            "title": "Language",
+            "description": "Wake-word language (2-letter), e.g. 'ru'",
+            "default": "en"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "model"
+        ],
+        "title": "WakeWordSpec",
+        "description": "A single wake word — the uniform unit shared by every voice-trigger provider (QUAL-20).\n\n``name`` is the provider-agnostic label (also the room/satellite identity key); ``model`` is an\nartifact reference (a built-in catalog name, or a path to a custom ``.tflite``/``.onnx`` + manifest —\nthe per-ESP32-unit Russian model); ``threshold`` and ``language`` are the per-word knobs. Provider\nmechanics (openWakeWord ``inference_framework``, microWakeWord ``sliding_window_size``) live on the\nprovider, not here — uniformity is the shared shape, not a merge of provider internals."
       },
       "WebInputConfig": {
         "properties": {

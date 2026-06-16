@@ -33,7 +33,7 @@ context_timeout_minutes = 30
 microphone_enabled = false      # ESP32 captures + gates audio (no server VAD)
 audio_playback_enabled = false  # no local speaker — TTS reply rides the output seam
 web_api_enabled = true
-web_port = 8000
+web_port = 6000
 metrics_enabled = false
 metrics_port = 9090
 
