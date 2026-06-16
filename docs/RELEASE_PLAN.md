@@ -331,7 +331,7 @@ See `docs/review/phase1_architecture_map.md` §5.
       failed into the legacy path + a copy hack). Explicit `model_file` still honored as an override (back-compat). New
       `test_silero_routing.py` (4 tests incl. the anti-collision property). **Invariant #4 N/A** (TTS provider config is
       free-form `Dict[str,Any]`, `models.py:191` — not schema/config-ui-typed). Gates: suite 935 green, pyright 0, contracts 9/9.
-- [ ] **QUAL-50** [NLU][LLM] (P2) — **LLM NLU classifier as a cascade fallback provider** (decided 2026-06-15 in the
+- [x] **QUAL-50** [NLU][LLM] (P2) — **LLM NLU classifier as a cascade fallback provider** (decided 2026-06-15 in the
       ARCH-24 T4 armv7 config session). New `LLMNLUProvider(NLUProvider)`: when the deterministic providers (keyword +
       spaCy-on-64-bit) don't recognize an utterance, ask the **LLM to classify** it into a known intent **and extract its
       parameters** (intent taxonomy sourced from the donation/bridge catalog) — recovering fuzzy *commands* the keyword
@@ -358,6 +358,17 @@ See `docs/review/phase1_architecture_map.md` §5.
       self-report/logprobs are a weak prior only. **Commands** accept only if intent-valid + evidence + ALL required params
       resolved (missing → CLARIFYING; unresolvable / no-evidence → abstain); **queries** accept on intent-valid + evidence.
       **DEPENDS ON QUAL-52** (the reworked, budget-aware LLM component — *not* its structured output, which was reverted).
+      **Built 2026-06-16:** `irene/providers/nlu/llm.py` `LLMNLUProvider` — `_initialize_from_donations` builds the
+      taxonomy + `parameter_specs` from the same donations; `recognize_with_parameters` makes one deterministic
+      `LLMPort.generate_response` call, parses locally, and returns a plain `Intent` or `None`. Abstains on
+      no-LLM / offline / unparseable / intent∉donations / evidence-not-in-text; else confidence = `0.7 + 0.25 × required-coverage`
+      (a missing required param still clears the threshold → the handler's QUAL-30 `_clarify` asks — verified at
+      `handlers/base.py:285,302`). Injection mirrors the conversation handler: `set_llm_component(LLMPort)`, soft-injected by
+      `NLUComponent.post_initialize_coordination` via `core.component_manager.get_component('llm')` (no hard dep → no-LLM
+      builds still start). `LLMNLUProviderSchema` registered + `[nlu.providers.llm]` (enabled=false, opt-in) + pyproject
+      entry-point; default cascade unchanged. Arch = all (cloud HTTP is armv7-safe). Tests `test_llm_nlu.py` (13). Gates:
+      suite 995 green, pyright 0, contracts 9/9 (provider→`intents.ports` is ARCH-4-legal), config-ui type-checks (Inv #4).
+      **Unblocks ARCH-24 T4** (armv7 config can now use `keyword→llm`). Prompt wording is a first cut → **QUAL-51**.
 - [x] **QUAL-52** [LLM] (P2) — **LLM component rework: real token budgets + budget-aware prompting** (surfaced 2026-06-15;
       **prerequisite for QUAL-50**; DONE 2026-06-16). Today's LLM handling used arbitrary/meaningless config knobs and was
       **token-budget-blind**. Reworked `llm_component` + providers (deepseek/openai/anthropic) + the LLM config schema:

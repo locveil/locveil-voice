@@ -162,7 +162,7 @@ class AutoSchemaRegistry:
                 # VAD providers (ARCH-18)
                 EnergyVADProviderSchema, SileroVADProviderSchema, MicroVADProviderSchema,
                 # NLU providers
-                HybridKeywordMatcherProviderSchema, SpaCyNLUProviderSchema,
+                HybridKeywordMatcherProviderSchema, SpaCyNLUProviderSchema, LLMNLUProviderSchema,
                 # Text processor provider (QUAL-13: one unified processor)
                 UnifiedTextProcessorProviderSchema
             )
@@ -209,6 +209,7 @@ class AutoSchemaRegistry:
                 "nlu": {
                     "hybrid_keyword_matcher": HybridKeywordMatcherProviderSchema,
                     "spacy_nlu": SpaCyNLUProviderSchema,
+                    "llm": LLMNLUProviderSchema,
                 },
                 "text_processor": {
                     "unified_text_processor": UnifiedTextProcessorProviderSchema,

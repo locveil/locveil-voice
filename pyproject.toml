@@ -286,6 +286,7 @@ microvad = "irene.providers.vad.microvad:MicroVADProvider"
 [project.entry-points."irene.providers.nlu"]
 hybrid_keyword_matcher = "irene.providers.nlu.hybrid_keyword_matcher:HybridKeywordMatcherProvider"
 spacy_nlu = "irene.providers.nlu.spacy_provider:SpaCyNLUProvider"
+llm = "irene.providers.nlu.llm:LLMNLUProvider"
 
 [project.entry-points."irene.providers.text_processor"]
 # QUAL-13: one config-driven processor (per-stage normalizer chains) replaced the 4 stage-specific

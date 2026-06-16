@@ -15,11 +15,20 @@ A request is tried provider by provider, stopping at the first one confident eno
    ~80%: "привет", "который час", "поставь таймер".
 2. **spaCy** — only when the keyword matcher isn't sure. It understands grammar and entities, so it catches
    the commands plain word-matching can't (more on it below).
-3. **Fallback** — if nothing recognises the utterance it becomes `conversation.general`, handled as chat
+3. **LLM classifier** *(optional, opt-in — QUAL-50)* — a last-resort tier for fuzzy *commands* the pattern
+   layers miss. It asks the configured LLM to pick one intent from the donation taxonomy and extract its
+   parameters. It's off by default and only runs when added to `provider_cascade_order` with an `[llm]`
+   provider configured (e.g. the armv7 satellite, which has no spaCy: `["hybrid_keyword_matcher", "llm"]`).
+   It returns a **plain `Intent`** exactly like the tiers above — same threshold, same downstream
+   grounding — and **abstains** when no LLM is available, so offline still falls through to the fallback.
+4. **Fallback** — if nothing recognises the utterance it becomes `conversation.general`, handled as chat
    (offline, or by an LLM when one is configured).
 
-Both providers read the **same donations** — there is no separate "NLU model" to train. Add a phrase or a
-pattern to a donation and both tiers pick it up.
+All three recognisers read the **same donations** — there is no separate "NLU model" to train. Add a
+phrase or a pattern to a donation and every tier picks it up (the LLM tier uses them as its intent
+taxonomy). Whatever tier wins, the entities it returns are **raw spans** ("kitchen", "lamp"); the shared
+`ContextualEntityResolver` then grounds them against the live catalog — so the LLM tier never needs the
+catalog in its prompt.
 
 ## What spaCy is
 

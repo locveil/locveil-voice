@@ -12,6 +12,17 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-16
+- **QUAL-50 — LLM NLU classifier built (cascade fallback).** New `irene/providers/nlu/llm.py` `LLMNLUProvider`: behaves
+  like keyword/spaCy — `recognize_with_parameters` makes one deterministic `LLMPort.generate_response` call (temp 0.0 from
+  QUAL-52 PR4), classifies into a donation-taxonomy intent + extracts raw param spans, and returns a **plain `Intent`** or
+  `None`. No structured output, no catalog in the prompt — grounding stays in the shared `ContextualEntityResolver`
+  downstream (the QUAL-52-PR3-revert lesson, applied). Derived confidence: abstain unless intent∈donations [gate] + an
+  evidence span actually in the text [anti-hallucination]; else `0.7 + 0.25×required-coverage` so a missing required param
+  still clears the threshold and the handler's QUAL-30 `_clarify` asks for it. Injection mirrors the conversation handler
+  (`set_llm_component(LLMPort)`, soft-injected from `core.component_manager` — no hard dep, no-LLM builds still start).
+  Wiring: schema registered, `[nlu.providers.llm]` opt-in block, pyproject entry-point; default cascade unchanged. Contracts
+  held — a provider importing `intents.ports.LLMPort` is ARCH-4-legal (forbids only components/workflows). `test_llm_nlu.py`
+  (13). Suite 995 green, pyright 0, contracts 9/9, config-ui type-checks (Inv #4). Unblocks ARCH-24 T4; prompt → QUAL-51.
 - **QUAL-52 PR4 — dropped the temperature / fine-tuning knobs.** Per "temperature and fine-tunings aren't needed": removed
   `temperature` from the 3 LLM provider schemas, config-master, and the providers' config/kwargs plumbing (plus the dead
   `top_p`/`frequency_penalty`/`presence_penalty` no provider ever read); each provider now uses a fixed module-level

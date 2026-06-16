@@ -345,6 +345,15 @@ class SpaCyNLUProviderSchema(NLUProviderSchema):
     )
 
 
+class LLMNLUProviderSchema(NLUProviderSchema):
+    """LLM NLU classifier — cascade fallback after keyword/spaCy (QUAL-50)."""
+    provider_class: str = Field(default="LLMNLUProvider", description="Provider class name")
+    confidence_threshold: float = Field(default=0.7, ge=0.0, le=1.0, description="Minimum confidence for intent acceptance")
+    model: Optional[str] = Field(default=None, description="Pin a model (provider/model or model); None = the LLM component's default")
+    provider: Optional[str] = Field(default=None, description="Pin an LLM provider; None = the LLM component's default chain")
+    max_phrases_per_intent: int = Field(default=3, ge=0, le=20, description="Sample phrases per intent included in the classifier prompt (taxonomy budget)")
+
+
 # ============================================================
 # TEXT PROCESSOR PROVIDER SCHEMAS
 # ============================================================

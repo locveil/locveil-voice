@@ -393,11 +393,31 @@ class NLUComponent(Component, NLUPlugin, WebAPIPlugin):
         """
         try:
             logger.info("Starting NLU post-initialization coordination for donation loading...")
+            self._inject_llm_into_providers()
             await self.initialize_providers_from_json_donations()
             logger.info("NLU post-initialization coordination completed successfully")
         except Exception as e:
             logger.error(f"Failed during NLU post-initialization coordination: {e}")
             raise
+
+    def _inject_llm_into_providers(self) -> None:
+        """Soft-inject the LLM capability port into any NLU provider that wants it (QUAL-50, the
+        LLMNLUProvider). Fetched from the component manager (precedent: monitoring_component) rather than
+        a hard `get_component_dependencies` entry, so no-LLM builds still start — the provider just
+        abstains when `llm_component` is None."""
+        llm_component = None
+        try:
+            manager = getattr(self.core, "component_manager", None)
+            if manager is not None:
+                llm_component = manager.get_component("llm")
+        except Exception as e:
+            logger.debug("NLU: LLM component not available for injection (%s) — LLM NLU will abstain", e)
+        for provider_name, provider in self.providers.items():
+            setter = getattr(provider, "set_llm_component", None)
+            if callable(setter):
+                setter(llm_component)
+                logger.info("Injected LLM port into NLU provider '%s' (present=%s)",
+                            provider_name, llm_component is not None)
     
     @property
     def name(self) -> str:

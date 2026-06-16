@@ -422,6 +422,18 @@ entity_types = ["PERSON", "ORG", "GPE", "DATE", "TIME", "MONEY", "QUANTITY"]  # 
 ru = ["ru_core_news_md", "ru_core_news_sm"]  # Russian models in preference order
 en = ["en_core_web_md", "en_core_web_sm"]    # English models in preference order
 
+# LLM NLU Provider (QUAL-50) — last-resort cascade fallback for fuzzy COMMANDS the pattern layers miss.
+# Opt-in: NOT in the default provider_cascade_order above (the deterministic path stays primary and
+# offline keeps working). Enable it AND add "llm" after the pattern providers in provider_cascade_order
+# (e.g. the armv7 satellite: ["hybrid_keyword_matcher", "llm"]). Borrows the [llm] component's provider;
+# abstains when no LLM is configured/available. Entity grounding stays downstream (ContextualEntityResolver).
+[nlu.providers.llm]
+enabled = false                     # Opt-in; enable per deployment that wants the LLM fallback
+confidence_threshold = 0.7         # Provider confidence threshold (consistent with the other NLU tiers)
+max_phrases_per_intent = 3         # Sample phrases per intent in the classifier prompt (taxonomy budget)
+# model = "deepseek/deepseek-chat" # Optional: pin provider/model; omit to use the [llm] default chain
+# provider = "deepseek"            # Optional: pin the LLM provider; omit to use the [llm] default
+
 # ============================================================
 # TEXT PROCESSOR COMPONENT CONFIGURATION
 # ============================================================
