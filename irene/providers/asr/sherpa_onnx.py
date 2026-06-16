@@ -25,7 +25,7 @@ import asyncio
 import io
 import logging
 import wave
-from typing import Any, AsyncIterator, Callable, Dict, List, Optional
+from typing import Any, AsyncIterator, Callable, Dict, List, Optional, Tuple
 
 from .base import ASRProvider
 from ...utils.inference_policy import InferencePolicy
@@ -197,20 +197,32 @@ class SherpaOnnxASRProvider(ASRProvider):
             rec.decode_stream(stream)
         return rec.get_result(stream) or ""
 
-    async def transcribe_stream(self, audio_stream: AsyncIterator[bytes]) -> AsyncIterator[str]:
-        """Streaming transcription.
+    @property
+    def supports_streaming(self) -> bool:
+        """Real incremental recognition + server-side endpointing exists only for the
+        streaming model types (`OnlineRecognizer`)."""
+        return self._is_streaming
 
-        For an **offline** model_type: buffer the stream, emit one final transcription.
-        For a **streaming** model_type (`vosk-streaming`): feed chunks to the
-        `OnlineRecognizer`, emitting incremental results and a segment on each endpoint.
+    async def transcribe_stream(self, audio_stream: AsyncIterator[bytes]) -> AsyncIterator[str]:
+        """Text-only view of the stream (partials + finalized segments). Thin wrapper over
+        :meth:`transcribe_stream_segments` for callers that don't need the final/partial flag."""
+        async for text, _is_final in self.transcribe_stream_segments(audio_stream):
+            yield text
+
+    async def transcribe_stream_segments(
+        self, audio_stream: AsyncIterator[bytes]
+    ) -> AsyncIterator[Tuple[str, bool]]:
+        """``(text, is_final)`` per segment.
+
+        For an **offline** model_type: buffer the stream and emit one final segment
+        (the base default). For a **streaming** model_type (`vosk-streaming`): feed chunks
+        to the `OnlineRecognizer`, emitting partials (``is_final=False``) and a finalized
+        segment (``is_final=True``) on each model endpoint, plus an EOF finalize when the
+        stream ends.
         """
         if not self._is_streaming:
-            chunks = bytearray()
-            async for chunk in audio_stream:
-                chunks.extend(chunk)
-            text = await self.transcribe_audio(bytes(chunks))
-            if text:
-                yield text
+            async for seg in super().transcribe_stream_segments(audio_stream):
+                yield seg
             return
 
         if self._recognizer is None:
@@ -233,11 +245,11 @@ class SherpaOnnxASRProvider(ASRProvider):
             text, endpoint = await asyncio.to_thread(step)
             if endpoint:
                 if text:
-                    yield text.strip()
+                    yield text.strip(), True
                 rec.reset(stream)
                 last = ""
             elif text and text != last:
-                yield text.strip()
+                yield text.strip(), False
                 last = text
 
         def finalize():
@@ -247,8 +259,8 @@ class SherpaOnnxASRProvider(ASRProvider):
             return rec.get_result(stream) or ""
 
         final = await asyncio.to_thread(finalize)
-        if final and final != last:
-            yield final.strip()
+        if final and final.strip() != last:
+            yield final.strip(), True
 
     @staticmethod
     def _to_float_samples(data: bytes, default_rate: int):

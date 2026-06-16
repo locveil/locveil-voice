@@ -6,7 +6,7 @@ Following ABC inheritance pattern for type safety and runtime validation.
 """
 
 from abc import abstractmethod
-from typing import Dict, Any, List, AsyncIterator, Optional
+from typing import Dict, Any, List, AsyncIterator, Optional, Tuple
 
 from ..base import ProviderBase
 
@@ -56,7 +56,35 @@ class ASRProvider(ProviderBase):
             Transcribed text chunks as they become available
         """
         ...
-    
+
+    @property
+    def supports_streaming(self) -> bool:
+        """Whether this provider does real incremental recognition with server-side
+        endpoint detection (vs. buffer-then-finalize). Only such providers can drive
+        the no-VAD `/ws/audio` streaming path, where the model — not the device — marks
+        end-of-utterance. Overridden by streaming providers (sherpa `OnlineRecognizer`)."""
+        return False
+
+    async def transcribe_stream_segments(
+        self, audio_stream: AsyncIterator[bytes]
+    ) -> AsyncIterator[Tuple[str, bool]]:
+        """Yield ``(text, is_final)`` per utterance segment.
+
+        ``is_final=True`` marks a finalized utterance (server-authoritative
+        end-of-utterance); ``is_final=False`` is an in-progress hypothesis (partial).
+        The default buffers the whole stream and emits a single final segment — correct
+        for offline providers. Streaming providers override this to feed an
+        ``OnlineRecognizer`` and emit partials plus an endpoint-finalized segment without
+        waiting for the caller to close the stream. Consumed by the no-VAD `/ws/audio`
+        path; non-streaming providers stay on the device-signalled batch path instead.
+        """
+        chunks = bytearray()
+        async for chunk in audio_stream:
+            chunks.extend(chunk)
+        text = await self.transcribe_audio(bytes(chunks))
+        if text:
+            yield text, True
+
     def get_parameter_schema(self) -> Dict[str, Any]:
         """Auto-generate parameter schema from Pydantic model
         

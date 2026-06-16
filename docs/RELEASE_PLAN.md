@@ -376,12 +376,22 @@ See `docs/review/phase1_architecture_map.md` §5.
       pymicro-vad on Linux x86_64/aarch64 only (extras now carry honest markers). WB7 hardware re-validation
       deferred to ARCH-10 completion (user).
       Build/Docker corrections = BUILD-5/3.
-      **★ OWNS the ESP32 streaming-endpoint (ARCH-22 #3 / D-6, deferred here 2026-06-14):** a **new no-VAD streaming path**
-      for `/ws/audio` that feeds the configured ASR's `transcribe_stream` + finalizes on the model endpoint (sherpa-onnx
-      `OnlineRecognizer`), opportunistic — server-authoritative end-of-utterance for the background-noise/TV case. NOT
-      `process_audio_stream` (that's the VAD-segmented mic path). Deployment-gated (streaming ASR + WB7 — testable here with
-      the deferred WB7 hardware re-validation); the accumulate-until-`end` + batch-ASR fallback in `/ws/audio` is the
-      permanent floor and already active, so the wire contract + firmware design are unaffected. See `esp32_satellite.md`
+      **★ OWNS the ESP32 streaming-endpoint (ARCH-22 #3 / D-6, deferred here 2026-06-14) — BUILT + seam-tested 2026-06-16,
+      device-validation hardware-gated:** a **new no-VAD streaming path** for `/ws/audio` that feeds the configured ASR's
+      streaming segmenter + finalizes on the model endpoint (sherpa-onnx `OnlineRecognizer`), opportunistic —
+      server-authoritative end-of-utterance for the background-noise/TV case. NOT `process_audio_stream` (that's the
+      VAD-segmented mic path). **Implementation:** the ASR port grew a typed `transcribe_stream_segments` →
+      `(text, is_final)` (concrete buffer-once default in `asr/base.py`; sherpa override does real `OnlineRecognizer`
+      endpointing yielding partials + endpoint-/EOF-finalized segments) + a `supports_streaming` capability flag; the ASR
+      **component** exposes a pass-through (provider stays behind the port); `/ws/audio` gains a branch selected by the
+      device's `mode:"streaming"` register field AND `supports_streaming()` — partials go back as `{"type":"partial"}`,
+      each finalized segment is injected via `workflow_manager.process_text_input` (enters at **Text Processing** → NLU →
+      Intent → Response, same tail as the batch path; ASR just runs at the edge instead of inside the workflow). No
+      wire-contract break — `{"type":"end"}` still honored as a hard finalize; non-streaming ASR falls through to the batch
+      floor. 4 seam tests (fake streaming ASR) green; suite 1007, pyright 0, 9/9 contracts. **Remaining:** real endpoint
+      RTF/latency validation on the WB7 (the deferred hardware re-val). _Note:_ in streaming mode ASR runs at the adapter,
+      so the request traces as a **text** input — no per-provider ASR-stage trace for these utterances (matters to QUAL-53).
+      The accumulate-until-`end` + batch-ASR path in `/ws/audio` stays the permanent floor. See `esp32_satellite.md`
       §4.4/§12.
 - [x] **ARCH-11** `[release]` (P1) — **DONE 2026-06-03 (S1-S4, commits 64c4050·0453b12·b64be87·+S4).** Inverted all 4
       `core → inputs/workflows/components.base` composition-root edges + locked them with the import-linter contract "Core

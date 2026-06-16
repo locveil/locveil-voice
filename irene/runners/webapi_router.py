@@ -822,7 +822,48 @@ def create_webapi_router(
             await websocket.send_json({"type": "registered", "client_id": registration.client_id,
                                        "session_id": session_id})
 
-            # Step 2 — utterance loop: accumulate binary PCM until an {"type":"end"} control frame.
+            # ARCH-22: the SPOKEN reply goes back to the device's reply channel (/ws/audio/reply), never
+            # local playback — so processing runs with wants_audio=False and we route the SPEECH modality
+            # origin-paired via the OutputManager (reaches this client's RemoteAudioOutput if its reply
+            # channel is connected; else it's dropped/fallback).
+            async def _route_reply(result):
+                output_manager = getattr(core, "output_manager", None)
+                if (wants_audio and output_manager is not None
+                        and getattr(result, "should_speak", True) and (result.text or "")):
+                    from ..core.interfaces.output import OutputModality
+                    from ..intents.context_models import RequestContext
+                    reply_ctx = RequestContext(session_id=session_id, client_id=registration.client_id)
+                    await output_manager.deliver(result, reply_ctx, OutputModality.SPEECH)
+
+            # ARCH-10: server-authoritative streaming path. If the device asks for mode="streaming" AND
+            # the configured ASR does real endpointing (sherpa OnlineRecognizer), the SERVER marks
+            # end-of-utterance from the model — no {"type":"end"} needed (the always-on / no-VAD case).
+            # Any other case falls through to the device-signalled batch loop, the permanent floor.
+            asr: Any = core.component_manager.get_component('asr') if core.component_manager else None
+            if reg.get("mode") == "streaming" and asr is not None and getattr(asr, "supports_streaming", None) \
+                    and asr.supports_streaming():
+                async def _pcm_frames():
+                    while True:
+                        msg = await websocket.receive()
+                        if msg.get("type") == "websocket.disconnect":
+                            return
+                        if msg.get("bytes") is not None:
+                            yield msg["bytes"]
+                        elif msg.get("text") is not None and (json.loads(msg["text"]) or {}).get("type") == "end":
+                            return  # a device hard-finalize is still honored
+                async for text, is_final in asr.transcribe_stream_segments(_pcm_frames()):
+                    if not is_final:
+                        await websocket.send_json({"type": "partial", "text": text})
+                        continue
+                    result = await core.workflow_manager.process_text_input(
+                        text=text, session_id=session_id, wants_audio=False,
+                        client_context=client_context)
+                    await websocket.send_json({"type": "response", "text": result.text,
+                                               "success": result.success, "metadata": result.metadata})
+                    await _route_reply(result)
+                return
+
+            # Step 2 (batch floor) — utterance loop: accumulate binary PCM until an {"type":"end"} frame.
             while True:
                 frames = bytearray()
                 while True:
@@ -843,17 +884,7 @@ def create_webapi_router(
                     client_context=client_context)
                 await websocket.send_json({"type": "response", "text": result.text,
                                            "success": result.success, "metadata": result.metadata})
-                # ARCH-22: the SPOKEN reply goes back to the device's reply channel (/ws/audio/reply),
-                # never local playback — so process_audio_input runs with wants_audio=False and we route
-                # the SPEECH modality origin-paired via the OutputManager (reaches this client's
-                # RemoteAudioOutput, if its reply channel is connected; else it's dropped/fallback).
-                output_manager = getattr(core, "output_manager", None)
-                if (wants_audio and output_manager is not None
-                        and getattr(result, "should_speak", True) and (result.text or "")):
-                    from ..core.interfaces.output import OutputModality
-                    from ..intents.context_models import RequestContext
-                    reply_ctx = RequestContext(session_id=session_id, client_id=registration.client_id)
-                    await output_manager.deliver(result, reply_ctx, OutputModality.SPEECH)
+                await _route_reply(result)
         except WebSocketDisconnect:
             logger.debug(f"WS audio driving input disconnected (session {session_id})")
         except Exception as e:

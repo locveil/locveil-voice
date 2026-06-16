@@ -12,6 +12,23 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-16
+- **ARCH-10 — ESP32 server-authoritative streaming-endpoint built + seam-tested (device-validation hardware-gated).**
+  Wired the no-VAD `/ws/audio` path so the ASR *model* marks end-of-utterance (sherpa `OnlineRecognizer`), for the
+  always-on / background-noise / TV case where the device can't endpoint. The ASR port gained a typed
+  `transcribe_stream_segments` yielding `(text, is_final)` — a concrete buffer-once default in `asr/base.py` (safe for
+  offline providers) and a sherpa override that does real incremental endpointing (partials + endpoint-/EOF-finalized
+  segments) — plus a `supports_streaming` capability flag. The ASR component exposes a thin pass-through so the provider
+  stays behind the port. `/ws/audio` got a branch, selected by the device's `mode:"streaming"` register field AND
+  `supports_streaming()`: partials are forwarded as `{"type":"partial"}`, and each finalized segment is injected via
+  `workflow_manager.process_text_input`. **Confirmed against the code where the streaming ASR result reaches the next
+  stage:** `process_text_input` enters the unified pipeline at **Text Processing → NLU → Intent → Response** (skip_asr /
+  skip_wake_word only skip the audio front-end), so the streamed transcript gets the same normalization tail as the batch
+  audio path — the only difference is ASR running at the edge vs. inside the workflow. Backward-compatible: `{"type":"end"}`
+  still works as a hard finalize, and a non-streaming ASR falls through to the device-signalled batch floor. Also fixed a
+  stale `workflow_manager.py` comment that wrongly said the TEXT entry "enters at NLU" (it enters at Text Processing). 4
+  new seam tests (`test_ws_streaming_asr.py`, fake streaming ASR) green; suite 1007 passed, pyright 0, 9/9 import
+  contracts. Real endpoint RTF/latency validation waits on the WB7 hardware re-val. Trade-off recorded: streaming-mode
+  utterances trace as a *text* input, so there's no per-provider ASR-stage trace for them (relevant to QUAL-53).
 - **ARCH-24 + BUILD-3 closed.** With the images green, the docs rewritten, and a re-check of every tranche — T1/T2
   providers, T3 armv7 torch-ban CI gate, T4 the three baked configs, T5 the `inference_policy`/`torch_model_cache`
   sherpa helpers (all present with tests) — both items are engineering-complete. The only outstanding work is

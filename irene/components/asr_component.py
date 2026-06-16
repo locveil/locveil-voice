@@ -5,7 +5,7 @@ Speech Recognition Coordinator managing multiple ASR providers.
 Provides unified web API (/asr/*), voice commands, and multi-source audio processing.
 """
 
-from typing import Dict, Any, List, Optional, Type
+from typing import Dict, Any, List, Optional, Type, AsyncIterator, Tuple
 from pathlib import Path
 import json
 import time
@@ -302,7 +302,25 @@ class ASRComponent(Component, ASRPlugin, WebAPIPlugin, ASRPort):
                        f"audio_size: {len(audio_data)} bytes)")
         
         return result
-    
+
+    def supports_streaming(self, provider: Optional[str] = None) -> bool:
+        """Whether the selected ASR provider does server-side streaming endpointing
+        (gates the no-VAD `/ws/audio` streaming path)."""
+        name = provider or self.default_provider
+        p = self.providers.get(name) if name else None
+        return bool(getattr(p, "supports_streaming", False))
+
+    async def transcribe_stream_segments(
+        self, audio_stream: AsyncIterator[bytes], **kwargs
+    ) -> AsyncIterator[Tuple[str, bool]]:
+        """Yield ``(text, is_final)`` per utterance from the active provider — the no-VAD
+        `/ws/audio` streaming path. Keeps the provider behind the ASR port."""
+        provider_name = kwargs.get("provider", self.default_provider)
+        if provider_name not in self.providers:
+            raise HTTPException(404, f"ASR provider '{provider_name}' not available")
+        async for segment in self.providers[provider_name].transcribe_stream_segments(audio_stream):
+            yield segment
+
     # Public methods for intent handler delegation
     def set_default_provider(self, provider_name: str) -> bool:
         """Set default ASR provider - simple atomic operation"""

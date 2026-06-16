@@ -462,7 +462,7 @@ class WorkflowManager:
             source=(client_context or {}).get("source", "text"),
             session_id=session_id,
             wants_audio=wants_audio,
-            input_format=InputFormat.TEXT,  # enters at NLU (derives skip_wake_word + skip_asr)
+            input_format=InputFormat.TEXT,  # enters at Text Processing (skips wake-word + ASR)
             metadata=client_context or {"mode": "text_input"},
             client_id=client_context.get("client_id") if client_context else None,
             room_name=client_context.get("room_name") if client_context else None,
