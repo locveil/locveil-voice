@@ -12,6 +12,13 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-16
+- **Invariant #10 added (user-facing docs are part of "done") + QUAL-50 doc correction.** Prompted by a slip in the
+  QUAL-50 doc update: `architecture/nlu.md` had picked up internal tracking language (a task ID, raw config keys, an
+  internal class name) that doesn't belong in user-facing prose, and its cascade diagram wasn't updated. Filed Invariant
+  #10: every task must check whether the user-facing docs (`architecture/*`, `guides/*`, `README*`) need updating, match
+  their explanatory voice (no task IDs / ledger refs / internal symbols), and update + regenerate any diagram the change
+  affects in the established visual style. Reworked the `nlu.md` language-model-tier paragraph into the document's voice
+  and regenerated `images/nlu-cascade.png` (+ `.dot`) to show the optional language-model stage (dashed, same palette).
 - **QUAL-50 — LLM NLU classifier built (cascade fallback).** New `irene/providers/nlu/llm.py` `LLMNLUProvider`: behaves
   like keyword/spaCy — `recognize_with_parameters` makes one deterministic `LLMPort.generate_response` call (temp 0.0 from
   QUAL-52 PR4), classifies into a donation-taxonomy intent + extracts raw param spans, and returns a **plain `Intent`** or

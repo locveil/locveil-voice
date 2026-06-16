@@ -15,20 +15,17 @@ A request is tried provider by provider, stopping at the first one confident eno
    ~80%: "привет", "который час", "поставь таймер".
 2. **spaCy** — only when the keyword matcher isn't sure. It understands grammar and entities, so it catches
    the commands plain word-matching can't (more on it below).
-3. **LLM classifier** *(optional, opt-in — QUAL-50)* — a last-resort tier for fuzzy *commands* the pattern
-   layers miss. It asks the configured LLM to pick one intent from the donation taxonomy and extract its
-   parameters. It's off by default and only runs when added to `provider_cascade_order` with an `[llm]`
-   provider configured (e.g. the armv7 satellite, which has no spaCy: `["hybrid_keyword_matcher", "llm"]`).
-   It returns a **plain `Intent`** exactly like the tiers above — same threshold, same downstream
-   grounding — and **abstains** when no LLM is available, so offline still falls through to the fallback.
+3. **Language model** — an optional last resort, off unless a deployment turns it on. When the simpler
+   tiers can't place an utterance, it asks a language model to match it to one of the known commands and
+   pull out the details that command carries. A small device with no room for spaCy can lean on this
+   instead; and if no language model is reachable it simply steps aside, so recognition still falls
+   through to chat.
 4. **Fallback** — if nothing recognises the utterance it becomes `conversation.general`, handled as chat
    (offline, or by an LLM when one is configured).
 
 All three recognisers read the **same donations** — there is no separate "NLU model" to train. Add a
-phrase or a pattern to a donation and every tier picks it up (the LLM tier uses them as its intent
-taxonomy). Whatever tier wins, the entities it returns are **raw spans** ("kitchen", "lamp"); the shared
-`ContextualEntityResolver` then grounds them against the live catalog — so the LLM tier never needs the
-catalog in its prompt.
+phrase or a pattern to a donation and every tier picks it up; the language-model tier simply takes that
+list as the menu of commands it is allowed to choose from.
 
 ## What spaCy is
 

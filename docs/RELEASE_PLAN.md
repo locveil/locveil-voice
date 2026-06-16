@@ -74,6 +74,19 @@ The single active tracker for the road to release. Supersedes the legacy `docs/T
    `pyproject.toml`) are never optional, so guarding their imports is pure ceremony. When touching a file that has a
    `TYPE_CHECKING` block, remove it: hoist the import if there's no cycle, or fix the cycle if there is. _(Tracked as
    QUAL-32 for the residual repo-wide sweep; new code must comply from the start.)_
+10. **USER-FACING DOCS ARE PART OF "DONE".** The user-facing documents — `docs/architecture/*`, `docs/guides/*`,
+    top-level `README*` — are narrative explanations for a reader who does **not** know the codebase or the release
+    plan. For **every** task, before completion **check whether the change alters behavior any of them describes**; if so,
+    update them **in the same change**.
+    - **Match the document's voice.** User-facing prose is explanatory and self-contained. It carries **no internal
+      tracking language** — no task IDs (`QUAL-50`), no ledger/review/journal references, no gate counts, no file:line,
+      and no raw internal symbols/config keys (`provider_cascade_order`, `ContextualEntityResolver`) unless that document
+      already teaches them as user-facing names. Mirror the existing tone, structure, and depth of the file you're editing.
+    - **Diagrams are docs too.** If the change alters a flow or structure a diagram shows, update the diagram **source**
+      (`docs/images/*.dot`, etc.) and **regenerate the image** in the visual style the existing diagrams establish
+      (same shapes, palette, edge conventions) — a stale diagram is a doc bug.
+    - Internal detail (task IDs, evidence, gate results) lives in the ledger + journal (Invariants #5–#7), never in
+      user-facing prose. _Pairs with #4 (config-ui is the user-facing **app**; this is the user-facing **docs**)._
 
 ---
 
