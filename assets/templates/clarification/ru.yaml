@@ -3,4 +3,4 @@
 # (e.g. a missing required parameter from IntentHandler.get_param). {detail} = the parameter's
 # donation description (or its name).
 
-missing_parameter: "Уточните, пожалуйста: для этой команды не хватает данных — {detail}."
+missing_parameter: "Уже почти — подскажите, пожалуйста, ещё одно: {detail}."

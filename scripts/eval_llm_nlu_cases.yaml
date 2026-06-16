@@ -1,0 +1,46 @@
+# QUAL-51 — LLM NLU classifier evaluation set (bilingual). Refine freely.
+#
+# Each case:
+#   text           the utterance
+#   lang           ru | en  (the detected input language)
+#   category       clear | fuzzy | missing_param | abstain | ambiguous  (for the scorecard)
+#   expect_intent  the intent name the classifier should return; null/absent => it should ABSTAIN
+#   expect_params  param KEYS that must be present in entities (values vary as raw spans — shown, not hard-scored)
+#   expect_missing required param KEYS that must be ABSENT (the missing-required → clarify path)
+#
+# Run live against DeepSeek:  .venv/bin/python scripts/eval_llm_nlu.py
+cases:
+  # --- clear commands / queries (the cheap layers usually get these; the LLM must not regress them) ---
+  - { text: "сколько сейчас времени",              lang: ru, category: clear, expect_intent: datetime.current_time }
+  - { text: "what time is it",                      lang: en, category: clear, expect_intent: datetime.current_time }
+  - { text: "какая сегодня дата",                   lang: ru, category: clear, expect_intent: datetime.current_date }
+  - { text: "привет",                               lang: ru, category: clear, expect_intent: greeting.hello }
+  - { text: "hello there",                          lang: en, category: clear, expect_intent: greeting.hello }
+  - { text: "поставь таймер на пять минут",         lang: ru, category: clear, expect_intent: timer.set, expect_params: [duration] }
+  - { text: "set a timer for ten minutes",          lang: en, category: clear, expect_intent: timer.set, expect_params: [duration] }
+  - { text: "подбрось монетку",                     lang: ru, category: clear, expect_intent: random.coin_flip }
+  - { text: "roll a dice",                          lang: en, category: clear, expect_intent: random.dice_roll }
+
+  # --- fuzzy phrasings the pattern layers tend to miss (the LLM's reason to exist) ---
+  - { text: "не подскажешь, который сейчас час",    lang: ru, category: fuzzy, expect_intent: datetime.current_time }
+  - { text: "could you let me know the time please", lang: en, category: fuzzy, expect_intent: datetime.current_time }
+  - { text: "запусти-ка отсчёт на три минуты",      lang: ru, category: fuzzy, expect_intent: timer.set, expect_params: [duration] }
+  - { text: "kick off a five minute countdown",     lang: en, category: fuzzy, expect_intent: timer.set, expect_params: [duration] }
+  - { text: "слушай, а скажи дату сегодня",         lang: ru, category: fuzzy, expect_intent: datetime.current_date }
+
+  # --- missing required parameter: classify the intent but leave the required slot empty (→ clarify) ---
+  - { text: "поставь таймер",                       lang: ru, category: missing_param, expect_intent: timer.set, expect_missing: [duration] }
+  - { text: "set a timer",                          lang: en, category: missing_param, expect_intent: timer.set, expect_missing: [duration] }
+
+  # --- out of scope: must ABSTAIN (return no intent) rather than force-fit a command ---
+  - { text: "что ты думаешь о квантовой физике",    lang: ru, category: abstain }
+  - { text: "what's your opinion on modern art",    lang: en, category: abstain }
+  - { text: "напиши стихотворение про осень",       lang: ru, category: abstain }
+  - { text: "tell me a long story about dragons",   lang: en, category: abstain }
+  - { text: "мне сегодня немного скучно",           lang: ru, category: abstain }
+
+  # --- ambiguous / softer cases ---
+  - { text: "помоги мне",                           lang: ru, category: ambiguous, expect_intent: system.help }
+  - { text: "what can you help me with",            lang: en, category: ambiguous, expect_intent: system.help }
+  # text + target both present → translation.specific (the intent that REQUIRES them) is the better match
+  - { text: "переведи слово hello на французский",  lang: ru, category: ambiguous, expect_intent: translation.specific, expect_params: [text, target_language] }

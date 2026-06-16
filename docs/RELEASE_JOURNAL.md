@@ -12,6 +12,20 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-16
+- **QUAL-51 — classifier prompt tightened + live-validated; QUAL-53 split out.** Interactive requirements session first
+  (scope, prompt-language strategy, validation approach, few-shot source). Reworked the inline classifier prompt:
+  conservative abstain-when-unsure framing, explicit JSON contract + verbatim-evidence anti-hallucination, and the
+  taxonomy + few-shot **filtered to the utterance language** by script. Few-shot = hand-written abstain exemplars per
+  language + auto-sourced positives from donation `examples`. Decisions (with the user): English-only instructions (they
+  work cross-lingually; the taxonomy/utterance carry the language), classifier keys off `context.language`, prompt kept
+  **inline** because it's assembled from donations at runtime (not a static asset) — `prompting.md` now documents that one
+  generated exception (Inv #10). Tuned the `missing_parameter` clarification template (en+ru). Built a live eval harness
+  (`scripts/eval_llm_nlu.py`) + bilingual fixture (24 cases over the real 54-intent taxonomy, DeepSeek via `.env`): scored
+  **24/24** after correcting two over-specified fixture cases (the model legitimately preferred `translation.specific` and
+  abstained on a vague help request). Added offline prompt-logic tests (test_llm_nlu.py → 18). The keyword-matcher-feedback
+  half isn't automatable in a prompt session — split to **QUAL-53** (trace-driven cheap-tier analysis), which first needs
+  the NLU cascade trace enriched to record per-provider attempts (today only the final result is traced). Suite green,
+  pyright 0, contracts 9/9.
 - **Invariant #10 added (user-facing docs are part of "done") + QUAL-50 doc correction.** Prompted by a slip in the
   QUAL-50 doc update: `architecture/nlu.md` had picked up internal tracking language (a task ID, raw config keys, an
   internal class name) that doesn't belong in user-facing prose, and its cascade diagram wasn't updated. Filed Invariant

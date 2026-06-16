@@ -1,7 +1,9 @@
 # Prompting
 
-Every prompt an LLM sees in Irene is **externalised** — authored in YAML under `assets/prompts/`, never
-hardcoded in Python. This guide is the convention for writing them.
+Almost every prompt an LLM sees in Irene is **externalised** — authored in YAML under `assets/prompts/`,
+never hardcoded in Python. (The one exception is the intent classifier, whose prompt is assembled from the
+donations at runtime — see [below](#one-generated-exception-the-intent-classifier).) This guide is the
+convention for writing the authored ones.
 
 ## Where prompts live
 
@@ -15,6 +17,15 @@ Two sets, both per-language YAML:
   `fallback_topic`).
 
 `LLMConfig` has no prompt fields — prompts are purely asset-driven, not config.
+
+### One generated exception: the intent classifier
+
+The optional language-model NLU tier (see [NLU](../architecture/nlu.md)) doesn't read a YAML prompt — it
+**builds** one at runtime from the donations: the list of intents, a few of each one's phrases, and worked
+examples, all filtered to the user's language. There's no static text to author, so its short English
+instructions live in code next to that assembly. Everything user-specific still comes from the donations
+you already maintain — so you tune the classifier by improving those (better phrases and examples), the
+same edits that make the cheaper tiers smarter.
 
 ## File format
 

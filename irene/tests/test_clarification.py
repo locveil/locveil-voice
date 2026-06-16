@@ -91,7 +91,7 @@ async def test_missing_required_becomes_localized_clarification():
     assert res.should_speak is True
     assert res.metadata.get("clarification") is True
     assert res.metadata.get("parameter") == "duration"
-    assert "Уточните" in res.text            # rendered from the RU template, not the generic error
+    assert "подскажите" in res.text          # rendered from the RU template, not the generic error
     assert "error processing your request" not in res.text
 
 
@@ -103,4 +103,4 @@ async def test_clarification_localizes_by_context_language():
     res = await h.execute_with_donation_routing(
         Intent(name="demo.set", entities={}, confidence=0.9, raw_text="set a timer"), ctx)
     assert res.metadata.get("clarification") is True
-    assert "Could you clarify" in res.text   # EN template frame
+    assert "one more detail" in res.text     # EN template frame

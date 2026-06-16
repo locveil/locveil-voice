@@ -154,3 +154,58 @@ def test_prompt_carries_taxonomy_not_catalog():
     system = llm.last_messages[0]["content"]
     assert "home.turn_on" in system and "weather.get_current" in system
     assert "device" in system  # parameter names are listed for extraction
+
+
+# --- QUAL-51: tightened prompt — language filtering + few-shot --------------------------------------
+
+def _donations_with_examples():
+    return [
+        KeywordDonation(
+            intent="home.turn_on",
+            phrases=["включи свет", "включи", "turn on the light", "turn on"],
+            parameters=[ParameterSpec(name="device", type=ParameterType.STRING, required=True)],
+            examples=[{"text": "включи свет на кухне", "parameters": {"device": "свет"}},
+                      {"text": "turn on the kitchen light", "parameters": {"device": "light"}}],
+            handler_domain="home",
+        ),
+    ]
+
+
+def _prompt(language):
+    p = LLMNLUProvider({})
+    asyncio.run(p._initialize_from_donations(_donations_with_examples()))
+    return p._build_system_prompt(language)
+
+
+def test_taxonomy_phrases_filtered_to_utterance_language():
+    ru = _prompt("ru")
+    en = _prompt("en")
+    # the taxonomy line shows the language's own phrases, not the other language's
+    assert "включи свет" in ru and "turn on the light" not in ru
+    assert "turn on the light" in en and "включи свет" not in en
+
+
+def test_few_shot_includes_abstain_examples_in_language():
+    ru = _prompt("ru")
+    assert "есть ли жизнь на Марсе" in ru          # ru abstain exemplar
+    assert '"intent": "none"' in ru                 # taught to abstain
+    assert "meaning of life" not in ru              # not the en exemplar
+
+
+def test_few_shot_positive_sourced_from_donation_examples():
+    ru = _prompt("ru")
+    # a real donation example (ru) appears as a positive few-shot mapped to its intent
+    assert "включи свет на кухне" in ru
+    assert '"intent": "home.turn_on"' in ru
+
+
+def test_examples_stored_from_donations():
+    p = LLMNLUProvider({})
+    asyncio.run(p._initialize_from_donations(_donations_with_examples()))
+    examples = p._intents["home.turn_on"]["examples"]
+    assert ("включи свет на кухне", {"device": "свет"}) in examples
+
+
+def test_lang_of_detects_script():
+    assert LLMNLUProvider._lang_of("включи свет") == "ru"
+    assert LLMNLUProvider._lang_of("turn on the light") == "en"

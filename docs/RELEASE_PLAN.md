@@ -397,12 +397,29 @@ See `docs/review/phase1_architecture_map.md` §5.
       `top_p`/`frequency_penalty`/`presence_penalty`); providers now use a fixed deterministic `0.0`. **Invariant #4:**
       config-ui has no typed temperature field (free-form params dict) → nothing to sync, openapi unchanged. (QUAL-15/16
       console-LLM fallback / `fallback_providers` — left as-is; not in scope here.)
-- [ ] **QUAL-51** [NLU][LLM] (P2) — **Prompt-tightening session for QUAL-50** (+ keyword-matcher config improvement).
-      Interactive prompt-engineering once QUAL-50 lands: the classifier's system prompt (intent taxonomy + parameter
-      extraction + a clean **abstain/confidence** contract so it doesn't hallucinate commands), few-shot examples, and
-      feeding the learnings back into the `hybrid_keyword_matcher` donations/patterns (so the cheap deterministic layer
-      catches more, reserving the LLM for genuine fuzz). Also tune the clarification prompts (ask-for-missing-param /
-      be-more-specific). Depends on QUAL-50.
+- [x] **QUAL-51** [NLU][LLM] (P2) — **Prompt-tightening session for QUAL-50** (DONE 2026-06-16; interactive scope agreed
+      with the user). Tightened the inline classifier system prompt: conservative "abstain when unsure" framing, an explicit
+      JSON output contract + anti-hallucination (verbatim evidence), and the taxonomy + few-shot **filtered to the utterance
+      language** (by script). Few-shot = hand-written **abstain** exemplars per language (the key last-resort lesson) +
+      **auto-sourced positives** from each intent's donation `examples`. Kept the prompt **inline** (per the user's call) —
+      it's *dynamically assembled* from donations (taxonomy + examples), so it isn't a static authored asset like the
+      `assets/prompts/*` task prompts; `docs/guides/prompting.md` updated to document this one generated exception (Inv #10).
+      Decisions: instructions **English-only** (LLMs follow them cross-lingually; taxonomy/utterance carry the language),
+      classifier keys off the **input** language (`context.language`), not the system default. Tuned the
+      `missing_parameter` clarification template (en+ru) — warmer, invites the answer. **Validation:** new live harness
+      `scripts/eval_llm_nlu.py` + bilingual fixture `scripts/eval_llm_nlu_cases.yaml` (24 cases, real 54-intent taxonomy,
+      DeepSeek via `.env`) — **24/24** after two fixture corrections (clear/fuzzy/missing-param/abstain/ambiguous all clean).
+      Offline prompt-logic tests in `test_llm_nlu.py` (now 18). Gates: suite green, pyright 0, contracts 9/9. The
+      keyword-matcher-feedback half is **not** automatable here → split out as **QUAL-53**.
+- [ ] **QUAL-53** [NLU] (P3) `[deferred]` — **Trace-driven improvement of the cheap NLU tiers** (split from QUAL-51,
+      2026-06-16). When an utterance falls through to the LLM classifier, that's a signal the cheap deterministic tiers
+      (keyword matcher, spaCy) *should* have caught it. Build an **offline analysis process, integrated with trace
+      playback**, that examines such fall-throughs and proposes concrete fixes — donation phrases/patterns, spaCy config,
+      keyword/fuzzy thresholds — so the cheap layers catch more and the LLM is reserved for genuine fuzz. **Prerequisite
+      (real gap found 2026-06-16):** the NLU cascade trace currently records only the **final** result
+      (`nlu_component.py` `record_stage("nlu_cascade")`), not each provider's attempt/confidence — so it can't yet explain
+      *why* a fall-through happened. First enrich the cascade trace to record per-provider attempts (which tried, each
+      one's confidence, why it abstained), then build the analyzer over recorded traces. Needs real usage data → deferred.
 - [x] **ARCH-7** [MQTT] — **✓ DONE 2026-06-06** (design session; deliverable `docs/design/mqtt_integration.md`, and the
       cross-project bridge contract AGREED with the user in the bridge session — `wb-mqtt-bridge/docs/
       voice_integration_contract_draft.md`, status AGREED 2026-06-06). **Approach REDEFINED (Invariant #8(d), approved):**
