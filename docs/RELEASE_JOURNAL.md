@@ -12,6 +12,15 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-16
+- **ARCH-24 T4 / BUILD-3 — standalone (x86_64) config built; all 3 target configs DONE.** New
+  `configs/standalone-x86_64.toml`: the lone non-satellite target — a full local voice runner
+  (mic→VAD→wake→ASR→NLU→TTS→playback) on the one torch image. ASR = `whisper` (torch) small, TTS = `silero_v4` (torch)
+  voice **baya** (female, matches the satellites' persona), NLU = keyword → **spaCy(md)** → llm (the x86 box has room for
+  the mid-size model), VAD = silero, wake-word = openWakeWord, mic + speaker on, monitoring/nlu_analysis/dashboard on
+  (full image). It's the image's baked default; the x86_64 image is built full-deps so a mounted/env override (entrypoint,
+  step 4) can reach any provider. Validates; x86_64 arch gate passes (20 modules / 21 py deps); all 14 configs green.
+  **The three target configs (armv7 / aarch64 / standalone) are now complete → BUILD-3 next: the shared Dockerfile-design
+  session, then per-image workflows + on-hardware build/boot.**
 - **ARCH-24 T4 / BUILD-3 — aarch64 (WB8.5/Pi satellite) config built.** New `configs/embedded-aarch64.toml`: same
   back-half satellite role as armv7, but 4 GB + no ORT wall lets it run the bigger torch-free models — ASR =
   `sherpa_onnx` + **whisper-small** (`model_type=whisper`, num_threads=4 per the user — heavy model on the A53), TTS =
