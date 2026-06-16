@@ -69,7 +69,7 @@ COPY irene/ irene/
 
 # Self-contained venv: install the project + its config-selected extras + any loose specs into /opt/venv
 RUN uv venv /opt/venv && . /opt/venv/bin/activate && \
-    UV_COMPILE_BYTECODE=1 uv pip install $(cat /tmp/pip-target.txt) $(cat /tmp/pip-specs.txt)
+    UV_COMPILE_BYTECODE=1 uv pip install $(cat /tmp/pip-target.txt) -r /tmp/pip-specs.txt
 
 # ============================================================
 # STAGE 3: RUNTIME — minimal armv7 image

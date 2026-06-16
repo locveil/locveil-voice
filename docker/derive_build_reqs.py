@@ -52,7 +52,10 @@ def main() -> None:
     (out / "system-packages.txt").write_text(" ".join(pkgs))            # all (builder stage)
     (out / "runtime-packages.txt").write_text(" ".join(runtime_pkgs))   # lean (runtime stage)
     (out / "pip-target.txt").write_text(target)
-    (out / "pip-specs.txt").write_text(" ".join(pip_specs))
+    # ONE spec per line → consumed via `uv pip install -r`. Critical for PEP 508 direct references
+    # (e.g. spaCy models `name @ https://…whl`) whose internal spaces an unquoted shell `$(cat …)`
+    # would split into broken args.
+    (out / "pip-specs.txt").write_text("\n".join(pip_specs) + ("\n" if pip_specs else ""))
     (out / "python-modules.txt").write_text("\n".join(modules))
 
     print(f"📦 apt packages ({len(pkgs)}): {pkgs}")

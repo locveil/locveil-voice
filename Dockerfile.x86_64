@@ -56,7 +56,7 @@ COPY pyproject.toml uv.lock README.md ./
 COPY irene/ irene/
 
 RUN uv venv /opt/venv && . /opt/venv/bin/activate && \
-    UV_COMPILE_BYTECODE=1 uv pip install $(cat /tmp/pip-target.txt) $(cat /tmp/pip-specs.txt)
+    UV_COMPILE_BYTECODE=1 uv pip install $(cat /tmp/pip-target.txt) -r /tmp/pip-specs.txt
 
 # ============================================================
 # STAGE 3: RUNTIME — minimal image
