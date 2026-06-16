@@ -2082,9 +2082,28 @@ _Apply to every remediation task below (from the 4 review docs + QUAL-25/26). So
       `embedded-armv7.toml` (sherpa+vosk-small / piper-irina / keyword→llm), `embedded-aarch64.toml`
       (sherpa+whisper-small / piper_ruaccent / keyword→spaCy(sm)→llm), `standalone-x86_64.toml` (torch whisper-small /
       silero_v4-baya / keyword→spaCy(md)→llm, full local pipeline). Satellites audio-off (relaxed the `CoreConfig`
-      TTS↔Audio rule for headless TTS); all 14 configs + arch gates green. **Next: the shared Dockerfile-design session
-      (steps 4–5)** — baked-vs-mounted (volumes/config/models/logs), ports, `/dev/snd`, entrypoint + the standalone's
-      external-override hook, extras → then per-image workflows + on-hardware build/boot. _Original deferred note below._ **DEFERRED to the release phase
+      TTS↔Audio rule for headless TTS); all 14 configs + arch gates green. **Steps 4–5 DONE 2026-06-16 — all three
+      images build green on GHCR** (`ghcr.io/droman42/wb-mqtt-voice-{armv7,aarch64,standalone}`, tags
+      `latest`/`sha-<short>`/`v<date>-<sha>`). **Dockerfile design (step 4):** realigned to the wb-mqtt-bridge 3-stage
+      pattern (analyzer→builder(`uv venv /opt/venv` + `uv pip install`)→lean runtime `COPY --from=builder`); **config
+      baked** (`COPY` profile → `/app/runtime-config.toml`, `IRENE_CONFIG_FILE` env, no entrypoint script); **assets
+      fully externalized** — the whole `assets/` tree is the mount and the assets-root (`IRENE_ASSETS_ROOT=/app/assets`,
+      models/cache/credentials resolve under it), shipped as a CI archive artifact (mirrors how the bridge ships configs);
+      **web_port 8000→6000** across all configs (8000 is the bridge's); runners now serve the **full web API alongside**
+      their primary input (voice_runner blocking-serve + mic background; cli_runner REPL foreground + web background;
+      webapi web-only) via a shared `WebServerMixin`, config-from-env drops the entrypoint. **Per-image workflow (step
+      5):** `.github/workflows/build-images.yml` — `workflow_dispatch` per target, buildx→GHCR, gha cache scoped per
+      target, assets archive artifact. **Repo hygiene:** Dockerfiles + `derive_build_reqs.py` moved under `docker/`;
+      added repo-root `.dockerignore`. **spaCy trim (2026-06-16):** the pip-distributed spaCy model wheels are baked at
+      build time (not runtime-downloaded), so `derive_build_reqs.py --config` now keeps only the first-preference model
+      per supported language — aarch64 4→2 (sm pair), standalone 4→2 (md pair), armv7 unaffected; aligned to spaCy 3.8.0
+      wheels. **Build patterns fixed (all 3 Dockerfiles):** analyzer needs `.[web-api]` (components import fastapi);
+      `COPY --from` resolves at stage root; uv ignores pip.conf → `UV_EXTRA_INDEX_URL=piwheels` + `UV_INDEX_STRATEGY=
+      unsafe-best-match` on ARM; dropped `uvicorn[standard]` (uvloop/httptools/watchfiles compile from source, need Rust)
+      → plain `uvicorn`; spaCy `name @ URL` specs go one-per-line via `uv pip install -r` (unquoted `$(cat)` shell-splits
+      the embedded spaces). **REMAINING (release-phase tail): on-hardware boot verification** (WB7 armv7 / WB8.5 aarch64)
+      and the **user-facing `docs/guides/build-docker.md` rewrite** (deferred per Invariant #10 — docs after the ledger
+      task). _Original deferred note below._ **DEFERRED to the release phase
       (decided 2026-06-01): Docker builds are an end-stage
       task**, after the architecture/code work settles (image contents, extras, and armv7 viability all depend on
       the post-refactor shape — incl. QUAL-19/20 [ESP32] and ARCH-9/10 [INFER] for the sherpa-onnx/runtime

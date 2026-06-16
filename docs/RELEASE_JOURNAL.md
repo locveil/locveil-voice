@@ -12,6 +12,29 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-16
+- **BUILD-3 — all three images build green on GHCR; spaCy model wheels trimmed config-aware.** Closed out the
+  Dockerfile-design + per-image-workflow steps. The three Dockerfiles were realigned to the wb-mqtt-bridge 3-stage
+  shape (analyzer → builder building into `/opt/venv` via `uv` → lean runtime that `COPY --from=builder`s the venv),
+  with the **config baked** (`COPY` profile → `/app/runtime-config.toml`, `IRENE_CONFIG_FILE`, no entrypoint script)
+  and the **whole `assets/` tree externalized** as the mount *and* the assets-root (`IRENE_ASSETS_ROOT=/app/assets`;
+  models/cache/credentials resolve underneath), shipped as a CI archive artifact the way the bridge ships configs. All
+  runners now serve the **full web API alongside** their primary input through a new `WebServerMixin` (voice = blocking
+  serve + mic background; cli = REPL foreground + web background; webapi = web-only), and config-from-env let the
+  entrypoint script go. `web_port` moved 8000→6000 everywhere (8000 is the bridge's). Added
+  `.github/workflows/build-images.yml` (`workflow_dispatch` per target → buildx → GHCR, per-target gha cache, assets
+  artifact). Repo hygiene: Dockerfiles + `derive_build_reqs.py` moved under `docker/`; added a repo-root `.dockerignore`.
+  Five build patterns had to be fixed across all three Dockerfiles before they went green — analyzer needs `.[web-api]`
+  (components import fastapi); `COPY --from` paths resolve at the *stage* root not WORKDIR; `uv` ignores `pip.conf` so
+  ARM builders need `UV_EXTRA_INDEX_URL=piwheels` + `UV_INDEX_STRATEGY=unsafe-best-match` (else numpy/pyyaml/rapidfuzz
+  compile from source); `uvicorn[standard]` drags in uvloop/httptools/watchfiles (watchfiles needs Rust) → dropped to
+  plain `uvicorn`; spaCy `name @ URL` specs must go one-per-line through `uv pip install -r` because an unquoted
+  `$(cat …)` shell-splits the embedded spaces. **Why the spaCy trim:** spaCy language models are PEP 508
+  direct-reference *wheels* installed at build time (unlike the runtime-downloaded whisper/vosk/piper/silero assets),
+  and the provider statically lists every model+tier — so an image baked all four (ru/en × sm/md). `derive_build_reqs.py
+  --config <profile>` now reads the profile's `nlu.spacy_nlu.language_preferences` and keeps only the first-preference
+  model per supported language; build logs confirm aarch64 ships the **sm** pair and standalone the **md** pair (each
+  dropped 2). Aligned the baked wheels to spaCy **3.8.0** to match ASSET-1's model refresh. Remaining for the release
+  phase: on-hardware boot (WB7/WB8.5) and the user-facing `build-docker.md` rewrite.
 - **ARCH-24 T4 / BUILD-3 — standalone (x86_64) config built; all 3 target configs DONE.** New
   `configs/standalone-x86_64.toml`: the lone non-satellite target — a full local voice runner
   (mic→VAD→wake→ASR→NLU→TTS→playback) on the one torch image. ASR = `whisper` (torch) small, TTS = `silero_v4` (torch)
