@@ -35,7 +35,7 @@ RUN pip install --no-cache-dir ".[web-api]"
 ARG CONFIG_PROFILE=embedded-armv7
 RUN python -m irene.tools.build_analyzer --config configs/${CONFIG_PROFILE}.toml \
         --platform linux.ubuntu --json > /tmp/build-requirements.json && \
-    python derive_build_reqs.py /tmp/build-requirements.json --platform linux.ubuntu --out /tmp
+    python derive_build_reqs.py /tmp/build-requirements.json --platform linux.ubuntu --out /tmp --config configs/${CONFIG_PROFILE}.toml
 
 # ============================================================
 # STAGE 2: BUILDER — build a self-contained /opt/venv (arm32v7)

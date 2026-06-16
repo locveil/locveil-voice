@@ -30,7 +30,7 @@ SAFE_IMPORT = "irene.providers.nlu.spacy_provider.safe_import"
 def _make_spacy(load=None):
     """Build a fake `spacy` module whose `.load` is controllable."""
     mock_spacy = MagicMock()
-    mock_spacy.__version__ = "3.7.0"
+    mock_spacy.__version__ = "3.8.0"
     if load is None:
         mock_spacy.load.return_value = MagicMock(name="nlp")
     else:
@@ -67,7 +67,7 @@ class TestSpaCyAssetConfigContract:
         assert deps, "expected at least one packaged model dependency"
         for dep in deps:
             assert dep.endswith(".whl")
-            assert "3.7.0" in dep
+            assert "3.8.0" in dep
 
     def test_language_preferences_mirror_asset_config(self):
         """Runtime model-resolution order must match the declared asset config."""
@@ -86,7 +86,7 @@ class TestSpaCyAssetInitialization:
         manager = MagicMock()
 
         async def ensure(provider_name, model_name, asset_config):
-            return Path(f"/tmp/test/{model_name}-3.7.0-py3-none-any.whl")
+            return Path(f"/tmp/test/{model_name}-3.8.0-py3-none-any.whl")
 
         manager.ensure_model_available = AsyncMock(side_effect=ensure)
         return manager
