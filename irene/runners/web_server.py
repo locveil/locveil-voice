@@ -56,8 +56,6 @@ class WebServerMixin:
         parser.add_argument("--cors-origins", nargs="*",
                             default=["http://localhost:3000", "http://127.0.0.1:3000"],
                             help="Allowed CORS origins")
-        parser.add_argument("--enable-tts", action="store_true", default=True,
-                            help="Enable TTS output (default: True)")
 
     def _resolve_web_port(self, config, args) -> None:
         """Port precedence: --port > config.system.web_port > 6000."""
@@ -201,19 +199,17 @@ class WebServerMixin:
 
     # --- serve -------------------------------------------------------------------------------------
 
-    async def _start_server(self, args) -> int:
-        """Run the uvicorn server (blocks until shutdown). Background tasks (e.g. the mic pipeline)
-        keep running on the same event loop."""
+    def _build_uvicorn_server(self, args):
+        """Build a configured uvicorn.Server from the app + args (None if the app isn't built)."""
         import uvicorn  # type: ignore
 
         if not self.app:
             logger.error("FastAPI app not initialized")
-            return 1
+            return None
 
         ssl_config = {}
         if args.ssl_cert and args.ssl_key:
             ssl_config = {"ssl_certfile": str(args.ssl_cert), "ssl_keyfile": str(args.ssl_key)}
-
         config_kwargs = {
             "app": self.app,
             "host": args.host,
@@ -223,15 +219,25 @@ class WebServerMixin:
             "workers": args.workers if not args.reload else 1,
         }
         config_kwargs.update(ssl_config)
-        server = uvicorn.Server(uvicorn.Config(**config_kwargs))  # type: ignore
+        return uvicorn.Server(uvicorn.Config(**config_kwargs))  # type: ignore
 
+    def _web_banner(self, args, *, alongside: str = "") -> None:
         if not args.quiet:
-            protocol = "https" if ssl_config else "http"
-            print(f"🌐 Web API server at {protocol}://{args.host}:{args.port}")
+            protocol = "https" if (args.ssl_cert and args.ssl_key) else "http"
+            tail = f" (alongside {alongside})" if alongside else ""
+            print(f"🌐 Web API server at {protocol}://{args.host}:{args.port}{tail}")
             print(f"📚 REST docs: {protocol}://{args.host}:{args.port}/docs")
             print(f"🔌 Component WebSockets: /asr/stream, /asr/binary (ESP32)")
-            print("Press Ctrl+C to stop")
 
+    async def _start_server(self, args) -> int:
+        """Run uvicorn in the FOREGROUND (blocks until shutdown). Background tasks (e.g. the mic
+        pipeline) keep running on the same event loop."""
+        server = self._build_uvicorn_server(args)
+        if server is None:
+            return 1
+        self._web_banner(args)
+        if not args.quiet:
+            print("Press Ctrl+C to stop")
         try:
             await server.serve()
             return 0
@@ -242,3 +248,25 @@ class WebServerMixin:
         except Exception as e:
             logger.error(f"Server error: {e}")
             return 1
+
+    async def _serve_in_background(self, args):
+        """Start uvicorn as a BACKGROUND task — for a runner whose primary loop is the foreground
+        (e.g. the CLI REPL). Returns (server, task); to stop: `server.should_exit = True; await task`.
+        Returns (None, None) if the app isn't built."""
+        import asyncio
+        server = self._build_uvicorn_server(args)
+        if server is None:
+            return None, None
+        self._web_banner(args, alongside="the console")
+        return server, asyncio.create_task(server.serve())
+
+    async def _stop_background_server(self, server, task) -> None:
+        """Signal a background uvicorn server to stop and wait for it (best-effort)."""
+        import asyncio
+        if server is not None:
+            server.should_exit = True
+        if task is not None:
+            try:
+                await asyncio.wait_for(task, timeout=5)
+            except Exception:
+                task.cancel()

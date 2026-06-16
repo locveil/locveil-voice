@@ -50,8 +50,10 @@ class WebAPIRunner(WebServerMixin, BaseRunner):
         self._init_web_server_state()
 
     def _add_runner_arguments(self, parser: argparse.ArgumentParser) -> None:
-        """Add the shared web-server args."""
+        """Add the shared web-server args + the TTS toggle this runner honours."""
         self._add_web_server_arguments(parser)
+        parser.add_argument("--enable-tts", action="store_true", default=True,
+                            help="Enable TTS output (default: True)")
 
     def _get_usage_examples(self) -> str:
         return """

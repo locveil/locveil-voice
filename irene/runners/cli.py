@@ -16,6 +16,7 @@ from ..config.models import CoreConfig, ComponentConfig
 from ..core.session_manager import SessionManager
 from ..utils.loader import get_component_status, suggest_installation
 from .base import BaseRunner, RunnerConfig, InteractiveRunnerMixin
+from .web_server import WebServerMixin
 
 
 
@@ -107,26 +108,24 @@ def list_deployment_profiles():
 
 
 
-class CLIRunner(BaseRunner, InteractiveRunnerMixin):
+class CLIRunner(WebServerMixin, BaseRunner, InteractiveRunnerMixin):
     """
     CLI Runner class - Provides command line interface for Irene.
-    
-    This runner ALWAYS uses CLI input only, regardless of config file settings.
-    It overrides any input configuration to ensure only CLI input is enabled.
-    
-    Now using BaseRunner for unified patterns and InteractiveRunnerMixin
-    for interactive mode support.
+
+    CLI is the primary input; the web API (WebServerMixin) runs alongside it in the background — ON by
+    default, OFF for --headless. So the same instance gives you the terminal REPL **and** REST/WS.
     """
-    
+
     def __init__(self):
         runner_config = RunnerConfig(
             name="CLI",
-            description="Command line interface for Irene (CLI input only)",
+            description="Command line interface for Irene (CLI input + web API)",
             requires_config_file=False,
             supports_interactive=True,
             required_dependencies=["core"]
         )
         super().__init__(runner_config)
+        self._init_web_server_state()
     
     def _add_runner_arguments(self, parser: argparse.ArgumentParser) -> None:
         """Add CLI-specific command line arguments"""
@@ -183,7 +182,10 @@ class CLIRunner(BaseRunner, InteractiveRunnerMixin):
             type=Path,
             help="Override data directory path"
         )
-    
+
+        # Web-server args (the CLI serves the web API alongside the REPL, unless --headless)
+        self._add_web_server_arguments(parser)
+
     def _get_usage_examples(self) -> str:
         """Get usage examples for CLI runner"""
         return """
@@ -255,12 +257,16 @@ Note: CLI runner always uses CLI input only, regardless of config file settings.
             config.system.audio_playback_enabled = True
             config.system.web_api_enabled = True
         
-        # CLI Runner ALWAYS forces CLI-only input configuration
-        # This overrides any input configuration from the config file
+        # CLI is the primary input; the web API runs alongside it — ON by default, OFF for --headless
+        # (--api-only / --voice already enabled it above). This overrides the config file's inputs.
+        serve_web = not args.headless
         config.inputs.microphone = False
-        config.inputs.web = False
         config.inputs.cli = True
+        config.inputs.web = serve_web
         config.inputs.default_input = "cli"
+        config.system.web_api_enabled = serve_web
+        if serve_web:
+            self._resolve_web_port(config, args)
         
         # Apply other command line overrides
         if args.data_dir:
@@ -314,11 +320,29 @@ Note: CLI runner always uses CLI input only, regardless of config file settings.
             if self._output_manager is not None and (out_cfg is None or out_cfg.console):
                 prefix = out_cfg.console_prefix if out_cfg is not None else "📝 "
                 await self._output_manager.add_output("console", ConsoleOutput(origin="cli", prefix=prefix))
+
+        # Build the web API alongside the CLI (unless --headless / web deps absent).
+        if self.core and getattr(self.core.config.system, "web_api_enabled", False):
+            try:
+                await self._setup_web_server(args)
+            except Exception as e:
+                self._logger.warning(f"Web API unavailable, CLI-only: {e}")
+                self.app = None
     
     async def _execute_runner_logic(self, args: argparse.Namespace) -> int:
-        """Execute CLI runner logic"""
+        """Execute CLI runner logic — the REPL/command in the foreground, the web API (if built) on a
+        background task that's stopped when the CLI exits."""
         if not self.core:
             return 1
+        server, task = (None, None)
+        if self.app:
+            server, task = await self._serve_in_background(args)
+        try:
+            return await self._cli_logic(args)
+        finally:
+            await self._stop_background_server(server, task)
+
+    async def _cli_logic(self, args: argparse.Namespace) -> int:
         # Handle single command execution
         if args.command:
             try:
