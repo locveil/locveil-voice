@@ -2224,10 +2224,18 @@ _Apply to every remediation task below (from the 4 review docs + QUAL-25/26). So
       per-config). Removed the `Dockerfile.x86_64` cpu-torch two-step bridge (torch now CPU-pins via the
       `advanced-asr`/`tts-silero` extras). `uv.lock`: torch `2.12.1+cpu`, **0 nvidia packages**, `uv lock --check` green.
       Local gates: `ast.parse` all edits, every returned extra-name exists in pyproject, no remaining raw specs except
-      spaCy URLs. **Pending build-confirm:** rebuild all 3 GHCR images; expect standalone ~6.4 GB → ~2.85 GB (cpu torch,
-      no nvidia; triton still rides in via `openai-whisper`). **Flagged (not fixed):**
-      `Component.start`→`is_dependencies_available` `__import__`s the returned strings — dead code (ComponentManager uses
-      `initialize()`; nothing calls `.start()`), but now a landmine since returns are extra-names; remove or rewrite later.
+      spaCy URLs. **Build-confirmed 2026-06-21** (all 3 GHCR images rebuilt, green): standalone **6.44 GB → 3.16 GB**
+      uncompressed (3198 MB → 955 MB compressed, −70% on the wire) — nvidia packages **2724 MB → 0**, torch `2.12.1+cpu`
+      (1075 → 584 MB); satellites byte-identical (aarch64 763 MB, armv7 233 MB — no torch). Re-audited: still **0 models
+      baked** (`/app/assets` empty); aarch64 spaCy trim verified (provider declares 4, config preferences 2 `sm` →
+      exactly `ru_core_news_sm` + `en_core_web_sm` pulled, `md` tier trimmed). **Parked follow-up — triton:** `triton`
+      (688 MB) still rides in via `openai-whisper` (its **only** requirer; imported lazily + try/except-guarded in
+      `whisper/triton_ops.py`, so unused on a `device="cpu"` box → safe to drop → standalone ~2.47 GB). Two approaches
+      scoped (uv `override-dependencies` vs a Dockerfile `uv pip uninstall triton`) but **deferred**. NOT removable:
+      numba/llvmlite (~160 MB) — `whisper/timing.py:7` does a top-level `import numba`, required for `import whisper`.
+      **Flagged (not fixed):** `Component.start`→`is_dependencies_available` `__import__`s the returned strings — dead
+      code (ComponentManager uses `initialize()`; nothing calls `.start()`), but now a landmine since returns are
+      extra-names; remove or rewrite later.
 
 ### Models & Assets (ASSET)
 - [x] **ASSET-1** — Refresh stale model IDs (Anthropic→Claude 4.x, Whisper large-v3, ElevenLabs multilingual_v2, spaCy 3.8, gpt-4→gpt-4o-mini). → fc85306

@@ -30,7 +30,10 @@ newest entries near the top of each dated section.
   was **removed** — torch now CPU-pins automatically through the `advanced-asr`/`tts-silero` extras. `uv.lock`
   regenerated: torch `2.12.1+cpu`, **0 nvidia packages**, `uv lock --check` green. Runtime-safe: the only import-based
   consumer (`Component.start`→`is_dependencies_available`) is dead code (ComponentManager uses `initialize()`; nothing
-  calls `.start()`) — flagged for cleanup, not touched. Image-size confirmation gated on the rebuild of all 3 GHCR images.
+  calls `.start()`) — flagged for cleanup, not touched. **Build-confirmed (all 3 images rebuilt green):** standalone
+  **6.44 GB → 3.16 GB** (nvidia 2724 MB → 0, torch `2.12.1+cpu`); satellites byte-identical (763 MB / 233 MB); still 0
+  models baked; aarch64 spaCy trim verified (4 declared → 2 `sm` pulled). `triton` (688 MB, `openai-whisper`'s sole
+  requirer, unused on CPU) parked as a follow-up; numba/llvmlite must stay (top-level import in whisper).
 
 ### 2026-06-16
 - **ARCH-10 closed (implementation); WB7/WB8 hardware bring-up split out as ARCH-25.** With the streaming-endpoint
