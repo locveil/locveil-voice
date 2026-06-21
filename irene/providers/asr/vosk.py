@@ -373,8 +373,8 @@ class VoskASRProvider(ASRProvider):
     # Build dependency methods (TODO #5 Phase 1)
     @classmethod
     def get_python_dependencies(cls) -> List[str]:
-        """Vosk ASR requires specific vosk library"""
-        return ["vosk>=0.3.45"]
+        """Vosk ASR requires the asr-vosk build extra"""
+        return ["asr-vosk"]  # Build extra: asr-vosk
         
     @classmethod
     def get_platform_dependencies(cls) -> Dict[str, List[str]]:

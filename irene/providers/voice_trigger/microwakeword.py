@@ -220,8 +220,8 @@ class MicroWakeWordProvider(VoiceTriggerProvider):
     # --- Build / asset metadata -----------------------------------------------------------------
     @classmethod
     def get_python_dependencies(cls) -> List[str]:
-        """pymicro-wakeword bundles its own tflite C lib + the micro frontend (no tflite-runtime)."""
-        return ["pymicro-wakeword>=2.0.0"]
+        """microWakeWord on a bundled tflite C lib + micro frontend (no tflite-runtime); extra: wake-tflite."""
+        return ["wake-tflite"]  # Build extra: wake-tflite
 
     @classmethod
     def get_platform_dependencies(cls) -> Dict[str, List[str]]:

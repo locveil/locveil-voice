@@ -180,8 +180,8 @@ class AnthropicLLMProvider(LLMProvider):
     # Build dependency methods (TODO #5 Phase 1)
     @classmethod
     def get_python_dependencies(cls) -> List[str]:
-        """Anthropic requires specific anthropic library"""
-        return ["anthropic>=0.25.0"]
+        """Anthropic requires the llm-anthropic build extra"""
+        return ["llm-anthropic"]  # Build extra: llm-anthropic
         
     @classmethod
     def get_platform_dependencies(cls) -> Dict[str, List[str]]:

@@ -2210,6 +2210,24 @@ _Apply to every remediation task below (from the 4 review docs + QUAL-25/26). So
       `build_analyzer --validate-all-profiles` already passes (the providers exist); this is the deeper provider-config
       *schema* validation. Done when `config_validator_cli --config-dir configs/ --ci-mode` is green (backend CI goes
       green).
+- [x] **BUILD-7** `[release]` [BUILD] (P2) — **DONE 2026-06-21.** Docker images de-bloated + the BUILD-5-deferred
+      `get_python_dependencies()` extra-names migration finished. The standalone (torch) image was ~6.44 GB; a
+      docker-export audit of all 3 *published* images proved **no assets/models are baked** (`/app/assets` empty, 0 model
+      files; satellites 763 MB / 233 MB) — the bloat was default-PyPI torch pulling ~3.4 GB of unused NVIDIA CUDA +
+      Triton into a `device="cpu"` runner. Pinned torch/torchaudio to the CPU wheel index (`[[tool.uv.index]]` explicit +
+      `[tool.uv.sources]`). **Constraint:** `uv pip` honors sources for the project's own optional-deps
+      (`uv pip install .[extra]`) but NOT for loose `-r` specs — so torch had to leave `pip-specs.txt` for an extra,
+      which required fixing providers that returned raw specs instead of extra-names (the `metadata.py` contract).
+      Migrated **31** providers/components/inputs/handlers to return extra-NAMES (or `[]`); added 10 granular per-provider
+      extras + made `tts`/`llm`/`audio-output`/`audio-input`/`nlu` umbrellas; `dependency_validator` made
+      extra-name-aware. spaCy models stay raw `@`-URL specs (the one exception → `derive._spacy_keep` still trims
+      per-config). Removed the `Dockerfile.x86_64` cpu-torch two-step bridge (torch now CPU-pins via the
+      `advanced-asr`/`tts-silero` extras). `uv.lock`: torch `2.12.1+cpu`, **0 nvidia packages**, `uv lock --check` green.
+      Local gates: `ast.parse` all edits, every returned extra-name exists in pyproject, no remaining raw specs except
+      spaCy URLs. **Pending build-confirm:** rebuild all 3 GHCR images; expect standalone ~6.4 GB → ~2.85 GB (cpu torch,
+      no nvidia; triton still rides in via `openai-whisper`). **Flagged (not fixed):**
+      `Component.start`→`is_dependencies_available` `__import__`s the returned strings — dead code (ComponentManager uses
+      `initialize()`; nothing calls `.start()`), but now a landmine since returns are extra-names; remove or rewrite later.
 
 ### Models & Assets (ASSET)
 - [x] **ASSET-1** — Refresh stale model IDs (Anthropic→Claude 4.x, Whisper large-v3, ElevenLabs multilingual_v2, spaCy 3.8, gpt-4→gpt-4o-mini). → fc85306

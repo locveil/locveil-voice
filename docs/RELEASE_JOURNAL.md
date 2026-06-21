@@ -11,6 +11,27 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+### 2026-06-21
+- **Docker images de-bloated (CPU-only torch) + finished the BUILD-5-deferred `get_python_dependencies()` extra-names
+  migration (BUILD-7).** The standalone (torch) image was ~6.44 GB. An audit (docker-export of all 3 *published* images)
+  proved **no model assets are baked** — `/app/assets` is an empty mount, 0 model files in any image; the satellites are
+  763 MB / 233 MB. The bloat was the default PyPI torch dragging ~3.4 GB of unused NVIDIA CUDA + Triton wheels into a
+  `device="cpu"` runner (nvidia 2724 MB + triton 696 MB + CUDA-laden torch 1075 MB). Fix: pin torch/torchaudio to the
+  CPU wheel index via `[[tool.uv.index]]` (explicit) + `[tool.uv.sources]`. **Key finding:** the `uv pip` interface
+  IGNORES `[tool.uv.sources]` for loose `-r` specs but HONORS them for the project's own optional-deps
+  (`uv pip install .[extra]`) — so the pin only lands if torch arrives via an EXTRA, not a raw spec in `pip-specs.txt`.
+  torch was a raw spec because providers (whisper/silero) declared raw pip specs in `get_python_dependencies()`,
+  violating the `metadata.py` contract (it returns extra-NAMES). So finished the migration: **31** providers/components/
+  inputs/handlers now return extra-names (or `[]` for base-dep-only); added 10 granular per-provider extras
+  (`tts-silero`/`tts-pyttsx`/`tts-elevenlabs`/`tts-vosk`, `asr-vosk`, `audio-sounddevice`/`audio-miniaudio`,
+  `llm-openai`/`llm-anthropic`, `nlu-spacy`) and turned `tts`/`llm`/`audio-output`/`audio-input`/`nlu` into umbrellas;
+  `dependency_validator` made extra-name-aware. spaCy language models STAY as raw `@`-URL specs (the one justified
+  exception) so `derive._spacy_keep` keeps trimming them per-config. The `Dockerfile.x86_64` cpu-torch two-step bridge
+  was **removed** — torch now CPU-pins automatically through the `advanced-asr`/`tts-silero` extras. `uv.lock`
+  regenerated: torch `2.12.1+cpu`, **0 nvidia packages**, `uv lock --check` green. Runtime-safe: the only import-based
+  consumer (`Component.start`→`is_dependencies_available`) is dead code (ComponentManager uses `initialize()`; nothing
+  calls `.start()`) — flagged for cleanup, not touched. Image-size confirmation gated on the rebuild of all 3 GHCR images.
+
 ### 2026-06-16
 - **ARCH-10 closed (implementation); WB7/WB8 hardware bring-up split out as ARCH-25.** With the streaming-endpoint
   sliver landed, ARCH-10's software scope is 100% complete (all PR slices, the VAD seam, the ESP32 streaming endpoint —

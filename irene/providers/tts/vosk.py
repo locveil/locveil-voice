@@ -288,8 +288,8 @@ class VoskTTSProvider(TTSProvider):
     # Build dependency methods (TODO #5 Phase 1)
     @classmethod
     def get_python_dependencies(cls) -> List[str]:
-        """VOSK TTS requires vosk-tts package"""
-        return ["vosk-tts>=0.3.0"]
+        """VOSK TTS requires its runtime package"""
+        return ["tts-vosk"]  # Build extra: tts-vosk
         
     @classmethod
     def get_platform_dependencies(cls) -> Dict[str, List[str]]:

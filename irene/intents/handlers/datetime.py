@@ -334,8 +334,8 @@ class DateTimeIntentHandler(IntentHandler):
     # Build dependency methods (TODO #5 Phase 2)
     @classmethod
     def get_python_dependencies(cls) -> List[str]:
-        """DateTime handler needs date utilities"""
-        return ["python-dateutil>=2.8.0"]
+        """DateTime handler relies on base date utilities"""
+        return []  # python-dateutil is a base dependency
     
     @classmethod
     def get_platform_dependencies(cls) -> Dict[str, List[str]]:

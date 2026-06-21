@@ -114,8 +114,8 @@ class PyttsTTSProvider(TTSProvider):
     # Build dependency methods (TODO #5 Phase 1)
     @classmethod
     def get_python_dependencies(cls) -> List[str]:
-        """Pyttsx TTS requires pyttsx3 library"""
-        return ["pyttsx3>=2.90"]
+        """Pyttsx TTS requires its runtime library"""
+        return ["tts-pyttsx"]  # Build extra: tts-pyttsx
         
     @classmethod
     def get_platform_dependencies(cls) -> Dict[str, List[str]]:

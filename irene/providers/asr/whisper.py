@@ -220,8 +220,8 @@ class WhisperASRProvider(ASRProvider):
     # Build dependency methods (TODO #5 Phase 1)
     @classmethod
     def get_python_dependencies(cls) -> List[str]:
-        """Whisper requires specific libraries for speech recognition"""
-        return ["openai-whisper>=20230314", "torch>=1.13.0", "torchaudio>=0.13.0"]
+        """Whisper requires the advanced ASR build extra for speech recognition"""
+        return ["advanced-asr"]  # Build extra: advanced-asr
         
     @classmethod
     def get_platform_dependencies(cls) -> Dict[str, List[str]]:

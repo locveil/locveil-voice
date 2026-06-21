@@ -975,7 +975,7 @@ class HybridKeywordMatcherProvider(NLUProvider):
     @classmethod
     def get_python_dependencies(cls) -> List[str]:
         """Hybrid keyword matcher dependencies"""
-        return ["rapidfuzz>=3.0.0"]  # Optional but recommended for fuzzy matching
+        return []  # rapidfuzz is a base dependency
         
     @classmethod
     def get_platform_dependencies(cls) -> Dict[str, List[str]]:

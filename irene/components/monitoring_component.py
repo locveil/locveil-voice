@@ -591,11 +591,7 @@ class MonitoringComponent(Component, WebAPIPlugin):
     @classmethod
     def get_python_dependencies(cls) -> List[str]:
         """Python dependencies for monitoring component"""
-        return [
-            "fastapi>=0.100.0",
-            "uvicorn>=0.20.0",
-            "pydantic>=2.0.0"
-        ]
+        return ["web-api"]  # FastAPI/uvicorn web stack (pydantic is a base dependency)
     
     def get_component_dependencies(self) -> List[str]:
         """Component dependencies"""

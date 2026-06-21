@@ -696,12 +696,7 @@ class ASRComponent(Component, ASRPlugin, WebAPIPlugin, ASRPort):
     @classmethod
     def get_python_dependencies(cls) -> List[str]:
         """ASR component needs web API functionality"""
-        return [
-            "fastapi>=0.100.0", 
-            "uvicorn>=0.20.0", 
-            "websockets>=11.0.0",
-            "python-multipart>=0.0.6"  # Required for file upload endpoints
-        ]
+        return ["web-api"]  # FastAPI/uvicorn/websockets/python-multipart stack
     
     # Phase 1: Unified metrics integration methods
     def _start_metrics_push_task(self) -> None:

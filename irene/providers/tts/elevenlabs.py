@@ -220,8 +220,8 @@ class ElevenLabsTTSProvider(TTSProvider):
     # Build dependency methods (TODO #5 Phase 1)
     @classmethod
     def get_python_dependencies(cls) -> List[str]:
-        """ElevenLabs TTS requires elevenlabs API client and httpx"""
-        return ["elevenlabs>=1.0.3", "httpx>=0.25.0"]
+        """ElevenLabs TTS requires its API client runtime dependencies"""
+        return ["tts-elevenlabs"]  # Build extra: tts-elevenlabs
         
     @classmethod
     def get_platform_dependencies(cls) -> Dict[str, List[str]]:

@@ -28,11 +28,17 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# Audio input components
-audio-input = [
+# Audio input — split per-provider (B): the vosk ASR provider + the sounddevice audio backend
+# (also reused by the microphone input). Umbrella `audio-input` kept for back-compat.
+asr-vosk = [
     "vosk>=0.3.45",
+]
+audio-sounddevice = [
     "sounddevice>=0.5.0",
-    "soundfile>=0.13.0"
+    "soundfile>=0.13.0",
+]
+audio-input = [
+    "irene-voice-assistant[asr-vosk,audio-sounddevice]"
 ]
 
 # Advanced ASR providers
@@ -65,22 +71,35 @@ audio-input-complete = [
     "irene-voice-assistant[audio-input,cloud-asr,advanced-asr]"
 ]
 
-# TTS output components
-tts = [
+# TTS output — split per-provider (B). silero needs torch (pulled as the CPU wheel via the
+# [tool.uv.index]/[tool.uv.sources] pin below); the others are self-contained. Umbrella `tts` kept.
+tts-silero = [
+    "torch>=1.13.0",
+]
+tts-pyttsx = [
     "pyttsx3>=2.90",
+]
+tts-elevenlabs = [
     "elevenlabs>=1.0.3",
     "httpx>=0.25.0",
-    "vosk-tts>=0.3.0", # VOSK TTS for high-quality Russian multi-speaker synthesis
+]
+tts-vosk = [
+    "vosk-tts>=0.3.0",  # VOSK TTS for high-quality Russian multi-speaker synthesis
+]
+tts = [
+    "irene-voice-assistant[tts-pyttsx,tts-elevenlabs,tts-vosk,tts-silero]"
 ]
 
 # Audio output components. ARCH-20: streamable-only backends — sounddevice (RawOutputStream, cross-OS),
 # aplay (ALSA stdin, Linux), miniaudio (self-contained, bundled WASAPI/CoreAudio/ALSA, cross-OS incl. RPi).
 # Dropped audioplayer (file-only) + simpleaudio (archived, WAV-buffer-only) — neither can stream raw PCM.
-audio-output = [
-    "sounddevice>=0.5.0",
-    "soundfile>=0.13.0",
+audio-miniaudio = [
     "miniaudio>=1.59",
-    "numpy>=1.21.0",
+]
+# Umbrella: the two output backends + librosa (resampling helper, not owned by one provider).
+# numpy dropped — it is a base dependency.
+audio-output = [
+    "irene-voice-assistant[audio-sounddevice,audio-miniaudio]",
     "librosa>=0.10.0",  # For high-quality audio resampling in audio_helpers.py
 ]
 
@@ -128,16 +147,27 @@ cloud-asr = [
     "google-auth>=2.17.0",
 ]
 
-# LLM (Large Language Model) components
-llm = [
+# LLM components — split per-provider (B). deepseek reuses llm-openai (OpenAI-compatible client).
+llm-openai = [
     "openai>=1.0.0",
+]
+llm-anthropic = [
     "anthropic>=0.25.0",
 ]
+llm = [
+    "irene-voice-assistant[llm-openai,llm-anthropic]"
+]
 
-# NLU (Natural Language Understanding) components - Phase 1: Multi-model support
-nlu = [
+# NLU spaCy — the LIB lives in this extra; the LANGUAGE MODELS stay as raw direct-URL specs (returned
+# in-code by the spaCy provider) so the build can trim them per-config via derive_build_reqs `_spacy_keep`.
+# The provider returns ["nlu-spacy", <model URLs>]: derive routes the extra-name to uv, the URLs to pip-specs.
+nlu-spacy = [
     "spacy>=3.8.0",
-    "numpy>=1.21.0",  # Required for intent centroids and vector operations
+]
+# Umbrella with all models — for the `voice` dev group (`uv sync`); the trimmed Docker build path uses
+# the provider's raw model specs instead. numpy dropped — it is a base dependency.
+nlu = [
+    "irene-voice-assistant[nlu-spacy]",
     # Phase 1: Multi-language model support - Russian models (in preference order)
     "ru_core_news_md @ https://github.com/explosion/spacy-models/releases/download/ru_core_news_md-3.8.0/ru_core_news_md-3.8.0-py3-none-any.whl",
     "ru_core_news_sm @ https://github.com/explosion/spacy-models/releases/download/ru_core_news_sm-3.8.0/ru_core_news_sm-3.8.0-py3-none-any.whl",
@@ -340,6 +370,24 @@ web = "irene.inputs.web:WebInput"
 cli = "irene.runners.cli:CLIRunner"
 voice = "irene.runners.voice_runner:VoiceRunner"
 webapi = "irene.runners.webapi_runner:WebAPIRunner"
+
+# Pull torch/torchaudio from the CPU-only wheel index. The only torch consumer is the x86_64 standalone
+# (Silero TTS + Whisper ASR), and it runs device="cpu" — the default PyPI torch drags in ~3.4 GB of unused
+# NVIDIA CUDA + Triton wheels. The CPU wheels carry none of that (image: ~6.4 GB → ~2.5 GB). Satellites
+# ship no torch at all. The index is `explicit` + scoped via [tool.uv.sources] so it is consulted ONLY for
+# torch/torchaudio; a non-explicit index would let uv's first-index rule cap pytorch's stale mirrors of
+# common deps (urllib3, types-requests, …) and break resolution. torch reaches the build only through the
+# `tts-silero` / `advanced-asr` EXTRAS (`uv pip install .[…]`), and the pip interface DOES honor
+# [tool.uv.sources] for the project's own optional-deps — so the CPU pin applies with no Dockerfile step.
+# (It is NOT honored for loose `-r requirements` specs, which is why torch must stay in an extra, not pip-specs.)
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-cpu" }
+torchaudio = { index = "pytorch-cpu" }
 
 [tool.setuptools.packages.find]
 where = ["."]

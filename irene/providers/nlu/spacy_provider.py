@@ -1215,9 +1215,11 @@ class SpaCyNLUProvider(NLUProvider):
     @classmethod
     def get_python_dependencies(cls) -> List[str]:
         """spaCy NLU requires spacy library and multiple language models"""
+        # The spacy library ships via the "nlu-spacy" build extra; numpy is a base dependency.
+        # The four model "@"-URL specs stay as raw specs (not an extra) so the build can trim
+        # them per-config via derive_build_reqs._spacy_keep.
         return [
-            "spacy>=3.8.0",
-            "numpy>=1.20.0",  # For centroids and vector operations
+            "nlu-spacy",
             # Russian models (in preference order - system will use first available)
             "ru_core_news_md @ https://github.com/explosion/spacy-models/releases/download/ru_core_news_md-3.8.0/ru_core_news_md-3.8.0-py3-none-any.whl",
             "ru_core_news_sm @ https://github.com/explosion/spacy-models/releases/download/ru_core_news_sm-3.8.0/ru_core_news_sm-3.8.0-py3-none-any.whl",

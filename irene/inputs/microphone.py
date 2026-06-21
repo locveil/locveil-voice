@@ -340,4 +340,4 @@ class MicrophoneInput(InputPort):
     @classmethod
     def get_python_dependencies(cls) -> List[str]:
         """Microphone input needs audio processing libraries"""
-        return ["sounddevice>=0.4.0", "soundfile>=0.12.0"] 
+        return ["audio-sounddevice"]  # Build extra: audio-sounddevice

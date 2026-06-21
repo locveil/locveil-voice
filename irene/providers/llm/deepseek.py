@@ -112,7 +112,8 @@ class DeepSeekLLMProvider(LLMProvider):
 
     @classmethod
     def get_python_dependencies(cls) -> List[str]:
-        return ["openai>=1.0.0"]
+        """DeepSeek uses the OpenAI-compatible client from the llm-openai build extra"""
+        return ["llm-openai"]  # Build extra: llm-openai
 
     @classmethod
     def get_platform_dependencies(cls) -> Dict[str, List[str]]:

@@ -644,7 +644,7 @@ class LLMComponent(Component, LLMPlugin, WebAPIPlugin, LLMPort):
     @classmethod
     def get_python_dependencies(cls) -> List[str]:
         """LLM component needs web API functionality"""
-        return ["fastapi>=0.100.0", "uvicorn>=0.20.0"]
+        return ["web-api"]  # FastAPI/uvicorn web stack
     
     # Config interface methods (Phase 3 - Configuration Architecture Cleanup)
     @classmethod

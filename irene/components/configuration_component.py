@@ -71,7 +71,7 @@ class ConfigurationComponent(Component, WebAPIPlugin):
     @classmethod
     def get_python_dependencies(cls) -> list[str]:
         """Return list of required Python modules for ConfigurationComponent"""
-        return ["fastapi", "pydantic", "tomlkit"]  # Required for WebAPI, configuration validation, and comment preservation
+        return ["web-api"]  # FastAPI/uvicorn web stack (pydantic, tomlkit are base dependencies)
     
     def get_service_dependencies(self) -> Dict[str, type]:
         """Get list of required service dependencies."""

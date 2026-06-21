@@ -35,8 +35,8 @@ class CLIInput(InputPort):
     # Build dependency methods (TODO #5 Phase 2)
     @classmethod
     def get_python_dependencies(cls) -> List[str]:
-        """CLI input needs prompt_toolkit for enhanced terminal features"""
-        return ["prompt_toolkit>=3.0.0"]
+        """CLI input relies on base dependencies for enhanced terminal features"""
+        return []  # prompt-toolkit is a base dependency
         
     @classmethod
     def get_platform_dependencies(cls) -> Dict[str, List[str]]:

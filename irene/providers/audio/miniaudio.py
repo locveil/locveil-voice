@@ -88,8 +88,8 @@ class MiniaudioAudioProvider(AudioProvider):
 
     @classmethod
     def get_python_dependencies(cls) -> List[str]:
-        """Miniaudio ships its own native backends — one pure Python dependency."""
-        return ["miniaudio>=1.59"]
+        """Miniaudio ships its own native backends via the audio-miniaudio build extra."""
+        return ["audio-miniaudio"]  # Build extra: audio-miniaudio
 
     @classmethod
     def get_platform_dependencies(cls) -> Dict[str, List[str]]:

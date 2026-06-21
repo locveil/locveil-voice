@@ -251,8 +251,8 @@ class OpenAILLMProvider(LLMProvider):
     # Build dependency methods (TODO #5 Phase 1)
     @classmethod
     def get_python_dependencies(cls) -> List[str]:
-        """OpenAI requires specific openai library"""
-        return ["openai>=1.0.0"]
+        """OpenAI requires the llm-openai build extra"""
+        return ["llm-openai"]  # Build extra: llm-openai
         
     @classmethod
     def get_platform_dependencies(cls) -> Dict[str, List[str]]:

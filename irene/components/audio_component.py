@@ -629,11 +629,7 @@ class AudioComponent(Component, AudioPlugin, WebAPIPlugin, AudioPort):
     @classmethod
     def get_python_dependencies(cls) -> List[str]:
         """Audio component needs web API functionality"""
-        return [
-            "fastapi>=0.100.0", 
-            "uvicorn>=0.20.0",
-            "python-multipart>=0.0.6"  # Required for file upload endpoints
-        ]
+        return ["web-api"]  # FastAPI/uvicorn/python-multipart web stack
     
     # Config interface methods (Phase 3 - Configuration Architecture Cleanup)
     @classmethod

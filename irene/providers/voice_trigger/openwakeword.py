@@ -407,7 +407,7 @@ class OpenWakeWordProvider(VoiceTriggerProvider):
     @classmethod
     def get_python_dependencies(cls) -> List[str]:
         """OpenWakeWord on the ONNX runtime (no torch); extra: wake-onnx. 64-bit (armv7 wakes on-device)."""
-        return ["openwakeword>=0.6.0", "onnxruntime>=1.15.0", "numpy>=1.21.0", "aiohttp>=3.8.0"]
+        return ["wake-onnx"]  # Build extra: wake-onnx
         
     @classmethod
     def get_platform_dependencies(cls) -> Dict[str, List[str]]:

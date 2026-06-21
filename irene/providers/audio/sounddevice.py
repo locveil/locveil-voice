@@ -112,8 +112,8 @@ class SoundDeviceAudioProvider(AudioProvider):
     # Build dependency methods (TODO #5 Phase 1)
     @classmethod
     def get_python_dependencies(cls) -> List[str]:
-        """SoundDevice audio requires sounddevice and soundfile libraries"""
-        return ["sounddevice>=0.4.0", "soundfile>=0.12.0"]
+        """SoundDevice audio requires the audio-sounddevice build extra"""
+        return ["audio-sounddevice"]  # Build extra: audio-sounddevice
         
     @classmethod
     def get_platform_dependencies(cls) -> Dict[str, List[str]]:

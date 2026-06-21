@@ -93,11 +93,7 @@ class NLUAnalysisComponent(Component, WebAPIPlugin):
     @classmethod
     def get_python_dependencies(cls) -> List[str]:
         """Return list of required Python modules"""
-        return [
-            "pydantic>=2.0.0",
-            "rapidfuzz>=3.0.0",  # Optional but recommended for fuzzy matching
-            "spacy>=3.4.0",      # Optional but recommended for semantic analysis
-        ]
+        return ["nlu-spacy"]  # spaCy NLU extra (pydantic, rapidfuzz are base dependencies)
     
     def get_providers_info(self) -> str:
         """Get human-readable information about analysis capabilities"""

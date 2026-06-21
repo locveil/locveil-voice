@@ -216,8 +216,8 @@ class GoogleCloudASRProvider(ASRProvider):
     # Build dependency methods (TODO #5 Phase 1)
     @classmethod
     def get_python_dependencies(cls) -> List[str]:
-        """Google Cloud ASR requires specific Google Cloud libraries"""
-        return ["google-cloud-speech>=2.20.0", "google-auth>=2.17.0"]
+        """Google Cloud ASR requires the cloud-asr build extra"""
+        return ["cloud-asr"]  # Build extra: cloud-asr
         
     @classmethod
     def get_platform_dependencies(cls) -> Dict[str, List[str]]:

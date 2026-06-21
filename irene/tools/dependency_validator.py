@@ -466,8 +466,13 @@ class DependencyValidator:
             # Check each declared dependency
             deps_valid = True
             for dep in python_deps:
-                # Extract package name from dependency specification
-                if " @ " in dep:  # Git URL dependency  
+                # Per the metadata contract, an entry may be an EXTRA-GROUP NAME (e.g. "web-api",
+                # "tts-silero") rather than a package spec — that is the expected form. A bare token that
+                # matches an optional-dependencies group is valid as-is (no package-name lookup).
+                if dep.strip() in optional_deps:
+                    continue
+                # Otherwise it's a raw spec (e.g. the spaCy model `@`-URL wheels) — resolve its package name.
+                if " @ " in dep:  # Git URL dependency
                     pkg_name = dep.split(" @ ")[0]
                 elif ">=" in dep:
                     pkg_name = dep.split(">=")[0]

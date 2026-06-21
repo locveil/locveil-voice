@@ -228,8 +228,8 @@ class SileroV3TTSProvider(TTSProvider):
     # Build dependency methods (TODO #5 Phase 1)
     @classmethod
     def get_python_dependencies(cls) -> List[str]:
-        """Silero v3 requires PyTorch for model inference"""
-        return ["torch>=1.13.0"]
+        """Silero v3 requires runtime dependencies for model inference"""
+        return ["tts-silero"]  # Build extra: tts-silero
         
     @classmethod
     def get_platform_dependencies(cls) -> Dict[str, List[str]]:
