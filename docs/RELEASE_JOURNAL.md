@@ -12,6 +12,11 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-22
+- **CR-A6 follow-up: switched the donation-source access to the component DI pattern.** The initial CR-A6 reached the
+  NLU component's `asset_loader` via `core.component_manager.get_component("nlu")` (a "core-reach" the newer QUAL-24
+  port code avoids). Tightened to the injected pattern: `NLUAnalysisComponent.get_component_dependencies()` now returns
+  `["nlu"]`, so the manager topo-orders NLU first and injects it; `_get_asset_loader()` reads it via
+  `self.get_dependency("nlu")` (dropped the stored `self._core`). Suite 1048 passed, pyright 0, import-linter 9/9.
 - **NLU-analysis donation loaders implemented (review CR-A6) — `docs/review/codebase_review_2026-06-21.md`.**
   `_get_context_units` / `_get_all_intent_units` were `return []` stubs, so the NLU-analysis endpoints always reported
   "healthy / no conflicts". Implemented them to enumerate the loaded donations off the NLU component's

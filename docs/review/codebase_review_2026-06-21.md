@@ -47,8 +47,10 @@ _Plausible_ = realistic but depends on a reachable runtime state / framework beh
   `return []` stubs, so conflict detection always found nothing and the health score was always `1.0`. Implemented them
   to enumerate the loaded donations off the NLU component's `IntentAssetLoader`
   (`get_all_handlers_with_languages` → `get_language_phrasing_for_editing`) and build one `IntentUnit` per
-  (handler, language); `_get_context_units` excludes the candidate handler. Resolved lazily via `core` (degrades to
-  empty when the donation source isn't up yet — no init-order crash). **Bonus fix:** `_donation_to_intent_unit` read
+  (handler, language); `_get_context_units` excludes the candidate handler. Uses the component **DI** pattern — declares
+  `get_component_dependencies() → ["nlu"]`, so the manager topo-orders NLU first and injects it; the loader is read
+  lazily off the injected component (degrades to empty if NLU is absent — no core-reach, no init-order crash). **Bonus
+  fix:** `_donation_to_intent_unit` read
   the wrong key `methods` (a dict) — real donations use `method_donations` (a **list**), so even the realtime path
   produced empty units; now reads `method_donations` with a legacy `methods` fallback, so realtime analysis works too.
   New `test_nlu_analysis_loaders.py`. Gates: suite 1047 passed / 0 failed, pyright 0, import-linter 9/9. (§A now clear

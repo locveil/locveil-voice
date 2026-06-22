@@ -33,12 +33,10 @@ class _FakeLoader:
 def _component(with_source=True):
     c = object.__new__(NLUAnalysisComponent)
     c.logger = MagicMock()
+    # The NLU component is injected by the manager (declared via get_component_dependencies).
+    c.injected_dependencies = {}
     if with_source:
-        nlu = SimpleNamespace(asset_loader=_FakeLoader())
-        c._core = SimpleNamespace(component_manager=SimpleNamespace(
-            get_component=lambda n: nlu if n == "nlu" else None))
-    else:
-        c._core = None
+        c.injected_dependencies["nlu"] = SimpleNamespace(asset_loader=_FakeLoader())
     return c
 
 
@@ -71,6 +69,10 @@ class TestIntentUnitLoaders(unittest.TestCase):
 
     def test_empty_when_no_source(self):
         self.assertEqual(_arun(_component(with_source=False)._get_all_intent_units("ru")), [])
+
+    def test_declares_nlu_dependency(self):
+        # The injected pattern: declaring this drives init order + injection (no core-reach).
+        self.assertEqual(_component().get_component_dependencies(), ["nlu"])
 
 
 if __name__ == "__main__":

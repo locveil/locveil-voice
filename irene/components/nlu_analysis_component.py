@@ -79,9 +79,6 @@ class NLUAnalysisComponent(Component, WebAPIPlugin):
         
         # Concurrency control
         self._analysis_semaphore: Optional[asyncio.Semaphore] = None
-
-        # Core ref — used to reach the NLU component's asset loader for donation enumeration (CR-A6).
-        self._core: Any = None
     
     @classmethod
     def get_config_class(cls) -> Type[BaseModel]:
@@ -119,7 +116,6 @@ class NLUAnalysisComponent(Component, WebAPIPlugin):
     async def initialize(self, core=None):
         """Initialize the NLU analysis component and its analyzers"""
         await super().initialize(core)
-        self._core = core  # CR-A6: needed to reach the donation source at analysis time
 
         # Get configuration
         if core:
@@ -519,18 +515,20 @@ class NLUAnalysisComponent(Component, WebAPIPlugin):
             parameters=all_parameters
         )
     
+    def get_component_dependencies(self) -> list[str]:
+        """CR-A6: depend on the NLU component so the manager (a) initializes it first (topological order)
+        and (b) injects it here — its loaded IntentAssetLoader is our donation source for analysis."""
+        return ["nlu"]
+
     @staticmethod
     def _normalize_handler(name: str) -> str:
         return name[:-8] if name.endswith("_handler") else name
 
     def _get_asset_loader(self):
-        """The IntentAssetLoader that owns the on-disk donations — resolved lazily off the NLU component
-        (which loads donations at startup). None until that component is up, in which case analysis
-        degrades to an empty set rather than crashing."""
-        cm = getattr(self._core, "component_manager", None) if self._core else None
-        if cm is None:
-            return None
-        nlu = cm.get_component("nlu")
+        """The IntentAssetLoader that owns the on-disk donations, read off the INJECTED NLU component
+        (declared in get_component_dependencies). None until/unless NLU is up → analysis degrades to empty
+        rather than reaching into core."""
+        nlu = self.get_dependency("nlu")
         return getattr(nlu, "asset_loader", None) if nlu else None
 
     async def _load_intent_units(self, language: Optional[str]) -> List[IntentUnit]:
