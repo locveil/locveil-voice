@@ -411,12 +411,6 @@ class WorkflowManager:
             logger.error(f"Component injection failed for {workflow.name}: {e}")
             raise
     
-    def set_input_manager(self, input_manager) -> None:
-        """Set the input manager reference"""
-        self.input_manager = input_manager
-    
-
-    
     async def process_text_input(
         self,
         text: str,
@@ -715,49 +709,6 @@ class WorkflowManager:
         async for result in unified_workflow.process_audio_stream(audio_stream, context):
             # (QUAL-28) F&F actions are registered in the store by the launch — no write-back needed.
             yield result
-    
-    async def _start_audio_workflow(self, input_source: InputPort, workflow: WorkflowPort, context: RequestContext) -> None:
-        """Start audio processing workflow"""
-        try:
-            # Start input source
-            await input_source.start_listening()
-            
-            # Get audio stream from input source
-            audio_stream = self._get_audio_stream(input_source)
-            
-            # Start workflow task
-            self._workflow_task = asyncio.create_task(
-                self._run_workflow(workflow, audio_stream, context)
-            )
-            
-            logger.info(f"Started audio workflow: {workflow.name}")
-            
-        except Exception as e:
-            logger.error(f"Failed to start audio workflow: {e}")
-            raise
-    
-    async def _run_workflow(self, workflow: WorkflowPort, audio_stream: AsyncIterator[AudioData], context: RequestContext) -> None:
-        """Run the workflow with audio stream processing"""
-        try:
-            async for result in workflow.process_audio_stream(audio_stream, context):
-                # Handle workflow results
-                logger.info(f"Workflow result: {result.text[:50]}...")
-                
-                # TODO: Add result handling/routing here
-                # This could include outputting to different channels,
-                # triggering actions, etc.
-                
-        except asyncio.CancelledError:
-            logger.debug("Workflow processing cancelled")
-        except Exception as e:
-            logger.error(f"Workflow processing error: {e}")
-    
-    def _get_input_source(self, source_name: str) -> Optional[InputPort]:
-        """Get an input source by name"""
-        if not self.input_manager:
-            return None
-        
-        return self.input_manager._sources.get(source_name)
     
     async def _get_audio_stream(self, input_source: InputPort) -> AsyncIterator[AudioData]:
         """

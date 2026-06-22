@@ -104,7 +104,8 @@ def test_miniaudio_provider_metadata():
 
     provider = MiniaudioAudioProvider({})
     assert provider.get_provider_name() == "miniaudio"
-    assert provider.get_python_dependencies() == ["miniaudio>=1.59"]
+    # BUILD-7: get_python_dependencies returns the pyproject extra-NAME, not a raw pip spec.
+    assert provider.get_python_dependencies() == ["audio-miniaudio"]
     # Self-contained: no system packages on any platform.
     assert all(pkgs == [] for pkgs in provider.get_platform_dependencies().values())
 

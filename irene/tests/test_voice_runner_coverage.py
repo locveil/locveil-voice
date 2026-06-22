@@ -260,7 +260,8 @@ class TestPostCoreSetup(unittest.TestCase):
         runner = self._runner_with_stubbed_workflow(core)
         _arun(runner._post_core_setup(SimpleNamespace(quiet=True)))
         self.assertEqual(started, ["microphone"])
-        runner._start_voice_audio_workflow.assert_awaited_once()
+        runner._start_voice_audio_workflow.assert_called_once()
+        self.assertIsInstance(runner._mic_task, asyncio.Task)  # CR-A1: launched as a background task, not awaited
 
     def test_start_failure_does_not_raise(self):
         async def start_source(name):
@@ -272,7 +273,8 @@ class TestPostCoreSetup(unittest.TestCase):
                                config=SimpleNamespace(asr=SimpleNamespace(default_provider="x")))
         runner = self._runner_with_stubbed_workflow(core)
         _arun(runner._post_core_setup(SimpleNamespace(quiet=True)))
-        runner._start_voice_audio_workflow.assert_awaited_once()
+        runner._start_voice_audio_workflow.assert_called_once()
+        self.assertIsInstance(runner._mic_task, asyncio.Task)  # CR-A1: launched as a background task, not awaited
 
     def test_already_active_microphone_not_restarted(self):
         started = []
@@ -302,12 +304,14 @@ class TestPostCoreSetup(unittest.TestCase):
         runner = self._runner_with_stubbed_workflow(core)
         _arun(runner._post_core_setup(SimpleNamespace(quiet=True)))
         self.assertEqual(started, [])
-        runner._start_voice_audio_workflow.assert_awaited_once()
+        runner._start_voice_audio_workflow.assert_called_once()
+        self.assertIsInstance(runner._mic_task, asyncio.Task)  # CR-A1: launched as a background task, not awaited
 
     def test_no_core_skips_mic_block_but_still_starts_workflow(self):
         runner = self._runner_with_stubbed_workflow(None)
         _arun(runner._post_core_setup(SimpleNamespace(quiet=True)))
-        runner._start_voice_audio_workflow.assert_awaited_once()
+        runner._start_voice_audio_workflow.assert_called_once()
+        self.assertIsInstance(runner._mic_task, asyncio.Task)  # CR-A1: launched as a background task, not awaited
 
     def test_verbose_banner_path(self):
         async def start_source(name):
@@ -320,7 +324,71 @@ class TestPostCoreSetup(unittest.TestCase):
         runner = self._runner_with_stubbed_workflow(core)
         # quiet=False exercises the banner print branch (reads config.asr.default_provider).
         _arun(runner._post_core_setup(SimpleNamespace(quiet=False)))
-        runner._start_voice_audio_workflow.assert_awaited_once()
+        runner._start_voice_audio_workflow.assert_called_once()
+        self.assertIsInstance(runner._mic_task, asyncio.Task)  # CR-A1: launched as a background task, not awaited
+
+
+# --------------------------------------------------------------- CR-A1: mic task lifecycle
+
+class TestMicTaskLifecycle(unittest.TestCase):
+    """The standalone serves the web API alongside the mic. The mic workflow runs an infinite loop, so
+    it must be launched as a BACKGROUND task — never awaited — or the web server never starts (CR-A1)."""
+
+    def test_blocking_mic_workflow_does_not_block_web_setup(self):
+        # Regression: with the old `await self._start_voice_audio_workflow()`, this hangs forever and the
+        # web server is never set up. The fix runs it as a task, so _post_core_setup completes.
+        runner = _runner()
+        runner.core = None  # skip the mic-start block; focus on the workflow-launch ordering
+
+        async def _never_returns():
+            await asyncio.Event().wait()  # models the never-ending mic loop
+
+        runner._start_voice_audio_workflow = _never_returns
+        web_setup = []
+
+        async def _setup_web_server(args):
+            web_setup.append(True)
+            runner.app = None
+
+        runner._setup_web_server = _setup_web_server
+
+        async def _scenario():
+            await runner._post_core_setup(SimpleNamespace(quiet=True))
+            # Reached here despite the never-ending workflow → web setup ran (CR-A1 fixed).
+            self.assertEqual(web_setup, [True])
+            self.assertIsInstance(runner._mic_task, asyncio.Task)
+            self.assertFalse(runner._mic_task.done())  # still running in the background
+            await runner._cancel_mic_task()
+            self.assertTrue(runner._mic_task.done())
+
+        _arun(_scenario())
+
+    def test_mic_task_crash_is_surfaced(self):
+        # A crash inside the background mic workflow must be logged by the done-callback (an orphaned
+        # task would swallow it). _on_mic_task_done reads task.exception() → must not raise.
+        runner = _runner()
+
+        async def _boom():
+            raise RuntimeError("mic exploded")
+
+        async def _scenario():
+            task = asyncio.ensure_future(_boom())
+            runner._mic_task = task
+            with self.assertLogs("irene.runners.voice_runner", level="ERROR") as cm:
+                task.add_done_callback(runner._on_mic_task_done)
+                try:
+                    await task
+                except RuntimeError:
+                    pass
+                await asyncio.sleep(0)  # let the done-callback run
+            self.assertTrue(any("stopped unexpectedly" in m for m in cm.output))
+
+        _arun(_scenario())
+
+    def test_cancel_mic_task_noop_when_absent(self):
+        runner = _runner()
+        runner._mic_task = None
+        _arun(runner._cancel_mic_task())  # must not raise
 
 
 # --------------------------------------------------------------------------- _start_voice_audio_workflow

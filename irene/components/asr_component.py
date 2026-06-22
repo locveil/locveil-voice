@@ -159,7 +159,14 @@ class ASRComponent(Component, ASRPlugin, WebAPIPlugin, ASRPort):
             else:
                 self.default_provider = getattr(config, "default_provider", "vosk")
                 self.default_language = getattr(config, "default_language", "ru")
-            
+
+            # CR-A2: reconcile the default to a provider that actually loaded (mirror TTS/audio/
+            # voice_trigger). The configured default may have failed to load while another succeeded —
+            # without this every request raises "provider not loaded" even though ASR is usable.
+            if self.default_provider not in self.providers and self.providers:
+                self.default_provider = next(iter(self.providers))
+                logger.info(f"Configured default ASR provider unavailable; using '{self.default_provider}'")
+
             # Ensure we have at least one provider
             if not self.providers:
                 logger.warning("No ASR providers available")
@@ -170,8 +177,13 @@ class ASRComponent(Component, ASRPlugin, WebAPIPlugin, ASRPort):
             self._start_metrics_push_task()
                 
         except Exception as e:
+            # CR-A3: re-raise so the ComponentManager's graceful-degradation path engages
+            # (core/components.py only stores a component whose initialize() returns without raising).
+            # Swallowing left ASR reported healthy with zero providers → per-request 404s/ValueErrors.
             logger.error(f"Failed to initialize Universal ASR Plugin: {e}")
-    
+            self.initialized = False
+            raise
+
     # Workflow-compatible interface for AudioData objects
     async def process_audio(self, audio_data: AudioData, trace_context: Optional[TraceContext] = None, **kwargs) -> str:
         """

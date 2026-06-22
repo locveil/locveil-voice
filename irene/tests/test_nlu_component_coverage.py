@@ -540,7 +540,8 @@ def test_service_dependencies_and_injection():
 
 
 def test_classmethod_build_metadata():
-    assert any("fastapi" in d for d in NLUComponent.get_python_dependencies())
+    # BUILD-7: get_python_dependencies returns pyproject extra-NAMES, not raw pip specs.
+    assert NLUComponent.get_python_dependencies() == ["web-api"]
     plat = NLUComponent.get_platform_dependencies()
     assert "linux.ubuntu" in plat
     assert "macos" in NLUComponent.get_platform_support()

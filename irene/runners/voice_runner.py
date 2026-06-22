@@ -76,6 +76,9 @@ class VoiceRunner(WebServerMixin, BaseRunner):
         )
         super().__init__(runner_config)
         self._init_web_server_state()
+        # The mic pipeline runs as a background task (CR-A1) — tracked so it can be cancelled on shutdown
+        # and so a crash inside it is surfaced rather than swallowed by the orphaned task.
+        self._mic_task: Optional[asyncio.Task] = None
 
     def _add_runner_arguments(self, parser: argparse.ArgumentParser) -> None:
         """Voice utility option + the shared web-server args (the standalone serves web too)."""
@@ -228,8 +231,12 @@ preload_models = true
             else:
                 logger.error("❌ Microphone input source not available - check configuration and hardware")
 
-        # Start the audio workflow (with intelligent wake-word handling)
-        await self._start_voice_audio_workflow()
+        # Start the audio workflow (with intelligent wake-word handling) in the BACKGROUND.
+        # CR-A1: this MUST NOT be awaited — _start_voice_audio_workflow runs an infinite loop over the
+        # live mic, so awaiting it here blocks _post_core_setup forever and the web server below never
+        # starts. Run it as a tracked task; the done-callback surfaces a crash the task would otherwise hide.
+        self._mic_task = asyncio.create_task(self._start_voice_audio_workflow())
+        self._mic_task.add_done_callback(self._on_mic_task_done)
 
         # Build the web API alongside the mic pipeline (degrade to mic-only if fastapi/uvicorn absent).
         try:
@@ -320,6 +327,26 @@ preload_models = true
             logger.error(f"❌ Failed to start the voice audio workflow: {e}")
             raise
 
+    def _on_mic_task_done(self, task: "asyncio.Task") -> None:
+        """Surface a crash in the background mic workflow (CR-A1) — an unawaited task would otherwise
+        swallow the exception silently and the web server would keep running with a dead mic."""
+        if task.cancelled():
+            return
+        exc = task.exception()
+        if exc is not None:
+            logger.error(f"❌ Microphone workflow stopped unexpectedly: {exc}", exc_info=exc)
+
+    async def _cancel_mic_task(self) -> None:
+        """Cancel the background mic workflow on shutdown and wait for it to unwind."""
+        task = self._mic_task
+        if task is None or task.done():
+            return
+        task.cancel()
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
+
     async def _execute_runner_logic(self, args: argparse.Namespace) -> int:
         """Run the web server (blocks, keeping the process alive) while the mic workflow — already
         started in _post_core_setup — runs in the background on the same loop. With no web server
@@ -334,6 +361,8 @@ preload_models = true
             if not args.quiet:
                 print("\n\n🛑 Voice assistant stopped")
             return 0
+        finally:
+            await self._cancel_mic_task()
 
 
 def run_voice() -> int:

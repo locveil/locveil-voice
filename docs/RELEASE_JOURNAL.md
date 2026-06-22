@@ -11,6 +11,24 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+### 2026-06-22
+- **CR-A1 group fixed (standalone-runtime cluster) — `docs/review/codebase_review_2026-06-21.md`.** **CR-A1 (P0):** the
+  shipped x86_64 standalone served no web API — `voice_runner._post_core_setup` `await`ed the infinite mic loop, so
+  `_setup_web_server` never ran. Now launched as a tracked background task (`asyncio.create_task` + done-callback to
+  surface a mic crash + cancel-on-shutdown in `_execute_runner_logic`). Bundled the same-path / same-boot items:
+  **CR-D5** (web banner advertised deleted `/asr/stream,/asr/binary` → real `/ws/audio` + `/ws/audio/reply` +
+  `/ws/observe` + `/ws/output`), **CR-B2** (deleted the dead `set_input_manager` + `_start_audio_workflow`→
+  `_run_workflow`→`_get_input_source` audio-start cluster in `workflow_manager`; live `_get_audio_stream` kept),
+  **CR-A2** (ASR reconciles `default_provider` to a provider that actually loaded — was hard-failing every request when
+  the configured default failed to load), **CR-A3** (ASR `initialize` re-raises so the ComponentManager degradation
+  path engages instead of reporting healthy-with-zero-providers), **CR-A14** (monitoring `_start_time` set in
+  `__init__` → uptime no longer always ~0). **Tests:** added `TestMicTaskLifecycle` (CR-A1 regression — a never-returning
+  mic workflow must not block web setup) replacing the `AsyncMock` stub that hid the bug; updated the `_post_core_setup`
+  assertions to the background-task contract; fixed 2 stale **BUILD-7** metadata tests (`test_miniaudio_provider_metadata`,
+  `test_classmethod_build_metadata`) asserting the old raw-spec return. **Gates:** suite 1010 passed / 0 failed, pyright 0,
+  import-linter 9/9. CR-A5 (audio_playback simulation) + CR-A6 (nlu_analysis stub loaders) re-confirmed but deferred
+  (feature-completion). Review tracker + this ledger updated.
+
 ### 2026-06-21
 - **Whole-codebase review filed → `docs/review/codebase_review_2026-06-21.md`.** 7 parallel finder passes
   (subsystem + cross-cutting dead-code/duplication/doc-claim specialists) over `irene/` + `docker/` + `pyproject.toml`

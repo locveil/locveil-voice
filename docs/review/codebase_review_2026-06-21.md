@@ -1,6 +1,7 @@
 # Whole-codebase review (2026-06-21)
 
-**Status:** findings filed, unaddressed. **Backs:** general health pass (post-BUILD-7); individual items cross-ref
+**Status:** findings filed; **CR-A1 group resolved 2026-06-22** (CR-A1/A2/A3/A14/B2/D5 — see Resolution log), remainder
+open. **Backs:** general health pass (post-BUILD-7); individual items cross-ref
 their owning task below. **Scope:** entire `irene/` tree + `docker/` + `pyproject.toml` + `docs/guides/`. **Method:**
 7 parallel finder passes (subsystem deep-reads + cross-cutting dead-code / duplication / doc-claim specialists);
 the highest-severity correctness items (CR-A1, A2, A4, A7) were re-verified against source by hand.
@@ -17,9 +18,9 @@ _Plausible_ = realistic but depends on a reachable runtime state / framework beh
 
 | ID | Sev | Conf. | One-liner | Owner / ref |
 |----|-----|-------|-----------|-------------|
-| **CR-A1** | **P0** | Confirmed | `voice_runner` `await`s the infinite mic loop → standalone web API never starts | standalone runtime; **not** covered by BUILD-3 (used `webapi_runner`) |
-| CR-A2 | P1 | Confirmed | ASR never reconciles `default_provider` to a loaded provider → ASR hard-fails | new |
-| CR-A3 | P1 | Likely | `ASRComponent.initialize` swallows exceptions but stays `initialized=True` | new (compounds CR-A2) |
+| **CR-A1** | **P0** | ✅ FIXED | `voice_runner` `await`s the infinite mic loop → standalone web API never starts | standalone runtime; **not** covered by BUILD-3 (used `webapi_runner`) |
+| CR-A2 | P1 | ✅ FIXED | ASR never reconciles `default_provider` to a loaded provider → ASR hard-fails | new |
+| CR-A3 | P1 | ✅ FIXED | `ASRComponent.initialize` swallows exceptions but stays `initialized=True` | new (compounds CR-A2) |
 | CR-A4 | P1 | Likely | `tts/vosk` `is_available` probes wrong asset namespace → dead on first run | new |
 | CR-A5 | P2 | Confirmed | `audio_playback` "play" is a shipped simulation (commented-out call + 10% dice fail) | new |
 | CR-A6 | P2 | Confirmed | `nlu_analysis` context loaders are stubs → endpoints always "healthy/no conflicts" | new |
@@ -30,7 +31,7 @@ _Plausible_ = realistic but depends on a reachable runtime state / framework beh
 | CR-A11 | P3 | Plausible | `voice_synthesis._handle_speak_text` AttributeError on `text:null` entity | new |
 | CR-A12 | P3 | Plausible | `silero_v3.is_available` does a blocking `requests.head` in async | QUAL-15 (same anti-pattern) |
 | CR-A13 | P3 | Plausible | `silero_v4._download_model` hardcodes the RU URL, ignores `model_id` | ASSET-2 |
-| CR-A14 | P3 | Likely | monitoring `uptime` always ~0 (`_start_time` never assigned) | new |
+| CR-A14 | P3 | ✅ FIXED | monitoring `uptime` always ~0 (`_start_time` never assigned) | new |
 | CR-A15 | P2 | Plausible | asset-loader save/load: `assets_root / domain / language` unsanitized (path traversal) | new (security) |
 | CR-A16 | P3 | Plausible | self-routing handlers' broad `except Exception` can swallow `ParameterExtractionError` | QUAL-30 boundary |
 | CR-B1..13 | — | Confirmed | dead/zombie code (see §B) | CR-B1 → BUILD-7 |
@@ -39,9 +40,25 @@ _Plausible_ = realistic but depends on a reachable runtime state / framework beh
 
 ---
 
+## Resolution log
+
+- **2026-06-22 — CR-A1 group (the standalone-runtime cluster).** Fixed **CR-A1** (background the mic task via
+  `asyncio.create_task` + done-callback to surface crashes + cancel-on-shutdown), **CR-D5** (web banner → real
+  `/ws/audio` routes), **CR-B2** (deleted the dead `set_input_manager` + `_start_audio_workflow`→`_run_workflow`→
+  `_get_input_source` audio-start cluster; kept the live `_get_audio_stream`), **CR-A2** (ASR reconciles
+  `default_provider` to a loaded provider), **CR-A3** (ASR `initialize` re-raises so the degradation path engages),
+  **CR-A14** (monitoring `_start_time` set in `__init__`). Added a CR-A1 regression test
+  (`test_voice_runner_coverage.py::TestMicTaskLifecycle` — boots `_post_core_setup` with a never-returning mic workflow
+  and asserts web setup still runs) replacing the `AsyncMock` stub that hid the bug; also fixed 2 stale BUILD-7
+  metadata tests (`test_miniaudio_provider_metadata`, `test_classmethod_build_metadata`). Gates: suite 1010 passed / 0
+  failed, pyright 0, import-linter 9/9. **CR-A5 / CR-A6 re-confirmed but deferred** (feature-completion, not quick
+  fixes — `audio_playback` real `play_file` call + `nlu_analysis` real context loaders).
+
+---
+
 ## A. Correctness bugs
 
-### CR-A1 — [P0, Confirmed] `voice_runner` blocks before the web server starts
+### CR-A1 — [P0, ✅ FIXED 2026-06-22] `voice_runner` blocks before the web server starts
 `irene/runners/voice_runner.py:232`. `_post_core_setup` does `await self._start_voice_audio_workflow()`, whose body
 ends in `async for result in process_audio_stream(...)` (`:306`) — an infinite loop over the live mic. The `await`
 never returns, so `_setup_web_server` (`:236`) never runs, `self.app` stays `None`, and `_execute_runner_logic` →
@@ -52,7 +69,7 @@ boots the mic pipeline but **never serves REST / WS / config-UI**. CI is green o
 `test_voice_runner_coverage.py:246` stubs `_start_voice_audio_workflow` with `AsyncMock`. Not covered by BUILD-3
 hardware verification, which used `webapi_runner` (aarch64/armv7).
 
-### CR-A2 — [P1, Confirmed] ASR never reconciles `default_provider` to a loaded provider
+### CR-A2 — [P1, ✅ FIXED 2026-06-22] ASR never reconciles `default_provider` to a loaded provider
 `irene/components/asr_component.py:155-167`. Sets `self.default_provider` from config (default `"vosk"`) and only logs
 whether `providers` is empty. Missing the reconciliation every sibling has — `tts_component.py:161-163`,
 `audio_component.py:192`, `voice_trigger_component.py:217`: `if default not in providers and providers: default =
@@ -62,7 +79,7 @@ hits `if provider_name not in self.providers: raise ValueError` (`:202`) and `/t
 dead despite a healthy provider. (LLM `llm_component.py:160` has the same gap but is masked by its console fallback;
 ASR has no mask.)
 
-### CR-A3 — [P1, Likely] `ASRComponent.initialize` swallows all exceptions yet stays `initialized=True`
+### CR-A3 — [P1, ✅ FIXED 2026-06-22] `ASRComponent.initialize` swallows all exceptions yet stays `initialized=True`
 `irene/components/asr_component.py:93-173`. Whole body under `try/except Exception` that only logs (`:172`), but
 `super().initialize()` (`:95`) already set `initialized=True`. A mid-init failure → component reports healthy with
 `providers=={}`; defeats the ComponentManager's degrade-on-raise path (`core/components.py:204-212`). Compounds CR-A2.
@@ -120,7 +137,7 @@ Blocks the loop up to 5s and marks v3 unavailable whenever offline (even with to
 path fetches RU for any `model_id`. Both v3/v4 `_load_model_async` log `get_model_info("silero","v3_ru"/"v4_ru")`
 regardless of the selected model.
 
-### CR-A14 — [P3, Likely] monitoring `uptime` always ~0
+### CR-A14 — [P3, ✅ FIXED 2026-06-22] monitoring `uptime` always ~0
 `irene/components/monitoring_component.py:242`. `_start_time` is never assigned, so reported uptime is ~0.
 
 ### CR-A15 — [P2, Plausible] Path-traversal gap in asset-loader save/load helpers
@@ -145,7 +162,7 @@ of their `get_param` calls ever drops its caller-supplied default.
 - **CR-B1** — `irene/components/base.py:219,376` `is_dependencies_available()` + `Component.start()`. Dead
   (ComponentManager uses `initialize()` at `core/components.py:204`; zero `.start()` callers) **and** broken since
   BUILD-7 (`__import__("web-api")`). _Ref: already flagged in **BUILD-7**._
-- **CR-B2** — `irene/core/workflow_manager.py`: ~250 lines dead — `set_input_manager` (`:414`, 0 callers →
+- **CR-B2** — ✅ **FIXED 2026-06-22** (audio-start subset). `irene/core/workflow_manager.py`: ~250 lines dead — `set_input_manager` (`:414`, 0 callers →
   `input_manager` always `None`); the `_start_audio_workflow`→`_run_workflow`→`_get_input_source` cluster (`:719+`);
   `switch_workflow` (`:815`), `hot_reload_workflow` (`:847`), `optimize_component_sharing` (`:969`),
   `get_workflow_dependencies` (`:927`), `get_startup_performance_metrics` (`:1007`). (`_get_audio_stream`,
@@ -228,7 +245,7 @@ of their `get_param` calls ever drops its caller-supplied default.
   raw-spec mistake.
 - **CR-D4** — `pyproject.toml` `[tool.uv.index]` comment says "image: ~6.4 GB → ~2.5 GB"; confirmed actual is
   **3.16 GB** (BUILD-7 ledger has the right number). Self-inflicted; correct alongside the docs.
-- **CR-D5** — `irene/runners/web_server.py:230` `_web_banner` still advertises `/asr/stream, /asr/binary` as the ESP32
+- **CR-D5** — ✅ **FIXED 2026-06-22**. `irene/runners/web_server.py:230` `_web_banner` still advertises `/asr/stream, /asr/binary` as the ESP32
   path; those endpoints were deleted (transport is now `/ws/audio`).
 
 ---

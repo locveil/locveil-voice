@@ -227,7 +227,7 @@ class WebServerMixin:
             tail = f" (alongside {alongside})" if alongside else ""
             print(f"🌐 Web API server at {protocol}://{args.host}:{args.port}{tail}")
             print(f"📚 REST docs: {protocol}://{args.host}:{args.port}/docs")
-            print(f"🔌 Component WebSockets: /asr/stream, /asr/binary (ESP32)")
+            print(f"🔌 WebSockets: /ws/audio + /ws/audio/reply (ESP32 satellite), /ws/observe, /ws/output")
 
     async def _start_server(self, args) -> int:
         """Run uvicorn in the FOREGROUND (blocks until shutdown). Background tasks (e.g. the mic

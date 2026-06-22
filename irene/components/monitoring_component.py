@@ -39,6 +39,10 @@ class MonitoringComponent(Component, WebAPIPlugin):
     
     def __init__(self):
         super().__init__()
+        # CR-A14: anchor uptime at construction; without this `_start_time` is never set and the
+        # reported uptime (`time.time() - getattr(self,'_start_time',time.time())`) is always ~0.
+        import time
+        self._start_time = time.time()
         self.notification_service = None
         self.metrics_collector = None
         self.action_debugger = None
