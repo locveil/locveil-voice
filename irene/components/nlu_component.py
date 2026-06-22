@@ -1182,12 +1182,7 @@ class NLUComponent(Component, NLUPlugin, WebAPIPlugin):
                     # Apply runtime configuration without TOML persistence
                     config_dict = config_update.model_dump()
                     
-                    # Update default provider if provided
-                    if config_dict.get("default_provider"):
-                        if config_dict["default_provider"] in self.providers:
-                            self.default_provider = config_dict["default_provider"]
-                        else:
-                            logger.warning(f"NLU provider '{config_dict['default_provider']}' not available")
+                    self._apply_provider_config(config_dict)
                     
                     # Update confidence threshold if provided
                     confidence_threshold = config_dict.get("confidence_threshold")

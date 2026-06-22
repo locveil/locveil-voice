@@ -595,12 +595,7 @@ class LLMComponent(Component, LLMPlugin, WebAPIPlugin, LLMPort):
                 # Apply runtime configuration without TOML persistence
                 config_dict = config_update.model_dump()
                 
-                # Update default provider if provided
-                if config_dict.get("default_provider"):
-                    if config_dict["default_provider"] in self.providers:
-                        self.default_provider = config_dict["default_provider"]
-                    else:
-                        logger.warning(f"LLM provider '{config_dict['default_provider']}' not available")
+                self._apply_provider_config(config_dict)
                 
                 # Update fallback providers
                 fallback_providers = config_dict.get("fallback_providers", [])

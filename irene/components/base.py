@@ -236,7 +236,18 @@ class Component(ComponentPort):
     def is_provider_available(self, provider_name: str) -> bool:
         """Check if a specific provider is available."""
         return provider_name in self.providers
-    
+
+    def _apply_provider_config(self, config_dict: dict) -> None:
+        """Apply a `/configure` request's `default_provider`: switch to it when it names a loaded
+        provider, else warn and keep the current default. Shared by the provider components' configure
+        endpoints (CR-C8) — the single source of the "is this provider loaded?" gate."""
+        requested = config_dict.get("default_provider")
+        if requested:
+            if requested in self.providers:
+                self.default_provider = requested
+            else:
+                self.logger.warning(f"{self.name}: provider '{requested}' not available")
+
     async def initialize(self, core):
         """Initialize the component and its providers.
 

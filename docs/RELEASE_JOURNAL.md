@@ -12,6 +12,14 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-22
+- **Provider `/configure` gate dedup — CR-C8 completed (review) — `docs/review/codebase_review_2026-06-21.md`.** The
+  byte-identical "set `default_provider` if it names a loaded provider, else warn and keep" block in 6 components'
+  `/configure` endpoints (audio/asr/tts/llm/nlu/voice_trigger) → one base method `Component._apply_provider_config`.
+  The `/providers` endpoints (×6) were assessed and deliberately left un-unified — they genuinely diverge (try/except
+  only in asr/llm, defensive `getattr` in nlu, distinct per-provider fields + response models); a forced helper would
+  change error-path behavior or be a leaky abstraction. New `test_apply_provider_config.py`. Gates: suite 1063 passed,
+  pyright 0, import-linter 9/9. This closes CR-C8 (its is_api_available + MetricsPushMixin parts landed earlier in the
+  CR-C6/C7/C8 pass); **review §C is now fully resolved** (CR-C9 belongs to ARCH-25). Review tracker + this ledger updated.
 - **WebAPIPlugin component-walk dedup (review CR-C12) — `docs/review/codebase_review_2026-06-21.md`.** The "iterate
   `component_manager.get_components()`, filter `isinstance(.., WebAPIPlugin)`, build `(name, component)`" walk was
   reimplemented (with differing guards/logging) in `web_server._mount_component_routers` and `webapi_router` AsyncAPI

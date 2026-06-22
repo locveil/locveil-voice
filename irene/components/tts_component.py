@@ -787,12 +787,7 @@ class TTSComponent(Component, TTSPlugin, WebAPIPlugin, TTSPort):
                     # Apply runtime configuration without TOML persistence
                     config_dict = config_update.model_dump()
                     
-                    # Update default provider if provided
-                    if config_dict.get("default_provider"):
-                        if config_dict["default_provider"] in self.providers:
-                            self.default_provider = config_dict["default_provider"]
-                        else:
-                            logger.warning(f"TTS provider '{config_dict['default_provider']}' not available")
+                    self._apply_provider_config(config_dict)
                     
                     # Update enabled providers if provided (would require re-initialization)
                     providers_config = config_dict.get("providers", {})

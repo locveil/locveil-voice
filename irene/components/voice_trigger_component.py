@@ -471,12 +471,7 @@ class VoiceTriggerComponent(MetricsPushMixin, Component, VoiceTriggerPlugin, Web
                     # Apply runtime configuration without TOML persistence
                     config_dict = config_update.model_dump()
                     
-                    # Update default provider if provided
-                    if config_dict.get("default_provider"):
-                        if config_dict["default_provider"] in self.providers:
-                            self.default_provider = config_dict["default_provider"]
-                        else:
-                            logger.warning(f"Voice trigger provider '{config_dict['default_provider']}' not available")
+                    self._apply_provider_config(config_dict)
                     
                     # Extract wake words from provider configurations
                     wake_words = []

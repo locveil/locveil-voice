@@ -1,7 +1,7 @@
 # Whole-codebase review (2026-06-21)
 
 **Status:** findings filed; **resolved 2026-06-22:** CR-A1 group (A1/A2/A3/A14/B2/D5) + BUILD-7 doc/dup cluster (C1/C2/C4/D1–D4) + dead-code
-sweep (all CR-B except B4 KEPT) + provider-base dedup (C6/C7, C8 partial) + standalone correctness (A4/A8) + silero cleanups (A12/A13) + tracing pair (A7/A9) + path-traversal hardening (A15) + correctness trio (A10/A11/A16) + Cyrillic dedup (C3) + nlu-analysis loaders (A6) + audio playback (A5) + handler base-class consolidation (C11) + asset-name/path helper (C10) + spaCy init dedup (C5) + WebAPIPlugin walk dedup (C12) — see Resolution log. **§A FULLY CLEAR.** Remainder open. **Backs:** general health pass (post-BUILD-7); individual items
+sweep (all CR-B except B4 KEPT) + provider-base dedup (C6/C7/C8) + standalone correctness (A4/A8) + silero cleanups (A12/A13) + tracing pair (A7/A9) + path-traversal hardening (A15) + correctness trio (A10/A11/A16) + Cyrillic dedup (C3) + nlu-analysis loaders (A6) + audio playback (A5) + handler base-class consolidation (C11) + asset-name/path helper (C10) + spaCy init dedup (C5) + WebAPIPlugin walk dedup (C12) — see Resolution log. **§A FULLY CLEAR.** Remainder open. **Backs:** general health pass (post-BUILD-7); individual items
 cross-ref
 their owning task below. **Scope:** entire `irene/` tree + `docker/` + `pyproject.toml` + `docs/guides/`. **Method:**
 7 parallel finder passes (subsystem deep-reads + cross-cutting dead-code / duplication / doc-claim specialists);
@@ -36,13 +36,22 @@ _Plausible_ = realistic but depends on a reachable runtime state / framework beh
 | CR-A15 | P2 | ✅ FIXED | asset-loader save/load: `assets_root / domain / language` unsanitized (path traversal) | new (security) |
 | CR-A16 | P3 | ✅ FIXED | self-routing handlers' broad `except Exception` can swallow `ParameterExtractionError` | QUAL-30 boundary |
 | CR-B1..13 | — | ✅ swept | dead/zombie code (see §B) | FIXED 2026-06-22 (CR-B4 KEPT — ARCH-22/25; B12 was QUAL-20) |
-| CR-C1..13 | — | C1–C7/C10/C11/C12/C13 ✅, C8◐ | duplication / drift risk (see §C) | C1–C7/C10/C11/C12/C13 + C8(partial) FIXED 2026-06-22; CR-C9 → ARCH-25 |
+| CR-C1..13 | — | C1–C8/C10/C11/C12/C13 ✅ | duplication / drift risk (see §C) | C1–C8/C10/C11/C12/C13 FIXED 2026-06-22; CR-C9 → ARCH-25 |
 | CR-D1..5 | — | D1-D4 ✅ | stale user-facing doc claims (see §D) | D1–D4 FIXED 2026-06-22; D5 done in CR-A1 group |
 
 ---
 
 ## Resolution log
 
+- **2026-06-22 — Provider `/configure` gate dedup (CR-C8, completing the partial).** The "set `default_provider` if it
+  names a loaded provider, else warn and keep" block was byte-identical (modulo the log label) in 6 components' `/configure`
+  endpoints (audio/asr/tts/llm/nlu/voice_trigger). Extracted `Component._apply_provider_config(config_dict)` (base) — the
+  single source of the "is this provider loaded?" gate; all 6 call it. (`text_processor`/`intent` `/configure` don't have
+  the block — left alone.) **`/providers` (×6) deliberately NOT unified:** the handlers genuinely diverge — only asr/llm
+  wrap per-provider in try/except, audio/tts/voice_trigger don't, nlu uses defensive `getattr(...)`, and the per-provider
+  capability fields + response models all differ; a shared skeleton would impose try/except on 4 endpoints (a behavior
+  change on the error path) or become a leaky callback abstraction. Shallow 3-line loop, real variation → not worth it.
+  New `test_apply_provider_config.py`. Gates: suite 1063 passed, pyright 0, import-linter 9/9. **CR-C8 complete.**
 - **2026-06-22 — WebAPIPlugin component-walk dedup (CR-C12).** The "iterate `component_manager.get_components()`, filter
   `isinstance(.., WebAPIPlugin)`, build `(name, component)`" walk was reimplemented with different guarding/logging in
   `web_server._mount_component_routers` and `webapi_router` (AsyncAPI spec gen). Extracted `web_api_components(core)` into
@@ -380,7 +389,7 @@ of their `get_param` calls ever drops its caller-supplied default.
 - **CR-C7** — ✅ **FIXED 2026-06-22**. cloud-LLM providers (openai/deepseek/anthropic) duplicate `_GENERIC_SYSTEM_FALLBACK`/`_LLM_TEMPERATURE`
   (byte-identical), `_get_default_credentials`, `get_supported_tasks`, credential-load idiom, import-probe
   `is_available`. Belongs in `LLMProvider`.
-- **CR-C8** — ✅ **PARTIAL 2026-06-22** (is_api_available + metrics mixin done; /configure & /providers deferred). component web scaffolding copy-paste: `_metrics_push_*` (`asr_component.py:702` ≡
+- **CR-C8** — ✅ **FIXED 2026-06-22** (is_api_available + metrics mixin + /configure `_apply_provider_config`; /providers assessed — not unified, see Resolution log). component web scaffolding copy-paste: `_metrics_push_*` (`asr_component.py:702` ≡
   `voice_trigger_component.py:565`, byte-identical), `is_api_available` (×3: nlu/text_processor/monitoring),
   `/configure` POST (×7), `/providers` (×6). Candidate `MetricsPushMixin` + shared `_apply_provider_config`.
 - **CR-C9** — `["linux.ubuntu","linux.alpine","macos","windows"]` `get_platform_support()` literal hardcoded in ~25
