@@ -86,8 +86,10 @@ class VoskTTSProvider(TTSProvider):
         if self.model_path.exists():
             return True
             
-        # Check if model can be downloaded via asset manager
-        model_info = self.asset_manager.get_model_info("vosk", "tts")
+        # Check if model can be downloaded via asset manager (CR-A4: the model is registered under the
+        # ("vosk_tts", "ru_multi") namespace — as used by _load_model below; ("vosk","tts") matched
+        # nothing, so a clean install returned None here and the provider was dropped before downloading).
+        model_info = self.asset_manager.get_model_info("vosk_tts", "ru_multi")
         return model_info is not None
     
     @classmethod

@@ -12,6 +12,13 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-22
+- **Standalone correctness fixes (review CR-A4/A8) — `docs/review/codebase_review_2026-06-21.md`.** **CR-A4:**
+  `tts/vosk.py is_available` probed the wrong asset namespace `("vosk","tts")` (matched nothing) → a clean install
+  reported vosk-TTS unavailable and never downloaded the model; now queries `("vosk_tts","ru_multi")` as the rest of the
+  provider does. **CR-A8:** `tts/elevenlabs.py synthesize_to_file` swallowed errors and returned without writing a file
+  (caller then read a non-existent WAV, fallback chain never engaged); now re-raises `RuntimeError` like silero/vosk/
+  piper. New `test_tts_provider_fixes.py` (correct-namespace probe + raise-on-failure / no-phantom-file). Gates: suite
+  1016 passed / 0 failed, pyright 0, import-linter 9/9. Review tracker + this ledger updated.
 - **Provider-base duplication dedup (review CR-C6/C7/C8) — `docs/review/codebase_review_2026-06-21.md`.** Behavior-
   preserving base/mixin extractions, run as 3 parallel specialists over disjoint files (llm/, tts/, components/), then
   verified together. **CR-C6:** new `silero_base.py::SileroTTSBase` holds the ~80%-shared Silero body; `silero_v3`/

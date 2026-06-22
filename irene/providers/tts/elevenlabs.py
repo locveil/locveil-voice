@@ -116,9 +116,13 @@ class ElevenLabsTTSProvider(TTSProvider):
                 f.write(audio_data)
                 
             logger.info(f"ElevenLabs audio saved to: {output_path}")
-            
+
         except Exception as e:
+            # CR-A8: re-raise like the other TTS providers (silero/vosk/piper). Swallowing made the method
+            # appear to succeed while writing no file → the caller read a non-existent WAV and the TTS
+            # fallback chain never engaged.
             logger.error(f"ElevenLabs file generation failed: {e}")
+            raise RuntimeError(f"ElevenLabs file generation failed: {e}") from e
     
     async def synthesize_to_stream(self, text: str, **kwargs) -> PCMStream:
         """Native streaming override (ARCH-21): request raw PCM (not MP3) from ElevenLabs so it flows

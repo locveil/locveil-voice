@@ -1,7 +1,7 @@
 # Whole-codebase review (2026-06-21)
 
 **Status:** findings filed; **resolved 2026-06-22:** CR-A1 group (A1/A2/A3/A14/B2/D5) + BUILD-7 doc/dup cluster (C1/C2/C4/D1–D4) + dead-code
-sweep (all CR-B except B4 KEPT) + provider-base dedup (C6/C7, C8 partial) — see Resolution log. Remainder open. **Backs:** general health pass (post-BUILD-7); individual items
+sweep (all CR-B except B4 KEPT) + provider-base dedup (C6/C7, C8 partial) + standalone correctness (A4/A8) — see Resolution log. Remainder open. **Backs:** general health pass (post-BUILD-7); individual items
 cross-ref
 their owning task below. **Scope:** entire `irene/` tree + `docker/` + `pyproject.toml` + `docs/guides/`. **Method:**
 7 parallel finder passes (subsystem deep-reads + cross-cutting dead-code / duplication / doc-claim specialists);
@@ -22,11 +22,11 @@ _Plausible_ = realistic but depends on a reachable runtime state / framework beh
 | **CR-A1** | **P0** | ✅ FIXED | `voice_runner` `await`s the infinite mic loop → standalone web API never starts | standalone runtime; **not** covered by BUILD-3 (used `webapi_runner`) |
 | CR-A2 | P1 | ✅ FIXED | ASR never reconciles `default_provider` to a loaded provider → ASR hard-fails | new |
 | CR-A3 | P1 | ✅ FIXED | `ASRComponent.initialize` swallows exceptions but stays `initialized=True` | new (compounds CR-A2) |
-| CR-A4 | P1 | Likely | `tts/vosk` `is_available` probes wrong asset namespace → dead on first run | new |
+| CR-A4 | P1 | ✅ FIXED | `tts/vosk` `is_available` probes wrong asset namespace → dead on first run | new |
 | CR-A5 | P2 | Confirmed | `audio_playback` "play" is a shipped simulation (commented-out call + 10% dice fail) | new |
 | CR-A6 | P2 | Confirmed | `nlu_analysis` context loaders are stubs → endpoints always "healthy/no conflicts" | new |
 | CR-A7 | P2 | Likely | `process_text_input` drops the trace when the workflow raises (audio path doesn't) | tracing |
-| CR-A8 | P2 | Likely | `elevenlabs.synthesize_to_file` swallows error, writes no file | new |
+| CR-A8 | P2 | ✅ FIXED | `elevenlabs.synthesize_to_file` swallows error, writes no file | new |
 | CR-A9 | P3 | Plausible | Over-broad substring trace redaction nukes `session_id`/`keyword`/`author` | tracing |
 | CR-A10 | P3 | Plausible | `asr/base.audio_contract` reads a voice-trigger method name → rates always `[16000]` | new |
 | CR-A11 | P3 | Plausible | `voice_synthesis._handle_speak_text` AttributeError on `text:null` entity | new |
@@ -43,6 +43,13 @@ _Plausible_ = realistic but depends on a reachable runtime state / framework beh
 
 ## Resolution log
 
+- **2026-06-22 — Standalone correctness (CR-A4 / CR-A8).** **CR-A4:** `tts/vosk.py` `is_available` now probes the
+  correct asset namespace `("vosk_tts","ru_multi")` (was `("vosk","tts")`, which matched nothing → on a clean install
+  the provider reported unavailable and the model was never downloaded). **CR-A8:** `tts/elevenlabs.py`
+  `synthesize_to_file` now re-raises `RuntimeError` on failure like the sibling providers (was logging-and-returning,
+  so the caller read a non-existent WAV and the TTS fallback chain never engaged). New
+  `test_tts_provider_fixes.py` covers both (correct-namespace probe + raise-on-failure / no-phantom-file). Gates: suite
+  1016 passed / 0 failed, pyright 0, import-linter 9/9.
 - **2026-06-22 — Provider-base duplication (CR-C6/C7/C8).** Behavior-preserving base/mixin extractions (suite 1013
   passed / 0 failed, pyright 0, import-linter 9/9). **CR-C6:** new `irene/providers/tts/silero_base.py` `SileroTTSBase`
   holds the ~80%-shared body (torch-device handling, the `f"{model_file}:{torch_device}"` cache plumbing, config
@@ -130,7 +137,7 @@ ASR has no mask.)
 `super().initialize()` (`:95`) already set `initialized=True`. A mid-init failure → component reports healthy with
 `providers=={}`; defeats the ComponentManager's degrade-on-raise path (`core/components.py:204-212`). Compounds CR-A2.
 
-### CR-A4 — [P1, Likely] `tts/vosk.is_available` probes the wrong asset namespace
+### CR-A4 — [P1, ✅ FIXED 2026-06-22] `tts/vosk.is_available` probes the wrong asset namespace
 `irene/providers/tts/vosk.py:90`. `get_model_info("vosk","tts")` — every other call uses `("vosk_tts","ru_multi")`
 (`:181,:186`, registered under `vosk_tts`). The pair matches nothing → `None`.
 **Impact:** on a clean install the model isn't downloaded, `model_path.exists()` is False, fallback returns `None` →
@@ -153,7 +160,7 @@ reports "healthy / no conflicts" regardless of reality.
 after the `with trace_scope` block; `process_audio_input` (`:576`) records an error stage and saves. With tracing on,
 a text-path exception → trace never written, no error stage. The "save every request" guarantee is violated for text.
 
-### CR-A8 — [P2, Likely] `elevenlabs.synthesize_to_file` swallows the error, writes no file
+### CR-A8 — [P2, ✅ FIXED 2026-06-22] `elevenlabs.synthesize_to_file` swallows the error, writes no file
 `irene/providers/tts/elevenlabs.py:104-121`. Catches + logs, **no `raise`** (silero/vosk/piper all raise). Returns
 normally without creating `output_path` → caller reads a non-existent WAV; fallback chain never engages.
 
