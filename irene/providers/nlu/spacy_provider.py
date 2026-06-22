@@ -97,11 +97,8 @@ class SpaCyNLUProvider(NLUProvider):
                 return False
             
             if not self.nlp:
-                if self.asset_manager:
-                    await self._initialize_spacy_with_assets()
-                else:
-                    await self._initialize_spacy()
-            
+                await self._initialize_spacy()
+
             # Only check if the model is loaded - patterns will be loaded during donation initialization
             return self.nlp is not None
             
@@ -115,86 +112,25 @@ class SpaCyNLUProvider(NLUProvider):
         from ...core.assets import get_asset_manager
         self.asset_manager = get_asset_manager()
         
-        # Initialize spaCy with asset management
-        await self._initialize_spacy_with_assets()
+        # Initialize spaCy (asset-manager-aware — acquired just above)
+        await self._initialize_spacy()
     
     async def _initialize_spacy(self):
-        """Initialize spaCy models with multi-language support"""
+        """Initialize spaCy models with multi-language support.
+
+        When an asset manager is wired (`self.asset_manager`, set by `_do_initialize`), each model is first
+        verified/ensured through it (best-effort — failures degrade to a direct load); without one, models
+        load directly. The provider works either way, so callers no longer branch on the asset manager."""
         try:
             spacy = safe_import('spacy')
             if spacy is None:
                 raise ImportError("spaCy not available")
-            
+
             # Initialize available models for each language
             for language, models in self.language_preferences.items():
                 for model_name in models:
                     try:
-                        model = spacy.load(model_name)
-                        self.available_models[language] = model
-                        
-                        # Capture model version for cache validation
-                        if hasattr(model, 'meta') and 'version' in model.meta:
-                            version = model.meta['version']
-                        else:
-                            version = spacy.__version__
-                        
-                        logger.info(f"Loaded spaCy model for {language}: {model_name} (version: {version})")
-                        break  # Use the first available model for this language
-                    except OSError:
-                        logger.debug(f"Model {model_name} not available for {language}")
-                        continue
-                
-                if language not in self.available_models:
-                    logger.warning(f"No models available for language: {language}")
-            
-            # Set primary model (use Russian if available, else English)
-            if 'ru' in self.available_models:
-                self.nlp = self.available_models['ru']
-                self._spacy_model_version = getattr(self.nlp, 'meta', {}).get('version', spacy.__version__)
-                logger.info(f"Primary model set to Russian: {self.nlp.meta.get('name', 'unknown')}")
-            elif 'en' in self.available_models:
-                self.nlp = self.available_models['en']
-                self._spacy_model_version = getattr(self.nlp, 'meta', {}).get('version', spacy.__version__)
-                logger.info(f"Primary model set to English: {self.nlp.meta.get('name', 'unknown')}")
-            else:
-                # No models available - this is a configuration/installation issue
-                logger.error("No spaCy models available for any language")
-                raise RuntimeError("No spaCy models found. Install with: python -m spacy download ru_core_news_sm en_core_web_sm")
-            
-            # Initialize intent patterns if donations are available
-            if len(self.intent_patterns) > 0:
-                await self._initialize_intent_patterns()
-            
-            logger.info(f"spaCy NLU initialized successfully with {len(self.available_models)} language models")
-            
-        except Exception as e:
-            logger.error(f"Failed to initialize spaCy NLU: {e}")
-            self.nlp = None
-            self.available_models = {}
-            raise
-    
-    async def _initialize_spacy_with_assets(self):
-        """Initialize spaCy models with multi-language support using asset management system"""
-        try:
-            spacy = safe_import('spacy')
-            if spacy is None:
-                raise ImportError("spaCy not available")
-            
-            # Ensure asset manager is available
-            if not self.asset_manager:
-                try:
-                    from ...core.assets import get_asset_manager
-                    self.asset_manager = get_asset_manager()
-                    logger.info(f"Asset manager initialized: {self.asset_manager}")
-                except Exception as e:
-                    logger.error(f"Failed to initialize asset manager: {e}")
-                    self.asset_manager = None
-            
-            # Initialize available models for each language with asset management
-            for language, models in self.language_preferences.items():
-                for model_name in models:
-                    try:
-                        # Try to ensure model is available through asset manager
+                        # Best-effort: ensure the model is present via the asset manager when one is wired.
                         if self.asset_manager:
                             try:
                                 model_path = await self.asset_manager.ensure_model_available(
@@ -202,34 +138,31 @@ class SpaCyNLUProvider(NLUProvider):
                                     model_name=model_name,
                                     asset_config=self.__class__.get_asset_config()
                                 )
-                                
                                 if model_path:
                                     logger.info(f"Asset manager verified spaCy model: {model_name} -> {model_path}")
                                 else:
                                     logger.debug(f"Asset manager could not ensure model: {model_name}")
-                                    
                             except Exception as e:
                                 logger.debug(f"Asset manager failed to provide model {model_name}: {e}")
-                        
-                        # Try to load the model
+
                         model = spacy.load(model_name)
                         self.available_models[language] = model
-                        
+
                         # Capture model version for cache validation
                         if hasattr(model, 'meta') and 'version' in model.meta:
                             version = model.meta['version']
                         else:
                             version = spacy.__version__
-                        
+
                         logger.info(f"Loaded spaCy model for {language}: {model_name} (version: {version})")
                         break  # Use the first available model for this language
                     except OSError:
                         logger.debug(f"Model {model_name} not available for {language}")
                         continue
-                
+
                 if language not in self.available_models:
                     logger.warning(f"No models available for language: {language}")
-            
+
             # Set primary model (use Russian if available, else English)
             if 'ru' in self.available_models:
                 self.nlp = self.available_models['ru']
@@ -243,15 +176,15 @@ class SpaCyNLUProvider(NLUProvider):
                 # No models available - this is a configuration/installation issue
                 logger.error("No spaCy models available for any language")
                 raise RuntimeError("No spaCy models found. Install with: python -m spacy download ru_core_news_sm en_core_web_sm")
-            
+
             # Initialize intent patterns if donations are available
             if len(self.intent_patterns) > 0:
                 await self._initialize_intent_patterns()
-            
-            logger.info(f"spaCy NLU initialized successfully with asset management ({len(self.available_models)} language models)")
-            
+
+            logger.info(f"spaCy NLU initialized successfully with {len(self.available_models)} language models")
+
         except Exception as e:
-            logger.error(f"Failed to initialize spaCy NLU with assets: {e}")
+            logger.error(f"Failed to initialize spaCy NLU: {e}")
             self.nlp = None
             self.available_models = {}
             raise
@@ -700,11 +633,8 @@ class SpaCyNLUProvider(NLUProvider):
             Intent with classification result
         """
         if not self.nlp:
-            if self.asset_manager:
-                await self._initialize_spacy_with_assets()
-            else:
-                await self._initialize_spacy()
-        
+            await self._initialize_spacy()
+
         if not self.nlp:
             # Fallback to basic intent if spaCy unavailable
             return Intent(

@@ -1,7 +1,7 @@
 # Whole-codebase review (2026-06-21)
 
 **Status:** findings filed; **resolved 2026-06-22:** CR-A1 group (A1/A2/A3/A14/B2/D5) + BUILD-7 doc/dup cluster (C1/C2/C4/D1–D4) + dead-code
-sweep (all CR-B except B4 KEPT) + provider-base dedup (C6/C7, C8 partial) + standalone correctness (A4/A8) + silero cleanups (A12/A13) + tracing pair (A7/A9) + path-traversal hardening (A15) + correctness trio (A10/A11/A16) + Cyrillic dedup (C3) + nlu-analysis loaders (A6) + audio playback (A5) + handler base-class consolidation (C11) + asset-name/path helper (C10) — see Resolution log. **§A FULLY CLEAR.** Remainder open. **Backs:** general health pass (post-BUILD-7); individual items
+sweep (all CR-B except B4 KEPT) + provider-base dedup (C6/C7, C8 partial) + standalone correctness (A4/A8) + silero cleanups (A12/A13) + tracing pair (A7/A9) + path-traversal hardening (A15) + correctness trio (A10/A11/A16) + Cyrillic dedup (C3) + nlu-analysis loaders (A6) + audio playback (A5) + handler base-class consolidation (C11) + asset-name/path helper (C10) + spaCy init dedup (C5) — see Resolution log. **§A FULLY CLEAR.** Remainder open. **Backs:** general health pass (post-BUILD-7); individual items
 cross-ref
 their owning task below. **Scope:** entire `irene/` tree + `docker/` + `pyproject.toml` + `docs/guides/`. **Method:**
 7 parallel finder passes (subsystem deep-reads + cross-cutting dead-code / duplication / doc-claim specialists);
@@ -36,13 +36,23 @@ _Plausible_ = realistic but depends on a reachable runtime state / framework beh
 | CR-A15 | P2 | ✅ FIXED | asset-loader save/load: `assets_root / domain / language` unsanitized (path traversal) | new (security) |
 | CR-A16 | P3 | ✅ FIXED | self-routing handlers' broad `except Exception` can swallow `ParameterExtractionError` | QUAL-30 boundary |
 | CR-B1..13 | — | ✅ swept | dead/zombie code (see §B) | FIXED 2026-06-22 (CR-B4 KEPT — ARCH-22/25; B12 was QUAL-20) |
-| CR-C1..13 | — | C1/2/3/4/6/7/10/11/13 ✅, C8◐ | duplication / drift risk (see §C) | C1/C2/C3/C4/C6/C7/C10/C11/C13 + C8(partial) FIXED 2026-06-22; CR-C9 → ARCH-25 |
+| CR-C1..13 | — | C1/2/3/4/5/6/7/10/11/13 ✅, C8◐ | duplication / drift risk (see §C) | C1–C7/C10/C11/C13 + C8(partial) FIXED 2026-06-22; CR-C9 → ARCH-25 |
 | CR-D1..5 | — | D1-D4 ✅ | stale user-facing doc claims (see §D) | D1–D4 FIXED 2026-06-22; D5 done in CR-A1 group |
 
 ---
 
 ## Resolution log
 
+- **2026-06-22 — spaCy init dedup (CR-C5).** `_initialize_spacy` (plain) and `_initialize_spacy_with_assets` were ~75
+  near-identical lines, and the call sites diverged: `is_available()` / `recognize()` branched
+  `if self.asset_manager: _with_assets() else: _initialize_spacy()` while `_do_initialize` always used `_with_assets` —
+  so a fix could land on only some paths. Merged into a single `_initialize_spacy` whose per-model asset-manager step is
+  guarded by `if self.asset_manager:` (best-effort → degrades to a direct `spacy.load`). Dropped the duplicate's
+  self-acquisition block (always a no-op: callers only reached `_with_assets` with `asset_manager` already set, and
+  `_do_initialize` acquires it just before) — so the no-asset-manager "legacy path" still leaves `asset_manager`
+  untouched (backwards-compat test holds). All three call sites collapse to the one method. Existing
+  `test_spacy_asset_integration.py` (asset path + legacy path) now exercises both branches through the single method.
+  Net −70 LOC. Gates: suite 1059 passed, pyright 0, import-linter 9/9.
 - **2026-06-22 — Asset-name / asset-path helper dedup (CR-C10).** `_get_asset_handler_name` was defined verbatim in
   `intent_asset_loader.py` and `cross_language_validator.py` (and they'd *drifted* — only the loader's validated via
   `_safe_path_segment`), the inverse `[:-8]` was inlined 3×, and `assets_root / "<category>" / …` construction was
@@ -356,7 +366,7 @@ of their `get_param` calls ever drops its caller-supplied default.
 - **CR-C4** — ✅ **FIXED 2026-06-22**. base-dep re-listings with inconsistent floors: `numpy` base `<2` vs extras `>=1.21.0`; `aiohttp` base
   `>=3.12.15` vs `wake-onnx`/`wake-tflite` `>=3.8.0`. (In-code pattern already prefers "don't re-list base deps" — see
   the `# base dependency` comments — so the extras are inconsistent with the intended convention.) _Ref: **BUILD-7**._
-- **CR-C5** — `spacy_provider._initialize_spacy` (`:110`) vs `_initialize_spacy_with_assets` (`:165`): ~75 near-identical
+- **CR-C5** — ✅ **FIXED 2026-06-22**. `spacy_provider._initialize_spacy` (`:110`) vs `_initialize_spacy_with_assets` (`:165`): ~75 near-identical
   lines; `recognize()` re-init and `is_available()` each pick a different one → a fix can land on only some paths.
 - **CR-C6** — ✅ **FIXED 2026-06-22**. `silero_v3.py` vs `silero_v4.py`: ~80% shared body, **shared `torch_model_cache` key** → device/cache
   changes must mirror; source of the CR-A8/A12/A13-class divergence. Candidate `SileroTTSBase`.

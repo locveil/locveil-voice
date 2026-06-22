@@ -12,6 +12,14 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-22
+- **spaCy init dedup (review CR-C5) — `docs/review/codebase_review_2026-06-21.md`.** `_initialize_spacy` and
+  `_initialize_spacy_with_assets` were ~75 near-identical lines; `is_available()`/`recognize()` branched on
+  `self.asset_manager` to pick one while `_do_initialize` always used the assets variant — a fix could land on only some
+  paths. Merged into a single `_initialize_spacy` (per-model asset step guarded by `if self.asset_manager:`, best-effort
+  → degrades to a direct `spacy.load`); dropped the variant's always-no-op self-acquisition block so the no-asset
+  "legacy path" still leaves `asset_manager` untouched. All three call sites collapse to the one method; existing
+  `test_spacy_asset_integration.py` exercises both branches. Net −70 LOC. Gates: suite 1059 passed, pyright 0,
+  import-linter 9/9. Review tracker + this ledger updated.
 - **Asset-name / asset-path helper dedup (review CR-C10) — `docs/review/codebase_review_2026-06-21.md`.**
   `_get_asset_handler_name` was defined verbatim in `intent_asset_loader.py` and `cross_language_validator.py` (drifted —
   only the loader's validated), the inverse `[:-8]` was inlined 3×, and `assets_root / "<category>" / …` construction was

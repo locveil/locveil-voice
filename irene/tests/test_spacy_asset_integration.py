@@ -101,7 +101,7 @@ class TestSpaCyAssetInitialization:
         mock_spacy = _make_spacy()
 
         with patch(SAFE_IMPORT, return_value=mock_spacy):
-            await provider._initialize_spacy_with_assets()
+            await provider._initialize_spacy()
 
         # Asset manager was consulted with the provider's own name + asset config.
         asset_manager.ensure_model_available.assert_awaited()
@@ -134,7 +134,7 @@ class TestSpaCyAssetInitialization:
         mock_spacy = _make_spacy(load=load)
 
         with patch(SAFE_IMPORT, return_value=mock_spacy):
-            await provider._initialize_spacy_with_assets()
+            await provider._initialize_spacy()
 
         mock_spacy.load.assert_any_call("ru_core_news_sm")
         mock_spacy.load.assert_any_call("en_core_web_sm")
@@ -151,7 +151,7 @@ class TestSpaCyAssetInitialization:
         mock_spacy = _make_spacy()
 
         with patch(SAFE_IMPORT, return_value=mock_spacy):
-            await provider._initialize_spacy_with_assets()
+            await provider._initialize_spacy()
 
         mock_spacy.load.assert_called()
         assert provider.nlp is not None
@@ -164,7 +164,7 @@ class TestSpaCyAssetInitialization:
 
         with patch(SAFE_IMPORT, return_value=mock_spacy):
             with pytest.raises(RuntimeError):
-                await provider._initialize_spacy_with_assets()
+                await provider._initialize_spacy()
 
         assert provider.nlp is None
         assert provider.available_models == {}
@@ -175,7 +175,7 @@ class TestSpaCyAssetInitialization:
 
         with patch(SAFE_IMPORT, return_value=None):
             with pytest.raises(ImportError):
-                await provider._initialize_spacy_with_assets()
+                await provider._initialize_spacy()
 
         assert provider.nlp is None
 
