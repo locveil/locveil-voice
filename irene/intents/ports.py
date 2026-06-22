@@ -17,6 +17,7 @@ surfacing as a latent `AttributeError`.
 """
 
 from abc import ABC, abstractmethod
+from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
 
@@ -73,6 +74,9 @@ class TTSPort(ComponentControlPort):
 
 class AudioPort(ComponentControlPort):
     """Audio-playback capability used by the audio-playback handler."""
+
+    @abstractmethod
+    async def play_file(self, file_path: Path, **kwargs: Any) -> Any: ...
 
     @abstractmethod
     async def pause_audio(self) -> Any: ...

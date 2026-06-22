@@ -12,6 +12,18 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-22
+- **Audio playback made real (review CR-A5) — `docs/review/codebase_review_2026-06-21.md`.** Purpose: system/
+  notification sounds (e.g. a timer-done chime) from a local media library. The play/stop fire-and-forget actions were
+  simulated (`sleep` + a 10% `random` failure; real call commented out), and play *couldn't* be wired because the domain
+  `AudioPort` didn't expose `play_file` (only the component did). Added `play_file` to `AudioPort` (component already
+  implements it → satisfied), wired `_start_audio_playback_action` → `play_file(path)` and
+  `_stop_audio_playback_action` → `stop_playback()` (honest — no "assume success"), and dropped `random`/`sleep`. Added a
+  **provisional** `_resolve_media_file` (`<assets_root>/audio/<name>` with a single-safe-segment + stay-in-dir traversal
+  guard, since the name comes from an utterance) — clearly marked to be replaced when the text→media mapping is redone;
+  non-`local` source → clean "unsupported". Tests rewritten (`test_audio_playback_handler_coverage.py`) to exercise the
+  real path via a stub port. Gates: suite 1050 passed / 0 failed, pyright 0, import-linter 9/9. **Review §A is now fully
+  resolved.** Note: `<assets_root>/audio/` is the media dir (currently empty — drop sound files there). Review tracker +
+  this ledger updated.
 - **CR-A6 follow-up: switched the donation-source access to the component DI pattern.** The initial CR-A6 reached the
   NLU component's `asset_loader` via `core.component_manager.get_component("nlu")` (a "core-reach" the newer QUAL-24
   port code avoids). Tightened to the injected pattern: `NLUAnalysisComponent.get_component_dependencies()` now returns

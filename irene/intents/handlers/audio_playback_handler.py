@@ -8,6 +8,7 @@ in AudioComponent. Delegates to AudioComponent for actual functionality.
 import asyncio
 import logging
 import time
+from pathlib import Path
 from typing import List, Dict, Optional
 
 from .base import IntentHandler
@@ -311,37 +312,45 @@ class AudioPlaybackIntentHandler(IntentHandler):
             success=False
         )
     
+    def _resolve_media_file(self, name: str) -> Optional[Path]:
+        """Resolve a media name to a file in the local audio library `<assets_root>/audio/` (e.g. a
+        timer-done chime). Returns None if absent.
+
+        PROVISIONAL: the text→media mapping is intentionally minimal and will be replaced — only the
+        *playback wiring* downstream of this is final. `name` originates from an utterance, so it is
+        clamped to a single safe filename (no separators / `..` / NUL) and the resolved path is verified
+        to stay inside the media directory — an utterance must not read outside it."""
+        loader = self.get_asset_loader()
+        assets_root = getattr(loader, "assets_root", None) if loader else None
+        if not assets_root:
+            return None
+        if not name or name in (".", "..") or "/" in name or "\\" in name or "\x00" in name:
+            return None
+        media_dir = (Path(assets_root) / "audio").resolve()
+        for candidate in (name, f"{name}.wav", f"{name}.mp3", f"{name}.ogg"):
+            resolved = (media_dir / candidate).resolve()
+            if resolved.parent == media_dir and resolved.is_file():
+                return resolved
+        return None
+
     async def _start_audio_playback_action(self, audio_file: str, source: str, language: str) -> bool:
-        """Fire-and-forget audio playback action"""
+        """Fire-and-forget audio playback: resolve the media file from the local library and play it
+        through the audio port. Returns True only when playback was actually dispatched."""
         try:
+            if source != "local":
+                self.logger.warning(f"Audio source '{source}' not supported (local media library only)")
+                return False
             audio_component = await self._get_audio_component()
             if not audio_component:
                 self.logger.error("Audio component not available for playback")
                 return False
-            
-            # Simulate audio playback start
-            # In a real implementation, this would:
-            # 1. Load audio file from source (local/streaming/URL)
-            # 2. Initialize audio playback
-            # 3. Start playback in background
-            # 4. Handle playback events (completion, errors)
-            
-            self.logger.info(f"🎵 Starting audio playback: {audio_file} from {source}")
-            
-            # Simulate loading time
-            await asyncio.sleep(0.5)
-            
-            # Simulate potential loading failures (10% failure rate)
-            import random
-            if random.random() < 0.1:
-                raise Exception(f"Failed to load audio file: {audio_file}")
-            
-            # In a real implementation, would call:
-            # await audio_component.play_file(audio_file, source=source)
-            
-            self.logger.info(f"🎵 Audio playback started successfully: {audio_file}")
+            path = self._resolve_media_file(audio_file)
+            if path is None:
+                self.logger.warning(f"Media file not found in the audio library: {audio_file!r}")
+                return False
+            await audio_component.play_file(path)
+            self.logger.info(f"🎵 Audio playback started: {path}")
             return True
-            
         except Exception as e:
             self.logger.error(f"Audio playback action failed: {e}")
             return False
@@ -379,34 +388,15 @@ class AudioPlaybackIntentHandler(IntentHandler):
             return False
 
     async def _stop_audio_playback_action(self, language: str) -> bool:
-        """Fire-and-forget audio stop action"""
+        """Fire-and-forget audio stop: stop all active playback through the audio port."""
         try:
             audio_component = await self._get_audio_component()
             if not audio_component:
                 self.logger.warning("Audio component not available for stop operation")
                 return False
-            
-            # In a real implementation, this would:
-            # 1. Check if any audio is currently playing
-            # 2. Stop all active playback
-            # 3. Clean up audio resources
-            # 4. Update playback state
-            
-            self.logger.info("🛑 Stopping audio playback")
-            
-            # Simulate stop operation
-            await asyncio.sleep(0.2)
-            
-            # Try to stop playback using audio component
-            try:
-                await audio_component.stop_playback()
-                self.logger.info("🛑 Audio playback stopped successfully")
-                return True
-            except Exception as component_error:
-                self.logger.warning(f"Audio component stop failed: {component_error}")
-                # Fallback: assume stop was successful anyway
-                return True
-                
+            await audio_component.stop_playback()
+            self.logger.info("🛑 Audio playback stopped")
+            return True
         except Exception as e:
             self.logger.error(f"Audio stop action failed: {e}")
             return False

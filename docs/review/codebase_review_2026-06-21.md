@@ -1,7 +1,7 @@
 # Whole-codebase review (2026-06-21)
 
 **Status:** findings filed; **resolved 2026-06-22:** CR-A1 group (A1/A2/A3/A14/B2/D5) + BUILD-7 doc/dup cluster (C1/C2/C4/D1–D4) + dead-code
-sweep (all CR-B except B4 KEPT) + provider-base dedup (C6/C7, C8 partial) + standalone correctness (A4/A8) + silero cleanups (A12/A13) + tracing pair (A7/A9) + path-traversal hardening (A15) + correctness trio (A10/A11/A16) + Cyrillic dedup (C3) + nlu-analysis loaders (A6) — see Resolution log. **§A clear except A5 (audio_playback).** Remainder open. **Backs:** general health pass (post-BUILD-7); individual items
+sweep (all CR-B except B4 KEPT) + provider-base dedup (C6/C7, C8 partial) + standalone correctness (A4/A8) + silero cleanups (A12/A13) + tracing pair (A7/A9) + path-traversal hardening (A15) + correctness trio (A10/A11/A16) + Cyrillic dedup (C3) + nlu-analysis loaders (A6) + audio playback (A5) — see Resolution log. **§A FULLY CLEAR.** Remainder open. **Backs:** general health pass (post-BUILD-7); individual items
 cross-ref
 their owning task below. **Scope:** entire `irene/` tree + `docker/` + `pyproject.toml` + `docs/guides/`. **Method:**
 7 parallel finder passes (subsystem deep-reads + cross-cutting dead-code / duplication / doc-claim specialists);
@@ -23,7 +23,7 @@ _Plausible_ = realistic but depends on a reachable runtime state / framework beh
 | CR-A2 | P1 | ✅ FIXED | ASR never reconciles `default_provider` to a loaded provider → ASR hard-fails | new |
 | CR-A3 | P1 | ✅ FIXED | `ASRComponent.initialize` swallows exceptions but stays `initialized=True` | new (compounds CR-A2) |
 | CR-A4 | P1 | ✅ FIXED | `tts/vosk` `is_available` probes wrong asset namespace → dead on first run | new |
-| CR-A5 | P2 | Confirmed | `audio_playback` "play" is a shipped simulation (commented-out call + 10% dice fail) | new |
+| CR-A5 | P2 | ✅ FIXED | `audio_playback` "play" is a shipped simulation (commented-out call + 10% dice fail) | new |
 | CR-A6 | P2 | ✅ FIXED | `nlu_analysis` context loaders are stubs → endpoints always "healthy/no conflicts" | new |
 | CR-A7 | P2 | ✅ FIXED | `process_text_input` drops the trace when the workflow raises (audio path doesn't) | tracing |
 | CR-A8 | P2 | ✅ FIXED | `elevenlabs.synthesize_to_file` swallows error, writes no file | new |
@@ -43,6 +43,18 @@ _Plausible_ = realistic but depends on a reachable runtime state / framework beh
 
 ## Resolution log
 
+- **2026-06-22 — Audio playback made real (CR-A5).** Purpose (per user): system/notification sounds (e.g. a
+  timer-done chime) from a local media library. The "play" and "stop" fire-and-forget actions were simulated (`sleep` +
+  a 10% `random` failure; the real call commented out) — and `play` couldn't even be wired because **`AudioPort` didn't
+  expose `play_file`** (only the component did). Fixes: (1) added `play_file` to `AudioPort` (the component already
+  implements it — the handler now reaches playback through the domain port like pause/resume/stop); (2) real wiring —
+  `_start_audio_playback_action` resolves the media file and calls `audio_component.play_file(path)`,
+  `_stop_audio_playback_action` calls `stop_playback()` honestly (no more "assume success"); dropped `random`/`sleep`;
+  (3) **provisional** `_resolve_media_file` — `<assets_root>/audio/<name>` with a single-safe-segment + stay-in-dir
+  traversal guard (name comes from an utterance), clearly marked to be replaced when the text→media mapping is redone.
+  `source` other than `local` → clean "unsupported". New/updated `test_audio_playback_handler_coverage.py` (plays the
+  resolved file via a console-style stub port, media-not-found / unsupported-source / traversal-rejected). Gates: suite
+  1050 passed / 0 failed, pyright 0, import-linter 9/9. **§A fully clear.**
 - **2026-06-22 — NLU-analysis donation loaders (CR-A6).** `_get_context_units` / `_get_all_intent_units` were
   `return []` stubs, so conflict detection always found nothing and the health score was always `1.0`. Implemented them
   to enumerate the loaded donations off the NLU component's `IntentAssetLoader`
@@ -199,7 +211,7 @@ ASR has no mask.)
 **Impact:** on a clean install the model isn't downloaded, `model_path.exists()` is False, fallback returns `None` →
 `is_available()` False → component drops `vosk_tts` and **never triggers the download**. Permanently dead on first run.
 
-### CR-A5 — [P2, Confirmed] `audio_playback` "play" action is a shipped simulation
+### CR-A5 — [P2, ✅ FIXED 2026-06-22] `audio_playback` "play" action is a shipped simulation
 `irene/intents/handlers/audio_playback_handler.py:314-347`. Real `audio_component.play_file(...)` is commented out
 (`:339`); body sleeps 0.5s then `random.random()<0.1` raises a fake load failure. Handler is live (in entry-points).
 **Impact:** "включи музыку" → optimistic "starting playback" reply, plays nothing, ~10% of calls report a spurious

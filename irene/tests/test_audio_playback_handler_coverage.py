@@ -16,8 +16,9 @@ reads are wired up.
 
 import asyncio
 import logging
+import tempfile
 import unittest
-from unittest.mock import patch
+from pathlib import Path
 
 from irene.intents.handlers.audio_playback_handler import AudioPlaybackIntentHandler
 from irene.intents.models import Intent, IntentResult
@@ -27,8 +28,9 @@ from irene.intents.context_models import UnifiedConversationContext
 class _FakeAssetLoader:
     """Stub IntentAssetLoader — returns format-strings for known template names only."""
 
-    def __init__(self, templates=None):
+    def __init__(self, templates=None, assets_root=None):
         self._templates = templates or {}
+        self.assets_root = assets_root
 
     def get_template(self, handler_name, template_name, language):
         return self._templates.get(template_name)
@@ -58,6 +60,9 @@ class _StubAudioPort:
         self.calls.append("stop")
         if self._stop_raises:
             raise RuntimeError("stop boom")
+
+    async def play_file(self, file_path, **kwargs):
+        self.calls.append(("play_file", file_path))
 
     def parse_provider_name_from_text(self, text):
         return None
@@ -187,20 +192,41 @@ class TestActionCoroutinesGracefulDegradation(unittest.TestCase):
 class TestActionCoroutinesWithPort(unittest.TestCase):
     """Happy + error paths of each action coroutine against a stub port."""
 
-    def test_start_action_success_with_port(self):
-        port = _StubAudioPort()
-        h = _handler(audio_component=port)
-        # random.random gates a simulated 10% failure; pin it above the threshold for determinism.
-        with patch("random.random", return_value=0.99):
-            self.assertTrue(asyncio.run(
-                h._start_audio_playback_action("a.mp3", "local", "en")))
+    def test_start_action_plays_resolved_media_file(self):
+        # The real wiring: resolve <assets_root>/audio/timer.wav and dispatch it to the port's play_file.
+        with tempfile.TemporaryDirectory() as d:
+            media = Path(d) / "audio"
+            media.mkdir()
+            (media / "timer.wav").write_bytes(b"RIFF\x00\x00\x00\x00WAVE")
+            port = _StubAudioPort()
+            h = _handler(audio_component=port,
+                         asset_loader=_FakeAssetLoader(_DEFAULT_TEMPLATES, assets_root=d))
+            self.assertTrue(asyncio.run(h._start_audio_playback_action("timer", "local", "en")))
+            self.assertEqual(port.calls, [("play_file", (media / "timer.wav").resolve())])
 
-    def test_start_action_simulated_load_failure_returns_false(self):
+    def test_start_action_media_not_found_returns_false(self):
+        with tempfile.TemporaryDirectory() as d:
+            (Path(d) / "audio").mkdir()
+            port = _StubAudioPort()
+            h = _handler(audio_component=port,
+                         asset_loader=_FakeAssetLoader(_DEFAULT_TEMPLATES, assets_root=d))
+            self.assertFalse(asyncio.run(h._start_audio_playback_action("missing", "local", "en")))
+            self.assertEqual(port.calls, [])  # never dispatched
+
+    def test_start_action_unsupported_source_returns_false(self):
         port = _StubAudioPort()
         h = _handler(audio_component=port)
-        with patch("random.random", return_value=0.0):  # < 0.1 -> simulated load failure
-            self.assertFalse(asyncio.run(
-                h._start_audio_playback_action("a.mp3", "local", "en")))
+        self.assertFalse(asyncio.run(h._start_audio_playback_action("timer", "url", "en")))
+        self.assertEqual(port.calls, [])
+
+    def test_start_action_rejects_traversal_name(self):
+        with tempfile.TemporaryDirectory() as d:
+            (Path(d) / "audio").mkdir()
+            port = _StubAudioPort()
+            h = _handler(audio_component=port,
+                         asset_loader=_FakeAssetLoader(_DEFAULT_TEMPLATES, assets_root=d))
+            self.assertFalse(asyncio.run(h._start_audio_playback_action("../secret", "local", "en")))
+            self.assertEqual(port.calls, [])
 
     def test_pause_action_calls_port_and_succeeds(self):
         port = _StubAudioPort()
@@ -230,11 +256,11 @@ class TestActionCoroutinesWithPort(unittest.TestCase):
         self.assertTrue(asyncio.run(h._stop_audio_playback_action("en")))
         self.assertIn("stop", port.calls)
 
-    def test_stop_action_port_error_falls_back_to_true(self):
-        # The stop coroutine treats a component-level stop failure as "stopped anyway".
+    def test_stop_action_port_error_returns_false(self):
+        # Honest stop: a component-level failure surfaces as failure (no "assume success anyway").
         port = _StubAudioPort(stop_raises=True)
         h = _handler(audio_component=port)
-        self.assertTrue(asyncio.run(h._stop_audio_playback_action("en")))
+        self.assertFalse(asyncio.run(h._stop_audio_playback_action("en")))
         self.assertIn("stop", port.calls)
 
 
