@@ -18,6 +18,8 @@ from pathlib import Path
 from typing import Dict, List, Any, Optional, Set, Tuple
 from dataclasses import dataclass
 
+from .intent_asset_loader import asset_dir_name
+
 logger = logging.getLogger(__name__)
 
 
@@ -64,7 +66,7 @@ class CrossLanguageValidator:
 
     def _load_v11(self, handler_name: str) -> Tuple[Optional[dict], Dict[str, dict]]:
         """Return (contract_dict, {language: phrasing_dict}) as raw JSON. Neither is a full HandlerDonation."""
-        lang_dir = self.assets_root / "donations" / self._get_asset_handler_name(handler_name)
+        lang_dir = self.assets_root / "donations" / asset_dir_name(handler_name)
         contract: Optional[dict] = None
         languages: Dict[str, dict] = {}
         if not lang_dir.exists():
@@ -166,9 +168,3 @@ class CrossLanguageValidator:
     # phrase-gap suggester is superseded by the LLM translation service (POST /donations/{h}/translate).
 
     # ----- helpers -----
-
-    def _get_asset_handler_name(self, handler_name: str) -> str:
-        """Map handler file name to asset directory name"""
-        if handler_name.endswith("_handler"):
-            return handler_name
-        return f"{handler_name}_handler"

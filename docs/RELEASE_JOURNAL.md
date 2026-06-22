@@ -12,6 +12,14 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-22
+- **Asset-name / asset-path helper dedup (review CR-C10) — `docs/review/codebase_review_2026-06-21.md`.**
+  `_get_asset_handler_name` was defined verbatim in `intent_asset_loader.py` and `cross_language_validator.py` (drifted —
+  only the loader's validated), the inverse `[:-8]` was inlined 3×, and `assets_root / "<category>" / …` construction was
+  repeated in ~30 methods. Extracted pure module helpers `asset_dir_name` / `base_handler_name` and an `_asset_path(*segments)`
+  method (single source of the `assets/<category>/…` layout). The loader's `_get_asset_handler_name` keeps the CR-A15
+  validation choke point; `cross_language_validator` imports `asset_dir_name` (its copy removed); 3 `[:-8]` blocks →
+  `base_handler_name`; 32 path constructions → `_asset_path`. New `test_asset_naming.py`. Gates: suite 1052 passed,
+  pyright 0, import-linter 9/9 (new core→core edge holds), 12 profiles valid. Review tracker + this ledger updated.
 - **Handler base-class consolidation (review CR-C11) — `docs/review/codebase_review_2026-06-21.md`.** `can_handle` /
   `_get_template` / `_error_result` were copy-pasted across ~13 handlers and had drifted. Hoisted canonical versions to
   `IntentHandler` (base): donation-pattern `can_handle`; `_get_template` with the asset key derived from the module

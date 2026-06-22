@@ -43,6 +43,16 @@ def _safe_path_segment(value: str, field: str) -> str:
     return s
 
 
+def asset_dir_name(handler_name: str) -> str:
+    """Asset directory name for a handler — `<name>_handler` (idempotent if already suffixed)."""
+    return handler_name if handler_name.endswith("_handler") else f"{handler_name}_handler"
+
+
+def base_handler_name(name: str) -> str:
+    """Inverse of `asset_dir_name`: strip a trailing `_handler` from an asset directory name."""
+    return name[: -len("_handler")] if name.endswith("_handler") else name
+
+
 def _should_skip_directory(dir_name: str) -> bool:
     """
     Check if directory should be skipped in handler discovery.
@@ -165,7 +175,7 @@ class IntentAssetLoader:
     
     async def save_donation(self, handler_name: str, donation_data: dict, create_backup: bool = True) -> bool:
         """Save donation JSON to file with backup support"""
-        donations_dir = self.assets_root / "donations"
+        donations_dir = self._asset_path("donations")
         json_path = donations_dir / f"{handler_name}.json"
         
         try:
@@ -220,9 +230,9 @@ class IntentAssetLoader:
         try:
             # Determine backup directory based on asset type
             if backup_type == "localization":
-                backup_dir = self.assets_root / "localization" / "backups"
+                backup_dir = self._asset_path("localization", "backups")
             else:
-                backup_dir = self.assets_root / backup_type / "backups"
+                backup_dir = self._asset_path(backup_type, "backups")
             
             backup_dir.mkdir(parents=True, exist_ok=True)
             
@@ -250,7 +260,7 @@ class IntentAssetLoader:
 
     def get_donation_metadata(self, handler_name: str) -> Optional[dict]:
         """Get metadata about a donation file"""
-        donations_dir = self.assets_root / "donations"
+        donations_dir = self._asset_path("donations")
         json_path = donations_dir / f"{handler_name}.json"
         
         if not json_path.exists():
@@ -300,7 +310,7 @@ class IntentAssetLoader:
     
     def list_all_donations(self) -> list[dict]:
         """List all available donation files with metadata"""
-        donations_dir = self.assets_root / "donations"
+        donations_dir = self._asset_path("donations")
         
         if not donations_dir.exists():
             return []
@@ -472,7 +482,7 @@ class IntentAssetLoader:
     
     async def _load_donations(self, handler_names: List[str]) -> None:
         """Load language-separated donation files and merge for unified processing"""
-        donations_dir = self.assets_root / "donations"
+        donations_dir = self._asset_path("donations")
         
         for handler_name in handler_names:
             asset_handler_name = self._get_asset_handler_name(handler_name)
@@ -623,15 +633,19 @@ class IntentAssetLoader:
                 break
         return assembled
     
+    def _asset_path(self, *segments: str) -> Path:
+        """Build a path under the assets root — the single source of the `assets/<category>/…`
+        layout. Callers validate user-supplied segments (handler/domain/language) before passing
+        them (see `_safe_path_segment` / `_get_asset_handler_name`)."""
+        path = self.assets_root
+        for segment in segments:
+            path = path / segment
+        return path
+
     def _get_asset_handler_name(self, handler_name: str) -> str:
         """Map handler file name to asset directory name. Validates the input is a safe path segment
         (CR-A15) — this is the single choke point for every handler-derived asset path."""
-        handler_name = _safe_path_segment(handler_name, "handler_name")
-        # Handler files ending with _handler already have the suffix
-        if handler_name.endswith("_handler"):
-            return handler_name
-        # For files without suffix, add _handler
-        return f"{handler_name}_handler"
+        return asset_dir_name(_safe_path_segment(handler_name, "handler_name"))
     
     # ============================================================
     # LANGUAGE-SEPARATED FILE ACCESS FOR EDITOR (Phase 3C)
@@ -646,7 +660,7 @@ class IntentAssetLoader:
     def get_contract_for_editing(self, handler_name: str) -> Optional[Dict[str, Any]]:
         """Return the raw language-neutral contract.json for a handler, or None if absent."""
         asset = self._get_asset_handler_name(handler_name)
-        contract_file = self.assets_root / "donations" / asset / "contract.json"
+        contract_file = self._asset_path("donations", asset, "contract.json")
         if not contract_file.exists():
             return None
         try:
@@ -660,7 +674,7 @@ class IntentAssetLoader:
         backup_created = False
         try:
             asset = self._get_asset_handler_name(handler_name)
-            cdir = self.assets_root / "donations" / asset
+            cdir = self._asset_path("donations", asset)
             cdir.mkdir(parents=True, exist_ok=True)
             contract_file = cdir / "contract.json"
             if create_backup and contract_file.exists():
@@ -677,7 +691,7 @@ class IntentAssetLoader:
         description/extraction_patterns/aliases/default_value/choice_surfaces), or None if absent."""
         asset = self._get_asset_handler_name(handler_name)
         language = _safe_path_segment(language, "language")  # CR-A15
-        lang_file = self.assets_root / "donations" / asset / f"{language}.json"
+        lang_file = self._asset_path("donations", asset, f"{language}.json")
         if not lang_file.exists():
             return None
         try:
@@ -692,7 +706,7 @@ class IntentAssetLoader:
         try:
             asset = self._get_asset_handler_name(handler_name)
             language = _safe_path_segment(language, "language")  # CR-A15
-            lang_dir = self.assets_root / "donations" / asset
+            lang_dir = self._asset_path("donations", asset)
             lang_dir.mkdir(parents=True, exist_ok=True)
             lang_file = lang_dir / f"{language}.json"
             if create_backup and lang_file.exists():
@@ -716,7 +730,7 @@ class IntentAssetLoader:
         except ImportError:
             warnings.append({"type": "schema", "message": "jsonschema not available; validation skipped", "path": None})
             return True, errors, warnings
-        schema_path = self.assets_root / schema_filename
+        schema_path = self._asset_path(schema_filename)
         if not schema_path.exists():
             warnings.append({"type": "schema", "message": f"schema {schema_filename} not found; skipped", "path": None})
             return True, errors, warnings
@@ -740,7 +754,7 @@ class IntentAssetLoader:
         """Reload unified donation after language file changes"""
         try:
             asset_handler_name = self._get_asset_handler_name(handler_name)
-            lang_dir = self.assets_root / "donations" / asset_handler_name
+            lang_dir = self._asset_path("donations", asset_handler_name)
             
             if lang_dir.exists():
                 # Clear existing donation
@@ -762,7 +776,7 @@ class IntentAssetLoader:
     def get_available_languages_for_handler(self, handler_name: str) -> List[str]:
         """Get list of available language files for handler"""
         asset_handler_name = self._get_asset_handler_name(handler_name)
-        lang_dir = self.assets_root / "donations" / asset_handler_name
+        lang_dir = self._asset_path("donations", asset_handler_name)
         
         if not lang_dir.exists():
             return []
@@ -772,7 +786,7 @@ class IntentAssetLoader:
     
     def get_all_handlers_with_languages(self) -> Dict[str, List[str]]:
         """Get all handlers with their available languages"""
-        donations_dir = self.assets_root / "donations"
+        donations_dir = self._asset_path("donations")
         handlers_languages = {}
         
         if not donations_dir.exists():
@@ -781,9 +795,7 @@ class IntentAssetLoader:
         for handler_dir in donations_dir.iterdir():
             if handler_dir.is_dir() and not _should_skip_directory(handler_dir.name):
                 # Convert asset handler name back to handler name
-                handler_name = handler_dir.name
-                if handler_name.endswith("_handler"):
-                    handler_name = handler_name[:-8]  # Remove "_handler" suffix
+                handler_name = base_handler_name(handler_dir.name)
                 
                 languages = [lang_file.stem for lang_file in handler_dir.glob("*.json")
                              if lang_file.name != "contract.json"]
@@ -800,7 +812,7 @@ class IntentAssetLoader:
         """Get language-specific template data for editing purposes"""
         asset_handler_name = self._get_asset_handler_name(handler_name)
         language = _safe_path_segment(language, "language")  # CR-A15
-        lang_file = self.assets_root / "templates" / asset_handler_name / f"{language}.yaml"
+        lang_file = self._asset_path("templates", asset_handler_name, f"{language}.yaml")
         
         if lang_file.exists():
             try:
@@ -821,7 +833,7 @@ class IntentAssetLoader:
         backup_created = False
         asset_handler_name = self._get_asset_handler_name(handler_name)
         language = _safe_path_segment(language, "language")  # CR-A15
-        lang_dir = self.assets_root / "templates" / asset_handler_name
+        lang_dir = self._asset_path("templates", asset_handler_name)
         lang_dir.mkdir(parents=True, exist_ok=True)
         
         lang_file = lang_dir / f"{language}.yaml"
@@ -856,7 +868,7 @@ class IntentAssetLoader:
     def get_available_template_languages_for_handler(self, handler_name: str) -> List[str]:
         """Get list of available template language files for handler"""
         asset_handler_name = self._get_asset_handler_name(handler_name)
-        lang_dir = self.assets_root / "templates" / asset_handler_name
+        lang_dir = self._asset_path("templates", asset_handler_name)
         
         if not lang_dir.exists():
             return []
@@ -866,7 +878,7 @@ class IntentAssetLoader:
     def get_handlers_with_templates(self) -> Dict[str, List[str]]:
         """Get all handlers that have template files with their available languages"""
         handlers_languages = {}
-        templates_dir = self.assets_root / "templates"
+        templates_dir = self._asset_path("templates")
         
         if not templates_dir.exists():
             return handlers_languages
@@ -874,9 +886,7 @@ class IntentAssetLoader:
         for handler_dir in templates_dir.iterdir():
             if handler_dir.is_dir() and not _should_skip_directory(handler_dir.name):
                 # Convert asset handler name back to handler name
-                handler_name = handler_dir.name
-                if handler_name.endswith('_handler'):
-                    handler_name = handler_name[:-8]  # Remove '_handler' suffix
+                handler_name = base_handler_name(handler_dir.name)
                 
                 languages = [lang_file.stem for lang_file in handler_dir.glob("*.yaml")]
                 if languages:
@@ -958,7 +968,7 @@ class IntentAssetLoader:
         """Get language-specific prompt data for editing purposes"""
         asset_handler_name = self._get_asset_handler_name(handler_name)
         language = _safe_path_segment(language, "language")  # CR-A15
-        lang_file = self.assets_root / "prompts" / asset_handler_name / f"{language}.yaml"
+        lang_file = self._asset_path("prompts", asset_handler_name, f"{language}.yaml")
         
         if lang_file.exists():
             try:
@@ -979,7 +989,7 @@ class IntentAssetLoader:
         backup_created = False
         asset_handler_name = self._get_asset_handler_name(handler_name)
         language = _safe_path_segment(language, "language")  # CR-A15
-        lang_dir = self.assets_root / "prompts" / asset_handler_name
+        lang_dir = self._asset_path("prompts", asset_handler_name)
         lang_dir.mkdir(parents=True, exist_ok=True)
         
         lang_file = lang_dir / f"{language}.yaml"
@@ -1014,7 +1024,7 @@ class IntentAssetLoader:
     def get_available_prompt_languages_for_handler(self, handler_name: str) -> List[str]:
         """Get list of available prompt language files for handler"""
         asset_handler_name = self._get_asset_handler_name(handler_name)
-        lang_dir = self.assets_root / "prompts" / asset_handler_name
+        lang_dir = self._asset_path("prompts", asset_handler_name)
         
         if not lang_dir.exists():
             return []
@@ -1024,7 +1034,7 @@ class IntentAssetLoader:
     def get_handlers_with_prompts(self) -> Dict[str, List[str]]:
         """Get all handlers that have prompt files with their available languages"""
         handlers_languages = {}
-        prompts_dir = self.assets_root / "prompts"
+        prompts_dir = self._asset_path("prompts")
         
         if not prompts_dir.exists():
             return handlers_languages
@@ -1032,9 +1042,7 @@ class IntentAssetLoader:
         for handler_dir in prompts_dir.iterdir():
             if handler_dir.is_dir() and not _should_skip_directory(handler_dir.name):
                 # Convert asset handler name back to handler name
-                handler_name = handler_dir.name
-                if handler_name.endswith("_handler"):
-                    handler_name = handler_name[:-8]  # Remove "_handler" suffix
+                handler_name = base_handler_name(handler_dir.name)
                 
                 languages = [lang_file.stem for lang_file in handler_dir.glob("*.yaml")]
                 if languages:
@@ -1050,7 +1058,7 @@ class IntentAssetLoader:
         """Get language-specific localization data for editing"""
         domain = _safe_path_segment(domain, "domain")  # CR-A15
         language = _safe_path_segment(language, "language")  # CR-A15
-        domain_dir = self.assets_root / "localization" / domain
+        domain_dir = self._asset_path("localization", domain)
         lang_file = domain_dir / f"{language}.yaml"
         
         if not lang_file.exists():
@@ -1072,7 +1080,7 @@ class IntentAssetLoader:
         backup_created = False
         domain = _safe_path_segment(domain, "domain")  # CR-A15
         language = _safe_path_segment(language, "language")  # CR-A15
-        domain_dir = self.assets_root / "localization" / domain
+        domain_dir = self._asset_path("localization", domain)
         domain_dir.mkdir(parents=True, exist_ok=True)
         
         lang_file = domain_dir / f"{language}.yaml"
@@ -1099,7 +1107,7 @@ class IntentAssetLoader:
         try:
             # For localizations, we reload the specific domain's files
             domain = _safe_path_segment(domain, "domain")  # CR-A15
-            domain_dir = self.assets_root / "localization" / domain
+            domain_dir = self._asset_path("localization", domain)
             if domain_dir.exists():
                 merged_localization = {}
                 for lang_file in domain_dir.glob("*.yaml"):
@@ -1124,7 +1132,7 @@ class IntentAssetLoader:
     def get_available_localization_languages_for_domain(self, domain: str) -> List[str]:
         """Get list of available localization language files for domain"""
         domain = _safe_path_segment(domain, "domain")  # CR-A15
-        lang_dir = self.assets_root / "localization" / domain
+        lang_dir = self._asset_path("localization", domain)
         
         if not lang_dir.exists():
             return []
@@ -1134,7 +1142,7 @@ class IntentAssetLoader:
     def get_domains_with_localizations(self) -> Dict[str, List[str]]:
         """Get all domains that have localization files with their available languages"""
         domains_languages = {}
-        localizations_dir = self.assets_root / "localization"
+        localizations_dir = self._asset_path("localization")
         
         if not localizations_dir.exists():
             return domains_languages
@@ -1317,7 +1325,7 @@ class IntentAssetLoader:
     
     async def _load_templates(self, handler_names: List[str]) -> None:
         """Load response templates (Category B: YAML/JSON/Markdown parsing)"""
-        templates_dir = self.assets_root / "templates"
+        templates_dir = self._asset_path("templates")
         
         if not templates_dir.exists():
             logger.debug("Templates directory does not exist, skipping template loading")
@@ -1372,7 +1380,7 @@ class IntentAssetLoader:
 
     async def _load_prompts(self, handler_names: List[str]) -> None:
         """Load LLM prompts from YAML files with metadata (YAML format only)"""
-        prompts_dir = self.assets_root / "prompts"
+        prompts_dir = self._asset_path("prompts")
         
         if not prompts_dir.exists():
             logger.debug("Prompts directory does not exist, skipping prompt loading")
@@ -1448,7 +1456,7 @@ class IntentAssetLoader:
 
     async def _load_localizations(self, handler_names: List[str]) -> None:
         """Load localization data (Category C: YAML parsing)"""
-        localization_dir = self.assets_root / "localization"
+        localization_dir = self._asset_path("localization")
         
         if not localization_dir.exists():
             logger.debug("Localization directory does not exist, skipping localization loading")
@@ -1477,7 +1485,7 @@ class IntentAssetLoader:
     
     async def _load_web_templates(self) -> None:
         """Load web templates from assets/web/templates directory (NEW)"""
-        web_templates_dir = self.assets_root / "web" / "templates"
+        web_templates_dir = self._asset_path("web", "templates")
         
         if not web_templates_dir.exists():
             logger.debug("Web templates directory does not exist, skipping web template loading")
@@ -1519,7 +1527,7 @@ class IntentAssetLoader:
                 raise DonationDiscoveryError(f"jsonschema library not available for validation of {json_path}")
             logger.warning("jsonschema library not available - skipping v1.1 schema validation")
             return
-        schema_path = self.assets_root / schema_filename
+        schema_path = self._asset_path(schema_filename)
         if not schema_path.exists():
             logger.warning(f"v1.1 schema not found at {schema_path} - skipping schema validation")
             return

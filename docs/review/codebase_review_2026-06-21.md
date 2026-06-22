@@ -1,7 +1,7 @@
 # Whole-codebase review (2026-06-21)
 
 **Status:** findings filed; **resolved 2026-06-22:** CR-A1 group (A1/A2/A3/A14/B2/D5) + BUILD-7 doc/dup cluster (C1/C2/C4/D1–D4) + dead-code
-sweep (all CR-B except B4 KEPT) + provider-base dedup (C6/C7, C8 partial) + standalone correctness (A4/A8) + silero cleanups (A12/A13) + tracing pair (A7/A9) + path-traversal hardening (A15) + correctness trio (A10/A11/A16) + Cyrillic dedup (C3) + nlu-analysis loaders (A6) + audio playback (A5) + handler base-class consolidation (C11) — see Resolution log. **§A FULLY CLEAR.** Remainder open. **Backs:** general health pass (post-BUILD-7); individual items
+sweep (all CR-B except B4 KEPT) + provider-base dedup (C6/C7, C8 partial) + standalone correctness (A4/A8) + silero cleanups (A12/A13) + tracing pair (A7/A9) + path-traversal hardening (A15) + correctness trio (A10/A11/A16) + Cyrillic dedup (C3) + nlu-analysis loaders (A6) + audio playback (A5) + handler base-class consolidation (C11) + asset-name/path helper (C10) — see Resolution log. **§A FULLY CLEAR.** Remainder open. **Backs:** general health pass (post-BUILD-7); individual items
 cross-ref
 their owning task below. **Scope:** entire `irene/` tree + `docker/` + `pyproject.toml` + `docs/guides/`. **Method:**
 7 parallel finder passes (subsystem deep-reads + cross-cutting dead-code / duplication / doc-claim specialists);
@@ -36,13 +36,22 @@ _Plausible_ = realistic but depends on a reachable runtime state / framework beh
 | CR-A15 | P2 | ✅ FIXED | asset-loader save/load: `assets_root / domain / language` unsanitized (path traversal) | new (security) |
 | CR-A16 | P3 | ✅ FIXED | self-routing handlers' broad `except Exception` can swallow `ParameterExtractionError` | QUAL-30 boundary |
 | CR-B1..13 | — | ✅ swept | dead/zombie code (see §B) | FIXED 2026-06-22 (CR-B4 KEPT — ARCH-22/25; B12 was QUAL-20) |
-| CR-C1..13 | — | C1/2/3/4/6/7/11/13 ✅, C8◐ | duplication / drift risk (see §C) | C1/C2/C3/C4/C6/C7/C11/C13 + C8(partial) FIXED 2026-06-22; CR-C9 → ARCH-25 |
+| CR-C1..13 | — | C1/2/3/4/6/7/10/11/13 ✅, C8◐ | duplication / drift risk (see §C) | C1/C2/C3/C4/C6/C7/C10/C11/C13 + C8(partial) FIXED 2026-06-22; CR-C9 → ARCH-25 |
 | CR-D1..5 | — | D1-D4 ✅ | stale user-facing doc claims (see §D) | D1–D4 FIXED 2026-06-22; D5 done in CR-A1 group |
 
 ---
 
 ## Resolution log
 
+- **2026-06-22 — Asset-name / asset-path helper dedup (CR-C10).** `_get_asset_handler_name` was defined verbatim in
+  `intent_asset_loader.py` and `cross_language_validator.py` (and they'd *drifted* — only the loader's validated via
+  `_safe_path_segment`), the inverse `[:-8]` was inlined 3×, and `assets_root / "<category>" / …` construction was
+  repeated in ~30 methods. Extracted two pure module-level helpers — `asset_dir_name` (append `_handler`, idempotent) and
+  `base_handler_name` (strip it) — plus a `_asset_path(*segments)` method (the single source of the `assets/<category>/…`
+  layout). The loader's `_get_asset_handler_name` keeps the CR-A15 validation choke point
+  (`asset_dir_name(_safe_path_segment(...))`); `cross_language_validator` imports `asset_dir_name` and drops its copy;
+  the 3 `[:-8]` blocks → `base_handler_name`; 32 path constructions → `_asset_path`. New `test_asset_naming.py`. Gates:
+  suite 1052 passed, pyright 0, import-linter 9/9 (new core→core import edge holds), 12 profiles valid.
 - **2026-06-22 — Handler base-class consolidation (CR-C11).** `can_handle` / `_get_template` / `_error_result` were
   copy-pasted across ~13 handlers and had drifted. Hoisted canonical versions to `IntentHandler`: `can_handle`
   (donation domain/intent-name/action patterns), `_get_template` (asset key derived from the module via a
@@ -361,7 +370,7 @@ of their `get_param` calls ever drops its caller-supplied default.
   files (handlers/inputs/workflows/components) + `dependency_validator.py:678` (`argparse choices`) +
   `build_analyzer.py:122,134` (allow-list) + a test assertion. `core/metadata.py:134` is the would-be canonical source
   but isn't reused. _Ref: **ARCH-25** (adding an armv7/WB platform would touch all of them)._
-- **CR-C10** — `_get_asset_handler_name` defined verbatim in `intent_asset_loader.py:606` and
+- **CR-C10** — ✅ **FIXED 2026-06-22**. `_get_asset_handler_name` defined verbatim in `intent_asset_loader.py:606` and
   `cross_language_validator.py:170`; the inverse `[:-8]` inlined 3× (`:762,:852,:1008`); `assets_root / "donations"|…`
   path construction repeated in ~20 methods with no shared helper. (Fixing CR-A15 once depends on this helper existing.)
 - **CR-C11** — ✅ **FIXED 2026-06-22**. handler `can_handle` / `_get_template` / `_error_result` copy-pasted across 13 handlers and **already
