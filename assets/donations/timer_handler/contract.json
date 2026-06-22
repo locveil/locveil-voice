@@ -12,6 +12,9 @@
     "timer.list",
     "timer.status"
   ],
+  "domain_patterns": [
+    "timer"
+  ],
   "action_domain_priority": 70,
   "method_donations": [
     {

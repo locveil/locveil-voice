@@ -92,32 +92,6 @@ class SystemIntentHandler(IntentHandler):
             "allow_restart": False,      # matches config-master.toml line 446
             "info_detail_level": "basic" # matches config-master.toml line 447
         }
-        
-    async def can_handle(self, intent: Intent) -> bool:
-        """Check if this handler can process system intents"""
-        if not self.has_donation():
-            raise RuntimeError(f"SystemIntentHandler: Missing JSON donation file - system.json is required")
-        
-        # Use JSON donation patterns exclusively
-        donation = self.get_donation()
-        
-        if donation is None:
-            return False
-
-        # Check domain patterns
-        if hasattr(donation, 'domain_patterns') and intent.domain in donation.domain_patterns:
-            return True
-        
-        # Check intent name patterns
-        if hasattr(donation, 'intent_name_patterns') and intent.name in donation.intent_name_patterns:
-            return True
-        
-        # Check action patterns
-        if hasattr(donation, 'action_patterns') and intent.action in donation.action_patterns:
-            return True
-        
-        return False
-    
     async def execute(self, intent: Intent, context: UnifiedConversationContext) -> IntentResult:
         """Execute system intent"""
         try:
@@ -157,34 +131,6 @@ class SystemIntentHandler(IntentHandler):
     async def is_available(self) -> bool:
         """System commands are always available"""
         return True
-    
-    def _get_template(self, template_name: str, language: str, **format_args) -> str:
-        """Get template from asset loader - raises fatal error if not available"""
-        if self.asset_loader is None:
-            raise RuntimeError(
-                f"SystemIntentHandler: Asset loader not initialized. "
-                f"Cannot access template '{template_name}' for language '{language}'. "
-                f"This is a fatal configuration error - system templates must be externalized."
-            )
-        
-        # Get template from asset loader
-        template_content = self.asset_loader.get_template("system", template_name, language)
-        if template_content is None:
-            raise RuntimeError(
-                f"SystemIntentHandler: Required template '{template_name}' for language '{language}' "
-                f"not found in assets/templates/system/{language}/system_messages.yaml. "
-                f"This is a fatal error - all system templates must be externalized."
-            )
-        
-        # Format template with provided arguments
-        try:
-            return template_content.format(**format_args)
-        except KeyError as e:
-            raise RuntimeError(
-                f"SystemIntentHandler: Template '{template_name}' missing required format argument: {e}. "
-                f"Check assets/templates/system/{language}/system_messages.yaml for correct placeholders."
-            )
-    
     async def _handle_help_request(self, intent: Intent, context: UnifiedConversationContext) -> IntentResult:
         """Handle help/assistance request"""
         # Use language from context (detected by NLU)

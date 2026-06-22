@@ -89,31 +89,6 @@ class RandomIntentHandler(IntentHandler):
             "max_range_size": 1000000,    # matches config-master.toml line 432
             "default_dice_sides": 6       # matches config-master.toml line 433
         }
-        
-    async def can_handle(self, intent: Intent) -> bool:
-        """Check if this handler can process random intents"""
-        if not self.has_donation():
-            raise RuntimeError(f"RandomIntentHandler: Missing JSON donation file - random_handler.json is required")
-        
-        # Use JSON donation patterns exclusively
-        donation = self.get_donation()
-        if donation is None:
-            raise RuntimeError(f"RandomIntentHandler: Missing JSON donation file - random_handler.json is required")
-
-        # Check domain patterns
-        if hasattr(donation, 'domain_patterns') and intent.domain in donation.domain_patterns:
-            return True
-        
-        # Check intent name patterns
-        if hasattr(donation, 'intent_name_patterns') and intent.name in donation.intent_name_patterns:
-            return True
-        
-        # Check action patterns
-        if hasattr(donation, 'action_patterns') and intent.action in donation.action_patterns:
-            return True
-        
-        return False
-        
     async def execute(self, intent: Intent, context: UnifiedConversationContext) -> IntentResult:
         """Execute random generation intent"""
         # Use donation-driven routing exclusively
@@ -397,38 +372,3 @@ class RandomIntentHandler(IntentHandler):
             )
         
         return template_data
-    
-    def _get_template(self, template_name: str, language: str, **format_args) -> str:
-        """Get template from asset loader - raises fatal error if not available"""
-        if not self.has_asset_loader():
-            raise RuntimeError(
-                f"RandomIntentHandler: Asset loader not initialized. "
-                f"Cannot access template '{template_name}' for language '{language}'. "
-                f"This is a fatal configuration error - random templates must be externalized."
-            )
-        
-        # Get template from asset loader
-        loader = self.asset_loader
-        if loader is None:
-            raise RuntimeError(
-                f"RandomIntentHandler: Asset loader not initialized. "
-                f"Cannot access template '{template_name}' for language '{language}'."
-            )
-        template_content = loader.get_template("random", template_name, language)
-        if template_content is None:
-            raise RuntimeError(
-                f"RandomIntentHandler: Required template '{template_name}' for language '{language}' "
-                f"not found in assets/templates/random/{language}/results.yaml. "
-                f"This is a fatal error - all random templates must be externalized."
-            )
-        
-        # Format template with provided arguments
-        try:
-            return template_content.format(**format_args)
-        except KeyError as e:
-            raise RuntimeError(
-                f"RandomIntentHandler: Template '{template_name}' missing required format argument: {e}. "
-                f"Check assets/templates/random/{language}/results.yaml for correct placeholders."
-            )
-    
-

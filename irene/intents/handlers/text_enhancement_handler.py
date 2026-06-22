@@ -27,6 +27,9 @@ class TextEnhancementIntentHandler(IntentHandler):
     - Grammar and style enhancement
     """
     
+    _error_template = 'error_enhancement'
+
+    
     def __init__(self):
         super().__init__()
         self._llm_component: Optional[LLMPort] = None
@@ -51,32 +54,6 @@ class TextEnhancementIntentHandler(IntentHandler):
     def get_platform_support(cls) -> List[str]:
         """Text enhancement handler supports all platforms"""
         return ["linux.ubuntu", "linux.alpine", "macos", "windows"]
-        
-    async def can_handle(self, intent: Intent) -> bool:
-        """Check if this handler can process text enhancement intents"""
-        if not self.has_donation():
-            raise RuntimeError(f"TextEnhancementIntentHandler: Missing JSON donation file - text_enhancement_handler.json is required")
-        
-        # Use JSON donation patterns exclusively
-        donation = self.get_donation()
-        
-        if donation is None:
-            return False
-
-        # Check domain patterns
-        if hasattr(donation, 'domain_patterns') and intent.domain in donation.domain_patterns:
-            return True
-        
-        # Check intent name patterns
-        if hasattr(donation, 'intent_name_patterns') and intent.name in donation.intent_name_patterns:
-            return True
-        
-        # Check action patterns
-        if hasattr(donation, 'action_patterns') and intent.action in donation.action_patterns:
-            return True
-        
-        return False
-        
     async def execute(self, intent: Intent, context: UnifiedConversationContext) -> IntentResult:
         """Execute text enhancement intent"""
         # Use donation-driven routing exclusively
@@ -224,51 +201,6 @@ class TextEnhancementIntentHandler(IntentHandler):
         """
         return self._llm_component
         
-
-        
-    def _get_template(self, template_name: str, language: str, **format_args) -> str:
-        """Get template from asset loader - raises fatal error if not available"""
-        if self.asset_loader is None:
-            raise RuntimeError(
-                f"TextEnhancementIntentHandler: Asset loader not initialized. "
-                f"Cannot access template '{template_name}' for language '{language}'. "
-                f"This is a fatal configuration error - text enhancement templates must be externalized."
-            )
-        
-        # Get template from asset loader
-        template_content = self.asset_loader.get_template("text_enhancement", template_name, language)
-        if template_content is None:
-            raise RuntimeError(
-                f"TextEnhancementIntentHandler: Required template '{template_name}' for language '{language}' "
-                f"not found in assets/templates/text_enhancement/{language}/result_messages.yaml. "
-                f"This is a fatal error - all text enhancement templates must be externalized."
-            )
-        
-        # Format template with provided arguments
-        try:
-            return template_content.format(**format_args)
-        except KeyError as e:
-            raise RuntimeError(
-                f"TextEnhancementIntentHandler: Template '{template_name}' missing required format argument: {e}. "
-                f"Check assets/templates/text_enhancement/{language}/result_messages.yaml for correct placeholders."
-            )
-    
-    def _error_result(self, context: UnifiedConversationContext, error: str) -> IntentResult:
-        """Create error result with language awareness"""
-        language = context.language
-        
-        error_text = self._get_template("error_enhancement", language, error=error)
-        
-        return IntentResult(
-            text=error_text,
-            should_speak=True,
-            metadata={
-                "error": error,
-                "language": language
-            },
-            success=False
-        )
-    
     # Build dependency methods (TODO #5 Phase 2)
     # Configuration metadata: No configuration needed
     # This handler delegates to LLM component and uses JSON donations only

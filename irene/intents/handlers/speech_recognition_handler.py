@@ -28,6 +28,9 @@ class SpeechRecognitionIntentHandler(IntentHandler):
     - ASR configuration management
     """
     
+    _error_template = 'error_configuration'
+
+    
     def __init__(self):
         super().__init__()
         self._asr_component: Optional[ASRPort] = None
@@ -52,32 +55,6 @@ class SpeechRecognitionIntentHandler(IntentHandler):
     def get_platform_support(cls) -> List[str]:
         """Speech recognition handler supports all platforms"""
         return ["linux.ubuntu", "linux.alpine", "macos", "windows"]
-        
-    async def can_handle(self, intent: Intent) -> bool:
-        """Check if this handler can process speech recognition intents"""
-        if not self.has_donation():
-            raise RuntimeError(f"SpeechRecognitionIntentHandler: Missing JSON donation file - speech_recognition_handler.json is required")
-        
-        # Use JSON donation patterns exclusively
-        donation = self.get_donation()
-        
-        if donation is None:
-            return False
-
-        # Check domain patterns
-        if hasattr(donation, 'domain_patterns') and intent.domain in donation.domain_patterns:
-            return True
-        
-        # Check intent name patterns
-        if hasattr(donation, 'intent_name_patterns') and intent.name in donation.intent_name_patterns:
-            return True
-        
-        # Check action patterns
-        if hasattr(donation, 'action_patterns') and intent.action in donation.action_patterns:
-            return True
-        
-        return False
-        
     async def execute(self, intent: Intent, context: UnifiedConversationContext) -> IntentResult:
         """Execute speech recognition intent"""
         # Use donation-driven routing exclusively
@@ -233,51 +210,6 @@ class SpeechRecognitionIntentHandler(IntentHandler):
         """
         return self._asr_component
         
-
-        
-    def _get_template(self, template_name: str, language: str, **format_args) -> str:
-        """Get template from asset loader - raises fatal error if not available"""
-        if self.asset_loader is None:
-            raise RuntimeError(
-                f"SpeechRecognitionIntentHandler: Asset loader not initialized. "
-                f"Cannot access template '{template_name}' for language '{language}'. "
-                f"This is a fatal configuration error - speech recognition templates must be externalized."
-            )
-        
-        # Get template from asset loader
-        template_content = self.asset_loader.get_template("speech_recognition", template_name, language)
-        if template_content is None:
-            raise RuntimeError(
-                f"SpeechRecognitionIntentHandler: Required template '{template_name}' for language '{language}' "
-                f"not found in assets/templates/speech_recognition/{language}/error_messages.yaml. "
-                f"This is a fatal error - all speech recognition templates must be externalized."
-            )
-        
-        # Format template with provided arguments
-        try:
-            return template_content.format(**format_args)
-        except KeyError as e:
-            raise RuntimeError(
-                f"SpeechRecognitionIntentHandler: Template '{template_name}' missing required format argument: {e}. "
-                f"Check assets/templates/speech_recognition/{language}/error_messages.yaml for correct placeholders."
-            )
-    
-    def _error_result(self, context: UnifiedConversationContext, error: str) -> IntentResult:
-        """Create error result with language awareness"""
-        language = context.language
-        
-        error_text = self._get_template("error_configuration", language, error=error)
-        
-        return IntentResult(
-            text=error_text,
-            should_speak=True,
-            metadata={
-                "error": error,
-                "language": language
-            },
-            success=False
-        )
-    
     # Build dependency methods (TODO #5 Phase 2)
     # Configuration metadata: No configuration needed
     # This handler delegates to ASR component and uses asset loader for provider mappings

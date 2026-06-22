@@ -12,6 +12,17 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-22
+- **Handler base-class consolidation (review CR-C11) — `docs/review/codebase_review_2026-06-21.md`.** `can_handle` /
+  `_get_template` / `_error_result` were copy-pasted across ~13 handlers and had drifted. Hoisted canonical versions to
+  `IntentHandler` (base): donation-pattern `can_handle`; `_get_template` with the asset key derived from the module
+  (`_template_asset` property) and always-format (unfilled placeholder is fatal); `_error_result` rendering
+  `self._error_template` (default `error_general`). Removed 12 `can_handle` (all but `conversation` — genuine
+  `fallback_conditions` override), 12 `_get_template`, 6 `_error_result`; 5 handlers set the `_error_template` class
+  attr. **Drift fixed via donation data, not code:** `timer`/`datetime` were the only handlers missing `domain_patterns`
+  in their contract (the reason for their hardcoded domain check) — added `domain_patterns: ["timer"]` / `["datetime"]`
+  to `contract.json` (language-neutral; `ru.json`/`en.json` need no change) and dropped the overrides. `greetings` keeps
+  its distinct `_get_template_data` (returns `List[str]`, not the scalar `_get_template`). Net −665 LOC across 14 files.
+  Gates: suite 1052 passed / 0 failed, pyright 0, import-linter 9/9, 12 profiles valid. Review tracker + this ledger updated.
 - **Retired the duplicate boot-time handler validator (review CR-C13) — `docs/review/codebase_review_2026-06-21.md`.**
   `intent_asset_loader._validate_method_existence` imported each handler module + scanned its classes per donation to
   check method existence (`hasattr`), duplicating the contract validator (`validate_contract_wiring`), which imports

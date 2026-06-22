@@ -8,6 +8,9 @@
     "datetime.current_date",
     "datetime.current_datetime"
   ],
+  "domain_patterns": [
+    "datetime"
+  ],
   "method_donations": [
     {
       "method_name": "_handle_time_request",

@@ -273,43 +273,6 @@ class ConversationIntentHandler(IntentHandler):
             )
         
         return template_data
-
-    def _get_template(self, template_name: str, language: str, **format_args) -> str:
-        """Get template string from asset loader - raises fatal error if not available"""
-        if not self.has_asset_loader():
-            raise RuntimeError(
-                f"ConversationIntentHandler: Asset loader not initialized. "
-                f"Cannot access template '{template_name}' for language '{language}'. "
-                f"This is a fatal configuration error - templates must be externalized."
-            )
-        
-        # Get template from asset loader
-        loader = self.asset_loader
-        if loader is None:
-            raise RuntimeError(
-                f"ConversationIntentHandler: Asset loader not initialized. "
-                f"Cannot access template '{template_name}' for language '{language}'."
-            )
-        template_content = loader.get_template("conversation", template_name, language)
-        if template_content is None:
-            raise RuntimeError(
-                f"ConversationIntentHandler: Required template '{template_name}' for language '{language}' "
-                f"not found in assets/templates/conversation/{language}/responses.yaml. "
-                f"This is a fatal error - all conversation templates must be externalized."
-            )
-        
-        # Format template with provided arguments if any
-        if format_args:
-            try:
-                return template_content.format(**format_args)
-            except KeyError as e:
-                raise RuntimeError(
-                    f"ConversationIntentHandler: Template '{template_name}' missing required format argument: {e}. "
-                    f"Check assets/templates/conversation/{language}/responses.yaml for correct placeholders."
-                )
-        
-        return template_content
-    
     async def is_available(self) -> bool:
         """Check if LLM component is available for conversation"""
         llm_component = await self._get_llm_component()

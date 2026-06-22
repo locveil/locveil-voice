@@ -33,32 +33,6 @@ class DateTimeIntentHandler(IntentHandler):
         
         # TODO #15: Phase 2 - Temporal formatting arrays now externalized to assets/localization/datetime/
         # All temporal data is loaded from localization files with fallback to hardcoded defaults
-    
-    async def can_handle(self, intent: Intent) -> bool:
-        """Check if this handler can process datetime intents"""
-        if not self.has_donation():
-            raise RuntimeError(f"DateTimeIntentHandler: Missing JSON donation file - datetime.json is required")
-        
-        # Use JSON donation patterns exclusively
-        donation = self.get_donation()
-        
-        # Check domain patterns (fallback)
-        if intent.domain == "datetime":
-            return True
-        
-        if donation is None:
-            return False
-
-        # Check intent name patterns
-        if hasattr(donation, 'intent_name_patterns') and intent.name in donation.intent_name_patterns:
-            return True
-        
-        # Check action patterns
-        if hasattr(donation, 'action_patterns') and intent.action in donation.action_patterns:
-            return True
-        
-        return False
-    
     async def execute(self, intent: Intent, context: UnifiedConversationContext) -> IntentResult:
         """Execute datetime intent"""
         try:

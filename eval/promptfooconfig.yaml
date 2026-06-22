@@ -1,0 +1,103 @@
+# Proof-of-concept eval config for wb-mqtt-voice (Irene).
+# PURE YAML — no project code. All logic lives in ../../eval-commons.
+#
+# Run from THIS directory:   cd eval && promptfoo eval
+# Prereqs: see eval/README.md (install promptfoo + eval-commons, set env, record fixtures).
+#
+# Surface under test: the shipped streaming-ASR endpoint /ws/audio (ARCH-10,
+# irene/runners/webapi_router.py:791). MQTT/bridge examples are at the bottom as a
+# FUTURE block (bridge REST is design-only today — docs/design/mqtt_integration.md).
+
+description: wb-mqtt-voice — streaming ASR + Russian conversational UX (PoC)
+
+# The rendered prompt handed to the provider is just the audio fixture path for each case.
+prompts:
+  - '{{audio}}'
+
+providers:
+  - id: file://../../eval-commons/eval_commons/providers/ws_audio_provider.py
+    label: ws-audio
+    config:
+      ws_url: ${WS_AUDIO_URL}      # ws://localhost:6000/ws/audio  (IRENE_WEB_PORT=6000)
+      room_name: Кухня
+      sample_rate: 16000
+      mode: streaming
+      return_mode: full            # output = JSON {transcript, response_text, intent_name, ...}
+
+# Every llm-rubric / g-eval assertion is graded by DeepSeek, wired once here.
+defaultTest:
+  options:
+    provider:
+      file://../../eval-commons/shared/deepseek-judge.yaml
+
+tests:
+  # ── 1. ASR transcript accuracy (deterministic, WER via jiwer) ──────────────────
+  - description: ASR accuracy — «поставь таймер на десять минут»
+    vars:
+      audio: fixtures/timer_10min.wav
+      reference: поставь таймер на десять минут
+      wer_threshold: 0.15
+    assert:
+      - type: python
+        value: file://../../eval-commons/eval_commons/assertions/wer_scorer.py
+
+  # ── 2. Intent recognition (deterministic, parse the full-JSON output) ──────────
+  - description: Intent — timer set is recognized
+    vars:
+      audio: fixtures/timer_10min.wav
+    assert:
+      - type: is-json
+      # TODO: confirm the exact intent name emitted by Irene's timer handler
+      #       (placeholder 'timer.set'); adjust once verified against a live run.
+      - type: javascript
+        value: JSON.parse(output).intent_name === 'timer.set' && JSON.parse(output).success === true
+
+  # ── 3. Conversational UX (LLM-as-human judge: DeepSeek) ────────────────────────
+  #   transform extracts the user-facing reply so the judge scores the answer, not JSON.
+  #   Canonical rubric: ../../eval-commons/shared/rubrics/ru-ux.yaml#confirms_action_ru
+  - description: UX — assistant confirms the timer in natural Russian
+    vars:
+      audio: fixtures/timer_10min.wav
+    assert:
+      - type: llm-rubric
+        transform: JSON.parse(output).response_text
+        value: >
+          Ассистент явно и однозначно подтвердил на естественном русском языке, что
+          таймер установлен (например «таймер на десять минут установлен»), без
+          англоязычных вставок и без сырых технических ошибок. Технические
+          идентификаторы оценивать не нужно.
+
+  # ── 4. Graceful-failure UX (unreachable device, judged on tone/clarity) ────────
+  - description: UX — polite, human-readable failure when a device is unreachable
+    vars:
+      audio: fixtures/light_unreachable.wav
+    assert:
+      - type: llm-rubric
+        transform: JSON.parse(output).response_text
+        value: >
+          Когда действие невозможно, ассистент вежливо и понятно сообщает о проблеме на
+          русском языке, не выдаёт трейсбек или сырую ошибку, и по возможности предлагает
+          следующий шаг. Пройдено, если сообщение доброжелательно и человекочитаемо.
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# FUTURE (not active): smart-home surface. Irene drives wb-mqtt-bridge over REST,
+# with one MQTT touchpoint. These show the zero-extra-code paths once the bridge lands.
+#
+# Bridge actuation via promptfoo's NATIVE http provider (no custom code):
+#   - id: https
+#     config:
+#       url: http://localhost:8000/devices/wb-mr6c_47/canonical
+#       method: POST
+#       headers: { 'Content-Type': 'application/json' }
+#       body: { capability: power, action: on, params: {} }
+#     # assert: type: javascript → JSON.parse(output).success === true
+#
+# MQTT retained catalog-version topic via the shared mqtt_provider:
+#   - id: file://../../eval-commons/eval_commons/providers/mqtt_provider.py
+#     config:
+#       host: ${MQTT_HOST}
+#       port: 1883
+#       subscribe_topic: bridge/catalog/version
+#       return_mode: payload
+#     # assert: type: javascript → output.length > 0   (a version hash is retained)
+# ═══════════════════════════════════════════════════════════════════════════════

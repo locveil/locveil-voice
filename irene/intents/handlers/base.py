@@ -27,7 +27,10 @@ class IntentHandler(EntryPointMetadata, ABC):
     - Donation-driven method routing
     - Parameter extraction from donation specifications
     """
-    
+
+    # Template name `_error_result` renders; handlers override to point at their own error template.
+    _error_template: str = "error_general"
+
     def __init__(self):
         """Initialize the intent handler."""
         self.name = self.__class__.__name__
@@ -146,18 +149,25 @@ class IntentHandler(EntryPointMetadata, ABC):
         """
         pass
     
-    @abstractmethod
     async def can_handle(self, intent: Intent) -> bool:
-        """
-        Check if this handler can process the given intent.
-        
-        Args:
-            intent: Intent to check
-            
-        Returns:
-            True if this handler can process the intent
-        """
-        pass
+        """Donation-driven routing: match the intent against this handler's contract patterns
+        (domain → intent-name → action). Handlers needing extra logic (e.g. a low-confidence
+        fallback) override this. A missing donation is a fatal wiring error.
+
+        Note: handlers whose contract has no ``domain_patterns`` won't match by domain here — declare
+        ``domain_patterns`` in the contract rather than hardcoding a domain check in an override."""
+        if not self.has_donation():
+            raise RuntimeError(f"{type(self).__name__}: Missing JSON donation file - a donation is required")
+        donation = self.get_donation()
+        if donation is None:
+            return False
+        if donation.domain_patterns and intent.domain in donation.domain_patterns:
+            return True
+        if donation.intent_name_patterns and intent.name in donation.intent_name_patterns:
+            return True
+        if donation.action_patterns and intent.action in donation.action_patterns:
+            return True
+        return False
     
     async def is_available(self) -> bool:
         """
@@ -220,12 +230,52 @@ class IntentHandler(EntryPointMetadata, ABC):
     def has_asset_loader(self) -> bool:
         """
         Check if this handler has an asset loader set.
-        
+
         Returns:
             True if asset loader is set and initialized
         """
         return self._asset_loader_initialized and self.asset_loader is not None
-    
+
+    @property
+    def _template_asset(self) -> str:
+        """Asset namespace under assets/templates/ for this handler. Defaults to the handler's module
+        name minus a trailing `_handler` (e.g. `audio_playback_handler` → `audio_playback`); override
+        if a handler's templates live under a different name."""
+        return type(self).__module__.rsplit(".", 1)[-1].removesuffix("_handler")
+
+    def _get_template(self, template_name: str, language: str, **format_args) -> str:
+        """Resolve a template from the asset loader and format it with `format_args`. Templates are
+        externalized assets, so a missing loader, a missing template, or an unfilled placeholder is a
+        fatal configuration error (raises)."""
+        loader = self.asset_loader
+        if loader is None:
+            raise RuntimeError(
+                f"{type(self).__name__}: Asset loader not initialized. Cannot access template "
+                f"'{template_name}' for language '{language}'. Templates must be externalized."
+            )
+        content = loader.get_template(self._template_asset, template_name, language)
+        if content is None:
+            raise RuntimeError(
+                f"{type(self).__name__}: Required template '{template_name}' (language '{language}', asset "
+                f"'{self._template_asset}') not found. All templates must be externalized."
+            )
+        try:
+            return content.format(**format_args)
+        except KeyError as e:
+            raise RuntimeError(
+                f"{type(self).__name__}: template '{template_name}' missing required format argument: {e}."
+            )
+
+    def _error_result(self, context: UnifiedConversationContext, error: str) -> IntentResult:
+        """Language-aware error result rendered via this handler's error template (`_error_template`)."""
+        language = context.language
+        return IntentResult(
+            text=self._get_template(self._error_template, language, error=error),
+            should_speak=True,
+            metadata={"error": error, "language": language},
+            success=False,
+        )
+
     def find_method_for_intent(self, intent: Intent) -> Optional[str]:
         """
         Find method name for intent using JSON donation.

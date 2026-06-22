@@ -27,6 +27,9 @@ class VoiceSynthesisIntentHandler(IntentHandler):
     - TTS provider management
     """
     
+    _error_template = 'synthesis_error'
+
+    
     def __init__(self):
         super().__init__()
         self._tts_component: Optional[TTSPort] = None
@@ -51,32 +54,6 @@ class VoiceSynthesisIntentHandler(IntentHandler):
     def get_platform_support(cls) -> List[str]:
         """Voice synthesis handler supports all platforms"""
         return ["linux.ubuntu", "linux.alpine", "macos", "windows"]
-        
-    async def can_handle(self, intent: Intent) -> bool:
-        """Check if this handler can process voice synthesis intents"""
-        if not self.has_donation():
-            raise RuntimeError(f"VoiceSynthesisIntentHandler: Missing JSON donation file - voice_synthesis_handler.json is required")
-        
-        # Use JSON donation patterns exclusively
-        donation = self.get_donation()
-        
-        if donation is None:
-            return False
-
-        # Check domain patterns
-        if hasattr(donation, 'domain_patterns') and intent.domain in donation.domain_patterns:
-            return True
-        
-        # Check intent name patterns
-        if hasattr(donation, 'intent_name_patterns') and intent.name in donation.intent_name_patterns:
-            return True
-        
-        # Check action patterns
-        if hasattr(donation, 'action_patterns') and intent.action in donation.action_patterns:
-            return True
-        
-        return False
-        
     async def execute(self, intent: Intent, context: UnifiedConversationContext) -> IntentResult:
         """Execute voice synthesis intent"""
         # Use donation-driven routing exclusively
@@ -287,34 +264,6 @@ class VoiceSynthesisIntentHandler(IntentHandler):
         reaches into core for it.
         """
         return self._tts_component
-        
-    def _get_template(self, template_name: str, language: str, **format_args) -> str:
-        """Get template from asset loader - raises fatal error if not available"""
-        if self.asset_loader is None:
-            raise RuntimeError(
-                f"VoiceSynthesisIntentHandler: Asset loader not initialized. "
-                f"Cannot access template '{template_name}' for language '{language}'. "
-                f"This is a fatal configuration error - voice synthesis templates must be externalized."
-            )
-        
-        # Get template directly from asset loader (template_name is the key from YAML)
-        template_content = self.asset_loader.get_template("voice_synthesis", template_name, language)
-        if template_content is None:
-            raise RuntimeError(
-                f"VoiceSynthesisIntentHandler: Required template '{template_name}' for language '{language}' "
-                f"not found in assets/templates/voice_synthesis/{language}/synthesis_status.yaml. "
-                f"This is a fatal error - all voice synthesis templates must be externalized."
-            )
-        
-        # Format template with provided arguments
-        try:
-            return template_content.format(**format_args)
-        except KeyError as e:
-            raise RuntimeError(
-                f"VoiceSynthesisIntentHandler: Template '{template_name}' missing required format argument: {e}. "
-                f"Check assets/templates/voice_synthesis/{language}/synthesis_status.yaml for correct placeholders."
-            )
-    
     def _get_provider_mappings(self, language: str) -> Dict[str, Any]:
         """Get provider mappings from asset loader - raises fatal error if not available"""
         if self.asset_loader is None:
@@ -342,22 +291,6 @@ class VoiceSynthesisIntentHandler(IntentHandler):
             )
         
         return provider_mappings
-        
-    def _error_result(self, context: UnifiedConversationContext, error: str) -> IntentResult:
-        """Create error result with language awareness"""
-        language = context.language
-        error_text = self._get_template("synthesis_error", language, error=error)
-        
-        return IntentResult(
-            text=error_text,
-            should_speak=True,
-            metadata={
-                "error": error,
-                "language": language
-            },
-            success=False
-        )
-        
     def _parse_tts_provider_name(self, command: str) -> str:
         """Extract TTS provider name from command"""
         command_lower = command.lower()

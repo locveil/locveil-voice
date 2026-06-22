@@ -54,31 +54,6 @@ class GreetingsIntentHandler(IntentHandler):
     def get_platform_support(cls) -> List[str]:
         """Greetings handler supports all platforms"""
         return ["linux.ubuntu", "linux.alpine", "macos", "windows"]
-        
-    async def can_handle(self, intent: Intent) -> bool:
-        """Check if this handler can process greeting intents"""
-        if not self.has_donation():
-            raise RuntimeError(f"GreetingsIntentHandler: Missing JSON donation file - greetings.json is required")
-        
-        # Use JSON donation patterns exclusively
-        donation = self.get_donation()
-        if donation is None:
-            raise RuntimeError(f"GreetingsIntentHandler: Missing JSON donation file - greetings.json is required")
-
-        # Check domain patterns
-        if hasattr(donation, 'domain_patterns') and intent.domain in donation.domain_patterns:
-            return True
-        
-        # Check intent name patterns
-        if hasattr(donation, 'intent_name_patterns') and intent.name in donation.intent_name_patterns:
-            return True
-        
-        # Check action patterns
-        if hasattr(donation, 'action_patterns') and intent.action in donation.action_patterns:
-            return True
-        
-        return False
-    
     async def execute(self, intent: Intent, context: UnifiedConversationContext) -> IntentResult:
         """Execute greeting intent"""
         try:

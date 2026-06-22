@@ -93,32 +93,6 @@ class TimerIntentHandler(IntentHandler):
             "min_seconds": 1,        # matches config-master.toml line 427
             "max_seconds": 86400     # matches config-master.toml line 428
         }
-        
-    async def can_handle(self, intent: Intent) -> bool:
-        """Check if this handler can process timer intents"""
-        if not self.has_donation():
-            raise RuntimeError(f"TimerIntentHandler: Missing JSON donation file - timer.json is required")
-        
-        # Use JSON donation patterns exclusively
-        donation = self.get_donation()
-        
-        # Check domain patterns (fallback)
-        if intent.domain == "timer":
-            return True
-        
-        if donation is None:
-            return False
-
-        # Check intent name patterns
-        if hasattr(donation, 'intent_name_patterns') and intent.name in donation.intent_name_patterns:
-            return True
-        
-        # Check action patterns
-        if hasattr(donation, 'action_patterns') and intent.action in donation.action_patterns:
-            return True
-        
-        return False
-    
     async def execute(self, intent: Intent, context: UnifiedConversationContext) -> IntentResult:
         """Execute timer intent"""
         try:
@@ -156,34 +130,6 @@ class TimerIntentHandler(IntentHandler):
     async def is_available(self) -> bool:
         """Timer functionality is always available"""
         return True
-    
-    def _get_template(self, template_name: str, language: str, **format_args) -> str:
-        """Get template from asset loader - raises fatal error if not available"""
-        if self.asset_loader is None:
-            raise RuntimeError(
-                f"TimerIntentHandler: Asset loader not initialized. "
-                f"Cannot access template '{template_name}' for language '{language}'. "
-                f"This is a fatal configuration error - timer templates must be externalized."
-            )
-        
-        # Get template from asset loader
-        template_content = self.asset_loader.get_template("timer", template_name, language)
-        if template_content is None:
-            raise RuntimeError(
-                f"TimerIntentHandler: Required template '{template_name}' for language '{language}' "
-                f"not found in assets/templates/timer/{language}/status_messages.yaml. "
-                f"This is a fatal error - all timer templates must be externalized."
-            )
-        
-        # Format template with provided arguments
-        try:
-            return template_content.format(**format_args)
-        except KeyError as e:
-            raise RuntimeError(
-                f"TimerIntentHandler: Template '{template_name}' missing required format argument: {e}. "
-                f"Check assets/templates/timer/{language}/status_messages.yaml for correct placeholders."
-            )
-    
     async def _handle_set_timer(self, intent: Intent, context: UnifiedConversationContext) -> IntentResult:
         """Handle timer creation intent with fire-and-forget action execution"""
         # Extract timer parameters via the donation-driven typed accessor (QUAL-11):
