@@ -1,7 +1,7 @@
 # Whole-codebase review (2026-06-21)
 
 **Status:** findings filed; **resolved 2026-06-22:** CR-A1 group (A1/A2/A3/A14/B2/D5) + BUILD-7 doc/dup cluster (C1/C2/C4/D1–D4) + dead-code
-sweep (all CR-B except B4 KEPT) + provider-base dedup (C6/C7, C8 partial) + standalone correctness (A4/A8) + silero cleanups (A12/A13) + tracing pair (A7/A9) + path-traversal hardening (A15) + correctness trio (A10/A11/A16) + Cyrillic dedup (C3) + nlu-analysis loaders (A6) + audio playback (A5) + handler base-class consolidation (C11) + asset-name/path helper (C10) + spaCy init dedup (C5) — see Resolution log. **§A FULLY CLEAR.** Remainder open. **Backs:** general health pass (post-BUILD-7); individual items
+sweep (all CR-B except B4 KEPT) + provider-base dedup (C6/C7, C8 partial) + standalone correctness (A4/A8) + silero cleanups (A12/A13) + tracing pair (A7/A9) + path-traversal hardening (A15) + correctness trio (A10/A11/A16) + Cyrillic dedup (C3) + nlu-analysis loaders (A6) + audio playback (A5) + handler base-class consolidation (C11) + asset-name/path helper (C10) + spaCy init dedup (C5) + WebAPIPlugin walk dedup (C12) — see Resolution log. **§A FULLY CLEAR.** Remainder open. **Backs:** general health pass (post-BUILD-7); individual items
 cross-ref
 their owning task below. **Scope:** entire `irene/` tree + `docker/` + `pyproject.toml` + `docs/guides/`. **Method:**
 7 parallel finder passes (subsystem deep-reads + cross-cutting dead-code / duplication / doc-claim specialists);
@@ -36,13 +36,20 @@ _Plausible_ = realistic but depends on a reachable runtime state / framework beh
 | CR-A15 | P2 | ✅ FIXED | asset-loader save/load: `assets_root / domain / language` unsanitized (path traversal) | new (security) |
 | CR-A16 | P3 | ✅ FIXED | self-routing handlers' broad `except Exception` can swallow `ParameterExtractionError` | QUAL-30 boundary |
 | CR-B1..13 | — | ✅ swept | dead/zombie code (see §B) | FIXED 2026-06-22 (CR-B4 KEPT — ARCH-22/25; B12 was QUAL-20) |
-| CR-C1..13 | — | C1/2/3/4/5/6/7/10/11/13 ✅, C8◐ | duplication / drift risk (see §C) | C1–C7/C10/C11/C13 + C8(partial) FIXED 2026-06-22; CR-C9 → ARCH-25 |
+| CR-C1..13 | — | C1–C7/C10/C11/C12/C13 ✅, C8◐ | duplication / drift risk (see §C) | C1–C7/C10/C11/C12/C13 + C8(partial) FIXED 2026-06-22; CR-C9 → ARCH-25 |
 | CR-D1..5 | — | D1-D4 ✅ | stale user-facing doc claims (see §D) | D1–D4 FIXED 2026-06-22; D5 done in CR-A1 group |
 
 ---
 
 ## Resolution log
 
+- **2026-06-22 — WebAPIPlugin component-walk dedup (CR-C12).** The "iterate `component_manager.get_components()`, filter
+  `isinstance(.., WebAPIPlugin)`, build `(name, component)`" walk was reimplemented with different guarding/logging in
+  `web_server._mount_component_routers` and `webapi_router` (AsyncAPI spec gen). Extracted `web_api_components(core)` into
+  `core/interfaces/webapi.py` (next to `WebAPIPlugin`) — degrades to `[]` (warns) when no component manager / on lookup
+  failure. Both walks now call it; the `/debug/asyncapi` endpoint (the 3rd `get_components()` site, which lists *all*
+  components) also uses it to report `web_api_component_names`. New `test_web_api_components.py`. Gates: suite 1059
+  passed, pyright 0, import-linter 9/9.
 - **2026-06-22 — spaCy init dedup (CR-C5).** `_initialize_spacy` (plain) and `_initialize_spacy_with_assets` were ~75
   near-identical lines, and the call sites diverged: `is_available()` / `recognize()` branched
   `if self.asset_manager: _with_assets() else: _initialize_spacy()` while `_do_initialize` always used `_with_assets` —
@@ -385,7 +392,7 @@ of their `get_param` calls ever drops its caller-supplied default.
   path construction repeated in ~20 methods with no shared helper. (Fixing CR-A15 once depends on this helper existing.)
 - **CR-C11** — ✅ **FIXED 2026-06-22**. handler `can_handle` / `_get_template` / `_error_result` copy-pasted across 13 handlers and **already
   drifted** (`datetime`/`timer` added an extra short-circuit). Candidate base-class defaults.
-- **CR-C12** — the "iterate components, filter `isinstance(.., WebAPIPlugin)`" walk reimplemented 3× with different
+- **CR-C12** — ✅ **FIXED 2026-06-22**. the "iterate components, filter `isinstance(.., WebAPIPlugin)`" walk reimplemented 3× with different
   guarding: `web_server.py:161`, `webapi_router.py:37` and `:1094`.
 - **CR-C13** — ✅ **FIXED 2026-06-22**. `intent_asset_loader._validate_method_existence` (`:1501`) duplicates `contract_validator.py:142`
   (both default-on) → **every handler module is `importlib.import_module`-ed twice at boot** for one logical check.

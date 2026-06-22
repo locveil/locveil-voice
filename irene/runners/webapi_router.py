@@ -34,31 +34,12 @@ async def _generate_asyncapi_spec(core: AsyncVACore) -> Dict[str, Any]:
         base_spec = generate_base_asyncapi_spec()
         component_specs = []
         
-        # Get WebAPI components (same logic as _mount_component_routers)
+        # Get WebAPI components (shared walk — same source as _mount_component_routers)
         if core:
-            from ..core.interfaces.webapi import WebAPIPlugin
-            web_components = []
-            
-            # Check component manager first
-            if hasattr(core, 'component_manager'):
-                try:
-                    available_components = core.component_manager.get_components()
-                    logger.debug(f"Found {len(available_components)} available components: {list(available_components.keys())}")
-                    
-                    for name, component in available_components.items():
-                        if isinstance(component, WebAPIPlugin):
-                            web_components.append((name, component))
-                            logger.debug(f"Component {name} implements WebAPIPlugin")
-                        else:
-                            logger.debug(f"Component {name} does not implement WebAPIPlugin (type: {type(component).__name__})")
-                            
-                except Exception as e:
-                    logger.warning(f"Could not get components from component manager: {e}")
-            else:
-                logger.warning("Core does not have component_manager")
-
+            from ..core.interfaces.webapi import web_api_components
+            web_components = web_api_components(core)
             logger.debug(f"Found {len(web_components)} WebAPIPlugin components for AsyncAPI generation")
-            
+
             # Collect AsyncAPI specs from each component
             for name, component in web_components:
                 try:
@@ -1094,10 +1075,13 @@ def create_webapi_router(
         try:
             # Check component manager first
             if core and hasattr(core, 'component_manager'):
-                debug_info["component_manager_available"] = True
+                from ..core.interfaces.webapi import web_api_components
                 available_components = core.component_manager.get_components()
+                debug_info["component_manager_available"] = True
                 debug_info["total_components"] = len(available_components)
                 debug_info["component_names"] = list(available_components.keys())
+                # AsyncAPI generation only sees WebAPIPlugin components — surface them here too.
+                debug_info["web_api_component_names"] = [n for n, _ in web_api_components(core)]
             else:
                 debug_info["component_manager_available"] = False
 

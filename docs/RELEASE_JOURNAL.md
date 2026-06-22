@@ -12,6 +12,14 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-22
+- **WebAPIPlugin component-walk dedup (review CR-C12) — `docs/review/codebase_review_2026-06-21.md`.** The "iterate
+  `component_manager.get_components()`, filter `isinstance(.., WebAPIPlugin)`, build `(name, component)`" walk was
+  reimplemented (with differing guards/logging) in `web_server._mount_component_routers` and `webapi_router` AsyncAPI
+  spec generation. Extracted `web_api_components(core)` into `core/interfaces/webapi.py` (beside `WebAPIPlugin`) — it
+  degrades to `[]` (warns) when there's no component manager or the lookup fails. Both walks now call it; the
+  `/debug/asyncapi` endpoint (3rd `get_components()` site, lists *all* components) also reports `web_api_component_names`
+  via the helper. New `test_web_api_components.py`. Gates: suite 1059 passed, pyright 0, import-linter 9/9. Review
+  tracker + this ledger updated.
 - **spaCy init dedup (review CR-C5) — `docs/review/codebase_review_2026-06-21.md`.** `_initialize_spacy` and
   `_initialize_spacy_with_assets` were ~75 near-identical lines; `is_available()`/`recognize()` branched on
   `self.asset_manager` to pick one while `_do_initialize` always used the assets variant — a fix could land on only some

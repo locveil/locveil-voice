@@ -164,19 +164,9 @@ class WebServerMixin:
             logger.warning("Core not available for router mounting")
             return
         try:
-            from ..core.interfaces.webapi import WebAPIPlugin
+            from ..core.interfaces.webapi import web_api_components
 
-            web_components = []
-            if hasattr(self.core, "component_manager"):
-                try:
-                    available = self.core.component_manager.get_components()
-                    for name, component in available.items():
-                        if isinstance(component, WebAPIPlugin):
-                            web_components.append((name, component))
-                except Exception as e:
-                    logger.warning(f"Could not get components from component manager: {e}")
-            else:
-                logger.warning("Core does not have component_manager")
+            web_components = web_api_components(self.core)
 
             mounted = 0
             for name, component in web_components:

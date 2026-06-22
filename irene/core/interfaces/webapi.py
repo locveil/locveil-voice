@@ -6,10 +6,13 @@ using FastAPI routers.
 """
 
 import importlib.util
-from typing import Optional, Any
+import logging
+from typing import Optional, Any, List, Tuple
 from abc import abstractmethod
 
 from ..metadata import EntryPointMetadata
+
+logger = logging.getLogger(__name__)
 
 
 class WebAPIPlugin(EntryPointMetadata):
@@ -111,4 +114,23 @@ class WebAPIPlugin(EntryPointMetadata):
                 }
             }
         """
-        return None 
+        return None
+
+
+def web_api_components(core: Any) -> List[Tuple[str, "WebAPIPlugin"]]:
+    """Return ``(name, component)`` for every component implementing :class:`WebAPIPlugin`.
+
+    Single source of the "iterate the component manager, filter ``WebAPIPlugin``" walk used by router
+    mounting and AsyncAPI/OpenAPI spec generation. Degrades gracefully — returns ``[]`` (logging a
+    warning) when there is no component manager or the lookup fails, so callers never crash on it.
+    """
+    cm = getattr(core, "component_manager", None) if core else None
+    if cm is None:
+        logger.warning("Core does not have component_manager")
+        return []
+    try:
+        available = cm.get_components()
+    except Exception as e:
+        logger.warning(f"Could not get components from component manager: {e}")
+        return []
+    return [(name, c) for name, c in available.items() if isinstance(c, WebAPIPlugin)]
