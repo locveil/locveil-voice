@@ -23,6 +23,8 @@ Before touching the core, check whether what you want is one of these — each i
   whole new handler.
 - **[Add a model](docs/guides/howto-new-model.md)** — a new engine for wake word, VAD, ASR, TTS or LLM.
 - **[Add a language](docs/guides/howto-new-language.md)** — donations, config, and the models to swap.
+- **[Add a test](docs/guides/howto-new-test.md)** — a declarative YAML case (CLI contract, streaming-ASR
+  system, or judged UX), and recording its audio fixture.
 
 If you aren't sure where a change belongs, the [architecture overview](docs/architecture/overview.md) maps
 the pieces.
