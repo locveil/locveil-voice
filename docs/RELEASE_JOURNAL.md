@@ -48,6 +48,11 @@ newest entries near the top of each dated section.
   - **`user-facing-docs-are-done` scope widened** to add `docs/QUICKSTART.md` (always) + non-root `README*` (e.g.
     `eval/README.md`) — the latter **only when the task touches that README's directory/subsystem** (locality gate, so
     it isn't a "re-audit every README" burden). Closes the scope gaps surfaced when reviewing the invariant.
+  - **`every-task-in-the-ledger` carve-out for routine dependency housekeeping** (surfaced while porting the
+    invariants to the sister project `wb-mqtt-bridge`): a lockfile-only bump that doesn't change `pyproject.toml` /
+    `config-ui/package.json` intent (`npm audit fix`, `uv lock` refresh, Dependabot lock refresh) needs no ledger ID —
+    just a journal line on completion; deliberate version decisions still need a task. Keeps the two repos' invariant
+    sets in sync (same rule, two dialects).
 
 ### 2026-06-22
 - **Platform-list centralization (review CR-C9) — `docs/review/codebase_review_2026-06-21.md`.** The OS-platform list

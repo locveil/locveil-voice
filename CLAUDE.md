@@ -37,6 +37,11 @@ but these rules apply to any task). **Single source of truth** (relocated here f
   — a chat request, a GitHub issue, a code-review finding, a TODO spotted mid-task. The first action on any new piece
   of work is to file it: give it an ID and a `[release]`/`[deferred]` tag *before* starting. External sources merely
   *surface* work; it is not scope until it lives in the ledger (the intake door that `single-task-ledger` guards).
+  - **Carve-out — routine dependency housekeeping:** a lockfile-only dependency bump that does **not** change
+    `pyproject.toml` / `config-ui/package.json` intent (e.g. `npm audit fix`, a `uv lock` refresh, a Dependabot lock
+    refresh) does **not** need its own ledger ID. It still gets a `one-active-journal` line on completion, and any bump
+    that *is* a deliberate version decision (a new dep, a major upgrade, a pin change) is a normal task and **does**
+    need an ID.
 - **`design-then-implement`** — A task that **adds a feature or redesigns** an existing one is a **design task**: its
   deliverable is a **design document** — a new file under `docs/design/`, or an edit to the existing design for a
   redesign — referenced from the ledger entry and listed in the ledger's review/design index. Completing it means *the
