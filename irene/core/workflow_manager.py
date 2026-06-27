@@ -479,7 +479,7 @@ class WorkflowManager:
                 result = await unified_workflow.process_text_input(text, context, trace_context)
                 await self._publish_pipeline_event(EventType.RESULT_PRODUCED, context, {
                     "text": result.text, "success": result.success,
-                    "intent": result.metadata.get("intent_name") if result.metadata else None})
+                    "intent": result.metadata.get("original_intent") if result.metadata else None})
             if trace_context and trace_context.enabled:
                 trace_context.record_output(result)
             self._save_trace_if_enabled(trace_context)
@@ -634,7 +634,7 @@ class WorkflowManager:
                 result = await process_audio_input(audio_data, context, trace_context)
                 await self._publish_pipeline_event(EventType.RESULT_PRODUCED, context, {
                     "text": result.text, "success": result.success,
-                    "intent": result.metadata.get("intent_name") if result.metadata else None})
+                    "intent": result.metadata.get("original_intent") if result.metadata else None})
             if trace_context and trace_context.enabled:
                 trace_context.record_output(result)
             self._save_trace_if_enabled(trace_context)

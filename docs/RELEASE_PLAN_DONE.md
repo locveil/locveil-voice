@@ -710,6 +710,16 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       Dependabot alerts (commits 05aa763/4e05a38) — no risky major bumps. **No code until scheduled + green-lit.**
 
 ### Code Quality & Review (QUAL)
+- [x] **QUAL-54** [APICONTRACT] (P2) `[release]` — **DONE 2026-06-27.** Targeted fix of the live-bug subset from
+      `docs/review/api_result_contract_review.md` (F2 WS half + F5): the `/ws/audio` response now surfaces intent under
+      `intent_name` (remapped from the orchestrator's `original_intent`, keeping the raw metadata) at both send sites
+      (`webapi_router.py` streaming + batch), and the two `workflow_manager.py` pipeline-event emitters (`:482`,`:637`)
+      now read `original_intent` instead of the never-populated `intent_name` (the field was always `None` in prod).
+      Root masking cause fixed too: `test_pipeline_events.py`'s fake returned `metadata={"intent_name":…}` (wrong key) —
+      now mirrors the real `original_intent` contract, so it's a faithful regression test. Unblocks the `eval/` WS
+      intent case (provider reads `metadata.intent_name`). Gates: full suite 1066 passed / 9 skipped, pyright 0,
+      import-linter 9/9. `config-ui-stays-functional` N/A (additive WS metadata + internal logging; config-ui doesn't
+      consume `/ws/audio`). Full 5-way unification → QUAL-55.
 - [x] **QUAL-1** — Phase-0 static baseline (ruff/pyright/vulture/validators/import-graph). → `docs/review/phase0_static_baseline.md` (6e39886)
 - [x] **QUAL-2** — Review round 1: phantom-reference `NameError`s + method shadowing. → b6cd282
 - [x] **QUAL-3** (P1) — **DONE 2026-06-06.** Category D wiring. **Reconciled (Invariant #8): the entry-point total is now

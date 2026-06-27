@@ -839,8 +839,11 @@ def create_webapi_router(
                     result = await core.workflow_manager.process_text_input(
                         text=text, session_id=session_id, wants_audio=False,
                         client_context=client_context)
+                    # QUAL-54: surface intent under `intent_name` like REST /execute (the orchestrator
+                    # stores it as `original_intent`); keep the rest of the raw metadata.
+                    _meta = {**(result.metadata or {}), "intent_name": (result.metadata or {}).get("original_intent")}
                     await websocket.send_json({"type": "response", "text": result.text,
-                                               "success": result.success, "metadata": result.metadata})
+                                               "success": result.success, "metadata": _meta})
                     await _route_reply(result)
                 return
 
@@ -863,8 +866,11 @@ def create_webapi_router(
                 result = await core.workflow_manager.process_audio_input(
                     audio_data=audio, session_id=session_id, wants_audio=False,
                     client_context=client_context)
+                # QUAL-54: surface intent under `intent_name` like REST /execute (orchestrator stores
+                # it as `original_intent`); keep the rest of the raw metadata.
+                _meta = {**(result.metadata or {}), "intent_name": (result.metadata or {}).get("original_intent")}
                 await websocket.send_json({"type": "response", "text": result.text,
-                                           "success": result.success, "metadata": result.metadata})
+                                           "success": result.success, "metadata": _meta})
                 await _route_reply(result)
         except WebSocketDisconnect:
             logger.debug(f"WS audio driving input disconnected (session {session_id})")

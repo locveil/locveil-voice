@@ -65,6 +65,7 @@ Living findings behind the tasks (`read-at-start-record-at-completion`). `[x]` =
 | `docs/design/esp32_satellite.md` (DRAFT 2026-06-14) | **consolidated** ESP32 voice-satellite design — supersedes `ws_esp32_transport.md`, folds `esp32_wakeword_review.md` + `onnx §10/11` + ARCH-21; D-1..D-18 (device shape, wire protocol in+reply, micro stack, models/push, identity/multi-room, provisioning/CSR/OTA); backend plan §12 | ARCH-22 |
 | `config-ui/docs/donation_editor_ux.md` | human-friendly donations editor design | UI-1/2/3 |
 | `docs/review/test7_triage.md` (2026-06-15) | TEST-7 Phase-B worklist — 82-failure triage (delete/rewrite/fix) + risk-ranked coverage tiers + fix-code suspects | TEST-7 ✓ |
+| `docs/review/api_result_contract_review.md` `[x]` (2026-06-27) | API execution-result response-contract consistency — 5 findings (reply field name, 3-way intent split, divergent metadata under one model, confidence placement, live `None` internal misread); root cause = no shared serializer | QUAL-54 ✓, QUAL-55 |
 | `docs/review/codebase_review_2026-06-21.md` (2026-06-21; CR-A1 group resolved 2026-06-22) | whole-codebase health pass — 16 correctness (CR-A1 P0: standalone `voice_runner` web API never starts), 13 dead/zombie (CR-B), 13 duplication (CR-C), 5 stale user-facing doc claims (CR-D). **DONE 2026-06-22:** CR-A1 group (A1/A2/A3/A14/B2/D5 + masking-test fix) + BUILD-7 doc/dup cluster (C1/C2/C4/D1–D4) + dead-code sweep (all CR-B; B4 kept as ARCH-22/25 scaffolding, B12 was QUAL-20) + provider-base dedup (CR-C6/C7, C8 partial — route helpers deferred) + standalone correctness (CR-A4/A8) + silero cleanups (CR-A12/A13) + tracing pair (CR-A7/A9) + path-traversal hardening (CR-A15, security) + correctness trio (CR-A10/A11/A16) + Cyrillic dedup (CR-C3) + nlu-analysis loaders (CR-A6) + audio playback (CR-A5) + dup boot-validator removed (CR-C13) + handler base-class consolidation (CR-C11) + asset-name/path helper (CR-C10) + spaCy init dedup (CR-C5) + WebAPIPlugin walk dedup (CR-C12) + provider /configure gate (CR-C8) + platform-list centralization (CR-C9); **review §A + §B + §C + §D ALL fully resolved**. ARCH-25 (WB7/WB8 hardware bring-up) remains as a separate hardware-gated task, not a review item. Cross-refs: CR-B1→BUILD-7, CR-C1/2/4/D1-4→BUILD-7, CR-C9→ARCH-25, CR-A12→QUAL-15, CR-A16→QUAL-30 | (new findings) |
 
 ---
@@ -268,6 +269,13 @@ _Apply to every remediation task below (from the 4 review docs + QUAL-25/26). So
       (`nlu_component.py` `record_stage("nlu_cascade")`), not each provider's attempt/confidence — so it can't yet explain
       *why* a fall-through happened. First enrich the cascade trace to record per-provider attempts (which tried, each
       one's confidence, why it abstained), then build the analyzer over recorded traces. Needs real usage data → deferred.
+- [ ] **QUAL-55** [APICONTRACT] (P2) `[release]` — **One canonical `WorkflowResult → API` serializer across the five
+      execution surfaces.** `docs/review/api_result_contract_review.md` found the same result is hand-serialized 5 ways
+      (REST `/execute/command|audio`, `/trace/command|audio`, WS `/ws/audio`): reply text is `response` vs `text` (F1),
+      `CommandResponse` carries two different metadata payloads (F3), `confidence` placement differs (F4), intent exposure
+      diverges (F2 — WS half fixed in QUAL-54). Introduce a single serializer (`text`/`success`/`confidence`/`intent_name`
+      + normalized metadata) and route all five through it; retires F1/F3/F4 + the rest of F2. **Renames response fields →
+      `config-ui-stays-functional` co-change** (`apiClient.ts`, `src/types/*`). Filed 2026-06-27 from the review.
 
 ### Tests (TEST)
 > **Strategy (decided 2026-06-01): do NOT keep repairing the existing suite.** Most tests were written against

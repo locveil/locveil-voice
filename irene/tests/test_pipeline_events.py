@@ -13,7 +13,9 @@ from irene.intents.models import IntentResult
 
 class _FakeWorkflow:
     async def process_text_input(self, text, context, trace_context=None):
-        return IntentResult(text=f"re:{text}", metadata={"intent_name": "greetings.hello"})
+        # QUAL-54: the orchestrator records the intent under `original_intent` (not `intent_name`);
+        # the fake must mirror the real metadata contract so this stays a faithful regression test.
+        return IntentResult(text=f"re:{text}", metadata={"original_intent": "greetings.hello"})
 
 
 def _collect(sink):

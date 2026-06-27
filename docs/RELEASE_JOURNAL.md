@@ -14,6 +14,16 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-27
+- **API execution-result contract review → QUAL-54 (done) + QUAL-55 (filed).** Surfaced while wiring the `eval/` WS
+  suite: the `ws_audio_provider` reads `metadata.intent_name`, which `/ws/audio` never emits. Reviewed the execution
+  surfaces and found a **family** of inconsistencies (no shared result serializer) — captured in
+  `docs/review/api_result_contract_review.md` (F1 reply field `response` vs `text`; F2 3-way intent split; F3 one
+  response model, two metadata payloads; F4 `confidence` placement; F5 internal `intent_name` read always `None`).
+  **QUAL-54 (targeted, done):** `/ws/audio` now surfaces `intent_name` (remapped from `original_intent`) at both send
+  sites + `workflow_manager` pipeline events read `original_intent` (fixing the live `None`). `test_pipeline_events`'s
+  fake used the wrong key (`intent_name`), masking the bug — corrected to `original_intent`, now a faithful regression.
+  Full suite 1066 passed, pyright 0, import-linter 9/9. **QUAL-55 (open):** one canonical serializer across all five
+  surfaces (retires F1/F3/F4 + rest of F2; `config-ui` co-change). Unblocks the eval WS intent case.
 - **UI-10 DONE — config-ui major dependency upgrades; all 8 Dependabot alerts cleared.** The 6 the housekeeping pass
   couldn't touch needed breaking majors outside the declared ranges, so they were a deliberate version decision (filed
   as UI-10, done same session): `vite ^5`→`^8.1.0` (+ `@vitejs/plugin-react`→`^6`; vite 8 = rolldown bundler) cleared
