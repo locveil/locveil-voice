@@ -14,6 +14,15 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-27
+- **TEST-9 DONE — voice-fixture recorder wired into `eval/` (W6).** The recorder itself (design + W1–W5) was built and
+  pushed in the sibling **eval-commons** repo (`eval-fixture-record`: mic capture → 16 kHz/mono/PCM16, worklist derived
+  from the promptfoo YAML, interactive keep/redo); it lives there because eval-commons is the shared lower layer and
+  must not import a consumer's audio stack (cycle). This repo's W6 wiring: `make record`/`record-list`/`record-devices`/
+  `setup-record`; `profiles/recording.env.example` (real file git-ignored); `reference` added to the `light_unreachable`
+  judge case so the recorder has a script (§5 decision); `fixtures/README.md` + `eval/README.md` repointed at
+  `make record`. Verified end-to-end (`record-list` derives both fixtures, console script resolves, `make cli` 5/5).
+  Unblocks the WS suite's fixture gap — recording the WAVs is now a clean manual step. eval-commons has no ledger; its
+  side is tracked in its design doc §13 + commit `965153c`.
 - **API execution-result contract review → QUAL-54 (done) + QUAL-55 (filed).** Surfaced while wiring the `eval/` WS
   suite: the `ws_audio_provider` reads `metadata.intent_name`, which `/ws/audio` never emits. Reviewed the execution
   surfaces and found a **family** of inconsistencies (no shared result serializer) — captured in

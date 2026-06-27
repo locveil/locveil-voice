@@ -75,6 +75,10 @@ tests:
     metadata: { kind: ux }
     vars:
       audio: fixtures/light_unreachable.wav
+      # `reference` here is the line to SPEAK when recording this fixture (the recorder reads it);
+      # this is a judge case, so nothing asserts WER against it. Target a device that is unreachable
+      # in the SUT's config. TODO: confirm against a live run that this stays unreachable.
+      reference: включи свет в гараже
     assert:
       - type: llm-rubric
         transform: JSON.parse(output).response_text

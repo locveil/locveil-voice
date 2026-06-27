@@ -9,12 +9,28 @@ the provider validates this and won't resample, so tests measure the ASR, not a 
 | `light_unreachable.wav` | a command targeting a device that will be unreachable | case 4 |
 
 Fixtures are git-ignored by default (binary). To version them, drop a `.gitignore`
-exception or use git-lfs. Keep the spoken text in sync with the `reference:` vars in
-`../promptfooconfig.yaml`.
+exception or use git-lfs. The spoken text lives in each case's `reference:` var in
+`../ws.promptfooconfig.yaml` — the recorder reads it to you, so it stays in sync.
 
-Quick way to make a fixture from TTS, then conform the format:
+## Record them: `make record`
+
+One-time setup (adds the mic deps), then record the missing fixtures interactively:
 
 ```bash
-# example: synthesize, then force 16k/mono/16-bit
+make setup-record                 # adds sounddevice + soxr to the venv (once)
+cp profiles/recording.env.example profiles/recording.env   # then set REC_INPUT_DEVICE
+make record-devices               # ... find your device name/index for that file
+make record-list                  # what's needed/missing (no mic)
+make record                       # record every missing fixture (prompt → record → playback → keep/redo)
+make record FIXTURE=timer_10min   # just one
+```
+
+The recorder (eval-commons' `eval-fixture-record`) shows the line to read, records from
+the configured mic, lets you re-take, and writes a conformant **16 kHz / mono / PCM16** WAV —
+validated on save against the same check the `/ws/audio` provider applies.
+
+### Alternative: synthesize from TTS, then conform the format
+
+```bash
 ffmpeg -i raw.wav -ar 16000 -ac 1 -sample_fmt s16 timer_10min.wav
 ```

@@ -57,6 +57,7 @@ scripts resolve. No `activate` needed when going through `make`.
 
 ```bash
 make cli                                   # CLI contracts — runs today, no prerequisites
+make record                                # record the WS audio fixtures interactively (mic; see fixtures/README.md)
 make ws  TARGET=local                      # WS suite vs a locally-running Irene (start it first: make serve)
 make ws  TARGET=wb7                        # WS suite vs Irene on the WB7 controller
 make ux  TARGET=local                      # only the DeepSeek-judged UX cases
@@ -92,7 +93,8 @@ These are non-obvious and have already caused (and cost) bugs — keep them in m
 ## Notes / TODO
 
 - **Record the fixtures** before the WS suite can run — `fixtures/{timer_10min,light_unreachable}.wav`,
-  16 kHz mono PCM16 (see `fixtures/README.md`). This is the only blocker for the system/UX surfaces.
+  16 kHz mono PCM16. Use **`make record`** (`make setup-record` once first; see `fixtures/README.md`). This is the
+  only blocker for the system/UX surfaces.
 - **Intent name** in the intent case is a placeholder (`timer.set`) — confirm against a live run.
 - **DeepSeek-as-judge on Russian is unvalidated.** Hand-score a few replies and check agreement
   before trusting UX pass/fail in CI (eval-commons `ARCHITECTURE.md` §7.1). Treat UX verdicts as

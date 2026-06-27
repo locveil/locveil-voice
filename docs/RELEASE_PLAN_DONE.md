@@ -1638,6 +1638,17 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       console-LLM fallback / `fallback_providers` — left as-is; not in scope here.)
 
 ### Tests (TEST)
+- [x] **TEST-9** [EVAL] (P2) `[release]` — **DONE 2026-06-27.** Wired the eval-commons voice-fixture recorder (W6 of
+      `../eval-commons/docs/design/fixture_recorder.md`) into this repo's `eval/`: `make record` / `record-list` /
+      `record-devices` / `setup-record` targets (recorder invoked as `python -m eval_commons.record.cli`);
+      committed `profiles/recording.env.example` (machine-local `recording.env` git-ignored); **added `reference` to
+      the `light_unreachable` judge case** so the recorder has a line to read (§5 decision — inert to the test, it's
+      judge-only) — TODO in the YAML to confirm the target stays unreachable on a live run; repointed
+      `fixtures/README.md` + `eval/README.md` at `make record` (kept the ffmpeg/TTS recipe as the alternative). Verified:
+      `make record-list` derives both fixtures, `eval-fixture-record` console script resolves, `make record-devices`
+      lists inputs, `make cli` still 5/5. Recording the WAVs themselves is the remaining manual (human-at-mic) step,
+      which this unblocks. `config-ui-stays-functional` N/A. The recorder code + its design live in eval-commons (its
+      own repo/process).
 - [x] **TEST-0** (P0) — Minimal end-to-end smoke/integration harness (refactor safety net, Gate 0). **DONE
       2026-06-01** → `irene/tests/test_smoke_e2e.py` (**5 passed / 1 xfailed**, ~21s; boots the WebAPI runner once
       as a subprocess + a CLI headless check). Green flows: WebAPI boots, `привет`→`greeting.hello`, `/nlu/recognize`

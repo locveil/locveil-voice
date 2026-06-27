@@ -33,7 +33,9 @@ export WS_AUDIO_URL HEALTH_URL MQTT_HOST MQTT_PORT
 export IRENE_CONFIG_FILE
 
 .DEFAULT_GOAL := help
-.PHONY: help setup cli ws ux serve compare view clean
+.PHONY: help setup setup-record cli ws ux record record-list record-devices serve compare view clean
+
+RECORD := $(PROMPTFOO_PYTHON) -m eval_commons.record.cli --from-yaml ws.promptfooconfig.yaml --config profiles/recording.env
 
 help:
 	@sed -n 's/^#   //p' $(MAKEFILE_LIST) | head -8
@@ -43,6 +45,9 @@ help:
 setup:                        ## install the shared providers into the project venv (uv)
 	uv pip install --python $(PROMPTFOO_PYTHON) -e ../../eval-commons
 
+setup-record:                 ## add the fixture recorder + mic deps (sounddevice, soxr) to the venv
+	uv pip install --python $(PROMPTFOO_PYTHON) -e '../../eval-commons[record]'
+
 cli:                          ## CLI contract tests (argparse console scripts) — no service needed
 	$(PROMPTFOO) eval -c cli.promptfooconfig.yaml
 
@@ -51,6 +56,15 @@ ws:                           ## streaming-ASR system tests over /ws/audio (need
 
 ux:                           ## only the DeepSeek-judged UX cases (needs DEEPSEEK_API_KEY)
 	$(PROMPTFOO) eval -c ws.promptfooconfig.yaml --filter-metadata kind=ux
+
+record:                       ## record missing voice fixtures interactively (mic; run `make setup-record` once first)
+	$(RECORD) $(FIXTURE)      # e.g. make record  |  make record FIXTURE=timer_10min
+
+record-list:                  ## show the fixture worklist (needed/missing + the line to read) — no mic
+	$(RECORD) --list
+
+record-devices:               ## list input devices to fill REC_INPUT_DEVICE in profiles/recording.env
+	$(PROMPTFOO_PYTHON) -m eval_commons.record.cli --devices
 
 serve:                        ## bring Irene up LOCALLY with CONFIG (foreground; Ctrl-C to stop)
 	@echo ">> Irene local: IRENE_CONFIG_FILE=$(IRENE_CONFIG_FILE)  (serving for $(WS_AUDIO_URL))"
