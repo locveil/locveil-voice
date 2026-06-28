@@ -543,6 +543,7 @@ export interface CoreConfig {
   // Main configuration sections
   system: SystemConfig;
   inputs: InputConfig;
+  outputs: OutputConfig;
   components: ComponentConfig;
   assets: AssetConfig;
   workflows: WorkflowConfig;
@@ -559,9 +560,13 @@ export interface CoreConfig {
   intent_system: IntentSystemConfig;
   vad: VADConfig;
   monitoring: MonitoringConfig;
-  
-  
-  // Language and locale
+  trace: TraceConfig;
+
+
+  // Language and locale (QUAL-36: default_language + supported_languages are the canonical source of
+  // truth; `language` is the deprecated legacy locale string, retained only for config round-trip).
+  default_language: string;
+  supported_languages: string[];
   language: string;
   timezone?: string;
   
@@ -572,6 +577,26 @@ export interface CoreConfig {
 }
 
 // Configuration section interfaces (matching backend Pydantic models)
+
+// Output delivery channels (backend OutputConfig).
+export interface OutputConfig {
+  console: boolean;
+  console_prefix: string;
+  web_push: boolean;
+}
+
+// Trace persistence (backend TraceConfig, ARCH-19).
+export interface TraceConfig {
+  enabled: boolean;
+  capture_level: 'utterance' | 'segmenter' | 'raw';
+  capture_raw_mic: boolean;
+  log_threshold: string;
+  traces_dir?: string | null;
+  max_stages: number;
+  max_data_size_mb: number;
+  max_log_records: number;
+}
+
 export interface SystemConfig {
   microphone_enabled: boolean;
   audio_playback_enabled: boolean;
@@ -686,8 +711,7 @@ export interface NLUConfig {
   auto_detect_language: boolean;
   language_detection_confidence_threshold: number;
   persist_language_preference: boolean;
-  supported_languages: string[];
-  default_language: string;
+  // QUAL-36: default_language/supported_languages live on CoreConfig (the canonical source), NOT here.
   providers: Record<string, Record<string, any>>;
 }
 
@@ -731,24 +755,18 @@ export interface IntentHandlerListConfig {
   asset_validation: Record<string, any>;
 }
 
+// Voice Activity Detection (backend VADConfig, ARCH-18). Per-engine knobs (energy threshold,
+// sensitivity, …) moved under `providers` ([vad.providers.<name>]); they are no longer flat fields.
 export interface VADConfig {
   enabled: boolean;
-  energy_threshold: number;
-  sensitivity: number;
-  voice_duration_ms: number;
-  silence_duration_ms: number;
+  default_provider: string;
   max_segment_duration_s: number;
-  voice_frames_required: number;
-  silence_frames_required: number;
-  use_zero_crossing_rate: boolean;
-  adaptive_threshold: boolean;
-  noise_percentile: number;
-  voice_multiplier: number;
   processing_timeout_ms: number;
   buffer_size_frames: number;
   normalize_for_asr: boolean;
   asr_target_rms: number;
   enable_fallback_to_original: boolean;
+  providers: Record<string, Record<string, any>>;
 }
 
 export interface MonitoringConfig {

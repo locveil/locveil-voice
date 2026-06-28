@@ -353,14 +353,6 @@ Governed by `config-ui-stays-functional` (config-ui must stay functional).
       (today `canSaveNLU` hard-requires `!hasBlockingConflicts`). Deliverable: a design doc under `docs/design/` first,
       then implementation follow-up(s). The inline `ValidationIndicator` already surfaces blockers, so scope the modal's
       added value deliberately (resolution UX, not just a second display).
-- [ ] **UI-11** [UI] (P3) `[deferred]` — **config-ui type-contract drift in `src/types/api.ts`** (review
-      `config_ui_review.md` §B). The hand-written `api.ts` (what `apiClient` consumes) has fallen behind backend
-      `CoreConfig` while the generated `openapi.gen.ts` is current but unused: `CoreConfig` missing `outputs`/`trace`
-      (B1) and canonical `default_language`/`supported_languages` (B2); `NLUConfig` carries phantom required language
-      fields moved to CoreConfig (B3); `VADConfig` is the pre-ARCH-18 shape (B4). The editor renders from the backend
-      schema so it still works — but typed access is `undefined`/`as any` and the **type-check half of
-      `config-ui-stays-functional` gives false confidence**. Fix: regenerate/realign `api.ts`, or point `apiClient` at
-      `openapi.gen.ts`. (Also noted: `ajv`/`ajv-formats` are unused deps — client validation is backend-delegated.)
 - [ ] **UI-12** [UI] (P3) `[deferred]` — **config-ui duplication consolidation** (review §C, ~500+ duplicated lines).
       `apiClient` per-resource CRUD quintet copy-pasted ×4 (donations/templates/prompts/localizations) → a
       `resourceCrud(prefix, dataKey)` factory; `TemplatesPage`≈`PromptsPage` whole-page clones (+ Donations/Localizations

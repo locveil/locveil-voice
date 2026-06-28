@@ -2183,6 +2183,19 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       covered; the standalone `PARAMETER_EXTRACTION_GUIDE.md` was not needed.
 
 ### UI / config-ui (UI)
+- [x] **UI-11** [UI] (P3) `[deferred]` — **DONE 2026-06-28.** config-ui type-contract drift in `src/types/api.ts`
+      (review `config_ui_review.md` §B) — restores the type-check half of `config-ui-stays-functional`. Realigned the 4
+      drifted types to the backend `CoreConfig` (verified against the generated `openapi.gen.ts` + `irene/config/
+      models.py`): **(B1)** added `outputs: OutputConfig` + `trace: TraceConfig` to `CoreConfig` and defined those
+      interfaces; **(B2)** added canonical `default_language`/`supported_languages` (QUAL-36), kept `language` as the
+      deprecated legacy field; **(B3)** removed the phantom `default_language`/`supported_languages` from `NLUConfig`
+      (they live on `CoreConfig`); **(B4)** rewrote `VADConfig` to the ARCH-18 shape (dropped ~10 phantom flat per-engine
+      fields, added `default_provider` + `providers`). **Zero consumer churn** — grep confirmed no component read any
+      drifted field (the editor renders from the backend schema), so the realign is pure type-accuracy. Gate
+      (`config-ui-stays-functional`): `npm run check` + `npm run build` green. _Durable follow-up considered: the
+      generated `openapi.gen.ts` is current but unused while hand-written `api.ts` is consumed — making `api.ts` derive
+      from the generated schema would prevent recurrence, but that's a larger structural refactor (sub-interface
+      consumers) left for a future call. `ajv`/`ajv-formats` remain unused deps (client validation is backend-delegated)._
 - [x] **UI-10** [DEPS] (P2) `[release]` — **DONE 2026-06-27.** config-ui major dependency upgrades clearing the 6
       Dependabot alerts the lockfile-only housekeeping couldn't (all needed breaking majors outside the declared
       ranges): `vite ^5`→`^8.1.0` + `@vitejs/plugin-react ^4`→`^6.0.3` (3 vite advisories + esbuild dev-server; vite 8

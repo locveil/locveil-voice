@@ -14,6 +14,14 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-28
+- **UI-11 DONE — config-ui type-contract drift realigned (restores the type-check gate).** `src/types/api.ts` (what
+  `apiClient` consumes) had fallen behind backend `CoreConfig` while the generated `openapi.gen.ts` sat current-but-
+  unused. Realigned the 4 drifted types to the backend (verified vs the gen file + `models.py`): added `outputs`/`trace`
+  + canonical `default_language`/`supported_languages` to CoreConfig, removed the phantom NLU language fields, rewrote
+  VADConfig to the ARCH-18 shape (per-engine knobs now under `providers`). Zero consumer churn (no component read any
+  drifted field — pure type-accuracy), so `config-ui-stays-functional`'s type-check no longer passes on false types.
+  Gate: config-ui `check` + `build` green. Durable follow-up (derive `api.ts` from the generated schema) noted but left
+  as a larger structural call. Review cleanup remaining: UI-12 (dup) / UI-13 (dead) / UI-14 (efficiency) / UI-15 (feature).
 - **BUG-10 DONE — config-ui blocking-conflicts dialog made reachable (read-only).** Blocking conflicts disable Apply, so
   the dialog's only opener (a branch inside the disabled handler) could never fire. Added a "Review blocking conflicts"
   trigger that opens it read-only (dropped the `console.log` `onResolve` stub → no dead Resolve buttons), removed the
