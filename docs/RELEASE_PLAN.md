@@ -299,11 +299,6 @@ _Discrete functional defects (distinct from QUAL refactors/quality work). Surfac
       "time"/"for", `message` → "reminder"), but **NEVER** "translate" canonical technical identifiers (provider /
       model / driver / service names are self-matchable). Per-handler gap list in the BUG-4 audit. Surfaced while
       fixing BUG-4.
-- [ ] **BUG-10** [UI] (P3) `[deferred]` — **config-ui enhanced-mode blocking-conflicts dialog unreachable** (review §A3,
-      CONFIRMED). `canSaveNLU` already requires `!hasBlockingConflicts`, which disables the Apply button, so
-      `handleApply`'s `if (hasBlockingConflicts) setShowBlockingDialog(true)` never runs and `BlockingConflictsDialog`
-      can never open — the entire enhanced Apply branch is gated (`ApplyChangesBar.tsx:71,127-130,190,248`). Decide the
-      intended UX (a separate "review conflicts" trigger) or remove the dead dialog.
 
 ### Tests (TEST)
 > **Strategy (decided 2026-06-01): do NOT keep repairing the existing suite.** Most tests were written against
@@ -349,6 +344,15 @@ Governed by `config-ui-stays-functional` (config-ui must stay functional).
       `MonitoringPage` placeholder and the **ARCH-7 [MQTT]** output-seam work (both touch live pipeline observability).
       Re-scope against the *fixed* pipeline + real endpoints when it's actually picked up. Captured from a config-ui
       doc reviewed during QUAL-25 (2026-06-02).
+- [ ] **UI-15** [UI] (P3) `[deferred]` — **★ DESIGN — donation blocking-conflict resolution** (`design-then-implement`;
+      user chose "build real resolution" when triaging BUG-10, 2026-06-28). BUG-10 made `BlockingConflictsDialog`
+      reachable **read-only** (a "Review blocking conflicts" trigger; no Resolve buttons). This task designs+builds the
+      real thing: define what *resolving/overriding* a blocking NLU conflict means in the donations editor (override-to-
+      save? jump-to-edit the conflicting method/param? apply a suggested fix then re-validate?), then implement
+      `BlockingConflictsDialog.onResolve` + the gating change that lets save proceed once blockers are resolved/overridden
+      (today `canSaveNLU` hard-requires `!hasBlockingConflicts`). Deliverable: a design doc under `docs/design/` first,
+      then implementation follow-up(s). The inline `ValidationIndicator` already surfaces blockers, so scope the modal's
+      added value deliberately (resolution UX, not just a second display).
 - [ ] **UI-11** [UI] (P3) `[deferred]` — **config-ui type-contract drift in `src/types/api.ts`** (review
       `config_ui_review.md` §B). The hand-written `api.ts` (what `apiClient` consumes) has fallen behind backend
       `CoreConfig` while the generated `openapi.gen.ts` is current but unused: `CoreConfig` missing `outputs`/`trace`

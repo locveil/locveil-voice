@@ -14,6 +14,12 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-28
+- **BUG-10 DONE — config-ui blocking-conflicts dialog made reachable (read-only).** Blocking conflicts disable Apply, so
+  the dialog's only opener (a branch inside the disabled handler) could never fire. Added a "Review blocking conflicts"
+  trigger that opens it read-only (dropped the `console.log` `onResolve` stub → no dead Resolve buttons), removed the
+  unreachable branch, +i18n (en/ru). User triaged to **build real resolution** → filed **UI-15** (design-then-implement);
+  this is the foundation it builds on. Gate: config-ui `check` + `build` green. Closes the review's correctness cluster
+  (BUG-8/9/10); cleanup UI-11..14 + feature UI-15 remain.
 - **BUG-9 DONE — config-ui real-time analysis stale-request overwrite.** The post-await guard read the abort signal off
   the ref (newest controller), so a slow earlier response clobbered newer conflicts; fixed by guarding on a
   per-invocation local `AbortController` (the ref still drives abort-previous + unmount cleanup). Also threaded the

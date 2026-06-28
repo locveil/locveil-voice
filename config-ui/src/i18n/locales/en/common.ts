@@ -137,5 +137,6 @@ export const common = {
     confirmWarningsReview: 'There are warnings that should be reviewed. Do you want to proceed with saving anyway?',
     confirmErrors: 'There are validation errors. Do you want to proceed with saving anyway?',
     confirmWarnings: 'There are warnings. Do you want to proceed with saving anyway?',
+    reviewBlockingConflicts: 'Review blocking conflicts ({{count}})',
   },
 } as const;

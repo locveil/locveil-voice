@@ -1638,6 +1638,17 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       console-LLM fallback / `fallback_providers` — left as-is; not in scope here.)
 
 ### Bugs (BUG)
+- [x] **BUG-10** [UI] (P3) `[deferred]` — **DONE 2026-06-28.** config-ui enhanced-mode blocking-conflicts dialog
+      unreachable (review `config_ui_review.md` §A3). Blocking conflicts disable the Apply button (`canSaveNLU` requires
+      `!hasBlockingConflicts`), so the dialog's only opener — an `if (hasBlockingConflicts)` branch inside the disabled
+      handler — could never run. Fix: added a dedicated **"Review blocking conflicts (N)"** trigger in `ApplyChangesBar`
+      (shown when `useEnhancedValidation && hasBlockingConflicts`) that opens the dialog **read-only** (no `onResolve` →
+      no dead Resolve buttons; the previous `onResolve` was a `console.log` TODO), removed the unreachable handler
+      branch, and added the `applyBar.reviewBlockingConflicts` i18n key (en + ru). User triage (2026-06-28) chose to
+      **build real resolution** → filed as **UI-15** (design-then-implement); this is the read-only foundation it builds
+      on. Gate (`config-ui-stays-functional`): `npm run check` + `npm run build` green (orphan check confirms the dialog
+      is no longer dead). Closes the config-ui-review correctness cluster (BUG-8/9/10); cleanup UI-11..14 + feature UI-15
+      remain.
 - [x] **BUG-9** [UI] (P3) `[deferred]` — **DONE 2026-06-28.** config-ui real-time analysis stale-request overwrite
       (review `config_ui_review.md` §A2). `useRealtimeAnalysis.performAnalysis` read the abort signal off
       `abortControllerRef.current` *after* the await — by then the ref points at the newest controller, so a slow earlier

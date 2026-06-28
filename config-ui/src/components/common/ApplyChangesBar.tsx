@@ -123,11 +123,9 @@ const ApplyChangesBar: React.FC<ApplyChangesBarProps> = ({
         return; // Let user review validation results first
       }
 
-      // Check for blocking conflicts
-      if (hasBlockingConflicts) {
-        setShowBlockingDialog(true);
-        return; // Block save until conflicts are resolved
-      }
+      // BUG-10: blocking conflicts already disable the Apply button (canSaveNLU requires
+      // !hasBlockingConflicts), so this handler can't run with blockers — the dialog is opened from
+      // the dedicated "Review blocking conflicts" trigger below instead of this unreachable branch.
 
       // Show warning dialog for warnings
       if (hasWarnings && warningConflicts.length > 0) {
@@ -218,6 +216,18 @@ const ApplyChangesBar: React.FC<ApplyChangesBarProps> = ({
 
         {/* Right side - Actions */}
         <div className="flex items-center space-x-3">
+          {/* BUG-10: blocking conflicts disable Apply — this makes the (otherwise unreachable)
+              BlockingConflictsDialog reachable so the user can review the blockers. */}
+          {useEnhancedValidation && hasBlockingConflicts && (
+            <button
+              onClick={() => setShowBlockingDialog(true)}
+              className="inline-flex items-center px-3 py-2 border border-red-300 text-sm font-medium rounded-md text-red-700 bg-red-50 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+            >
+              <AlertTriangle className="w-4 h-4 mr-2" />
+              {t('applyBar.reviewBlockingConflicts', { count: blockingConflicts.length })}
+            </button>
+          )}
+
           {/* Validation Button */}
           <button
               onClick={() => void handleValidate()}
@@ -331,13 +341,10 @@ const ApplyChangesBar: React.FC<ApplyChangesBarProps> = ({
 
       {/* Enhanced NLU Features - Only show when in NLU context */}
       {useEnhancedValidation && showBlockingDialog && (
+        // BUG-10: read-only review for now (no `onResolve` → the dialog renders no Resolve buttons,
+        // rather than wiring up a stub that did nothing). Real resolution is tracked as UI-15.
         <BlockingConflictsDialog
           conflicts={blockingConflicts}
-          onResolve={(conflictId) => {
-            console.log('Resolve conflict:', conflictId);
-            // TODO: Implement conflict resolution
-            setShowBlockingDialog(false);
-          }}
           onClose={() => setShowBlockingDialog(false)}
         />
       )}

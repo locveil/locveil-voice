@@ -137,5 +137,6 @@ export const common = {
     confirmWarningsReview: 'Есть предупреждения, которые следует просмотреть. Всё равно сохранить?',
     confirmErrors: 'Есть ошибки проверки. Всё равно сохранить?',
     confirmWarnings: 'Есть предупреждения. Всё равно сохранить?',
+    reviewBlockingConflicts: 'Просмотреть блокирующие конфликты ({{count}})',
   },
 } as const;
