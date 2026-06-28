@@ -103,10 +103,16 @@ class IntentHandler(EntryPointMetadata, ABC):
         timeout: Optional[float] = None,
         max_retries: int = 0,
         retry_delay: float = 1.0,
+        completion_message: Optional[str] = None,
         **kwargs
     ) -> Dict[str, Any]:
         """
         Launch a fire-and-forget action, registered in the runtime action store (QUAL-28).
+
+        `completion_message` (optional) is the text to announce when the action completes, already
+        rendered in the REQUEST language by the handler. It is captured with `context.language` into
+        the action record so the deferred completion is delivered in the user's language (BUG-4 / F&F):
+        the action fires later, detached from the request, so the language can't be re-derived then.
 
         Resolves the action's stable ``physical_id`` from the context (room/device, falling back to
         the session id) so the action survives conversation-session eviction. ``**kwargs`` are passed
@@ -125,6 +131,8 @@ class IntentHandler(EntryPointMetadata, ABC):
             timeout=timeout,
             max_retries=max_retries,
             retry_delay=retry_delay,
+            language=getattr(context, "language", None),
+            completion_message=completion_message,
             **kwargs
         )
         # ARCH-19 (D-5): trace EVERY fire-and-forget launch uniformly at this choke point — covers
@@ -579,9 +587,19 @@ class IntentHandler(EntryPointMetadata, ABC):
             else:
                 return raw
 
-        # Missing (or coercion failed): apply declared default, then caller default.
-        if spec is not None and spec.default_value is not None:
-            return spec.default_value
+        # Missing (or coercion failed): apply the declared default, then the caller default.
+        # BUG-4: prefer the default declared for the REQUEST language; an English request whose
+        # en donation declares the default as null (or omits it) falls through to the caller default
+        # (typically an en template) instead of getting the Russian primary default.
+        if spec is not None:
+            by_lang = getattr(spec, "default_value_by_language", None) or {}
+            # When the param declares per-language defaults at all, resolve STRICTLY by request
+            # language (a language that doesn't declare one ⇒ no default here ⇒ fall through to the
+            # caller default, typically a language-aware template) — don't leak the primary language's
+            # default. Only when NO per-language default exists do we use the single/neutral default.
+            declared = by_lang.get(intent.language) if by_lang else spec.default_value
+            if declared is not None:
+                return declared
         if default is not IntentHandler._UNSET:
             return default
         if spec is not None and spec.required:
@@ -632,6 +650,8 @@ class IntentHandler(EntryPointMetadata, ABC):
         timeout: Optional[float] = None,
         max_retries: int = 0,
         retry_delay: float = 1.0,
+        language: Optional[str] = None,
+        completion_message: Optional[str] = None,
         **kwargs
     ) -> Dict[str, Any]:
         """
@@ -669,7 +689,10 @@ class IntentHandler(EntryPointMetadata, ABC):
                 room_id=room_id,
                 source=source,
                 metadata={"handler": self.__class__.__name__, "timeout": timeout,
-                          "max_retries": max_retries, "retry_count": 0},
+                          "max_retries": max_retries, "retry_count": 0,
+                          # BUG-4/F&F: carry the request language + the request-language-rendered
+                          # completion message so the deferred completion announces in the user's language.
+                          "language": language, "completion_message": completion_message},
             )
             get_client_registry().add_action(record)
 
@@ -759,16 +782,22 @@ class IntentHandler(EntryPointMetadata, ABC):
             duration = time.time() - record.started_at
             # ARCH-15 PR-4: carry the action's addressing identity so the OutputManager can deliver
             # the deferred result back to the originating channel / room-device (else drop+log, D-3).
+            # BUG-4/F&F: the language + the request-language-rendered completion message captured at
+            # registration, so the deferred completion announces in the user's language.
+            language = (record.metadata or {}).get("language")
+            completion_message = (record.metadata or {}).get("completion_message")
             if success:
                 await service.send_action_completion_notification(
                     session_id=session_id, domain=record.domain,
                     action_name=record.action_name, duration=duration, success=True,
-                    source=record.source, physical_id=record.physical_id, room_name=record.room_id)
+                    source=record.source, physical_id=record.physical_id, room_name=record.room_id,
+                    language=language, completion_message=completion_message)
             else:
                 await service.send_action_failure_notification(
                     session_id=session_id, domain=record.domain,
                     action_name=record.action_name, error=error or "Unknown error", is_critical=False,
-                    source=record.source, physical_id=record.physical_id, room_name=record.room_id)
+                    source=record.source, physical_id=record.physical_id, room_name=record.room_id,
+                    language=language)
         except Exception as e:
             self.logger.error(f"Failed to send action notification for {record.action_name}: {e}")
 

@@ -166,6 +166,7 @@ class TimerIntentHandler(IntentHandler):
                 domain="timers",
                 context=context,
                 timeout=duration_seconds + 5.0,
+                completion_message=message,   # BUG-4/F&F: announced (in the request language) when the timer fires
                 duration_seconds=duration_seconds,
                 message=message,
                 session_id=context.session_id,

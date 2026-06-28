@@ -59,6 +59,7 @@ class NotificationMessage:
     source: Optional[str] = None       # originating channel (cli/web/ws/…) — origin-pair key
     physical_id: Optional[str] = None  # persistent room/device/session scope
     room_name: Optional[str] = None    # human room name (room/device addressing, PR-8)
+    language: Optional[str] = None     # request language (BUG-4/F&F) — for output/TTS voice selection
     created_at: float = field(default_factory=time.time)
     delivered_at: Optional[float] = None
     delivery_status: Dict[DeliveryMethod, bool] = field(default_factory=dict)
@@ -179,10 +180,16 @@ class NotificationService:
         error: Optional[str] = None,
         source: Optional[str] = None,
         physical_id: Optional[str] = None,
-        room_name: Optional[str] = None
+        room_name: Optional[str] = None,
+        language: Optional[str] = None,
+        completion_message: Optional[str] = None,
     ) -> bool:
-        """Send notification for completed fire-and-forget action"""
-        
+        """Send notification for completed fire-and-forget action.
+
+        BUG-4/F&F: `completion_message` (already rendered in the request language by the handler at
+        registration) is announced verbatim when present; otherwise a generic message is rendered in
+        `language` — so a deferred completion (e.g. a timer firing) speaks in the user's language.
+        """
         # Get user preferences from context
         if self.context_manager:
             try:
@@ -197,16 +204,21 @@ class NotificationService:
         else:
             delivery_methods = [DeliveryMethod.LOG]
         
-        # Create notification message
+        # Create notification message — prefer the handler's pre-rendered (request-language) message.
+        en = (language or "ru") == "en"
         if success:
-            title = f"Action Completed: {action_name}"
-            message = f"The {action_name} action in {domain} has completed successfully after {duration:.1f} seconds."
+            title = "Action Completed" if en else "Действие завершено"
+            message = completion_message or (
+                f"The {action_name} action has completed." if en
+                else f"Действие «{action_name}» завершено.")
             priority = NotificationPriority.NORMAL
         else:
-            title = f"Action Failed: {action_name}"
-            message = f"The {action_name} action in {domain} failed after {duration:.1f} seconds."
-            if error:
-                message += f" Error: {error}"
+            title = "Action Failed" if en else "Сбой действия"
+            base = (f"The {action_name} action failed." if en
+                    else f"Действие «{action_name}» не выполнено.")
+            message = completion_message or base
+            if error and not completion_message:
+                message += (f" Error: {error}" if en else f" Ошибка: {error}")
             priority = NotificationPriority.HIGH
         
         notification = NotificationMessage(
@@ -226,7 +238,8 @@ class NotificationService:
             domain=domain,
             source=source,
             physical_id=physical_id,
-            room_name=room_name
+            room_name=room_name,
+            language=language
         )
 
         return await self.send_notification(notification)
@@ -240,9 +253,10 @@ class NotificationService:
         is_critical: bool = False,
         source: Optional[str] = None,
         physical_id: Optional[str] = None,
-        room_name: Optional[str] = None
+        room_name: Optional[str] = None,
+        language: Optional[str] = None,
     ) -> bool:
-        """Send notification for failed fire-and-forget action"""
+        """Send notification for failed fire-and-forget action (rendered in `language`)."""
         
         # Get user preferences from context
         if self.context_manager:
@@ -258,12 +272,15 @@ class NotificationService:
         else:
             delivery_methods = [DeliveryMethod.LOG, DeliveryMethod.TTS] if is_critical else [DeliveryMethod.LOG]
         
-        # Create notification message
-        title = f"{'Critical ' if is_critical else ''}Action Failure: {action_name}"
-        message = f"The {action_name} action in {domain} has failed. Error: {error}"
-        
+        # Create notification message (request language)
+        en = (language or "ru") == "en"
+        title = (f"{'Critical ' if is_critical else ''}Action Failure" if en
+                 else f"{'Критический ' if is_critical else ''}сбой действия")
+        message = (f"The {action_name} action has failed. Error: {error}" if en
+                   else f"Действие «{action_name}» не выполнено. Ошибка: {error}")
         if is_critical:
-            message += " This is a critical failure that may require attention."
+            message += (" This is a critical failure that may require attention." if en
+                        else " Это критический сбой, возможно требующий внимания.")
         
         notification = NotificationMessage(
             type=NotificationType.ACTION_FAILURE if not is_critical else NotificationType.CRITICAL_ALERT,
@@ -281,7 +298,8 @@ class NotificationService:
             domain=domain,
             source=source,
             physical_id=physical_id,
-            room_name=room_name
+            room_name=room_name,
+            language=language
         )
 
         return await self.send_notification(notification)
@@ -406,6 +424,7 @@ class NotificationService:
             session_id=notification.session_id,
             client_id=notification.physical_id,
             room_name=notification.room_name,
+            language=notification.language,  # BUG-4/F&F: so TTS picks the user's voice/language
         )
         result = IntentResult(text=notification.message, should_speak=speak)
         modality = OutputModality.SPEECH if speak else OutputModality.TEXT
@@ -462,22 +481,15 @@ class NotificationService:
                 temp_path.unlink()
     
     def _create_tts_message(self, notification: NotificationMessage) -> str:
-        """Create TTS-friendly version of notification message"""
-        # Simplify message for speech
-        if notification.type == NotificationType.ACTION_COMPLETION:
-            if notification.details.get("success", True):
-                return f"Action {notification.details.get('action_name', 'unknown')} completed successfully."
-            else:
-                return f"Action {notification.details.get('action_name', 'unknown')} failed."
-        
-        elif notification.type == NotificationType.ACTION_FAILURE:
-            return f"Action {notification.details.get('action_name', 'unknown')} has failed."
-        
-        elif notification.type == NotificationType.CRITICAL_ALERT:
-            return f"Critical alert: {notification.title}"
-        
-        else:
+        """Create TTS-friendly version of notification message.
+
+        The action notifications already carry a request-language message (BUG-4/F&F), so speak it
+        verbatim rather than re-synthesizing a hardcoded-English one.
+        """
+        if notification.type in (NotificationType.ACTION_COMPLETION, NotificationType.ACTION_FAILURE,
+                                 NotificationType.CRITICAL_ALERT):
             return notification.message
+        return notification.message
     
     def get_metrics(self) -> Dict[str, Any]:
         """Get notification delivery metrics"""

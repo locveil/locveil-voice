@@ -1638,6 +1638,22 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       console-LLM fallback / `fallback_providers` — left as-is; not in scope here.)
 
 ### Bugs (BUG)
+- [x] **BUG-4** [NLU/I18N/DONATION] (P3) `[deferred]` — **DONE 2026-06-28.** Three related per-language defects, all
+      "state not threaded to where messages render" (deeper research + the right altitude, per request):
+      **(1) Donation `default_value` not language-resolved** — assembly (`_assemble_v11_donation`) flattened it to the
+      ru primary; now it captures per-language defaults (`ParameterSpec.default_value_by_language`), the request
+      language is threaded onto the `Intent` (set in the orchestrator from `context.language`, no get_param call-site
+      churn), and `get_param` resolves strictly by request language (a param that declares per-language defaults but not
+      for this language falls through to the caller default, not the ru leak). **(2) Fire-and-forget completion
+      language** (the user's catch — set-timer is F&F): the request language + the request-language-rendered completion
+      message are captured into the `ActionRecord` at registration and replayed at completion, and the notification
+      service stopped hardcoding English (renders in the captured language / speaks the carried message). Verified
+      end-to-end: en «set a timer for ten minutes» → "Timer set for 10 min. Message: Timer completed!" and the deferred
+      completion fires "Timer completed!"; ru unchanged. **(3) Translation gap** — datetime en localization was missing
+      `days_ordinal`/`hours`/`periods`/`special_hours` (ru/en keys now match). Gates: suite 1086 passed (+ new
+      `test_param_language`, F&F test fixed for the new metadata), pyright 0, import-linter 9/9, 12/12 profiles valid,
+      config-ui check+build green (the new ParameterSpec field is runtime-only, not authored in donation files). The
+      donation en alias/choice **enrichment** sweep (non-functional) split out as **BUG-5**.
 - [x] **BUG-3** [NLU/I18N] (P3) `[deferred]` — **DONE 2026-06-28.** "Reply language doesn't follow request language"
       turned out to be **input corruption, not response localization** (deeper analysis, per the request). Root cause:
       the **`prepare` text normalizer transliterates Latin→Cyrillic** ("set a timer"→«сэт е таймё») and it ran at the

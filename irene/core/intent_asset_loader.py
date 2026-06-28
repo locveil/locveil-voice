@@ -568,17 +568,21 @@ class IntentAssetLoader:
         def assemble_param(cparam: dict, method_key, is_global: bool = False) -> dict:
             p = dict(cparam)  # neutral core: name/type/required/choices(canonical)/min-max/pattern/entity_type
             lang_params = []
+            default_by_lang = {}  # BUG-4: per-language default_value (lang → value, incl. explicit null)
             for lang in langs_ordered:
                 src = lang_jsons[lang] if is_global else lm[lang].get(method_key, {})
                 plist = src.get('global_parameters', []) if is_global else src.get('parameters', [])
                 for lp in plist:
                     if lp.get('name') == cparam['name']:
                         lang_params.append(lp)
-            for lp in lang_params:  # primary-first single-valued picks
+                        if 'default_value' in lp:
+                            default_by_lang[lang] = lp['default_value']
+            for lp in lang_params:  # primary-first single-valued picks (flattened, for back-compat)
                 if lp.get('description') and not p.get('description'):
                     p['description'] = lp['description']
                 if 'default_value' in lp and p.get('default_value') is None:
                     p['default_value'] = lp['default_value']
+            p['default_value_by_language'] = default_by_lang  # BUG-4: get_param resolves by request language
             p['extraction_patterns'] = self._accumulate('extraction_patterns', lang_params)
             p['aliases'] = self._accumulate('aliases', lang_params)
             if p.get('choices'):

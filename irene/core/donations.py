@@ -54,7 +54,12 @@ class ParameterSpec(BaseModel):
     name: str = Field(..., description="Parameter name")
     type: ParameterType = Field(..., description="Parameter type")
     required: bool = Field(True, description="Is this parameter mandatory?")
-    default_value: Any = Field(None, description="Default if not provided")
+    default_value: Any = Field(None, description="Default if not provided (the primary-language value)")
+    # BUG-4: per-language defaults, assembled at load time from each language file's `default_value`
+    # ({lang: value}). `get_param` resolves by the request language so an English request doesn't get
+    # the Russian default. Runtime-only (populated by assembly, not authored in donation files), so the
+    # per-file ParameterSpec shape config-ui edits is unchanged.
+    default_value_by_language: Dict[str, Any] = Field(default_factory=dict, description="{lang: default_value}")
     description: str = Field("", description="Human-readable description")
     
     # Type-specific configurations

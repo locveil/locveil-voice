@@ -250,6 +250,10 @@ class IntentOrchestrator:
                     processed_intent
                 )
             
+            # BUG-4: thread the request language onto the intent so the handler boundary (get_param)
+            # can resolve per-language donation defaults — without changing every get_param call site.
+            processed_intent.language = context.language
+
             # Check if handler can handle this specific intent
             if not await handler.can_handle(processed_intent):
                 logger.warning(f"Handler {handler.__class__.__name__} cannot handle intent: {processed_intent.name}")

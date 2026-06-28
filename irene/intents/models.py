@@ -24,6 +24,8 @@ class Intent:
     timestamp: float = field(default_factory=time.time)
     domain: Optional[str] = None       # "weather", "timer", "conversation"
     action: Optional[str] = None       # "get_current", "set", "cancel"
+    language: Optional[str] = None      # BUG-4: request language (set by the orchestrator from
+                                        # context.language) so get_param resolves per-language defaults
     # NOTE: no session_id here — the conversation/session id lives on the context
     # (UnifiedConversationContext.session_id), not duplicated on the Intent (QUAL-27 / QUAL-26 Q4).
 

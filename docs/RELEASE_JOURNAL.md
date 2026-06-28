@@ -14,6 +14,16 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-28
+- **BUG-4 DONE — per-language defaults + fire-and-forget completion language (all 3 sub-issues, right altitude).**
+  Three related defects, one theme (per-language state not threaded to where messages render): (1) donation
+  `default_value` flattened to ru → now assembled per-language (`ParameterSpec.default_value_by_language`), threaded via
+  `Intent.language` (set in the orchestrator), resolved strictly by request language in `get_param`; (2) **fire-and-
+  forget completion language** (the user's catch — a timer is F&F): capture the request language + the rendered
+  completion message into the `ActionRecord`, replay at completion; the notification service stopped hardcoding English.
+  Verified: en timer → "Timer set for 10 min. Message: Timer completed!" + the deferred completion fires "Timer
+  completed!"; ru unchanged. (3) datetime en localization filled (`days_ordinal`/`hours`/`periods`/`special_hours`).
+  Suite 1086 passed, pyright 0, import-linter 9/9, 12/12 profiles, config-ui green. The donation en alias/choice
+  *enrichment* sweep (non-functional, respect the technical-identifier rule) split out as **BUG-5**.
 - **BUG-3 DONE — English replies, at the right altitude: a TTS normalizer was corrupting NLU input.** Deeper analysis
   (per request, "not only timer related") found the en→ru reply was a *symptom of input corruption*: the `prepare`
   normalizer transliterates Latin→Cyrillic ("set a timer"→«сэт е таймё») and ran at the `asr_output` (pre-NLU) stage,
