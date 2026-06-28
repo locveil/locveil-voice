@@ -45,12 +45,6 @@ class TestExtractByType(unittest.TestCase):
         self.assertEqual(self.m._extract_by_type("use the fast mode", s), "fast")
         self.assertIsNone(self.m._extract_by_type("zzzzz qqqqq", s))
 
-    def test_duration_russian_and_english(self):
-        d = _spec(ParameterType.DURATION)
-        self.assertEqual(self.m._extract_by_type("5 минут", d), {"value": 5, "unit": "минут"})
-        self.assertEqual(self.m._extract_by_type("10 seconds", d), {"value": 10, "unit": "seconds"})
-        self.assertIsNone(self.m._extract_by_type("no duration", d))
-
     def test_string_quoted_then_alias_then_none(self):
         self.assertEqual(self.m._extract_by_type('play "my song"', _spec(ParameterType.STRING)), "my song")
         self.assertEqual(

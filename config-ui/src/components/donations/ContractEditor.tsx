@@ -19,7 +19,7 @@ import ArrayOfStringsEditor from '@/components/editors/ArrayOfStringsEditor';
 import type { DonationContract, ContractMethod, ContractParam, ParameterType, RoomContext } from '@/types';
 
 const PARAMETER_TYPES: ParameterType[] = [
-  'string', 'integer', 'float', 'duration', 'datetime', 'boolean', 'choice', 'entity',
+  'string', 'integer', 'float', 'datetime', 'boolean', 'choice', 'entity',
 ];
 const ENTITY_TYPES = ['device', 'location', 'room', 'person', 'generic'] as const;
 const ROOM_CONTEXTS: RoomContext[] = ['none', 'required', 'conditional'];
@@ -40,7 +40,7 @@ function ContractParamEditor({
 }) {
   const { t } = useTranslation('donations');
   const set = <K extends keyof ContractParam>(k: K, v: ContractParam[K]): void => onChange({ ...param, [k]: v });
-  const isNumeric = param.type === 'integer' || param.type === 'float' || param.type === 'duration';
+  const isNumeric = param.type === 'integer' || param.type === 'float';
 
   return (
     <div className="border rounded-xl p-3">

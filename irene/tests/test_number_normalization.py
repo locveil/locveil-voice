@@ -35,14 +35,11 @@ def test_unsupported_language_degrades_to_unchanged():
     assert normalize_numbers_to_digits("десять минут", "zz") == "десять минут"
 
 
-def test_timer_handler_parses_spelled_and_english(monkeypatch):
-    # The timer's duration is extracted by the handler's text fallback (its donation param has no
-    # type). Exercise that path directly — stub the message extraction (needs an asset loader) so
-    # the test focuses on duration+unit parsing: ru-spelled, ru-compound, English, digit regression.
-    from irene.intents.handlers.timer import TimerIntentHandler
-    h = TimerIntentHandler.__new__(TimerIntentHandler)
-    monkeypatch.setattr(h, "_extract_timer_message", lambda text, language="ru": "")
-    assert h._parse_timer_from_text("поставь таймер на десять минут")[:2] == (10, "minutes")
-    assert h._parse_timer_from_text("на двадцать пять минут")[:2] == (25, "minutes")
-    assert h._parse_timer_from_text("set a timer for ten minutes")[:2] == (10, "minutes")
-    assert h._parse_timer_from_text("на 10 минут")[:2] == (10, "minutes")            # digit regression
+def test_timer_duration_parses_spelled_and_english():
+    # BUG-6: the timer's duration now comes from the shared bilingual parser (irene.utils.units), the
+    # one place time quantities are read. Spelled ru/en, ru-compound, and digit regression.
+    from irene.utils.units import parse_duration
+    assert parse_duration("поставь таймер на десять минут") == (10, "minutes")
+    assert parse_duration("на двадцать пять минут") == (25, "minutes")
+    assert parse_duration("set a timer for ten minutes") == (10, "minutes")
+    assert parse_duration("на 10 минут") == (10, "minutes")            # digit regression

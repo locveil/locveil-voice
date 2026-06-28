@@ -244,6 +244,15 @@ _Apply to every remediation task below (from the 4 review docs + QUAL-25/26). So
       handshake). Gated by `config-ui-stays-functional` (any donation-schema change → config-ui;
       note the parked T2 pattern fields already exist, so no new schema surface unless extended). Refs:
       `parameter_extraction_review.md` (T2 = the "dead best mechanisms" themes 1+3), QUAL-11 (T1 baseline), Q6/Q7.
+      • **★ Units-of-measurement layer (design WITH this task — user, 2026-06-28).** Smart-home commands carry units
+        (dimming **%**, climate **°C**, …), the same value+unit shape time already needs. BUG-6 consolidated the **time**
+        family into `irene/utils/units.py` (`TIME_UNITS` table + `parse_duration`) and **removed the dead `DURATION`
+        param-type stub** (it never had a `coerce()` branch). Do NOT build a general units abstraction speculatively —
+        design it HERE, against the real device-unit requirements: generalize `units.py` to a value+unit type with
+        **canonical normalization + externalized (donation/catalog) unit surfaces** so timer + dimming + temperature
+        share ONE path. The bridge catalog (ARCH-8) declares each device's unit — that's the requirement source.
+        `QuantityEntityResolver` (`entity_resolver.py`) already holds the non-time nucleus (percent/degrees). _Bonus
+        defect to fold in: ru gendered «одну/одна» doesn't normalize to a digit (ovos ru gap) — BUG-1-adjacent._
 - [ ] **QUAL-44** `[deferred]` [DFLOW] (P2, enhancement; split from QUAL-31) — **Answer-vs-new-command arbitration on a
       clarifying turn.** QUAL-31's resume pre-check (`workflows/voice_assistant.py` `_process_pipeline`, the
       `take_pending_clarification` branch) **unconditionally** treats the turn that follows a clarification as the answer:

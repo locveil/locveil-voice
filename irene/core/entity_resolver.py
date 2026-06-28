@@ -12,6 +12,7 @@ from typing import Dict, Any, List, Optional, Tuple
 from dataclasses import dataclass
 from ..intents.models import Intent
 from ..intents.context_models import UnifiedConversationContext
+from ..utils.units import parse_duration, TIME_UNITS  # the one shared time-unit parser + surface table
 
 # Required rapidfuzz import for fuzzy matching
 from rapidfuzz import fuzz, process
@@ -447,32 +448,17 @@ class TemporalEntityResolver:
                 metadata={"match_type": "time_pattern", "format": "HH:MM"}
             )
         
-        # Duration pattern matching (Russian + English)
-        duration_patterns = [
-            # Russian patterns
-            (r'(\d+)\s*(часов?|часа|ч)', "hours"),
-            (r'(\d+)\s*(минут?|мин)', "minutes"),
-            (r'(\d+)\s*(секунд?|сек)', "seconds"),
-            # English patterns
-            (r'(\d+)\s*hours?', "hours"),
-            (r'(\d+)\s*minutes?', "minutes"),
-            (r'(\d+)\s*seconds?', "seconds"),
-            (r'(\d+)\s*hrs?', "hours"),
-            (r'(\d+)\s*mins?', "minutes"),
-            (r'(\d+)\s*secs?', "seconds")
-        ]
-        
-        for pattern, unit in duration_patterns:
-            match = re.search(pattern, temporal_lower)
-            if match:
-                value = int(match.group(1))
-                return EntityResolutionResult(
-                    resolved_value={"value": value, "unit": unit},
-                    original_value=temporal_reference,
-                    confidence=0.9,
-                    resolution_type="exact",
-                    metadata={"match_type": "duration_pattern", "unit": unit}
-                )
+        # Duration (value + time unit) via the shared bilingual parser — the one place time units live.
+        parsed = parse_duration(temporal_lower)
+        if parsed:
+            value, unit = parsed
+            return EntityResolutionResult(
+                resolved_value={"value": value, "unit": unit},
+                original_value=temporal_reference,
+                confidence=0.9,
+                resolution_type="exact",
+                metadata={"match_type": "duration_pattern", "unit": unit}
+            )
         
         # Relative time references (Russian + English)
         relative_times = {
@@ -524,7 +510,9 @@ class QuantityEntityResolver:
         if number_pattern:
             number = float(number_pattern.group(1))
             
-            # Unit inference (Russian + English)
+            # Unit inference (Russian + English). Non-time units (percent/degrees) stay here as the
+            # nucleus of the future general unit-of-measurement layer; the TIME units reuse the ONE
+            # shared surface table (no duplicate sec/min/hour lists).
             unit_patterns = {
                 "percent": [
                     # Russian
@@ -538,24 +526,7 @@ class QuantityEntityResolver:
                     # English
                     "degrees", "degree"
                 ],
-                "minutes": [
-                    # Russian
-                    "минут", "минута", "минуты", "мин",
-                    # English
-                    "minutes", "minute", "mins", "min"
-                ],
-                "seconds": [
-                    # Russian
-                    "секунд", "секунда", "секунды", "сек",
-                    # English
-                    "seconds", "second", "secs", "sec"
-                ],
-                "hours": [
-                    # Russian
-                    "часов", "час", "часа", "ч",
-                    # English
-                    "hours", "hour", "hrs", "hr"
-                ],
+                **{u: list(surfaces) for u, (_mult, surfaces) in TIME_UNITS.items()},
                 "times": [
                     # Russian
                     "раз", "раза", "x",

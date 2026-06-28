@@ -18,7 +18,6 @@ class ParameterType(str, Enum):
     STRING = "string"
     INTEGER = "integer"
     FLOAT = "float"
-    DURATION = "duration"
     DATETIME = "datetime"
     BOOLEAN = "boolean"
     CHOICE = "choice"

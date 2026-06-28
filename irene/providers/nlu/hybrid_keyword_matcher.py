@@ -1121,20 +1121,6 @@ class HybridKeywordMatcherProvider(NLUProvider):
                     best_choice = canonical
             return best_choice
             
-        elif param_spec.type == ParameterType.DURATION:
-            # Extract duration expressions
-            duration_patterns = [
-                r'(\d+)\s*(минут|мин|minutes?)',
-                r'(\d+)\s*(секунд|сек|seconds?)',
-                r'(\d+)\s*(часов|час|hours?)'
-            ]
-            for pattern in duration_patterns:
-                match = re.search(pattern, text_lower)
-                if match:
-                    value, unit = match.groups()
-                    return {'value': int(value), 'unit': unit}
-            return None
-            
         elif param_spec.type == ParameterType.STRING:
             # For string parameters, try to extract quoted strings or fallback to aliases
             quoted = re.search(r'"([^"]*)"', text_lower)

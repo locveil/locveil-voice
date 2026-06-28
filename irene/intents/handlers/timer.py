@@ -18,6 +18,7 @@ from ...core.donations import ParameterExtractionError
 from ..models import Intent, IntentResult
 from ..context_models import UnifiedConversationContext
 from ...core.trace_context import trace_event  # ARCH-19 (D-5): opt-in, no-op when no trace is active
+from ...utils.units import parse_duration  # shared bilingual time-unit parsing (the one place)
 
 logger = logging.getLogger(__name__)
 
@@ -136,12 +137,16 @@ class TimerIntentHandler(IntentHandler):
         unit = self.get_param(intent, 'unit', 'minutes')
         message = self.get_param(intent, 'message', self._get_template("timer_completed_default", language))
 
-        # If no duration in entities, try to parse from text
+        # The utterance's own value+unit is authoritative: the shared bilingual duration parser reads
+        # "one second"/«одну секунду» reliably, where the per-param CHOICE unit extraction mis-defaulted
+        # the unit ("one second" → "1 minute"). Fall back to the structured NLU duration+unit only when
+        # the text carries no duration at all (e.g. a param-driven invocation).
+        parsed = parse_duration(intent.raw_text, language)
+        if parsed:
+            duration, unit = parsed
+            message = self._extract_timer_message(intent.raw_text, language)
+
         if not duration:
-            duration, unit, message = self._parse_timer_from_text(intent.raw_text)
-        
-        if not duration:
-            language = context.language
             error_text = self._get_template("timer_duration_parse_error", language)
             return IntentResult(
                 text=error_text,
@@ -316,47 +321,6 @@ class TimerIntentHandler(IntentHandler):
         return IntentResult(text=response, should_speak=True,
                             metadata={"timer_id": timer_id, "remaining_seconds": max(0, remaining)})
     
-    def _parse_timer_from_text(self, text: str) -> tuple[Optional[int], str, str]:
-        """Parse timer parameters from natural language text"""
-        from ...utils.text_processing import normalize_numbers_to_digits
-        from ...utils.text_script import detect_language_by_script
-
-        text_lower = text.lower()
-        # BUG-1: convert spelled-out numbers to digits first (десять/ten → 10) so the digit patterns
-        # below catch natural speech, not only «10 минут». Language by script (Cyrillic → ru, else en).
-        lang = detect_language_by_script(text_lower)
-        text_lower = normalize_numbers_to_digits(text_lower, lang)
-
-        # Duration patterns — bilingual units (Russian + English); digits after normalization above.
-        units = r"секунд|сек|seconds?|минут|мин|minutes?|час|часа|часов|hours?"
-        patterns = [
-            rf"(\d+)\s*({units})",
-            rf"(?:на|через|for|in)\s+(\d+)\s*({units})",
-        ]
-
-        for pattern in patterns:
-            match = re.search(pattern, text_lower)
-            if match:
-                duration = int(match.group(1))
-                unit_text = match.group(2)
-
-                # Map Russian + English unit words to standard units
-                if unit_text in ['секунд', 'сек', 'second', 'seconds']:
-                    unit = 'seconds'
-                elif unit_text in ['минут', 'мин', 'minute', 'minutes']:
-                    unit = 'minutes'
-                elif unit_text in ['час', 'часа', 'часов', 'hour', 'hours']:
-                    unit = 'hours'
-                else:
-                    unit = 'seconds'
-                
-                # Try to extract message
-                message = self._extract_timer_message(text, lang)
-
-                return duration, unit, message
-
-        return None, 'seconds', self._get_template("timer_completed_default", lang)
-
     def _extract_timer_message(self, text: str, language: str = "ru") -> str:
         """Extract custom message from timer text"""
         # TODO: These message patterns are now migrated to timer.json message parameter extraction_patterns

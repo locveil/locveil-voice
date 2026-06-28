@@ -1638,6 +1638,22 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       console-LLM fallback / `fallback_providers` — left as-is; not in scope here.)
 
 ### Bugs (BUG)
+- [x] **BUG-6** [PEX/UNITS] (P3) `[deferred]` — **DONE 2026-06-28.** Timer-unit fix + consolidation + dead-stub removal
+      (the "unit story", scoped time-only per user). **Bug:** "set a timer for one second" → "1 min" — the en timer
+      `unit` param has no `choice_surfaces` (ru does), so the weak per-param CHOICE extraction couldn't match "second"
+      and fell back to the `default_value: "minutes"`, and since `duration` *was* extracted the bilingual text fallback
+      that parses it correctly was bypassed. **Fix at altitude:** the utterance's own value+unit is now authoritative —
+      one shared bilingual parser `irene/utils/units.py` (`TIME_UNITS` table + `parse_duration`/`duration_to_seconds`,
+      spelled→digits first), and the timer trusts it over the per-param CHOICE. **Consolidation:** the 3 unconnected
+      time-unit parsers normalized to that one place — `timer._parse_timer_from_text` (deleted), `entity_resolver`
+      `TemporalEntityResolver` (now calls `parse_duration`) and `QuantityEntityResolver` (time entries reuse `TIME_UNITS`;
+      percent/degrees kept as the future-layer nucleus). **Dead-stub removal:** `ParameterType.DURATION` deleted (declared
+      but never coerced, unused by the timer) — enum + `hybrid_keyword_matcher` branch + `donation_contract_v1.1.json`
+      schema enum + config-ui (`ContractEditor` + regenerated `donation-contract.gen.ts`). Verified: "one second" → "1
+      sec", ru/en 10-min + "2 hours" correct. Gates: suite 1103 passed (+ `test_units`; 2 tests redirected/removed),
+      pyright 0, import-linter 9/9, 12/12 profiles, config-ui check+build green. General units-of-measurement layer
+      (percent/°C) **filed onto QUAL-35** to design *with* smart-home (user: done together); ru «одну/одна» normalize gap
+      noted there too.
 - [x] **BUG-4** [NLU/I18N/DONATION] (P3) `[deferred]` — **DONE 2026-06-28.** Three related per-language defects, all
       "state not threaded to where messages render" (deeper research + the right altitude, per request):
       **(1) Donation `default_value` not language-resolved** — assembly (`_assemble_v11_donation`) flattened it to the

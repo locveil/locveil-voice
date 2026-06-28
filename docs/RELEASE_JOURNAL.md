@@ -14,6 +14,16 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-28
+- **BUG-6 DONE — the "unit story": timer-unit fix + consolidate 3 parsers to one + remove the dead DURATION stub.**
+  "set a timer for one second" → "1 min" because the en `unit` param lacked `choice_surfaces` (ru had them) so the weak
+  CHOICE extraction defaulted to "minutes", and the correct text fallback was bypassed once `duration` was extracted.
+  Right altitude: one shared bilingual parser `irene/utils/units.py` (`TIME_UNITS` + `parse_duration`), made
+  authoritative in the timer. Consolidated the 3 unconnected time-unit parsers (timer, `TemporalEntityResolver`,
+  `QuantityEntityResolver`) to it. Removed `ParameterType.DURATION` (declared, never coerced, unused) across enum +
+  hybrid matcher + contract JSON schema + config-ui (incl. regenerated gen types). Verified "one second" → "1 sec".
+  Gates: suite 1103 passed, pyright 0, import-linter 9/9, 12/12 profiles, config-ui green. The general units layer
+  (percent/°C) is filed onto **QUAL-35** to be designed *with* smart-home (units come from the bridge device catalog);
+  ru «одну/одна» normalize gap noted there. Scoped time-only for now, per user.
 - **BUG-4 DONE — per-language defaults + fire-and-forget completion language (all 3 sub-issues, right altitude).**
   Three related defects, one theme (per-language state not threaded to where messages render): (1) donation
   `default_value` flattened to ru → now assembled per-language (`ParameterSpec.default_value_by_language`), threaded via

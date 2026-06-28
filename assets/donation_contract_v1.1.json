@@ -46,7 +46,7 @@
       "additionalProperties": false,
       "properties": {
         "name": { "type": "string", "minLength": 1 },
-        "type": { "enum": ["string", "integer", "float", "duration", "datetime", "boolean", "choice", "entity"] },
+        "type": { "enum": ["string", "integer", "float", "datetime", "boolean", "choice", "entity"] },
         "required": { "type": "boolean" },
         "choices": { "type": ["array", "null"], "items": { "type": "string" },
           "description": "Canonical (language-neutral) choice tokens; per-language spoken forms live in <lang>.json choice_surfaces." },

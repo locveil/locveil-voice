@@ -37,7 +37,7 @@ export interface Method {
 }
 export interface Param {
   name: string;
-  type: "string" | "integer" | "float" | "duration" | "datetime" | "boolean" | "choice" | "entity";
+  type: "string" | "integer" | "float" | "datetime" | "boolean" | "choice" | "entity";
   required?: boolean;
   /**
    * Canonical (language-neutral) choice tokens; per-language spoken forms live in <lang>.json choice_surfaces.
