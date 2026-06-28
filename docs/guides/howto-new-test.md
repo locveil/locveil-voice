@@ -17,6 +17,7 @@ axes, conventions, gotchas); this guide is the recipe for adding a case.
 | a command-line tool's output / exit code | **CLI contract** | `cli.promptfooconfig.yaml` | nothing (fastest) |
 | that speech is transcribed and understood | **WS system** | `ws.promptfooconfig.yaml` | a running Irene + an audio fixture |
 | that the spoken reply is *good* (natural, polite) | **WS UX** (judged) | `ws.promptfooconfig.yaml` | the above + `DEEPSEEK_API_KEY` |
+| that a known interaction *still behaves the same* | **Golden-trace** | `trace.promptfooconfig.yaml` | the models (offline; no SUT) |
 
 ## A CLI-contract case
 
@@ -109,6 +110,28 @@ make record FIXTURE=timer_10min   # or `make record` to record every missing fix
 ```
 
 Device setup, the keep/redo loop and the TTS alternative are in [`eval/fixtures/README.md`](../../eval/fixtures/README.md).
+
+## A golden-trace regression case
+
+Record a known-good interaction once; replay it offline forever to catch behavior drift. A recorded
+trace carries its input and an **oracle** (the reply, success, and actions it produced); replaying re-runs
+the input through the *current* pipeline and diffs against that oracle — exit `0` means it still matches.
+No server, no mic, no judge: a case is just a console invocation whose exit code is the verdict.
+
+```yaml
+- description: golden — «поставь таймер на 10 минут» still sets the timer
+  metadata: { kind: trace-system }
+  vars:
+    cmd: "irene-replay-trace -t eval/traces/timer_set_10min.json --config configs/embedded-armv7.toml"
+  assert:
+    - { type: javascript, value: "JSON.parse(output).exit_code === 0" }
+```
+
+Run with **`make replay`** (needs the models present; offline). Use `trace-system` only for deterministic
+paths (ASR + cheap NLU + rule-handlers); LLM replies vary run-to-run, so mark those `trace-ux` and judge
+the reply instead. Recording a golden and the determinism tiering are covered in
+[`eval/traces/README.md`](../../eval/traces/README.md). The oracle drifts *on purpose* when you change
+behavior — re-record and review the JSON diff.
 
 ## Keep cases endpoint-agnostic
 

@@ -13,7 +13,23 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
-### 2026-06-27
+### 2026-06-28
+- **TEST-12 DONE — config overrides (`--set`) + offline golden-trace replay surface; BUG-2 fixed, BUG-1 filed.**
+  Trying to record a golden trace exposed that you couldn't override config settings without hand-editing files.
+  Fixed: **`--set DOTTED.KEY=VALUE`** on the base runner (`config/manager.py apply_dotted_overrides`, applied
+  pre-validation so Pydantic coerces+validates; strict — an explicit `--set` never silently falls back; 8 tests).
+  Built the **golden-trace surface**: `eval/trace.promptfooconfig.yaml` drives `irene-replay-trace` through the
+  existing `cli_provider` (assert `exit_code === 0`), `make replay`/`replay-judge`, a committed seed golden
+  (`timer_set_10min.json`) that replays green under the WB7 config, `eval/traces/README.md`, the 4th surface in
+  `howto-new-test.md`. Also made `diff_output` normalize volatile timestamps (a timer's `started_at`) so deterministic
+  handlers stay green goldens. Two bugs surfaced and a new **`BUG` workstream** filed:
+  - **BUG-2 (fixed)** — stale `TTS requires Audio` check in `voice_assistant.py` (a drifted duplicate of the canonical
+    `CoreConfig` validator, missing the `audio_playback_enabled` condition) rejected the valid WB7 satellite config in
+    any runner that didn't force audio on. It was masked by `webapi_runner` hard-setting `components.audio`. Removed the
+    duplicate; suite 1074 passed; the WB7 golden replays green with no workaround.
+  - **BUG-1 (open)** — spelled-out Russian numerals don't set a timer («десять минут» → no timer; «10 минут» works);
+    the golden uses the digit form pending the fix.
+  (Reverted the reactive `--set` I'd added to the replay tool — BUG-2's fix made the local-replay workaround unneeded.)
 - **TEST-11 DONE (design) — trace-driven system testing → `docs/design/trace_system_testing.md`.** Uses the shipped
   trace record/replay (ARCH-19) two ways: an **offline deterministic regression surface** (committed golden traces
   replayed via `irene-replay-trace --local` through the existing `cli_provider`, asserting `exit_code === 0`; tiered

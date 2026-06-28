@@ -1637,7 +1637,34 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       config-ui has no typed temperature field (free-form params dict) → nothing to sync, openapi unchanged. (QUAL-15/16
       console-LLM fallback / `fallback_providers` — left as-is; not in scope here.)
 
+### Bugs (BUG)
+- [x] **BUG-2** [WORKFLOW] (P2) `[release]` — **DONE 2026-06-28.** Stale `TTS requires Audio` validation rejected
+      valid satellite configs. `workflows/voice_assistant.py` had a duplicate of the TTS↔Audio check that
+      **unconditionally** required the Audio component when TTS was present — a stale copy that never got the
+      `system.audio_playback_enabled` condition the **canonical** `CoreConfig` validator already has
+      (`config/models.py`: "satellite delivers TTS over the output seam"). So `embedded-armv7.toml` (`audio = false`,
+      TTS rides the ESP32 output seam) failed to build its workflow in any runner that didn't force audio on. It was
+      **masked** because `webapi_runner._modify_config_for_runner` hard-sets `components.audio = args.enable_tts` (True
+      by default) — so `irene-webapi` silently ran with audio enabled, while `irene-replay-trace` honored the config and
+      hit the stale check. **Fix:** removed the duplicate workflow check; the config-model validator is the single
+      source of truth. Verified: full suite 1074 passed (no test relied on it), and the WB7-config golden now replays
+      green with no workaround. Surfaced while recording a golden trace (TEST-12). _Noted but not changed: the webapi
+      runner overriding component config is its own smell — relevant to the `--set` work, worth a future look._
+
 ### Tests (TEST)
+- [x] **TEST-12** [EVAL] (P2) `[deferred]` — **DONE 2026-06-28.** Offline golden-trace replay surface (S1 of
+      `trace_system_testing.md`) **+ the config-override enabler the user asked for.** (1) **`--set DOTTED.KEY=VALUE`**
+      config overrides — `apply_dotted_overrides` in `config/manager.py` (JSON-typed coercion, applied pre-validation so
+      Pydantic coerces+validates, strict: an explicit `--set` never silently falls back to defaults), wired into the
+      base runner (all `irene-*` runners); 8 unit tests. No more hand-editing temp config files to tweak a setting.
+      (2) **Replay surface:** `eval/trace.promptfooconfig.yaml` drives `irene-replay-trace -t … --config … --local`
+      through the existing `cli_provider` (assert `exit_code === 0`) — no new `eval-commons` code; `make replay` /
+      `replay-judge`; committed seed golden `eval/traces/timer_set_10min.json` (text trace, ~12 KB, portable) that
+      replays **green** under the pure WB7 config; `eval/traces/README.md` + the 4th surface in `howto-new-test.md`.
+      (3) **`diff_output` now normalizes volatile timestamps** (`_strip_volatile`) so a fire-and-forget action's
+      `started_at` doesn't break an otherwise-deterministic golden (+ tests). Recording surfaced **BUG-1** (spelled-ru
+      numerals; golden uses the digit form) and **BUG-2** (stale TTS↔Audio check — fixed here). The natural-speech timer
+      golden + the `trace-ux` LLM tier await BUG-1.
 - [x] **TEST-11** [EVAL] (P2) `[deferred]` — **DONE 2026-06-27 (design).** Design for trace-driven system testing →
       `docs/design/trace_system_testing.md`. Uses the shipped ARCH-19 trace record/replay as (1) an **offline,
       deterministic, CI-able regression surface** — committed golden traces under `eval/traces/`, replayed via

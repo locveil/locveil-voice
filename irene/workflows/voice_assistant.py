@@ -150,13 +150,14 @@ class UnifiedVoiceAssistantWorkflow(Workflow):
             if comp_name not in self.components:
                 raise ConfigValidationError(f"Required component '{comp_name}' not available")
         
-        # TTS-Audio dependency validation (Phase 2 implementation)
-        if self.components.get('tts') and not self.components.get('audio'):
-            raise ConfigValidationError(
-                "TTS component requires Audio component. "
-                "Either disable TTS or enable Audio component."
-            )
-        
+        # TTS↔Audio consistency is validated authoritatively at config-load time by the CoreConfig
+        # validator (config/models.py), which correctly allows audio-less TTS for satellites
+        # (system.audio_playback_enabled = false) whose reply rides the OUTPUT SEAM rather than a local
+        # speaker. A second, stricter copy used to live here and unconditionally required the Audio
+        # component — it diverged from the canonical rule and wrongly rejected valid satellite configs
+        # (e.g. embedded-armv7) in any runner that didn't force-enable audio. Removed; the config model
+        # is the single source of truth.
+
         # Get component references (some are optional for different entry points)
         self.voice_trigger = self.components.get('voice_trigger')  # Optional - for voice entry only
         self.asr = self.components.get('asr')  # Optional - for audio input only  

@@ -1,0 +1,480 @@
+{
+  "trace_version": 1,
+  "request_id": "d30c7127-28f1-425b-8733-9526c2eae1aa",
+  "saved_at": "2026-06-28T06:57:58.169332+00:00",
+  "replay": {
+    "input": {
+      "kind": "text",
+      "text": "поставь таймер на 10 минут"
+    },
+    "request": {
+      "source": "api",
+      "session_id": "webapi_b6eee0da_session",
+      "wants_audio": false,
+      "skip_wake_word": true,
+      "skip_asr": true,
+      "room": null,
+      "client_id": null
+    },
+    "canonical": null,
+    "seed_context": {
+      "session_id": "webapi_b6eee0da_session",
+      "client_id": null,
+      "room_name": null,
+      "conversation_history": [],
+      "client_metadata": {
+        "source": "api",
+        "room_alias": null,
+        "client_id": null
+      },
+      "available_devices": [],
+      "language": "ru",
+      "supported_languages": [
+        "ru",
+        "en"
+      ],
+      "handler_contexts": {},
+      "conversation_state": "idle",
+      "state_context": {},
+      "state_changed_at": 1782629878.1648471,
+      "pending_clarification": null,
+      "created_at": 1782629878.1648476,
+      "last_activity": 1782629878.1649618,
+      "user_id": null,
+      "current_intent_context": null,
+      "last_intent_timestamp": null,
+      "preferred_output_device": null,
+      "client_capabilities": {},
+      "timezone": null,
+      "user_preferences": {},
+      "notification_preferences": {
+        "action_completion": {
+          "enabled": true,
+          "long_running_threshold": 30.0,
+          "delivery_methods": [
+            "tts",
+            "log"
+          ],
+          "priority_filter": "important"
+        },
+        "action_failure": {
+          "enabled": true,
+          "critical_only": true,
+          "delivery_methods": [
+            "tts",
+            "log"
+          ],
+          "retry_notifications": false
+        },
+        "system_status": {
+          "enabled": true,
+          "delivery_methods": [
+            "log"
+          ],
+          "include_metrics": false
+        }
+      },
+      "timestamp": 1782629878.1648505,
+      "request_source": "api",
+      "metadata": {},
+      "last_updated": 1782629878.1648512,
+      "max_history_turns": 10,
+      "disambiguation_context": null
+    },
+    "config_subset": null,
+    "config_digest": null,
+    "provider_models": null
+  },
+  "execution": {
+    "pipeline_stages": [
+      {
+        "stage": "text_processing",
+        "input": "поставь таймер на 10 минут",
+        "output": "поставь таймер на десять минут",
+        "metadata": {
+          "component_name": "TextProcessorComponent",
+          "stage": "asr_output",
+          "normalizers_applied": [
+            "numbers",
+            "prepare"
+          ],
+          "session_id": "webapi_b6eee0da_session"
+        },
+        "processing_time_ms": 0.9601116180419922,
+        "timestamp": 1782629878.1663096
+      },
+      {
+        "stage": "nlu_cascade",
+        "input": "поставь таймер на десять минут",
+        "output": {
+          "intent_name": "timer.set",
+          "domain": "timer",
+          "action": "set",
+          "confidence": 0.7340000000000001,
+          "entities": {
+            "_provider_metadata": {
+              "method": "exact_pattern",
+              "confidence": 0.7340000000000001,
+              "provider": "hybrid_keyword_matcher",
+              "matched_pattern": "\\bпоставь\\ таймер\\b"
+            },
+            "unit": "minutes",
+            "message": "Таймер завершён!",
+            "_recognition_provider": "hybrid_keyword_matcher",
+            "_cascade_attempts": 1
+          }
+        },
+        "metadata": {
+          "cascade_attempts": [
+            {
+              "final_result": {
+                "intent_name": "timer.set",
+                "domain": "timer",
+                "action": "set",
+                "confidence": 0.7340000000000001,
+                "entities": {
+                  "_provider_metadata": {
+                    "method": "exact_pattern",
+                    "confidence": 0.7340000000000001,
+                    "provider": "hybrid_keyword_matcher",
+                    "matched_pattern": "\\bпоставь\\ таймер\\b"
+                  },
+                  "unit": "minutes",
+                  "message": "Таймер завершён!",
+                  "_recognition_provider": "hybrid_keyword_matcher",
+                  "_cascade_attempts": 1
+                }
+              },
+              "success": true,
+              "confidence": 0.7340000000000001
+            }
+          ],
+          "providers_available": [
+            "hybrid_keyword_matcher",
+            "llm"
+          ],
+          "confidence_threshold": 0.7,
+          "context_aware_processing": true,
+          "component_name": "NLUComponent",
+          "session_id": "webapi_b6eee0da_session"
+        },
+        "processing_time_ms": 1.6803741455078125,
+        "timestamp": 1782629878.168141
+      },
+      {
+        "stage": "intent_execution",
+        "input": {
+          "name": "timer.set",
+          "domain": "timer",
+          "action": "set",
+          "confidence": 0.7340000000000001,
+          "entities": {
+            "_provider_metadata": {
+              "method": "exact_pattern",
+              "confidence": 0.7340000000000001,
+              "provider": "hybrid_keyword_matcher",
+              "matched_pattern": "\\bпоставь\\ таймер\\b"
+            },
+            "unit": "minutes",
+            "message": "Таймер завершён!",
+            "_recognition_provider": "hybrid_keyword_matcher",
+            "_cascade_attempts": 1
+          }
+        },
+        "output": {
+          "success": true,
+          "text": "Таймер установлен на 10 мин. Сообщение: Таймер завершён!",
+          "confidence": 1.0,
+          "should_speak": true,
+          "action_metadata": {
+            "active_actions": {
+              "timer_1": {
+                "handler": "TimerIntentHandler",
+                "action": "timer_1",
+                "domain": "timers",
+                "physical_id": "webapi_b6eee0da_session",
+                "started_at": 1782629878.1687937,
+                "status": "running",
+                "timeout": 605.0
+              }
+            }
+          }
+        },
+        "metadata": {
+          "input_intent": {
+            "name": "timer.set",
+            "domain": "timer",
+            "action": "set",
+            "confidence": 0.7340000000000001,
+            "entities": {
+              "_provider_metadata": {
+                "method": "exact_pattern",
+                "confidence": 0.7340000000000001,
+                "provider": "hybrid_keyword_matcher",
+                "matched_pattern": "\\bпоставь\\ таймер\\b"
+              },
+              "unit": "minutes",
+              "message": "Таймер завершён!",
+              "_recognition_provider": "hybrid_keyword_matcher",
+              "_cascade_attempts": 1
+            }
+          },
+          "disambiguation_process": null,
+          "handler_resolution": {},
+          "handler_execution": {
+            "success": true,
+            "text": "Таймер установлен на 10 мин. Сообщение: Таймер завершён!",
+            "confidence": 1.0
+          },
+          "component_name": "IntentOrchestrator"
+        },
+        "processing_time_ms": 0.7832050323486328,
+        "timestamp": 1782629878.169107
+      }
+    ],
+    "context_evolution": {
+      "before": {
+        "active_actions": {},
+        "conversation_history_length": 0,
+        "recent_intents": [],
+        "session_id": "webapi_b6eee0da_session",
+        "user_id": null,
+        "client_id": null,
+        "room_name": null,
+        "handler_contexts": {},
+        "recent_actions_count": 0,
+        "failed_actions_count": 0,
+        "action_error_count": {},
+        "available_devices_count": 0,
+        "device_types": [],
+        "language": "ru",
+        "memory_usage": {
+          "total_mb": 0.00010013580322265625,
+          "total_bytes": 105,
+          "breakdown_summary": {
+            "conversation_history": 0,
+            "handler_contexts": 0,
+            "active_actions": 0,
+            "recent_actions": 0,
+            "failed_actions": 0,
+            "client_metadata": 105,
+            "available_devices": 0
+          }
+        },
+        "created_at": 1782629878.1648476,
+        "last_activity": 1782629878.1649618,
+        "snapshot_timestamp": 1782629878.1652074
+      },
+      "after": {
+        "active_actions": {
+          "timer_1": {
+            "handler": "TimerIntentHandler",
+            "timeout": 605.0,
+            "max_retries": 0,
+            "retry_count": 0,
+            "action": "timer_1",
+            "domain": "timers",
+            "started_at": 1782629878.1687937,
+            "expected_end": 1782630483.1687942,
+            "status": "running",
+            "session_id": "webapi_b6eee0da_session",
+            "room_id": null
+          }
+        },
+        "conversation_history_length": 1,
+        "recent_intents": [
+          {
+            "timestamp": 1782629878.1691484,
+            "user_text": "поставь таймер на 10 минут",
+            "response": "Таймер установлен на 10 мин. Сообщение: Таймер завершён!",
+            "intent": "timer.set",
+            "client_id": null
+          }
+        ],
+        "session_id": "webapi_b6eee0da_session",
+        "user_id": null,
+        "client_id": null,
+        "room_name": null,
+        "handler_contexts": {},
+        "recent_actions_count": 0,
+        "failed_actions_count": 0,
+        "action_error_count": {},
+        "available_devices_count": 0,
+        "device_types": [],
+        "language": "ru",
+        "memory_usage": {
+          "total_mb": 0.0008440017700195312,
+          "total_bytes": 885,
+          "breakdown_summary": {
+            "conversation_history": 454,
+            "handler_contexts": 0,
+            "active_actions": 326,
+            "recent_actions": 0,
+            "failed_actions": 0,
+            "client_metadata": 105,
+            "available_devices": 0
+          }
+        },
+        "created_at": 1782629878.1648476,
+        "last_activity": 1782629878.1649618,
+        "snapshot_timestamp": 1782629878.1692126
+      },
+      "changes": {
+        "active_actions_added": [
+          {
+            "domain": "timer_1",
+            "action": {
+              "handler": "TimerIntentHandler",
+              "timeout": 605.0,
+              "max_retries": 0,
+              "retry_count": 0,
+              "action": "timer_1",
+              "domain": "timers",
+              "started_at": 1782629878.1687937,
+              "expected_end": 1782630483.1687942,
+              "status": "running",
+              "session_id": "webapi_b6eee0da_session",
+              "room_id": null
+            }
+          }
+        ],
+        "active_actions_removed": [],
+        "conversation_history_entries_added": 1,
+        "total_active_actions_before": 0,
+        "total_active_actions_after": 1,
+        "room_context_changed": false,
+        "room_id_before": null,
+        "room_id_after": null,
+        "room_name_before": null,
+        "room_name_after": null,
+        "language_changed": false,
+        "language_before": "ru",
+        "language_after": "ru",
+        "handler_contexts_modified": [],
+        "handler_contexts_count_before": 0,
+        "handler_contexts_count_after": 0,
+        "recent_actions_added": 0,
+        "failed_actions_added": 0,
+        "action_error_count_before": 0,
+        "action_error_count_after": 0,
+        "devices_changed": false,
+        "device_count_before": 0,
+        "device_count_after": 0,
+        "device_types_added": [],
+        "device_types_removed": [],
+        "memory_usage_delta_mb": 0.001,
+        "memory_usage_before_mb": 0.00010013580322265625,
+        "memory_usage_after_mb": 0.0008440017700195312,
+        "activity_time_delta_seconds": 0.0,
+        "execution_duration_seconds": 0.004,
+        "summary": "Added 1 active actions; Added 1 conversation entries"
+      }
+    },
+    "performance_metrics": {
+      "total_processing_time_ms": 3.4236907958984375,
+      "stage_breakdown": {
+        "text_processing": 0.9601116180419922,
+        "nlu_cascade": 1.6803741455078125,
+        "intent_execution": 0.7832050323486328
+      },
+      "total_stages": 3,
+      "execution_start_time": 1782629878.164805,
+      "trace_overhead_estimate_ms": 0.30000000000000004
+    }
+  },
+  "logs": [
+    {
+      "t_ms": 0,
+      "level": "INFO",
+      "logger": "irene.intents.context",
+      "stage": null,
+      "message": "Created new conversation context for session: webapi_b6eee0da_session",
+      "exc_text": null
+    },
+    {
+      "t_ms": 0,
+      "level": "INFO",
+      "logger": "irene.core.client_registry",
+      "stage": null,
+      "message": "Loaded 2 client registrations from cache/client_registry.json",
+      "exc_text": null
+    },
+    {
+      "t_ms": 2,
+      "level": "INFO",
+      "logger": "irene.components.nlu_component",
+      "stage": null,
+      "message": "Intent recognized by hybrid_keyword_matcher: timer.set (confidence: 0.73, threshold: 0.70)",
+      "exc_text": null
+    },
+    {
+      "t_ms": 3,
+      "level": "INFO",
+      "logger": "irene.components.nlu_component.ContextAwareNLUProcessor",
+      "stage": null,
+      "message": "Context-enhanced intent: timer.set with 5 entities",
+      "exc_text": null
+    },
+    {
+      "t_ms": 3,
+      "level": "INFO",
+      "logger": "irene.intents.orchestrator",
+      "stage": null,
+      "message": "Executing intent 'timer.set' with handler TimerIntentHandler",
+      "exc_text": null
+    },
+    {
+      "t_ms": 4,
+      "level": "INFO",
+      "logger": "irene.intents.handlers.base.TimerIntentHandler",
+      "stage": null,
+      "message": "Started fire-and-forget action: timer_1 (domain: timers, scope: webapi_b6eee0da_session)",
+      "exc_text": null
+    },
+    {
+      "t_ms": 4,
+      "level": "INFO",
+      "logger": "irene.intents.orchestrator",
+      "stage": null,
+      "message": "Intent executed successfully: timer.set",
+      "exc_text": null
+    }
+  ],
+  "handler_events": [
+    {
+      "t_ms": 4,
+      "handler": "TimerIntentHandler",
+      "label": "action_launched",
+      "data": {
+        "domain": "timers",
+        "action": "timer_1"
+      }
+    },
+    {
+      "t_ms": 4,
+      "handler": "timer",
+      "label": "timer_set",
+      "data": {
+        "duration_s": 600,
+        "timer_id": "timer_1"
+      }
+    }
+  ],
+  "recorded_output": {
+    "text": "Таймер установлен на 10 мин. Сообщение: Таймер завершён!",
+    "success": true,
+    "actions": {
+      "active_actions": {
+        "timer_1": {
+          "handler": "TimerIntentHandler",
+          "action": "timer_1",
+          "domain": "timers",
+          "physical_id": "webapi_b6eee0da_session",
+          "started_at": 1782629878.1687937,
+          "status": "running",
+          "timeout": 605.0
+        }
+      }
+    }
+  }
+}

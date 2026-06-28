@@ -36,6 +36,21 @@ logger = logging.getLogger("irene.replay_trace")
 # Pure helpers (unit-tested without standing up a core)
 # --------------------------------------------------------------------------------------------
 
+# Action metadata embeds wall-clock fields (e.g. a fire-and-forget action's `started_at`) that move
+# on every run; they must be normalized out before diffing, or no command-handler trace could ever be
+# a green regression golden. Compare structure/identity, not timestamps.
+_VOLATILE_KEYS = frozenset({"started_at", "created_at", "ended_at", "saved_at", "timestamp", "t_ms"})
+
+
+def _strip_volatile(obj: Any) -> Any:
+    """Recursively drop volatile timestamp keys so the diff compares stable structure only."""
+    if isinstance(obj, dict):
+        return {k: _strip_volatile(v) for k, v in obj.items() if k not in _VOLATILE_KEYS}
+    if isinstance(obj, list):
+        return [_strip_volatile(v) for v in obj]
+    return obj
+
+
 def diff_output(result: Any, recorded: Dict[str, Any]) -> Dict[str, Any]:
     """Diff a fresh IntentResult against the recorded_output oracle (text/success/actions)."""
     fresh = {
@@ -54,7 +69,7 @@ def diff_output(result: Any, recorded: Dict[str, Any]) -> Dict[str, Any]:
         "success": {"recorded": rec["success"], "replayed": fresh["success"],
                     "match": rec["success"] == fresh["success"]},
         "actions": {"recorded": rec["actions"], "replayed": fresh["actions"],
-                    "match": rec["actions"] == fresh["actions"]},
+                    "match": _strip_volatile(rec["actions"]) == _strip_volatile(fresh["actions"])},
     }
     return {"match": all(f["match"] for f in fields.values()), "fields": fields}
 

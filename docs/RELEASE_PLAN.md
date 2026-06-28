@@ -278,6 +278,18 @@ _Apply to every remediation task below (from the 4 review docs + QUAL-25/26). So
       + normalized metadata) and route all five through it; retires F1/F3/F4 + the rest of F2. **Renames response fields →
       `config-ui-stays-functional` co-change** (`apiClient.ts`, `src/types/*`). Filed 2026-06-27 from the review.
 
+### Bugs (BUG)
+_Discrete functional defects (distinct from QUAL refactors/quality work). Surfaced from any source; filed before fixing._
+- [ ] **BUG-1** [NLU/TIMER] (P2) `[release]` — **Spelled-out Russian numerals don't set a timer.** «поставь таймер на
+      **десять** минут» is recognized as `timer.set` (confidence 1.0) but duration extraction fails — the reply is the
+      clarification *"Не удалось определить время для таймера…"*, no timer set (yet `success: true`, which also exposes
+      the eval intent assertion as too weak). The **digit** form «на 10 минут» works ("Таймер установлен на 10 мин").
+      So natural speech / ASR output (which yields «десять», not «10») doesn't reach the timer. Repro:
+      `irene-webapi --config configs/embedded-armv7.toml` → POST `/execute/command {"command":"поставь таймер на десять
+      минут"}`. Likely the T1 parameter extraction (QUAL-11) / `ovos-number-parser` (ASSET-3) path not converting
+      spelled ru numerals. Surfaced while recording a golden trace (TEST-12); blocks a natural-speech timer golden + the
+      WS UX timer case.
+
 ### Tests (TEST)
 > **Strategy (decided 2026-06-01): do NOT keep repairing the existing suite.** Most tests were written against
 > pre-refactor code and will be invalidated by the ARCH refactors (ARCH-1..5) and the code reviews (QUAL-8/10/12/14).
@@ -288,12 +300,6 @@ _Apply to every remediation task below (from the 4 review docs + QUAL-25/26). So
 > architecture + code reviews land** (gated). TEST-3/4/5/6 are coverage goals folded into that rewrite.
 
 _Trace-driven system testing (design `docs/design/trace_system_testing.md`, TEST-11 ✓) → these three implementation slices:_
-- [ ] **TEST-12** [EVAL] (P2) `[deferred]` — **Offline golden-trace replay surface** (S1 of the design). `eval/traces/`
-      + `trace.promptfooconfig.yaml` driving `irene-replay-trace -t … --local` via the existing `cli_provider` (assert
-      `exit_code === 0`); `make replay` / `make replay-judge`; record + commit a small deterministic seed (timer + one
-      smart-home command, per D-14); add the "golden-trace regression" surface to `howto-new-test.md`. Pure YAML +
-      Makefile + the curated traces — no new `eval-commons` code. Determinism tier `trace-system` only (LLM paths →
-      `trace-ux` judge). Stays `[deferred]` until D-12's promotion trigger (covers core paths + 2 green CI runs).
 - [ ] **TEST-13** [EVAL] (P2) `[deferred]` — **Failure-trace capture for the live WS suite** (S2). `make ws TRACE=1`
       launches the SUT traced; **SUT enabler:** echo the trace `request_id` in `/ws/audio` response metadata when
       tracing (D-6, additive; config-ui N/A); keep-on-failure post-step as a **generic `eval-commons` helper** (D-13,

@@ -47,6 +47,23 @@ class TestDiffOutput(unittest.TestCase):
         self.assertFalse(rep["fields"]["text"]["match"])
         self.assertTrue(rep["fields"]["success"]["match"])
 
+    def test_actions_match_ignoring_volatile_timestamp(self):
+        # A fire-and-forget action records `started_at`, which moves every run; the diff must
+        # normalize it out so a deterministic handler stays a green golden (regression for the
+        # timer golden — same structure, different started_at → still a match).
+        recorded = {"active_actions": {"timer_1": {"action": "timer_1", "domain": "timers",
+                                                   "status": "running", "started_at": 1782629878.16}}}
+        replayed = {"active_actions": {"timer_1": {"action": "timer_1", "domain": "timers",
+                                                   "status": "running", "started_at": 1782640000.99}}}
+        rep = diff_output(_Result(actions=replayed), {"text": "готово", "success": True, "actions": recorded})
+        self.assertTrue(rep["fields"]["actions"]["match"])
+        self.assertTrue(rep["match"])
+
+    def test_actions_mismatch_on_real_difference(self):
+        rep = diff_output(_Result(actions={"x": {"domain": "timers"}}),
+                          {"text": "готово", "success": True, "actions": {"x": {"domain": "lights"}}})
+        self.assertFalse(rep["fields"]["actions"]["match"])  # real structural difference still caught
+
     def test_text_whitespace_insensitive(self):
         rep = diff_output(_Result(text="  готово  "), {"text": "готово", "success": True})
         self.assertTrue(rep["fields"]["text"]["match"])

@@ -35,6 +35,38 @@ class ConfigValidationError(Exception):
     pass
 
 
+def apply_dotted_overrides(data: Dict[str, Any], overrides: Optional[list]) -> Dict[str, Any]:
+    """Apply ``--set DOTTED.KEY=VALUE`` overrides onto a raw config dict, in place.
+
+    Each value is parsed as a JSON scalar when possible (``true``/``false``/numbers/``null``/
+    ``[..]``/quoted strings), else taken as a bare string — so ``--set trace.enabled=true`` becomes
+    a bool while ``--set trace.traces_dir=eval/traces`` stays a string. Applied **before** Pydantic
+    validation, so the model coerces and validates the result and a bad key or type fails loudly
+    (rather than being silently stored). Returns the same dict for convenience.
+    """
+    for item in overrides or []:
+        key, sep, raw = item.partition("=")
+        key = key.strip()
+        if not sep or not key:
+            raise ValueError(f"--set expects KEY=VALUE with a non-empty key, got {item!r}")
+        try:
+            value: Any = json.loads(raw)
+        except json.JSONDecodeError:
+            value = raw  # bare string (e.g. a path)
+        node = data
+        parts = key.split(".")
+        for part in parts[:-1]:
+            child = node.get(part)
+            if child is None:
+                child = {}
+                node[part] = child
+            elif not isinstance(child, dict):
+                raise ValueError(f"--set {key!r}: '{part}' is not a config section (it is {type(child).__name__})")
+            node = child
+        node[parts[-1]] = value
+    return data
+
+
 class ConfigManager:
     """
     Manages configuration loading, saving, and validation.
@@ -57,14 +89,18 @@ class ConfigManager:
         self._reload_callbacks: list[Callable[[CoreConfig], None]] = []
         self._file_watchers: dict[str, asyncio.Task] = {}
         
-    async def load_config(self, config_path: Optional[Path] = None, create_default: bool = True) -> CoreConfig:
+    async def load_config(self, config_path: Optional[Path] = None, create_default: bool = True,
+                          overrides: Optional[list] = None) -> CoreConfig:
         """
         Load configuration from file with automatic default generation.
-        
+
         Args:
             config_path: Path to configuration file (auto-detect if None)
             create_default: Create default config file if not found
-            
+            overrides: ``--set DOTTED.KEY=VALUE`` strings applied to the parsed config before
+                validation (see ``apply_dotted_overrides``). When given, a load/validation error
+                is raised rather than silently falling back to defaults.
+
         Returns:
             Loaded CoreConfig instance
         """
@@ -100,7 +136,11 @@ class ConfigManager:
                 data = await self._parse_json(content)
             else:
                 raise ValueError(f"Unsupported config format: {config_path.suffix}")
-                
+
+            # Apply --set overrides on the raw dict so Pydantic coerces + validates the result.
+            if overrides:
+                apply_dotted_overrides(data, overrides)
+
             # Convert to CoreConfig with validation
             config = await self._dict_to_config_validated(data)
             
@@ -116,6 +156,10 @@ class ConfigManager:
             logger.error(f"Failed to load config from {config_path}: {e}")
             if isinstance(e, ValidationError):
                 logger.error(f"Configuration validation errors:\n{e}")
+            # An explicit --set override is a deliberate instruction: never silently swallow it
+            # into a default config — surface the error so the operator sees their typo/bad value.
+            if overrides:
+                raise
             logger.info("Using default configuration with environment overrides")
             return self._load_from_environment()
             

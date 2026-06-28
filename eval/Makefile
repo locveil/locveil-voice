@@ -33,7 +33,7 @@ export WS_AUDIO_URL HEALTH_URL MQTT_HOST MQTT_PORT
 export IRENE_CONFIG_FILE
 
 .DEFAULT_GOAL := help
-.PHONY: help setup setup-record cli ws ux record record-list record-devices serve compare view clean
+.PHONY: help setup setup-record cli ws ux record record-list record-devices replay replay-judge serve compare view clean
 
 RECORD := $(PROMPTFOO_PYTHON) -m eval_commons.record.cli --from-yaml ws.promptfooconfig.yaml --config profiles/recording.env
 
@@ -65,6 +65,12 @@ record-list:                  ## show the fixture worklist (needed/missing + the
 
 record-devices:               ## list input devices to fill REC_INPUT_DEVICE in profiles/recording.env
 	$(PROMPTFOO_PYTHON) -m eval_commons.record.cli --devices
+
+replay:                       ## golden-trace regression — offline replay of recorded traces (needs models, no SUT)
+	$(PROMPTFOO) eval -c trace.promptfooconfig.yaml -o results-replay.json
+
+replay-judge:                 ## the trace-ux tier of the replay suite (DeepSeek-judged; needs DEEPSEEK_API_KEY)
+	$(PROMPTFOO) eval -c trace.promptfooconfig.yaml --filter-metadata kind=trace-ux
 
 serve:                        ## bring Irene up LOCALLY with CONFIG (foreground; Ctrl-C to stop)
 	@echo ">> Irene local: IRENE_CONFIG_FILE=$(IRENE_CONFIG_FILE)  (serving for $(WS_AUDIO_URL))"

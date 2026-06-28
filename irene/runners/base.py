@@ -188,6 +188,15 @@ class BaseRunner(ABC):
             action="store_true",
             help="Also capture the pre-canonical LIVE mic audio (raw level; heavier rolling buffer). Implies --trace"
         )
+        parser.add_argument(
+            "--set",
+            dest="set_overrides",
+            action="append",
+            metavar="KEY=VALUE",
+            help="Override a config setting by dotted path, e.g. --set trace.enabled=true "
+                 "--set nlu.confidence_threshold=0.5 (repeatable; applied over the config file, "
+                 "JSON-typed when possible else a string). Lets you tweak settings without editing the file.",
+        )
 
         # Utility options
         parser.add_argument(
@@ -239,9 +248,9 @@ class BaseRunner(ABC):
         """Create configuration with unified pattern"""
         config_manager = ConfigManager()
         
-        # Load base configuration
+        # Load base configuration (with any --set overrides applied + validated)
         if args.config.exists():
-            config = await config_manager.load_config(args.config)
+            config = await config_manager.load_config(args.config, overrides=getattr(args, "set_overrides", None))
             if not args.quiet:
                 print(f"✅ Loaded configuration from: {args.config}")
         elif self.runner_config.requires_config_file:
