@@ -93,10 +93,11 @@ def test_analyze_text_language_english_words_is_en():
     assert proc._analyze_text_language("what time is it now") == "en"
 
 
-def test_analyze_text_language_no_signal_returns_none():
+def test_analyze_text_language_latin_no_keyword_is_english():
     proc = make_processor()
-    # Latin letters but no English indicator word and no Cyrillic.
-    assert proc._analyze_text_language("zxqv brrm") is None
+    # Latin letters, no English indicator word, no Cyrillic — BUG-3: falls back to SCRIPT
+    # (non-Cyrillic ⇒ English), not None→default('ru'), so English without a listed keyword works.
+    assert proc._analyze_text_language("zxqv brrm") == "en"
 
 
 # --------------------------------------------------------------------------- #
@@ -225,10 +226,11 @@ def test_detect_language_text_based_english():
     assert asyncio.run(proc._detect_language("what time is it now", c)) == "en"
 
 
-def test_detect_language_no_signal_falls_to_default():
+def test_detect_language_latin_no_keyword_is_english():
+    # BUG-3: no keyword signal but Latin script ⇒ English (not None→default), when en is supported.
     proc = make_processor(core=make_core(default_language="ru", supported=("ru", "en")))
     c = ctx(language="")
-    assert asyncio.run(proc._detect_language("zxqv brrm", c)) == "ru"
+    assert asyncio.run(proc._detect_language("zxqv brrm", c)) == "en"
 
 
 def test_detect_language_unsupported_detected_clamps_to_default():

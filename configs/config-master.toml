@@ -450,7 +450,7 @@ stages = ["asr_output", "tts_input"]
 
 [text_processor.normalizers.prepare]
 enabled = true                          # symbol->word, Latin->Cyrillic
-stages = ["asr_output", "tts_input"]
+stages = ["tts_input"]                  # TTS-only: transliterating Latin->Cyrillic before NLU corrupts English (BUG-3)
 latin_to_cyrillic = true
 symbol_replacement = true
 

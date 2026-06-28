@@ -131,9 +131,10 @@ class TimerIntentHandler(IntentHandler):
         #   instead of raising;
         # - unit/message: the declared per-language default_value wins (was a hardcoded 'seconds' that
         #   ignored the donation's "minutes" default — the latent "5 минут → 5 seconds" bug).
+        language = context.language
         duration = self.get_param(intent, 'duration', None)
         unit = self.get_param(intent, 'unit', 'minutes')
-        message = self.get_param(intent, 'message', self._get_template("timer_completed_default", "ru"))
+        message = self.get_param(intent, 'message', self._get_template("timer_completed_default", language))
 
         # If no duration in entities, try to parse from text
         if not duration:
@@ -176,8 +177,7 @@ class TimerIntentHandler(IntentHandler):
                         handler="timer")
 
             # Format response using template
-            language = context.language
-            time_str = self._format_duration(duration_seconds)
+            time_str = self._format_duration(duration_seconds, language)
             response = self._get_template("timer_set_success", language, time_str=time_str, message=message)
             
             return self.create_action_result(
@@ -323,7 +323,8 @@ class TimerIntentHandler(IntentHandler):
         text_lower = text.lower()
         # BUG-1: convert spelled-out numbers to digits first (десять/ten → 10) so the digit patterns
         # below catch natural speech, not only «10 минут». Language by script (Cyrillic → ru, else en).
-        text_lower = normalize_numbers_to_digits(text_lower, detect_language_by_script(text_lower))
+        lang = detect_language_by_script(text_lower)
+        text_lower = normalize_numbers_to_digits(text_lower, lang)
 
         # Duration patterns — bilingual units (Russian + English); digits after normalization above.
         units = r"секунд|сек|seconds?|минут|мин|minutes?|час|часа|часов|hours?"
@@ -349,13 +350,13 @@ class TimerIntentHandler(IntentHandler):
                     unit = 'seconds'
                 
                 # Try to extract message
-                message = self._extract_timer_message(text)
-                
+                message = self._extract_timer_message(text, lang)
+
                 return duration, unit, message
-        
-        return None, 'seconds', self._get_template("timer_completed_default", "ru")
-    
-    def _extract_timer_message(self, text: str) -> str:
+
+        return None, 'seconds', self._get_template("timer_completed_default", lang)
+
+    def _extract_timer_message(self, text: str, language: str = "ru") -> str:
         """Extract custom message from timer text"""
         # TODO: These message patterns are now migrated to timer.json message parameter extraction_patterns
         # Look for message patterns
@@ -371,7 +372,7 @@ class TimerIntentHandler(IntentHandler):
                 return match.group(1).strip()
         
         # Use template default value
-        return self._get_template("timer_completed_default", "ru")
+        return self._get_template("timer_completed_default", language)
     
     def _convert_to_seconds(self, duration: int, unit: str) -> int:
         """Convert duration to seconds using injected configuration"""
@@ -388,24 +389,25 @@ class TimerIntentHandler(IntentHandler):
         
         return total_seconds
     
-    def _format_duration(self, seconds: int) -> str:
-        """Format duration in human-readable format"""
+    def _format_duration(self, seconds: int, language: str = "ru") -> str:
+        """Format duration in human-readable format, in the request language (BUG-3)."""
+        sec, minute, hour = (("sec", "min", "h") if language == "en" else ("сек", "мин", "ч"))
         if seconds < 60:
-            return f"{seconds} сек"
+            return f"{seconds} {sec}"
         elif seconds < 3600:
             minutes = seconds // 60
             remaining_seconds = seconds % 60
             if remaining_seconds == 0:
-                return f"{minutes} мин"
+                return f"{minutes} {minute}"
             else:
-                return f"{minutes} мин {remaining_seconds} сек"
+                return f"{minutes} {minute} {remaining_seconds} {sec}"
         else:
             hours = seconds // 3600
             remaining_minutes = (seconds % 3600) // 60
             if remaining_minutes == 0:
-                return f"{hours} ч"
+                return f"{hours} {hour}"
             else:
-                return f"{hours} ч {remaining_minutes} мин"
+                return f"{hours} {hour} {remaining_minutes} {minute}"
     
     async def _run_timer(self, duration_seconds: int, message: str, session_id: str, timer_id: str) -> str:
         """The timer itself: sleep for the duration, then announce completion.

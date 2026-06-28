@@ -14,6 +14,16 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-28
+- **BUG-3 DONE — English replies, at the right altitude: a TTS normalizer was corrupting NLU input.** Deeper analysis
+  (per request, "not only timer related") found the en→ru reply was a *symptom of input corruption*: the `prepare`
+  normalizer transliterates Latin→Cyrillic ("set a timer"→«сэт е таймё») and ran at the `asr_output` (pre-NLU) stage,
+  so English never reached NLU as English → script detection saw Cyrillic → `ru` → every handler replied Russian.
+  `prepare` is TTS-only (also spells symbols out), so the fix is to run it at `tts_input` only — schema default +
+  `config-master` (the only config pinning it; the rest inherit the default; all 12 profiles validate). Plus: the
+  detector's no-signal case now falls back to script (non-Cyrillic ⇒ English) instead of None→default; and the timer's
+  own literals are localized (`_format_duration` units, message fallback). English now understood + replied correctly
+  across handlers. Suite 1086 passed (2 old-behavior tests updated), pyright 0, import-linter 9/9. Residual noted: the
+  timer donation's `message` default_value is Russian (a separate donation-localization concern).
 - **BUG-1 DONE — spelled-out numbers now reach parameter extraction (general fix, ru + en).** Research (not just ru)
   found the codebase only ever did DIGITS→WORDS (synthesis) and every extractor matched `\d+` — so English ("ten
   minutes") was broken identically. Added `normalize_numbers_to_digits` (ovos `numbers_to_digits`, ru+en, idempotent,

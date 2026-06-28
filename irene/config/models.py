@@ -383,8 +383,12 @@ class TextProcessorConfig(BaseModel):
                 "stages": ["asr_output", "tts_input"]
             },
             "prepare": {
+                # TTS-only (BUG-3): this normalizer spells symbols out ("$"→"доллар") and phonetically
+                # transliterates Latin→Cyrillic ("set"→"сэт") — for SYNTHESIS. Running it at asr_output
+                # (before NLU) corrupted English input into Cyrillic gibberish, so English was never
+                # understood and replies came back in Russian. Keep it on tts_input only.
                 "enabled": True,
-                "stages": ["asr_output", "tts_input"],
+                "stages": ["tts_input"],
                 "latin_to_cyrillic": True,
                 "symbol_replacement": True
             },

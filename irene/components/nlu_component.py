@@ -11,7 +11,7 @@ from typing import Dict, Any, List, Optional, Type
 
 from pydantic import BaseModel
 from .base import Component
-from ..utils.text_script import cyrillic_char_count
+from ..utils.text_script import cyrillic_char_count, detect_language_by_script
 from ..utils.text_processing import normalize_numbers_to_digits
 from ..core.interfaces.webapi import WebAPIPlugin
 from ..core.interfaces.nlu import NLUPlugin
@@ -194,7 +194,11 @@ class ContextAwareNLUProcessor:
         elif english_count > 0:
             return "en"
         else:
-            return None  # No decisive signal — caller applies the canonical default
+            # BUG-3: no keyword signal — fall back to SCRIPT, not None→default('ru'). Russian uses
+            # Cyrillic and English uses Latin, so non-Cyrillic text is English. The old None→default
+            # made most English utterances (no Cyrillic, no listed keyword) reply in Russian, since
+            # every handler renders its templates in `context.language`.
+            return detect_language_by_script(text)
     
     def _should_redetect_language(self, context: UnifiedConversationContext) -> bool:
         """

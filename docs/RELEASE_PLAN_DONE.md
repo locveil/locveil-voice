@@ -1638,6 +1638,22 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       console-LLM fallback / `fallback_providers` — left as-is; not in scope here.)
 
 ### Bugs (BUG)
+- [x] **BUG-3** [NLU/I18N] (P3) `[deferred]` — **DONE 2026-06-28.** "Reply language doesn't follow request language"
+      turned out to be **input corruption, not response localization** (deeper analysis, per the request). Root cause:
+      the **`prepare` text normalizer transliterates Latin→Cyrillic** ("set a timer"→«сэт е таймё») and it ran at the
+      **`asr_output` (pre-NLU) stage** — so English never reached NLU as English; `detect_language_by_script` then
+      saw Cyrillic → `ru`, and every handler replied Russian. `prepare` is a **TTS** normalizer (it also spells symbols
+      out, "$"→"доллар"); it has no business before comprehension. **Fix at the right altitude:** `prepare` runs at
+      `tts_input` only — both the schema default (`config/models.py`) and `config-master.toml` (the only config that
+      pinned it; all others inherit the default — verified across all 12, validator green). Plus two robustness/polish
+      fixes: `_analyze_text_language`'s no-signal case now falls back to **script** (non-Cyrillic ⇒ English) instead of
+      `None`→default('ru'); and the timer's own literals are localized (`_format_duration` units ru/en, the message
+      fallback uses the request language). Verified: English now reaches NLU intact, detection → `en`, replies follow
+      the request language across handlers; «set a timer for ten minutes» → "Timer set for 10 min…", ru unchanged.
+      Suite 1086 passed (2 tests that encoded the old None→ru behavior updated), pyright 0, import-linter 9/9, 12/12
+      profiles valid. _Residual (separate mechanism, not chased): the timer donation's `message` param `default_value`
+      is Russian and `get_param` returns it regardless of language, so an uncustomized en reply still ends "Message:
+      Таймер завершён!" — a donation-default localization concern, candidate follow-up._
 - [x] **BUG-1** [NLU/TIMER] (P2) `[release]` — **DONE 2026-06-28.** Spelled-out numbers didn't reach parameter
       extraction — «поставь таймер на десять минут» recognized `timer.set` but extracted no duration; «на 10 минут»
       worked. **General research (ru + en)** found it was **never Russian-specific**: every extractor matched `\d+`

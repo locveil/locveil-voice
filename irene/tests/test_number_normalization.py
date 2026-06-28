@@ -41,7 +41,7 @@ def test_timer_handler_parses_spelled_and_english(monkeypatch):
     # the test focuses on duration+unit parsing: ru-spelled, ru-compound, English, digit regression.
     from irene.intents.handlers.timer import TimerIntentHandler
     h = TimerIntentHandler.__new__(TimerIntentHandler)
-    monkeypatch.setattr(h, "_extract_timer_message", lambda text: "")
+    monkeypatch.setattr(h, "_extract_timer_message", lambda text, language="ru": "")
     assert h._parse_timer_from_text("поставь таймер на десять минут")[:2] == (10, "minutes")
     assert h._parse_timer_from_text("на двадцать пять минут")[:2] == (25, "minutes")
     assert h._parse_timer_from_text("set a timer for ten minutes")[:2] == (10, "minutes")
