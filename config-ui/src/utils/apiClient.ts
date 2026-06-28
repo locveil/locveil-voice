@@ -184,8 +184,9 @@ class IreneApiClient {
   /**
    * Make a POST request
    */
-  async post<T = any>(endpoint: string, data: any): Promise<T> {
+  async post<T = any>(endpoint: string, data: any, options?: RequestOptions): Promise<T> {
     return this.request<T>(endpoint, {
+      ...options,
       method: 'POST',
       body: JSON.stringify(data),
     });
@@ -988,16 +989,19 @@ class IreneApiClient {
    * Real-time analysis of donation for conflicts and issues
    */
   async analyzeDonation(
-    handlerName: string, 
-    language: string, 
-    donationData: Record<string, any>
+    handlerName: string,
+    language: string,
+    donationData: Record<string, any>,
+    signal?: AbortSignal
   ): Promise<NLUAnalysisResult> {
     const requestData: AnalyzeDonationRequest = {
       handler_name: handlerName,
       language: language,
       donation_data: donationData
     };
-    return this.post<NLUAnalysisResult>('/nlu_analysis/analyze/donation', requestData);
+    // BUG-9: forward an AbortSignal so a superseded real-time analysis actually cancels its network
+    // request (not just flips a flag) — the caller debounces and races these on every keystroke.
+    return this.post<NLUAnalysisResult>('/nlu_analysis/analyze/donation', requestData, { signal });
   }
 
   /**

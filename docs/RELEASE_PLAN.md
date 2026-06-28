@@ -299,12 +299,6 @@ _Discrete functional defects (distinct from QUAL refactors/quality work). Surfac
       "time"/"for", `message` → "reminder"), but **NEVER** "translate" canonical technical identifiers (provider /
       model / driver / service names are self-matchable). Per-handler gap list in the BUG-4 audit. Surfaced while
       fixing BUG-4.
-- [ ] **BUG-9** [UI] (P3) `[deferred]` — **config-ui real-time analysis stale-request overwrite** (review §A2, CONFIRMED).
-      `useRealtimeAnalysis.ts:100-141` reads the abort signal off `abortControllerRef.current` *after* the await (by then
-      the newest controller), so a slow earlier response passes the guard and clobbers newer results; the signal is also
-      never passed to `analyzeDonation`/`fetch`, so `abort()` never cancels the network. Fix: capture the signal in a
-      per-invocation local and thread it into the request. (A6, PLAUSIBLE) harden the unguarded `.conflicts.filter`/`.map`
-      (`useValidationWorkflow.ts:98-99`, `useRealtimeAnalysis.ts:122`) against a payload missing `conflicts`.
 - [ ] **BUG-10** [UI] (P3) `[deferred]` — **config-ui enhanced-mode blocking-conflicts dialog unreachable** (review §A3,
       CONFIRMED). `canSaveNLU` already requires `!hasBlockingConflicts`, which disables the Apply button, so
       `handleApply`'s `if (hasBlockingConflicts) setShowBlockingDialog(true)` never runs and `BlockingConflictsDialog`

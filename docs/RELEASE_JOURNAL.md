@@ -14,6 +14,11 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-28
+- **BUG-9 DONE — config-ui real-time analysis stale-request overwrite.** The post-await guard read the abort signal off
+  the ref (newest controller), so a slow earlier response clobbered newer conflicts; fixed by guarding on a
+  per-invocation local `AbortController` (the ref still drives abort-previous + unmount cleanup). Also threaded the
+  signal through `analyzeDonation`→`post`→`fetch` so a superseded analysis cancels its network request, and hardened the
+  `.conflicts` derefs against a malformed payload. Gate: config-ui `npm run check` + `build` green. BUG-10 remains.
 - **BUG-8 DONE — config-ui DonationsPage composite-key + stale-state defects (the first remediation from the config-ui
   review).** Everything keyed by `${handler}:${language}` now: the 404-fallback no longer stores under the bare handler
   (which caused an **infinite reload loop** + stuck spinner), the validation *catch* stores the error under the key the

@@ -95,8 +95,10 @@ const useValidationWorkflow = (
   const hasWarnings = validationResult?.has_warnings || false;
   const canSave = validationResult?.is_valid && !hasBlockingConflicts;
 
-  const blockingConflicts = validationResult?.conflicts.filter(c => c.severity === 'blocker') || [];
-  const warningConflicts = validationResult?.conflicts.filter(c => c.severity === 'warning') || [];
+  // BUG-9 (A6): optional-chain `conflicts` itself — a malformed/partial payload missing the array
+  // would otherwise throw on `.filter` during render and white-screen the panel.
+  const blockingConflicts = validationResult?.conflicts?.filter(c => c.severity === 'blocker') || [];
+  const warningConflicts = validationResult?.conflicts?.filter(c => c.severity === 'warning') || [];
 
   return {
     validationResult,

@@ -89,7 +89,7 @@ const useRealtimeAnalysis = (
     if (enableCaching && analysisCache.current.has(key)) {
       const cachedResult = analysisCache.current.get(key)!;
       setAnalysisResult(cachedResult);
-      setConflicts(cachedResult.conflicts);
+      setConflicts(cachedResult.conflicts || []);
       setAnalysisStatus('complete');
       setError(null);
       setLastAnalyzedHash(hash);
@@ -101,8 +101,12 @@ const useRealtimeAnalysis = (
       abortControllerRef.current.abort();
     }
 
-    // Start new analysis
-    abortControllerRef.current = new AbortController();
+    // Start new analysis. BUG-9: hold THIS invocation's controller in a local — the post-await guards
+    // must check the controller that belongs to this call, not `abortControllerRef.current` (which by
+    // the time a slow earlier call resolves points at the newest controller, so the stale guard passes
+    // and clobbers newer results). A newer call's abort() flips this local's signal → the guard returns.
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
     setAnalysisStatus('analyzing');
     setError(null);
 
@@ -110,16 +114,17 @@ const useRealtimeAnalysis = (
       const result = await apiClient.analyzeDonation(
         handlerName,
         language,
-        donationData
+        donationData,
+        controller.signal
       );
 
-      // Check if this request was aborted
-      if (abortControllerRef.current?.signal.aborted) {
+      // Check if this request was aborted (superseded by a newer analysis)
+      if (controller.signal.aborted) {
         return;
       }
 
       setAnalysisResult(result);
-      setConflicts(result.conflicts);
+      setConflicts(result.conflicts || []);
       setAnalysisStatus('complete');
       setLastAnalyzedHash(hash);
 
@@ -137,8 +142,9 @@ const useRealtimeAnalysis = (
       }
 
     } catch (err) {
-      // Don't set error state if the request was aborted
-      if (abortControllerRef.current?.signal.aborted) {
+      // Don't set error state if this request was aborted (superseded, or an AbortError from the
+      // cancelled fetch) — BUG-9: guard on THIS invocation's controller, not the ref.
+      if (controller.signal.aborted) {
         return;
       }
 

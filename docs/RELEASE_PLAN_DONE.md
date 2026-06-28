@@ -1638,6 +1638,17 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       console-LLM fallback / `fallback_providers` — left as-is; not in scope here.)
 
 ### Bugs (BUG)
+- [x] **BUG-9** [UI] (P3) `[deferred]` — **DONE 2026-06-28.** config-ui real-time analysis stale-request overwrite
+      (review `config_ui_review.md` §A2). `useRealtimeAnalysis.performAnalysis` read the abort signal off
+      `abortControllerRef.current` *after* the await — by then the ref points at the newest controller, so a slow earlier
+      response passed the guard and clobbered newer conflicts. Fix: hold THIS invocation's `AbortController` in a local
+      and guard both the success and catch paths on `controller.signal` (the ref still tracks the latest for
+      abort-previous + unmount cleanup). Also threaded the signal through `apiClient.analyzeDonation` → `post(…, {signal})`
+      → `request`/`fetch`, so a superseded analysis actually **cancels its network request** instead of only flipping a
+      flag (`post` gained an optional `RequestOptions` arg, backward-compatible). (A6) hardened the unguarded `.conflicts`
+      derefs — `result.conflicts || []` (success + cached) and `validationResult?.conflicts?.filter` — against a
+      malformed payload missing the array. Gate (`config-ui-stays-functional`): `npm run check` + `npm run build` green.
+      BUG-10 (unreachable blocking dialog) remains open.
 - [x] **BUG-8** [UI] (P3) `[deferred]` — **DONE 2026-06-28.** config-ui DonationsPage composite-key + stale-state
       defects (review `config_ui_review.md` §A). All keyed by `` `${handler}:${language}` `` now: **(A1)** the
       404-fallback stored the empty donation under the bare handler name while the load effect read the composite key →
