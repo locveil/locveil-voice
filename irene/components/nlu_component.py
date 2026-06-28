@@ -12,6 +12,7 @@ from typing import Dict, Any, List, Optional, Type
 from pydantic import BaseModel
 from .base import Component
 from ..utils.text_script import cyrillic_char_count
+from ..utils.text_processing import normalize_numbers_to_digits
 from ..core.interfaces.webapi import WebAPIPlugin
 from ..core.interfaces.nlu import NLUPlugin
 from ..core.trace_context import TraceContext
@@ -55,7 +56,14 @@ class ContextAwareNLUProcessor:
             detected_language = await self._detect_language(text, context)
             context.language = detected_language
             self.logger.debug(f"Language detected/updated: {detected_language}")
-        
+
+        # 1b. BUG-1: normalize spelled-out numbers to digits ONCE, before the cascade — so EVERY
+        # provider (keyword matcher, spaCy, the LLM tier) and the spaCy donation patterns extract
+        # them, not just one provider. The normalized text also becomes the intent's raw_text, so
+        # handler text-fallbacks see digits too. Reverse of the synthesis-direction number tables;
+        # ru + en. The original utterance is preserved upstream in the trace (record_input).
+        text = normalize_numbers_to_digits(text, context.language or "ru")
+
         # 2. Continue with existing NLU processing
         intent = await self.nlu_component.recognize(text, context)
         

@@ -13,8 +13,8 @@ timer's `started_at`) before diffing, so a deterministic handler stays a stable 
 |---|---|---|
 | `timer_set_10min.json` | «поставь таймер на 10 минут» → timer set | `trace-system` (deterministic) |
 
-> **Note (BUG-1):** the golden uses the **digit** «10 минут» because the spelled-out «десять минут» does
-> not currently set a timer (Russian-numeral parsing gap). Once BUG-1 is fixed, add a natural-speech golden.
+> The golden uses the digit «10 минут»; the spelled-out «десять минут» now sets a timer too (the number-word
+> parsing gap was fixed), so a natural-speech golden can be added alongside it.
 
 ## Run
 

@@ -280,15 +280,6 @@ _Apply to every remediation task below (from the 4 review docs + QUAL-25/26). So
 
 ### Bugs (BUG)
 _Discrete functional defects (distinct from QUAL refactors/quality work). Surfaced from any source; filed before fixing._
-- [ ] **BUG-1** [NLU/TIMER] (P2) `[release]` — **Spelled-out Russian numerals don't set a timer.** «поставь таймер на
-      **десять** минут» is recognized as `timer.set` (confidence 1.0) but duration extraction fails — the reply is the
-      clarification *"Не удалось определить время для таймера…"*, no timer set (yet `success: true`, which also exposes
-      the eval intent assertion as too weak). The **digit** form «на 10 минут» works ("Таймер установлен на 10 мин").
-      So natural speech / ASR output (which yields «десять», not «10») doesn't reach the timer. Repro:
-      `irene-webapi --config configs/embedded-armv7.toml` → POST `/execute/command {"command":"поставь таймер на десять
-      минут"}`. Likely the T1 parameter extraction (QUAL-11) / `ovos-number-parser` (ASSET-3) path not converting
-      spelled ru numerals. Surfaced while recording a golden trace (TEST-12); blocks a natural-speech timer golden + the
-      WS UX timer case.
 
 ### Tests (TEST)
 > **Strategy (decided 2026-06-01): do NOT keep repairing the existing suite.** Most tests were written against

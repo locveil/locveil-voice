@@ -186,6 +186,26 @@ def decimal_to_text_ru(
 # Text processing with lingua_franca integration
 # Migrated from utils/all_num_to_text.py
 
+
+def normalize_numbers_to_digits(text: str, language: str = "ru") -> str:
+    """Convert spelled-out numbers in `text` to digits — for COMPREHENSION / parameter extraction.
+
+    This is the **reverse** of `num_to_text_ru` / `pronounce_number` (which exist for *synthesis*,
+    digits→words): «десять минут» → «10 минут», "ten minutes" → "10 minutes", including compounds
+    («двадцать пять» → «25»). Idempotent on digits and on number-free text. Both Russian and English
+    (and other `ovos-number-parser` languages); returns the text **unchanged** if the language is
+    unsupported or parsing fails — extraction then degrades to the digit-only path, never worse.
+
+    This is the missing direction the extractors needed: every parameter extractor matched `\\d+`
+    only, so spoken numerals were silently dropped (BUG-1).
+    """
+    try:
+        from ovos_number_parser import numbers_to_digits  # type: ignore
+        return numbers_to_digits(text, lang=language)
+    except Exception:
+        return text
+
+
 def _convert_one_num_float(match_obj: "re.Match[str]", language: str = "ru") -> str:
     """Convert a single matched number to words.
 

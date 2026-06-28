@@ -1084,10 +1084,15 @@ class HybridKeywordMatcherProvider(NLUProvider):
         return None
     
     def _extract_by_type(self, text_lower: str, param_spec: ParameterSpec) -> Optional[Any]:
-        """Extract parameter value based on parameter type"""
+        """Extract parameter value based on parameter type.
+
+        Spelled-out numbers (десять/ten → 10) are normalized to digits upstream, once for the whole
+        cascade, in `ContextAwareNLUProcessor.process_with_context` (BUG-1) — so the digit-based
+        extractors below already see digits regardless of which provider recognized the intent.
+        """
         import re
         from ...core.donations import ParameterType
-        
+
         if param_spec.type == ParameterType.INTEGER:
             numbers = re.findall(r'\b\d+\b', text_lower)
             return int(numbers[0]) if numbers else None

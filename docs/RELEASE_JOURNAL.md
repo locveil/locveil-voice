@@ -14,6 +14,14 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-28
+- **BUG-1 DONE — spelled-out numbers now reach parameter extraction (general fix, ru + en).** Research (not just ru)
+  found the codebase only ever did DIGITS→WORDS (synthesis) and every extractor matched `\d+` — so English ("ten
+  minutes") was broken identically. Added `normalize_numbers_to_digits` (ovos `numbers_to_digits`, ru+en, idempotent,
+  safe-degrade) and — after a good catch that a provider-local fix misses spaCy/LLM — applied it **once at the cascade
+  entry** (`ContextAwareNLUProcessor.process_with_context`), so every recognizer + the spaCy donation patterns + (via
+  normalized `raw_text`) handler text-fallbacks see digits. Also gave the timer's `_parse_timer_from_text` English
+  units (it was ru-only). Verified ru/en spelled + compound + digit regression all set the timer; suite 1086 passed,
+  pyright 0, import-linter 9/9, 10 new tests. Unblocks a natural-speech timer golden + the WS UX timer case.
 - **TEST-12 DONE — config overrides (`--set`) + offline golden-trace replay surface; BUG-2 fixed, BUG-1 filed.**
   Trying to record a golden trace exposed that you couldn't override config settings without hand-editing files.
   Fixed: **`--set DOTTED.KEY=VALUE`** on the base runner (`config/manager.py apply_dotted_overrides`, applied

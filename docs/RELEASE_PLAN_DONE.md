@@ -1638,6 +1638,21 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       console-LLM fallback / `fallback_providers` — left as-is; not in scope here.)
 
 ### Bugs (BUG)
+- [x] **BUG-1** [NLU/TIMER] (P2) `[release]` — **DONE 2026-06-28.** Spelled-out numbers didn't reach parameter
+      extraction — «поставь таймер на десять минут» recognized `timer.set` but extracted no duration; «на 10 минут»
+      worked. **General research (ru + en)** found it was **never Russian-specific**: every extractor matched `\d+`
+      only, and the codebase only ever did DIGITS→WORDS (synthesis), never the reverse (comprehension) — English
+      ("ten minutes") was broken identically. **Fix at the cascade entry** (not one provider): added
+      `normalize_numbers_to_digits` (wraps `ovos-number-parser` `numbers_to_digits`, ru+en, idempotent, degrades to
+      unchanged on unsupported lang) and call it **once in `ContextAwareNLUProcessor.process_with_context`** before the
+      cascade — so the keyword matcher, spaCy, the LLM tier, the spaCy donation patterns, and (via normalized
+      `raw_text`) handler text-fallbacks all see digits. Also fixed the timer's own `_parse_timer_from_text` fallback
+      (it had **Russian-only units** — added English `minutes?/seconds?/hours?` + the normalize, since its donation
+      param has no type so NLU never extracts its duration). The trace keeps the verbatim utterance (`record_input`
+      runs upstream). Verified: ru/en spelled + compound («двадцать пять»→25, "twenty five"→25) + digit regression all
+      set the timer; suite 1086 passed, pyright 0, import-linter 9/9, 10 new tests. _(Note: response still renders ru
+      for en input — a separate response-localization concern, not extraction. Related debt left as-is: spaCy param
+      extraction stub, entity_resolver word-numbers 0–10.)_
 - [x] **BUG-2** [WORKFLOW] (P2) `[release]` — **DONE 2026-06-28.** Stale `TTS requires Audio` validation rejected
       valid satellite configs. `workflows/voice_assistant.py` had a duplicate of the TTS↔Audio check that
       **unconditionally** required the Audio component when TTS was present — a stale copy that never got the

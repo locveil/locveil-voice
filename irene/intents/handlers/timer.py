@@ -317,30 +317,33 @@ class TimerIntentHandler(IntentHandler):
     
     def _parse_timer_from_text(self, text: str) -> tuple[Optional[int], str, str]:
         """Parse timer parameters from natural language text"""
+        from ...utils.text_processing import normalize_numbers_to_digits
+        from ...utils.text_script import detect_language_by_script
+
         text_lower = text.lower()
-        
-        # TODO: These parsing patterns are now migrated to timer.json duration parameter extraction_patterns
-        # Common patterns for timer duration
+        # BUG-1: convert spelled-out numbers to digits first (десять/ten → 10) so the digit patterns
+        # below catch natural speech, not only «10 минут». Language by script (Cyrillic → ru, else en).
+        text_lower = normalize_numbers_to_digits(text_lower, detect_language_by_script(text_lower))
+
+        # Duration patterns — bilingual units (Russian + English); digits after normalization above.
+        units = r"секунд|сек|seconds?|минут|мин|minutes?|час|часа|часов|hours?"
         patterns = [
-            r"(\d+)\s*(секунд|сек)",
-            r"(\d+)\s*(минут|мин)",
-            r"(\d+)\s*(час|часа|часов)",
-            r"на\s+(\d+)\s*(секунд|сек|минут|мин|час|часа|часов)",
-            r"через\s+(\d+)\s*(секунд|сек|минут|мин|час|часа|часов)",
+            rf"(\d+)\s*({units})",
+            rf"(?:на|через|for|in)\s+(\d+)\s*({units})",
         ]
-        
+
         for pattern in patterns:
             match = re.search(pattern, text_lower)
             if match:
                 duration = int(match.group(1))
                 unit_text = match.group(2)
-                
-                # Map Russian units to standard units
-                if unit_text in ['секунд', 'сек']:
+
+                # Map Russian + English unit words to standard units
+                if unit_text in ['секунд', 'сек', 'second', 'seconds']:
                     unit = 'seconds'
-                elif unit_text in ['минут', 'мин']:
+                elif unit_text in ['минут', 'мин', 'minute', 'minutes']:
                     unit = 'minutes'
-                elif unit_text in ['час', 'часа', 'часов']:
+                elif unit_text in ['час', 'часа', 'часов', 'hour', 'hours']:
                     unit = 'hours'
                 else:
                     unit = 'seconds'
