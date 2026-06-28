@@ -187,6 +187,36 @@ def decimal_to_text_ru(
 # Migrated from utils/all_num_to_text.py
 
 
+# ovos-number-parser (ru) converts only NOMINATIVE numerals; the oblique-case forms common in speech
+# («одну секунду», «двух минут», «без пяти», «тридцати пяти») are left as words — and even break
+# compounds («тридцать одну» → "30 одну"). Remap the oblique cardinals ovos MISSES to their nominative
+# before ovos, so the digit conversion (incl. compounds) still fires. Forms ovos already handles
+# (одна/одно/одной/одним → 1, сорока → 40) are intentionally absent; words that collide with non-numeric
+# meanings are excluded so plain text is never mangled (семью=family, сорока=magpie — both handled/left
+# by ovos anyway). (BUG-7)
+_RU_OBLIQUE_NUMERALS = {
+    "одну": "один", "одного": "один",
+    "двух": "два", "двум": "два", "двумя": "два",
+    "трёх": "три", "трех": "три", "трём": "три", "трем": "три", "тремя": "три",
+    "четырёх": "четыре", "четырех": "четыре", "четырём": "четыре", "четырем": "четыре", "четырьмя": "четыре",
+    "пяти": "пять", "пятью": "пять",
+    "шести": "шесть", "шестью": "шесть",
+    "семи": "семь",
+    "восьми": "восемь", "восьмью": "восемь", "восемью": "восемь",
+    "девяти": "девять", "девятью": "девять",
+    "десяти": "десять", "десятью": "десять",
+    "одиннадцати": "одиннадцать", "двенадцати": "двенадцать", "пятнадцати": "пятнадцать",
+    "двадцати": "двадцать", "тридцати": "тридцать", "пятидесяти": "пятьдесят",
+    "девяноста": "девяносто", "ста": "сто", "двухсот": "двести",
+}
+_RU_OBLIQUE_RE = re.compile(r"\b(" + "|".join(_RU_OBLIQUE_NUMERALS) + r")\b", re.IGNORECASE)
+
+
+def _ru_oblique_to_nominative(text: str) -> str:
+    """Map oblique-case ru cardinals ovos can't read to their nominative (BUG-7); idempotent on others."""
+    return _RU_OBLIQUE_RE.sub(lambda m: _RU_OBLIQUE_NUMERALS[m.group(0).lower()], text)
+
+
 def normalize_numbers_to_digits(text: str, language: str = "ru") -> str:
     """Convert spelled-out numbers in `text` to digits — for COMPREHENSION / parameter extraction.
 
@@ -201,6 +231,8 @@ def normalize_numbers_to_digits(text: str, language: str = "ru") -> str:
     """
     try:
         from ovos_number_parser import numbers_to_digits  # type: ignore
+        if language == "ru":
+            text = _ru_oblique_to_nominative(text)  # BUG-7: oblique-case cardinals → nominative first
         return numbers_to_digits(text, lang=language)
     except Exception:
         return text

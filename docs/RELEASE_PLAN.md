@@ -251,8 +251,8 @@ _Apply to every remediation task below (from the 4 review docs + QUAL-25/26). So
         design it HERE, against the real device-unit requirements: generalize `units.py` to a value+unit type with
         **canonical normalization + externalized (donation/catalog) unit surfaces** so timer + dimming + temperature
         share ONE path. The bridge catalog (ARCH-8) declares each device's unit — that's the requirement source.
-        `QuantityEntityResolver` (`entity_resolver.py`) already holds the non-time nucleus (percent/degrees). _Bonus
-        defect to fold in: ru gendered «одну/одна» doesn't normalize to a digit (ovos ru gap) — BUG-1-adjacent._
+        `QuantityEntityResolver` (`entity_resolver.py`) already holds the non-time nucleus (percent/degrees). _(The ru
+        oblique-case numeral gap noted here was resolved separately as BUG-7.)_
 - [ ] **QUAL-44** `[deferred]` [DFLOW] (P2, enhancement; split from QUAL-31) — **Answer-vs-new-command arbitration on a
       clarifying turn.** QUAL-31's resume pre-check (`workflows/voice_assistant.py` `_process_pipeline`, the
       `take_pending_clarification` branch) **unconditionally** treats the turn that follows a clarification as the answer:

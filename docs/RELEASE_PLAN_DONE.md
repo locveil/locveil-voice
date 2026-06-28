@@ -1638,6 +1638,16 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       console-LLM fallback / `fallback_providers` — left as-is; not in scope here.)
 
 ### Bugs (BUG)
+- [x] **BUG-7** [NLU/I18N] (P3) `[deferred]` — **DONE 2026-06-28.** ru oblique-case numerals didn't normalize to
+      digits. `ovos-number-parser` (ru) reads only **nominative** numerals, so the oblique-case forms common in speech
+      stayed as words — «одну секунду» (one), «двух минут», «без пяти», «тридцати пяти» — and it even broke compounds
+      («тридцать одну» → "30 одну"). Fix at the normalizer altitude (`irene/utils/text_processing.py`): remap the oblique
+      cardinals ovos misses → nominative **before** ovos, so digit conversion incl. compounds fires. Only the forms ovos
+      actually misses are mapped (одна/одной/одним→1 and сорока→40 already work, so absent); words colliding with
+      non-numeric meanings are excluded so plain text is never mangled (verified «о семью детях»/«семья» untouched).
+      Surfaced as the bonus finding while fixing BUG-6 (it was noted onto QUAL-35; resolved here instead). Verified:
+      «одну секунду» → "1 сек", «тридцать одну секунду» → "31 сек". Gates: suite 1104 passed (+ oblique-case test),
+      pyright 0, import-linter 9/9. Normalizer-only — no schema/config-ui surface.
 - [x] **BUG-6** [PEX/UNITS] (P3) `[deferred]` — **DONE 2026-06-28.** Timer-unit fix + consolidation + dead-stub removal
       (the "unit story", scoped time-only per user). **Bug:** "set a timer for one second" → "1 min" — the en timer
       `unit` param has no `choice_surfaces` (ru does), so the weak per-param CHOICE extraction couldn't match "second"

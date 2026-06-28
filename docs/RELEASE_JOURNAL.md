@@ -14,6 +14,13 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-28
+- **BUG-7 DONE — ru oblique-case numerals normalize to digits.** ovos (ru) reads only nominative numerals, so «одну
+  секунду»/«двух минут»/«тридцати пяти» stayed as words and «тридцать одну» even broke to "30 одну". Fix at the
+  normalizer altitude (`text_processing.py`): remap the oblique cardinals ovos misses → nominative before ovos (digit
+  conversion incl. compounds then fires). Mapped only the forms ovos actually misses; excluded words that collide with
+  non-numeric meanings so plain text is never mangled («о семью детях» stays). Verified «одну секунду» → "1 сек",
+  «тридцать одну секунду» → "31 сек". Suite 1104 passed, pyright 0, import-linter 9/9. Normalizer-only. Surfaced as the
+  BUG-6 bonus finding (had been parked on QUAL-35; resolved here instead).
 - **BUG-6 DONE — the "unit story": timer-unit fix + consolidate 3 parsers to one + remove the dead DURATION stub.**
   "set a timer for one second" → "1 min" because the en `unit` param lacked `choice_surfaces` (ru had them) so the weak
   CHOICE extraction defaulted to "minutes", and the correct text fallback was bypassed once `duration` was extracted.

@@ -35,6 +35,20 @@ def test_unsupported_language_degrades_to_unchanged():
     assert normalize_numbers_to_digits("десять минут", "zz") == "десять минут"
 
 
+def test_ru_oblique_case_numerals():
+    # BUG-7: ovos (ru) reads only NOMINATIVE numerals; oblique-case forms common in speech are
+    # remapped to nominative first, including compounds. Ambiguous/non-numeric words stay intact.
+    nd = normalize_numbers_to_digits
+    assert nd("на одну секунду", "ru") == "на 1 секунду"
+    assert nd("тридцать одну секунду", "ru") == "31 секунду"      # compound (was "30 одну секунду")
+    assert nd("двух минут", "ru") == "2 минут"
+    assert nd("двадцати пяти градусов", "ru") == "25 градусов"    # compound oblique
+    assert nd("около ста метров", "ru") == "около 100 метров"
+    # ambiguous / non-numeric words must NOT be mangled
+    assert nd("о семью детях", "ru") == "о семью детях"           # семью = family, left alone
+    assert nd("семья из пяти человек", "ru") == "семья из 5 человек"
+
+
 def test_timer_duration_parses_spelled_and_english():
     # BUG-6: the timer's duration now comes from the shared bilingual parser (irene.utils.units), the
     # one place time quantities are read. Spelled ru/en, ru-compound, and digit regression.
