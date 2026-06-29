@@ -15,11 +15,8 @@ import type {
   // Language-aware donation types
   DonationHandlerListResponse,
   LanguageDonationContentResponse,
-  LanguageDonationUpdateRequest,
   LanguageDonationUpdateResponse,
-  LanguageDonationValidationRequest,
   LanguageDonationValidationResponse,
-  CreateLanguageRequest,
   CreateLanguageResponse,
   DeleteLanguageResponse,
   ReloadDonationResponse,
@@ -38,32 +35,23 @@ import type {
   // Phase 6: Template management types
   TemplateHandlerListResponse,
   TemplateContentResponse,
-  TemplateUpdateRequest,
   TemplateUpdateResponse,
-  TemplateValidationRequest,
   TemplateValidationResponse,
-  CreateTemplateLanguageRequest,
   CreateTemplateLanguageResponse,
   DeleteTemplateLanguageResponse,
   // Prompt management types (Phase 7)
   PromptHandlerListResponse,
   PromptContentResponse,
   PromptDefinition,
-  PromptUpdateRequest,
   PromptUpdateResponse,
-  PromptValidationRequest,
   PromptValidationResponse,
-  CreatePromptLanguageRequest,
   CreatePromptLanguageResponse,
   DeletePromptLanguageResponse,
   // Localization types
   LocalizationDomainListResponse,
   LocalizationContentResponse,
-  LocalizationUpdateRequest,
   LocalizationUpdateResponse,
-  LocalizationValidationRequest,
   LocalizationValidationResponse,
-  CreateLocalizationLanguageRequest,
   CreateLocalizationLanguageResponse,
   DeleteLocalizationLanguageResponse,
   // Configuration management types
@@ -212,6 +200,52 @@ class IreneApiClient {
   }
 
   // ============================================================
+  // Shared per-language resource CRUD (UI-12 / C1)
+  // ------------------------------------------------------------
+  // donations / templates / prompts / localizations differ only by URL prefix, the request body key
+  // (`donation_data` / `template_data` / …), and the create-path suffix (donations posts to
+  // `…/{lang}/create`; the others to `…/{lang}`). These private helpers centralise the URL + body
+  // assembly; the public methods below stay thin typed wrappers, so call sites and request shapes are
+  // unchanged. (`key` is the handler name or, for localizations, the domain.)
+  // ============================================================
+  private resourceLanguages(prefix: string, key: string): Promise<string[]> {
+    return this.get<string[]>(`${prefix}/${encodeURIComponent(key)}/languages`);
+  }
+
+  private getLanguageResource<T>(prefix: string, key: string, language: string): Promise<T> {
+    return this.get<T>(`${prefix}/${encodeURIComponent(key)}/${encodeURIComponent(language)}`);
+  }
+
+  private updateLanguageResource<T>(
+    prefix: string, key: string, language: string, dataKey: string, data: any,
+    options: { validateBeforeSave?: boolean; triggerReload?: boolean } = {}
+  ): Promise<T> {
+    return this.put<T>(`${prefix}/${encodeURIComponent(key)}/${encodeURIComponent(language)}`, {
+      [dataKey]: data,
+      validate_before_save: options.validateBeforeSave ?? true,
+      trigger_reload: options.triggerReload ?? true,
+    });
+  }
+
+  private validateLanguageResource<T>(prefix: string, key: string, language: string, dataKey: string, data: any): Promise<T> {
+    return this.post<T>(`${prefix}/${encodeURIComponent(key)}/${encodeURIComponent(language)}/validate`, { [dataKey]: data });
+  }
+
+  private deleteLanguageResource<T>(prefix: string, key: string, language: string): Promise<T> {
+    return this.delete<T>(`${prefix}/${encodeURIComponent(key)}/${encodeURIComponent(language)}`);
+  }
+
+  private createLanguageResource<T>(
+    prefix: string, key: string, language: string, createSuffix: string,
+    options: { copyFrom?: string; useTemplate?: boolean } = {}
+  ): Promise<T> {
+    return this.post<T>(`${prefix}/${encodeURIComponent(key)}/${encodeURIComponent(language)}${createSuffix}`, {
+      copy_from: options.copyFrom,
+      use_template: options.useTemplate ?? false,
+    });
+  }
+
+  // ============================================================
   // SYSTEM METHODS
   // ============================================================
 
@@ -244,89 +278,58 @@ class IreneApiClient {
    * Get available languages for a handler
    */
   async getHandlerLanguages(handlerName: string): Promise<string[]> {
-    return this.get<string[]>(`/intents/donations/${encodeURIComponent(handlerName)}/languages`);
+    return this.resourceLanguages('/intents/donations', handlerName);
   }
 
   /**
    * Get language-specific donation content for editing
    */
   async getLanguageDonation(handlerName: string, language: string): Promise<LanguageDonationContentResponse> {
-    return this.get<LanguageDonationContentResponse>(
-      `/intents/donations/${encodeURIComponent(handlerName)}/${encodeURIComponent(language)}`
-    );
+    return this.getLanguageResource<LanguageDonationContentResponse>('/intents/donations', handlerName, language);
   }
 
   /**
    * Update language-specific donation
    */
   async updateLanguageDonation(
-    handlerName: string, 
-    language: string, 
+    handlerName: string,
+    language: string,
     donationData: any,
-    options: {
-      validateBeforeSave?: boolean;
-      triggerReload?: boolean;
-    } = {}
+    options: { validateBeforeSave?: boolean; triggerReload?: boolean } = {}
   ): Promise<LanguageDonationUpdateResponse> {
-    const requestData: LanguageDonationUpdateRequest = {
-      donation_data: donationData,
-      validate_before_save: options.validateBeforeSave ?? true,
-      trigger_reload: options.triggerReload ?? true,
-    };
-
-    return this.put<LanguageDonationUpdateResponse>(
-      `/intents/donations/${encodeURIComponent(handlerName)}/${encodeURIComponent(language)}`,
-      requestData
-    );
+    return this.updateLanguageResource<LanguageDonationUpdateResponse>(
+      '/intents/donations', handlerName, language, 'donation_data', donationData, options);
   }
 
   /**
    * Validate language-specific donation without saving
    */
   async validateLanguageDonation(
-    handlerName: string, 
-    language: string, 
+    handlerName: string,
+    language: string,
     donationData: any
   ): Promise<LanguageDonationValidationResponse> {
-    const requestData: LanguageDonationValidationRequest = {
-      donation_data: donationData,
-    };
-
-    return this.post<LanguageDonationValidationResponse>(
-      `/intents/donations/${encodeURIComponent(handlerName)}/${encodeURIComponent(language)}/validate`,
-      requestData
-    );
+    return this.validateLanguageResource<LanguageDonationValidationResponse>(
+      '/intents/donations', handlerName, language, 'donation_data', donationData);
   }
 
   /**
    * Create a new language file for a handler
    */
   async createLanguage(
-    handlerName: string, 
-    language: string, 
-    options: {
-      copyFrom?: string;
-      useTemplate?: boolean;
-    } = {}
+    handlerName: string,
+    language: string,
+    options: { copyFrom?: string; useTemplate?: boolean } = {}
   ): Promise<CreateLanguageResponse> {
-    const requestData: CreateLanguageRequest = {
-      copy_from: options.copyFrom,
-      use_template: options.useTemplate ?? false,
-    };
-
-    return this.post<CreateLanguageResponse>(
-      `/intents/donations/${encodeURIComponent(handlerName)}/${encodeURIComponent(language)}/create`,
-      requestData
-    );
+    return this.createLanguageResource<CreateLanguageResponse>(
+      '/intents/donations', handlerName, language, '/create', options);
   }
 
   /**
    * Delete a language file for a handler
    */
   async deleteLanguage(handlerName: string, language: string): Promise<DeleteLanguageResponse> {
-    return this.delete<DeleteLanguageResponse>(
-      `/intents/donations/${encodeURIComponent(handlerName)}/${encodeURIComponent(language)}`
-    );
+    return this.deleteLanguageResource<DeleteLanguageResponse>('/intents/donations', handlerName, language);
   }
 
   /**
@@ -482,89 +485,58 @@ class IreneApiClient {
    * Get available languages for a handler's templates
    */
   async getTemplateHandlerLanguages(handlerName: string): Promise<string[]> {
-    return this.get<string[]>(`/intents/templates/${encodeURIComponent(handlerName)}/languages`);
+    return this.resourceLanguages('/intents/templates', handlerName);
   }
 
   /**
    * Get language-specific template content
    */
   async getLanguageTemplate(handlerName: string, language: string): Promise<TemplateContentResponse> {
-    return this.get<TemplateContentResponse>(
-      `/intents/templates/${encodeURIComponent(handlerName)}/${encodeURIComponent(language)}`
-    );
+    return this.getLanguageResource<TemplateContentResponse>('/intents/templates', handlerName, language);
   }
 
   /**
    * Update language-specific template
    */
   async updateLanguageTemplate(
-    handlerName: string, 
-    language: string, 
+    handlerName: string,
+    language: string,
     templateData: Record<string, any>,
-    options: {
-      validateBeforeSave?: boolean;
-      triggerReload?: boolean;
-    } = {}
+    options: { validateBeforeSave?: boolean; triggerReload?: boolean } = {}
   ): Promise<TemplateUpdateResponse> {
-    const requestData: TemplateUpdateRequest = {
-      template_data: templateData,
-      validate_before_save: options.validateBeforeSave ?? true,
-      trigger_reload: options.triggerReload ?? true
-    };
-
-    return this.put<TemplateUpdateResponse>(
-      `/intents/templates/${encodeURIComponent(handlerName)}/${encodeURIComponent(language)}`,
-      requestData
-    );
+    return this.updateLanguageResource<TemplateUpdateResponse>(
+      '/intents/templates', handlerName, language, 'template_data', templateData, options);
   }
 
   /**
    * Validate language-specific template without saving
    */
   async validateLanguageTemplate(
-    handlerName: string, 
-    language: string, 
+    handlerName: string,
+    language: string,
     templateData: Record<string, any>
   ): Promise<TemplateValidationResponse> {
-    const requestData: TemplateValidationRequest = {
-      template_data: templateData
-    };
-
-    return this.post<TemplateValidationResponse>(
-      `/intents/templates/${encodeURIComponent(handlerName)}/${encodeURIComponent(language)}/validate`,
-      requestData
-    );
+    return this.validateLanguageResource<TemplateValidationResponse>(
+      '/intents/templates', handlerName, language, 'template_data', templateData);
   }
 
   /**
    * Delete language-specific template file
    */
   async deleteTemplateLanguage(handlerName: string, language: string): Promise<DeleteTemplateLanguageResponse> {
-    return this.delete<DeleteTemplateLanguageResponse>(
-      `/intents/templates/${encodeURIComponent(handlerName)}/${encodeURIComponent(language)}`
-    );
+    return this.deleteLanguageResource<DeleteTemplateLanguageResponse>('/intents/templates', handlerName, language);
   }
 
   /**
    * Create new language file for template
    */
   async createTemplateLanguage(
-    handlerName: string, 
-    language: string, 
-    options: {
-      copyFrom?: string;
-      useTemplate?: boolean;
-    } = {}
+    handlerName: string,
+    language: string,
+    options: { copyFrom?: string; useTemplate?: boolean } = {}
   ): Promise<CreateTemplateLanguageResponse> {
-    const requestData: CreateTemplateLanguageRequest = {
-      copy_from: options.copyFrom,
-      use_template: options.useTemplate ?? false
-    };
-
-    return this.post<CreateTemplateLanguageResponse>(
-      `/intents/templates/${encodeURIComponent(handlerName)}/${encodeURIComponent(language)}`,
-      requestData
-    );
+    return this.createLanguageResource<CreateTemplateLanguageResponse>(
+      '/intents/templates', handlerName, language, '', options);
   }
 
   // ============================================================
@@ -582,89 +554,58 @@ class IreneApiClient {
    * Get available languages for a handler's prompts
    */
   async getPromptHandlerLanguages(handlerName: string): Promise<string[]> {
-    return this.get<string[]>(`/intents/prompts/${encodeURIComponent(handlerName)}/languages`);
+    return this.resourceLanguages('/intents/prompts', handlerName);
   }
 
   /**
    * Get language-specific prompt content
    */
   async getLanguagePrompt(handlerName: string, language: string): Promise<PromptContentResponse> {
-    return this.get<PromptContentResponse>(
-      `/intents/prompts/${encodeURIComponent(handlerName)}/${encodeURIComponent(language)}`
-    );
+    return this.getLanguageResource<PromptContentResponse>('/intents/prompts', handlerName, language);
   }
 
   /**
    * Update language-specific prompt
    */
   async updateLanguagePrompt(
-    handlerName: string, 
-    language: string, 
+    handlerName: string,
+    language: string,
     promptData: Record<string, PromptDefinition>,
-    options: {
-      validateBeforeSave?: boolean;
-      triggerReload?: boolean;
-    } = {}
+    options: { validateBeforeSave?: boolean; triggerReload?: boolean } = {}
   ): Promise<PromptUpdateResponse> {
-    const requestData: PromptUpdateRequest = {
-      prompt_data: promptData,
-      validate_before_save: options.validateBeforeSave ?? true,
-      trigger_reload: options.triggerReload ?? true
-    };
-
-    return this.put<PromptUpdateResponse>(
-      `/intents/prompts/${encodeURIComponent(handlerName)}/${encodeURIComponent(language)}`,
-      requestData
-    );
+    return this.updateLanguageResource<PromptUpdateResponse>(
+      '/intents/prompts', handlerName, language, 'prompt_data', promptData, options);
   }
 
   /**
    * Validate language-specific prompt without saving
    */
   async validateLanguagePrompt(
-    handlerName: string, 
-    language: string, 
+    handlerName: string,
+    language: string,
     promptData: Record<string, PromptDefinition>
   ): Promise<PromptValidationResponse> {
-    const requestData: PromptValidationRequest = {
-      prompt_data: promptData
-    };
-
-    return this.post<PromptValidationResponse>(
-      `/intents/prompts/${encodeURIComponent(handlerName)}/${encodeURIComponent(language)}/validate`,
-      requestData
-    );
+    return this.validateLanguageResource<PromptValidationResponse>(
+      '/intents/prompts', handlerName, language, 'prompt_data', promptData);
   }
 
   /**
    * Delete language-specific prompt file
    */
   async deletePromptLanguage(handlerName: string, language: string): Promise<DeletePromptLanguageResponse> {
-    return this.delete<DeletePromptLanguageResponse>(
-      `/intents/prompts/${encodeURIComponent(handlerName)}/${encodeURIComponent(language)}`
-    );
+    return this.deleteLanguageResource<DeletePromptLanguageResponse>('/intents/prompts', handlerName, language);
   }
 
   /**
    * Create new language file for prompt
    */
   async createPromptLanguage(
-    handlerName: string, 
-    language: string, 
-    options: {
-      copyFrom?: string;
-      useTemplate?: boolean;
-    } = {}
+    handlerName: string,
+    language: string,
+    options: { copyFrom?: string; useTemplate?: boolean } = {}
   ): Promise<CreatePromptLanguageResponse> {
-    const requestData: CreatePromptLanguageRequest = {
-      copy_from: options.copyFrom,
-      use_template: options.useTemplate ?? false
-    };
-
-    return this.post<CreatePromptLanguageResponse>(
-      `/intents/prompts/${encodeURIComponent(handlerName)}/${encodeURIComponent(language)}`,
-      requestData
-    );
+    return this.createLanguageResource<CreatePromptLanguageResponse>(
+      '/intents/prompts', handlerName, language, '', options);
   }
 
   // ============================================================
@@ -896,89 +837,58 @@ class IreneApiClient {
    * Get available languages for a domain
    */
   async getLocalizationDomainLanguages(domain: string): Promise<string[]> {
-    return this.get<string[]>(`/intents/localizations/${encodeURIComponent(domain)}/languages`);
+    return this.resourceLanguages('/intents/localizations', domain);
   }
 
   /**
    * Get language-specific localization content
    */
   async getLanguageLocalization(domain: string, language: string): Promise<LocalizationContentResponse> {
-    return this.get<LocalizationContentResponse>(
-      `/intents/localizations/${encodeURIComponent(domain)}/${encodeURIComponent(language)}`
-    );
+    return this.getLanguageResource<LocalizationContentResponse>('/intents/localizations', domain, language);
   }
 
   /**
    * Update language-specific localization
    */
   async updateLanguageLocalization(
-    domain: string, 
-    language: string, 
+    domain: string,
+    language: string,
     localizationData: Record<string, any>,
-    options: {
-      validateBeforeSave?: boolean;
-      triggerReload?: boolean;
-    } = {}
+    options: { validateBeforeSave?: boolean; triggerReload?: boolean } = {}
   ): Promise<LocalizationUpdateResponse> {
-    const requestData: LocalizationUpdateRequest = {
-      localization_data: localizationData,
-      validate_before_save: options.validateBeforeSave ?? true,
-      trigger_reload: options.triggerReload ?? true
-    };
-
-    return this.put<LocalizationUpdateResponse>(
-      `/intents/localizations/${encodeURIComponent(domain)}/${encodeURIComponent(language)}`,
-      requestData
-    );
+    return this.updateLanguageResource<LocalizationUpdateResponse>(
+      '/intents/localizations', domain, language, 'localization_data', localizationData, options);
   }
 
   /**
    * Validate language-specific localization without saving
    */
   async validateLanguageLocalization(
-    domain: string, 
-    language: string, 
+    domain: string,
+    language: string,
     localizationData: Record<string, any>
   ): Promise<LocalizationValidationResponse> {
-    const requestData: LocalizationValidationRequest = {
-      localization_data: localizationData
-    };
-
-    return this.post<LocalizationValidationResponse>(
-      `/intents/localizations/${encodeURIComponent(domain)}/${encodeURIComponent(language)}/validate`,
-      requestData
-    );
+    return this.validateLanguageResource<LocalizationValidationResponse>(
+      '/intents/localizations', domain, language, 'localization_data', localizationData);
   }
 
   /**
    * Delete language-specific localization file
    */
   async deleteLocalizationLanguage(domain: string, language: string): Promise<DeleteLocalizationLanguageResponse> {
-    return this.delete<DeleteLocalizationLanguageResponse>(
-      `/intents/localizations/${encodeURIComponent(domain)}/${encodeURIComponent(language)}`
-    );
+    return this.deleteLanguageResource<DeleteLocalizationLanguageResponse>('/intents/localizations', domain, language);
   }
 
   /**
    * Create new language file for localization
    */
   async createLocalizationLanguage(
-    domain: string, 
-    language: string, 
-    options: {
-      copyFrom?: string;
-      useTemplate?: boolean;
-    } = {}
+    domain: string,
+    language: string,
+    options: { copyFrom?: string; useTemplate?: boolean } = {}
   ): Promise<CreateLocalizationLanguageResponse> {
-    const requestData: CreateLocalizationLanguageRequest = {
-      copy_from: options.copyFrom,
-      use_template: options.useTemplate ?? false
-    };
-
-    return this.post<CreateLocalizationLanguageResponse>(
-      `/intents/localizations/${encodeURIComponent(domain)}/${encodeURIComponent(language)}`,
-      requestData
-    );
+    return this.createLanguageResource<CreateLocalizationLanguageResponse>(
+      '/intents/localizations', domain, language, '', options);
   }
 
   // ============================================================
