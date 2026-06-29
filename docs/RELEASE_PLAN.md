@@ -353,13 +353,16 @@ Governed by `config-ui-stays-functional` (config-ui must stay functional).
       (today `canSaveNLU` hard-requires `!hasBlockingConflicts`). Deliverable: a design doc under `docs/design/` first,
       then implementation follow-up(s). The inline `ValidationIndicator` already surfaces blockers, so scope the modal's
       added value deliberately (resolution UX, not just a second display).
-- [ ] **UI-12** [UI] (P3) `[deferred]` — **config-ui duplication consolidation** (review §C, ~500+ duplicated lines).
-      `apiClient` per-resource CRUD quintet copy-pasted ×4 (donations/templates/prompts/localizations) → a
-      `resourceCrud(prefix, dataKey)` factory; `TemplatesPage`≈`PromptsPage` whole-page clones (+ Donations/Localizations
-      shape) → a `useHandlerLanguageResource` hook + `ResourceEditorLayout`; "list of strings" reimplemented ×4 → route
-      through `ArrayOfStringsEditor`; `TemplateKeyEditor`≈`LocalizationKeyEditor` → one `TypedValueEditor` reusing
-      `KeyValueEditor`; `CardPatternsEditor`≈`ExtractionFillersEditor` controlled-editor scaffold → a
-      `useDecompiledPatterns` hook. File:line copies in the review doc §C1–C6.
+- [~] **UI-12** [UI] (P3) `[deferred]` — **config-ui duplication consolidation** (review §C, ~500+ duplicated lines).
+      **PARTIAL (2026-06-28).** **DONE:** **C1** — `apiClient` per-resource CRUD quintet (×4) → 6 shared private helpers
+      + thin typed wrappers (`123ce3b`); **C6** — `CardPatternsEditor`/`ExtractionFillersEditor` controlled scaffold →
+      `useDecompiledPatterns` hook (`99c1432`). Both type-proven/behavior-preserving, gate green. **REMAINING** (larger
+      merges of NON-identical components — uncatchable behavioral risk, need a config-ui smoke-test): **C2**
+      `TemplatesPage`≈`PromptsPage` (+ Donations/Localizations shape) → a `useHandlerLanguageResource` hook +
+      `ResourceEditorLayout`; **C3** "list of strings" reimplemented (LemmasEditor/SpacyValueEditor/LocalizationKeyEditor,
+      each with extra UI) → route the plain-list part through `ArrayOfStringsEditor`; **C4/C5**
+      `TemplateKeyEditor`≈`LocalizationKeyEditor` → one `TypedValueEditor` reusing `KeyValueEditor`. File:line copies in
+      the review doc §C2–C5.
 - [ ] **UI-13** [UI] (P3) `[deferred]` — **config-ui dead-code removal** (review §D — unused *exports*, which ESLint's
       unused-locals rule doesn't catch). `types/index.ts:12-23` 8 never-imported utility aliases; `types/components.ts`
       dead interfaces (`TokenPatternsEditorProps`, `SlotPatternsEditorProps`, `HandlerListProps`, `ConfigSection`+

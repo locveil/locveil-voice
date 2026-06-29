@@ -14,6 +14,14 @@ newest entries near the top of each dated section.
 ## Action journal
 
 ### 2026-06-28
+- **UI-12 PARTIAL — config-ui duplication consolidation, 2 of 6 done (the clean/safe ones).** **C1:** the apiClient
+  per-language CRUD quintet (donations/templates/prompts/localizations, ~250 dup lines) → 6 shared private helpers +
+  thin typed wrappers; call sites, signatures, and emitted requests unchanged; 12 now-unused `*Request` imports removed
+  (`123ce3b`). **C6:** the `CardPatternsEditor`/`ExtractionFillersEditor` controlled decompile→compile scaffold →
+  `useDecompiledPatterns` hook (`99c1432`). Both type-proven & behavior-preserving; gate green. Remaining C2 (page
+  clones), C3 (list editors w/ extras), C4/C5 (typed-key editor merge) are larger merges of NON-identical components
+  with behavioral risk the config-ui gate can't catch (no runtime tests) — left for a careful pass with UI smoke-testing
+  (user opted to push through; stopped at the clean subset for quality). UI-12 stays open `[~]`.
 - **UI-11 DONE — config-ui type-contract drift realigned (restores the type-check gate).** `src/types/api.ts` (what
   `apiClient` consumes) had fallen behind backend `CoreConfig` while the generated `openapi.gen.ts` sat current-but-
   unused. Realigned the 4 drifted types to the backend (verified vs the gen file + `models.py`): added `outputs`/`trace`
