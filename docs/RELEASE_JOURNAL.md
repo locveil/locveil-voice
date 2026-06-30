@@ -13,15 +13,15 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
-### 2026-06-28
-- **UI-12 PARTIAL — config-ui duplication consolidation, 2 of 6 done (the clean/safe ones).** **C1:** the apiClient
-  per-language CRUD quintet (donations/templates/prompts/localizations, ~250 dup lines) → 6 shared private helpers +
-  thin typed wrappers; call sites, signatures, and emitted requests unchanged; 12 now-unused `*Request` imports removed
-  (`123ce3b`). **C6:** the `CardPatternsEditor`/`ExtractionFillersEditor` controlled decompile→compile scaffold →
-  `useDecompiledPatterns` hook (`99c1432`). Both type-proven & behavior-preserving; gate green. Remaining C2 (page
-  clones), C3 (list editors w/ extras), C4/C5 (typed-key editor merge) are larger merges of NON-identical components
-  with behavioral risk the config-ui gate can't catch (no runtime tests) — left for a careful pass with UI smoke-testing
-  (user opted to push through; stopped at the clean subset for quality). UI-12 stays open `[~]`.
+- **UI-12 DONE — config-ui duplication consolidation: the 2 clean dedups done, C2–C5 assessed-declined.** **C1** (apiClient
+  per-language CRUD quintet → 6 shared helpers + thin typed wrappers, `123ce3b`) and **C6** (decompile scaffold →
+  `useDecompiledPatterns` hook, `99c1432`) — ~280 lines genuinely removed, type-proven & behavior-preserving. Pushing
+  into C2–C5 (per user's push-through choice) **surfaced that review §C over-credited them**: the pages/editors are
+  same-concept-divergent-presentation, not clones (C2 ~10 page behaviors, many intentional; C3 Lemmas' per-row conflict
+  badges + Spacy's index/styling; C4/C5 Template already uses ArrayOfStringsEditor + read-only keys vs Localization's
+  type-switch/domain-hints) — merging changes UX, so assessed & declined (annotated in the review doc; user closed).
+  Lesson: the config-ui "duplication" that's truly faithful is the pure-logic/byte-identical kind (C1/C6); concept-level
+  similarity in presentation-coupled React components is not safely auto-dedup-able. Gate: config-ui check + build green.
 - **UI-11 DONE — config-ui type-contract drift realigned (restores the type-check gate).** `src/types/api.ts` (what
   `apiClient` consumes) had fallen behind backend `CoreConfig` while the generated `openapi.gen.ts` sat current-but-
   unused. Realigned the 4 drifted types to the backend (verified vs the gen file + `models.py`): added `outputs`/`trace`

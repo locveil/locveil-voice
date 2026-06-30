@@ -2183,6 +2183,20 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       covered; the standalone `PARAMETER_EXTRACTION_GUIDE.md` was not needed.
 
 ### UI / config-ui (UI)
+- [x] **UI-12** [UI] (P3) `[deferred]` — **DONE 2026-06-28.** config-ui duplication consolidation (review §C). **The two
+      genuinely-clean dedups done; C2–C5 assessed and declined as over-credited.** **C1** — the `apiClient` per-language
+      CRUD quintet (donations/templates/prompts/localizations, ~250 dup lines) → 6 shared private helpers + thin typed
+      wrappers; call sites/signatures/requests unchanged; 12 now-unused `*Request` imports removed (`123ce3b`). **C6** —
+      the `CardPatternsEditor`/`ExtractionFillersEditor` controlled decompile→compile scaffold → `useDecompiledPatterns`
+      hook (`99c1432`). Both type-proven & behavior-preserving; gate green. **C2–C5 assessed-divergent** (annotated in
+      the review doc): the pages/editors are *same-concept, divergent-presentation*, not clones — C2's two pages diverge
+      in ~10 (often intentional) behaviors; C3's list editors carry per-row conflict badges (Lemmas) / index+styling
+      (Spacy) so they aren't faithful `ArrayOfStringsEditor` swaps; C4/C5's `TemplateKeyEditor` already uses
+      `ArrayOfStringsEditor` and has read-only keys while `LocalizationKeyEditor` adds a type-switch + domain hints —
+      merging would **change UX**, not dedup. Net: ~280 lines genuinely removed (C1+C6); the §C over-credit recorded so
+      it isn't re-litigated. Two optional micro-consistency wins (Localization array → `ArrayOfStringsEditor`; object
+      branches → `KeyValueEditor`) noted, not pursued (UX-touching, no meaningful dup). Decisions: C2 skip + C2–C5 close
+      both user calls (2026-06-28). Gate (`config-ui-stays-functional`): `npm run check` + `npm run build` green.
 - [x] **UI-11** [UI] (P3) `[deferred]` — **DONE 2026-06-28.** config-ui type-contract drift in `src/types/api.ts`
       (review `config_ui_review.md` §B) — restores the type-check half of `config-ui-stays-functional`. Realigned the 4
       drifted types to the backend `CoreConfig` (verified against the generated `openapi.gen.ts` + `irene/config/

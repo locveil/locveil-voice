@@ -99,6 +99,18 @@ an unused dependency, not drift).
 
 → tracked as **UI-12**.
 
+> **Assessment annotation (2026-06-28, on completing UI-12).** Acting on these, only **C1** and **C6** held
+> up as faithful, behavior-preserving dedups (done: `123ce3b`, `99c1432`; ~280 lines genuinely removed).
+> **C2–C5 were over-credited** — they are *same-concept, divergent-presentation* components, not clones:
+> **C2** the two pages diverge in ~10 behaviors (auto-select/`default_language`, clear-on-select, save
+> options, create/delete signatures, `filteredHandlers` only in Prompts) — many intentional; **C3**
+> `LemmasEditor` has per-row conflict badges + a typed-add-with-Enter flow, `SpacyValueEditor` has per-row
+> index numbers + bespoke styling — neither a faithful `ArrayOfStringsEditor` swap; **C4/C5**
+> `TemplateKeyEditor` already uses `ArrayOfStringsEditor` and has read-only keys, while
+> `LocalizationKeyEditor` hand-rolls the array and adds a type-switch + domain hints — a divergent merge,
+> not an extraction. Merging C2–C5 would *change UX*, so they were **assessed and declined**, not done.
+> (Two optional micro-consistency wins noted in the ledger, not pursued.)
+
 ## D. Dead code (unused exports — ESLint flags only unused *locals*)
 
 - **D1** `types/index.ts:12-23` — 8 never-imported utility aliases: `Maybe`, `Optional`, `RequiredKeys`,
