@@ -510,13 +510,13 @@ Examples:
   python -m irene.tools.config_validator_cli --config-file configs/production.toml
   
   # CI/CD mode with JSON output
-  python -m irene.tools.config_validator_cli --config-file configs/api-only.toml --json --ci-mode
+  python -m irene.tools.config_validator_cli --config-file configs/config-master.toml --json --ci-mode
   
   # Validate all configs in directory
   python -m irene.tools.config_validator_cli --config-dir configs/ --json
   
   # Profile-specific validation
-  python -m irene.tools.config_validator_cli --config-file configs/voice.toml --profile voice-assistant
+  python -m irene.tools.config_validator_cli --config-file configs/embedded-armv7.toml --profile voice-assistant
   
   # Generate validation report
   python -m irene.tools.config_validator_cli --config-file configs/production.toml --output-report report.json

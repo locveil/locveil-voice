@@ -25,8 +25,8 @@ providers:
 tests:
   # ── Config matrix: every shipped config validates clean (exit 0). ──────────────
   #   Identical assertion, many configs — the static counterpart to the WS config matrix.
-  - description: validate config — voice.toml
-    vars: { cmd: "irene-config-validate --config-file configs/voice.toml --ci-mode" }
+  - description: validate config — embedded-armv7.toml
+    vars: { cmd: "irene-config-validate --config-file configs/embedded-armv7.toml --ci-mode" }
     assert: [{ type: javascript, value: "JSON.parse(output).exit_code === 0" }]
 
   - description: validate config — standalone-x86_64.toml

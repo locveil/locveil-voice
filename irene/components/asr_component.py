@@ -170,11 +170,18 @@ class ASRComponent(MetricsPushMixin, Component, ASRPlugin, WebAPIPlugin, ASRPort
                 self.default_provider = next(iter(self.providers))
                 logger.info(f"Configured default ASR provider unavailable; using '{self.default_provider}'")
 
-            # Ensure we have at least one provider
+            # A (BUG-11): fail fast. An *enabled* ASR component that loaded zero providers used to report
+            # healthy and then fail EVERY audio request at runtime with a confusing "ASR provider '<x>'
+            # not available". Raise at init instead, so a misconfigured `[asr]` — e.g. `default_provider`
+            # names a provider with no enabled `[asr.providers.<name>]` section (the CR-A2 reconcile at
+            # the top only fires when providers is non-empty, so a zero-provider ASR slipped through) —
+            # surfaces at startup. (If ASR isn't needed, disable it: `[components] asr = false`.)
             if not self.providers:
-                logger.warning("No ASR providers available")
-            else:
-                logger.info(f"Universal ASR Plugin initialized with {len(self.providers)} providers")
+                raise ValueError(
+                    f"ASR component is enabled but loaded no providers (default_provider="
+                    f"{self.default_provider!r}). Add an enabled [asr.providers.<name>] section with a "
+                    f"matching [asr] default_provider, or disable ASR via [components] asr = false.")
+            logger.info(f"Universal ASR Plugin initialized with {len(self.providers)} providers")
                 
             # Phase 1: Start unified metrics push task
             self._start_metrics_push_task()

@@ -6,7 +6,7 @@ by analyzing TOML configuration + entry-points metadata to determine
 precisely which modules and dependencies are required.
 
 Usage:
-    python -m irene.tools.build_analyzer --config configs/minimal.toml
+    python -m irene.tools.build_analyzer --config configs/embedded-armv7.toml
     python -m irene.tools.build_analyzer --list-profiles
     python -m irene.tools.build_analyzer --validate-all-profiles
 """
@@ -942,7 +942,7 @@ def main():
         epilog="""
 Examples:
   # Analyze a specific configuration profile
-  python -m irene.tools.build_analyzer --config configs/minimal.toml
+  python -m irene.tools.build_analyzer --config configs/embedded-armv7.toml
 
   # List all available profiles
   python -m irene.tools.build_analyzer --list-profiles
@@ -951,10 +951,10 @@ Examples:
   python -m irene.tools.build_analyzer --validate-all-profiles
 
   # Generate Docker commands for specific platform
-  python -m irene.tools.build_analyzer --config minimal.toml --docker --platform alpine
+  python -m irene.tools.build_analyzer --config embedded-armv7.toml --docker --platform alpine
 
   # Generate system install commands
-  python -m irene.tools.build_analyzer --config minimal.toml --system-install --platform ubuntu
+  python -m irene.tools.build_analyzer --config embedded-armv7.toml --system-install --platform ubuntu
         """
     )
     

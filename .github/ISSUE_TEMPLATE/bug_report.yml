@@ -60,7 +60,7 @@ body:
     attributes:
       label: Config profile
       description: Which `configs/*.toml` (or a custom file)?
-      placeholder: configs/minimal.toml
+      placeholder: config.toml
   - type: textarea
     id: repro
     attributes:

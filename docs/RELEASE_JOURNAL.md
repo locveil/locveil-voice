@@ -13,6 +13,20 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **BUG-11 DONE — the WS e2e "whisper" error was a broken config, not a `/ws/audio` provider bug.** Deep research
+  (static-map agent + live instrumented repro) **disproved** the original hypothesis: a clean `embedded-armv7` SUT
+  transcribes the recording correctly via `sherpa_onnx` (verified «Таймер установлен на 10 мин» success:true). The error
+  came from running `voice.toml` — `[asr] default_provider="whisper"` with no `[asr.providers.whisper]` → zero providers
+  → every request failed (the CR-A2 reconcile only fires when providers is non-empty). User-approved fixes: **(B)**
+  deleted the 4 stale broken configs (voice/minimal/development/api-only) + repointed every ref (test→full,
+  build_analyzer/validator/cli-test, eval Makefile/profile, QUICKSTART rewritten to copy config-master + toggle
+  components, 3 guides, issue template, env-example, build-system diagram regenerated); **(A)** asr_component raises at
+  init on enabled-but-zero-providers (was a silent warning → per-request 404s); **(C)** eval WS default config voice →
+  embedded-armv7; **(D)** schema ASR default "whisper"/["whisper"] → ""/[] to match the runtime ASRConfig. Configs 13→9.
+  Gates: pyright 0, config-validator 9/9, suite 1105, import-linter 9/9; armv7 re-verified. **Lesson:** the recordings +
+  harness were vindicated — the system test did its job (surfaced a real config-robustness gap), and a stale-process
+  artifact (my own `pkill -f irene-webapi` self-kill) muddied the early diagnosis. _Open: the promptfoo `make ws` run
+  hangs where a direct WS client succeeds — a harness-level follow-up before WS is green e2e._
 - **UI-14 DONE — config-ui §E completed: efficiency + E6 drift-guard done; E7/E9/E10 → UI-16; E8 non-issue.** Added the
   altitude half: E6 makes the `ContractEditor` enum dropdowns derive from `satisfies Record<Union,…>` keys, so a backend
   donation-enum change fails the build rather than silently dropping options (a TS union can't be enumerated at runtime,

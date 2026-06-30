@@ -29,19 +29,23 @@ cp docs/env-example.txt .env      # then fill in the keys you need
 
 ## 3. Pick a config
 
-Copy a profile to `config.toml`, or pass it with `-c`. For testing, use a **lightweight** one
-(`minimal` / `api-only` keep TTS+Audio **off**, so no models are downloaded):
+Start from the documented reference and trim it: `cp configs/config-master.toml config.toml`, then pass
+it with `-c config.toml`. The shipped configs:
 
-| Config | Components | Use for |
-|---|---|---|
-| `configs/minimal.toml` | text pipeline only (NLU + intents); TTS/Audio **off** | **CLI text testing** |
-| `configs/api-only.toml` | web API + text pipeline; TTS/Audio **off** | **WebAPI + config-ui testing** |
-| `configs/config-master.toml` | every option, documented | reference only (heavy) |
+| Config | Use for |
+|---|---|
+| `configs/config-master.toml` | the documented reference (every option) — copy and trim it |
+| `configs/full.toml` | everything enabled (heavy) |
+| `configs/embedded-armv7.toml` / `configs/embedded-aarch64.toml` | ESP32 satellite controllers (WB7 / WB8) |
+| `configs/standalone-x86_64.toml` | a standalone x86 voice box |
 
-> For **voice** testing you need a config whose **`[components]`** section enables `tts`/`audio`/`asr`
-> **and** the matching models installed — the shipped `minimal`/`api-only` keep them off so a first run
-> needs no downloads. (Note: a profile's `[tts]`/`[audio]` sub-sections can read `enabled = true` while
-> the component is still off in `[components]`; the `[components]` flags are what actually load it.)
+> **Lightweight first run (no model downloads):** in your `config.toml` set `[components]` `tts = false`,
+> `audio = false`, `asr = false`. The text pipeline (NLU + intents) needs no models — perfect for the CLI
+> and WebAPI flows below. The **`[components]`** flags are what actually load a component (a sub-section's
+> `enabled = true` is ignored when its `[components]` flag is off).
+>
+> For **voice**, leave `asr`/`tts`/`audio` **on** in `[components]` and install the matching models — that's
+> heavier than the text flows.
 
 ---
 
@@ -49,7 +53,7 @@ Copy a profile to `config.toml`, or pass it with `-c`. For testing, use a **ligh
 
 ### CLI (interactive text)
 ```bash
-uv run python -m irene.runners.cli -c configs/minimal.toml
+uv run python -m irene.runners.cli -c config.toml          # text-only: asr/tts/audio off in [components]
 ```
 Then type, e.g.:
 - `привет` → a greeting
@@ -60,7 +64,7 @@ Then type, e.g.:
 
 ### WebAPI (REST + WebSocket + the config-ui backend)
 ```bash
-uv run python -m irene.runners.webapi_runner -c configs/api-only.toml --host 0.0.0.0 --port 8000
+uv run python -m irene.runners.webapi_runner -c config.toml --host 0.0.0.0 --port 8000
 ```
 Smoke-check:
 ```bash
@@ -74,7 +78,7 @@ Interactive API docs: open `http://localhost:8000/docs`.
 The full spoken pipeline from a local microphone — **Microphone → VAD → [wake word] → ASR → intent →
 spoken reply**:
 ```bash
-uv run python -m irene.runners.voice_runner -c configs/development.toml   # or the installed `irene-voice`
+uv run python -m irene.runners.voice_runner -c config.toml   # voice config (asr/tts/audio on) + models; or `irene-voice`
 ```
 It always uses microphone-only input (other inputs are overridden), but is otherwise **config-driven**:
 the ASR engine is whatever **`[asr] default_provider`** selects (`vosk` / `whisper` / `sherpa_onnx` / …)
@@ -103,7 +107,7 @@ npm run dev          # opens a Vite dev server (printed URL, usually http://loca
 **NOT in this build (don't file these as bugs):**
 - **Smart-home / device control** ("включи свет в гостиной") — the MQTT/bridge integration is designed but **not implemented** (ARCH-8). Device/room commands will report a resolution failure by design.
 - **ESP32 voice satellite** and the wake-word path.
-- **Voice/ASR** end-to-end unless you deliberately use `development.toml` + install models.
+- **Voice/ASR** end-to-end unless you deliberately enable `asr`/`tts`/`audio` in `[components]` + install models.
 - **Docker** packaging (release-phase item).
 
 ## 6. Tests & coverage

@@ -1638,6 +1638,27 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       console-LLM fallback / `fallback_providers` — left as-is; not in scope here.)
 
 ### Bugs (BUG)
+- [x] **BUG-11** [ASR][CONFIG] (P2) `[release]` — **DONE 2026-06-30.** Misconfigured-ASR configs failed every audio
+      request at runtime instead of failing fast. **Origin disproven:** the first `make ws TARGET=local` reported "ASR
+      provider 'whisper' not available", which I first hypothesised as `/ws/audio` ignoring the configured provider —
+      **wrong.** Deep research (a static map agent + a live instrumented repro) proved a cleanly-launched `embedded-armv7`
+      SUT transcribes the recording correctly via `sherpa_onnx` (one ASR instance, `process_audio` uses the configured
+      provider, no `whisper` override; verified «Таймер установлен на 10 мин» `success:true`). The "whisper" error came
+      from running the broken **`voice.toml`** (`[asr] default_provider="whisper"` with **no `[asr.providers.whisper]`** →
+      zero providers loaded → the CR-A2 reconcile guard at `asr_component.py:169` only fires when `providers` is
+      non-empty, so the dangling default failed every request) + a self-inflicted stale-process artifact (my
+      `pkill -f irene-webapi` self-killed the management shell). **Fixes (user-approved):** **(B)** deleted the 4 stale
+      broken configs (`voice`/`minimal`/`development`/`api-only`) and repointed **every** reference —
+      `test_audio_negotiator` (→ `full.toml`), `build_analyzer` + `config_validator` docstrings, the live
+      `cli.promptfooconfig` config-validate case (→ `embedded-armv7`), eval `Makefile CONFIG`/`voice.env`, `QUICKSTART`
+      (rewritten to copy `config-master` + toggle `[components]`), 3 guides, the issue template, `env-example`, and the
+      `build-system` diagram (`.dot` + regenerated PNG). **(A)** `asr_component` now **raises at init** when an enabled
+      ASR loaded zero providers (was a silent warning → per-request 404s). **(C)** eval WS-suite default config
+      `voice` → `embedded-armv7` (ASR-capable). **(D)** reconciled the dual default — `schemas.py` ASR `default_provider`
+      `"whisper"`/`["whisper"]` → `""`/`[]` (matches the runtime `ASRConfig`). Configs 13→9. Gates: pyright 0,
+      config-validator 9/9, suite 1105 passed, import-linter 9/9; armv7 SUT re-verified transcribing post-fix. _Open
+      follow-up (not BUG-11): the promptfoo `make ws` harness run hung where a direct WS client succeeds — a harness-level
+      issue to chase before the WS suite is green end-to-end._
 - [x] **BUG-10** [UI] (P3) `[deferred]` — **DONE 2026-06-28.** config-ui enhanced-mode blocking-conflicts dialog
       unreachable (review `config_ui_review.md` §A3). Blocking conflicts disable the Apply button (`canSaveNLU` requires
       `!hasBlockingConflicts`), so the dialog's only opener — an `if (hasBlockingConflicts)` branch inside the disabled

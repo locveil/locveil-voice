@@ -431,8 +431,11 @@ class AudioComponentSchema(ComponentProviderConfigSchema):
 
 class ASRComponentSchema(ComponentProviderConfigSchema):
     """ASR component configuration schema"""
-    default_provider: str = Field(default="whisper", description="Default ASR provider")
-    fallback_providers: List[str] = Field(default_factory=lambda: ["whisper"], description="Fallback ASR providers")
+    # D (BUG-11): no provider-implying default (was "whisper", which invited configs that named a
+    # provider with no matching [asr.providers.whisper] section → zero providers → every request failed).
+    # Empty = "pick one explicitly"; mirrors the runtime ASRConfig staying off/None until configured.
+    default_provider: str = Field(default="", description="Default ASR provider")
+    fallback_providers: List[str] = Field(default_factory=list, description="Fallback ASR providers")
 
 
 class LLMComponentSchema(ComponentProviderConfigSchema):

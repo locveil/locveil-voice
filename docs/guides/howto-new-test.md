@@ -25,8 +25,8 @@ The fastest tests check a console script: give it a command line, assert on its 
 command line; the result is JSON `{stdout, stderr, exit_code}`.
 
 ```yaml
-- description: validate config — voice.toml
-  vars: { cmd: "irene-config-validate --config-file configs/voice.toml --ci-mode" }
+- description: validate config — embedded-armv7.toml
+  vars: { cmd: "irene-config-validate --config-file configs/embedded-armv7.toml --ci-mode" }
   assert:
     - { type: javascript, value: "JSON.parse(output).exit_code === 0" }
 ```

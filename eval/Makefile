@@ -5,8 +5,8 @@
 #   make ws     TARGET=local                  # WS-audio system tests against a locally-running Irene
 #   make ws     TARGET=wb7                     # ... against Irene on the WB7 controller (remote)
 #   make ux     TARGET=local                   # only the DeepSeek-judged UX cases (needs DEEPSEEK_API_KEY)
-#   make serve  CONFIG=voice                   # bring Irene up LOCALLY with a chosen config (foreground)
-#   make compare CONFIGS="voice standalone"    # run the WS suite against each config (LOCAL bring-up loop)
+#   make serve  CONFIG=embedded-armv7                 # bring Irene up LOCALLY with a chosen config (foreground)
+#   make compare CONFIGS="embedded-armv7 standalone"    # run the WS suite against each config (LOCAL bring-up loop)
 #   make view                                  # open the promptfoo results UI
 #
 # Two axes, both EXTERNAL to the test YAML:
@@ -14,8 +14,8 @@
 #   CONFIG — which config it runs  → profiles/configs/<CONFIG>.env  (IRENE_CONFIG_FILE), local bring-up only
 
 TARGET    ?= local
-CONFIG    ?= voice
-CONFIGS   ?= voice standalone
+CONFIG    ?= embedded-armv7
+CONFIGS   ?= embedded-armv7 standalone
 PROMPTFOO ?= promptfoo
 
 # TEST-13 failure-trace capture (live WS). With TRACE=1, after the run the failing cases' traces are

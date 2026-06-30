@@ -64,7 +64,7 @@ IRENE_CONTEXT_TIMEOUT_MINUTES=30
 # ============================================================
 
 # Enable/disable core components.
-# NOTE: components are normally set in your config.toml (e.g. configs/minimal.toml), NOT here.
+# NOTE: components are normally set in your config.toml (e.g. config.toml), NOT here.
 # Env vars OVERRIDE the config file, so these are left COMMENTED — `cp docs/env-example.txt .env`
 # must not force a partial component set. (Older copies crashed at startup: they enabled TTS but
 # used the WRONG field `AUDIO_OUTPUT`, leaving Audio off → "TTS component requires Audio component".)

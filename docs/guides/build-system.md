@@ -19,12 +19,12 @@ You don't hand-pick extras. The **build analyzer** reads a config and works out 
 ![Minimal, config-driven builds](../images/build-system.png)
 
 ```
-python -m irene.tools.build_analyzer --config configs/minimal.toml
+python -m irene.tools.build_analyzer --config configs/embedded-armv7.toml
 ```
 
 It walks the enabled components and providers, collects their declared dependencies and the intent JSON files
 they require, and produces the minimal set for that profile — which is what a container build then installs.
-A `minimal.toml` deployment never lists torch; a voice profile lists only the speech libraries it actually
+A `embedded-armv7.toml` deployment never lists torch; a voice profile lists only the speech libraries it actually
 configured.
 
 ## Why it runs lean, too

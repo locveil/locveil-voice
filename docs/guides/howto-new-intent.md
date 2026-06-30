@@ -137,7 +137,7 @@ After editing entry-points, reinstall (`uv sync`) so the new handler is picked u
 ## Try it
 
 ```
-uv run python -m irene.runners.cli -c configs/minimal.toml --command "погода в Москве"
+uv run python -m irene.runners.cli -c configs/config-master.toml --command "погода в Москве"
 ```
 
 If recognition misses, check the donation `phrases`/patterns first — recognition lives there, not in the
