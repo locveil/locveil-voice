@@ -2026,6 +2026,21 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       Gates: pyright 0, suite **1105 passed**, import-linter 9/9, config-validator 100%. Residual (not blocking): on-WB7
       RAM/latency is a deployment checkbox folded into I18N-4; the real English WER measurement rides with I18N-5's
       English fixtures. Design §2c. Bench artifacts in the session scratchpad (not committed).
+- [x] **I18N-3** [ASSET] (P3) `[deferred]` — **DONE 2026-07-01.** English Piper TTS voices for the two torch-free
+      satellites (armv7/aarch64). Generalized the `ru_RU`-hardcoded catalog (`irene/providers/tts/piper.py`) to a
+      `locale` parameter and added `en_US-amy-medium` (default) + `lessac`/`ryan` — same k2-fsa `.tar.bz2` medium packs,
+      same sherpa-onnx runtime, no provider/runtime change. `get_capabilities` now reports the per-instance language
+      (`ru-RU`/`en-US`) instead of a hardcoded `ru-RU` (so `piper_ruaccent`, always RU, still reports RU). Tests updated
+      (descriptor set now ru∪en; new en-language capability test). Gates: pyright 0, suite 1107, import-linter 9/9.
+- [x] **I18N-7** [ASSET] (P3) `[deferred]` — **DONE 2026-07-01.** Silero v3 English for the x86_64 standalone (torch TTS
+      parity; Silero froze English at `v3_en`). Adjusted the existing `silero_v3` provider (not a new one) to pull
+      speakers + accent + language **by model**: `_SPEAKERS_BY_MODEL` (`v3_ru` → RU set; `v3_en` → `en_0…en_117`),
+      default-speaker fallback to the model's first, `put_accent`/`put_yo` default off for non-RU **and** omitted from
+      `apply_tts`/`save_wav` (Russian-only semantics), `get_capabilities` language + `stress_placement` feature by model,
+      assistant-name speaker map empty for non-RU, and the size-log lookup uses the selected `model_id` (was hardcoded
+      `v3_ru`). **Verified with real synthesis** (torch): `v3_en.pt` = 57 MB (≈ `v4_ru` size), 119 speakers,
+      `apply_tts(en_0)` produced audio cleanly. Tests added (EN speaker set / default / accent-off / capabilities). Gates:
+      pyright 0, suite 1107, import-linter 9/9.
 
 ### Build & CI (BUILD)
 - [x] **BUILD-1** (P0) — Verify clean `uv sync` + CLI and WebAPI boot at v15. **DONE 2026-06-01** (`bab6f97`):

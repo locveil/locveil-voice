@@ -13,6 +13,15 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **I18N-3 + I18N-7 DONE — English TTS on all three arches (Piper on the satellites, Silero v3 on the standalone).**
+  I18N-3: generalized the `ru_RU`-hardcoded Piper catalog to a locale param and added `en_US-amy`(default)/`lessac`/`ryan`
+  — same `.tar.bz2` packs + sherpa runtime, no provider change; capabilities now report per-instance language so
+  `piper_ruaccent` (always RU) stays RU. I18N-7: adjusted the *existing* `silero_v3` provider (not a new one) to pull
+  speakers/accent/language **by model** — `v3_en` → `en_0…en_117`, default-speaker fallback, and the Russian
+  `put_accent`/`put_yo` omitted for non-RU models (verified via real `v3_en` synthesis: 57 MB `.pt`, 119 speakers,
+  `apply_tts(en_0)` clean — and put_accent turned out to be *accepted* by v3_en, so the guard is about semantics, not
+  crashes; comment corrected). Gates: pyright 0, suite **1107**, import-linter 9/9. Both TTS tasks were hardware-
+  independent and are fully done; the EN *configs* that wire these (I18N-4) and EN fixtures/eval (I18N-5) remain.
 - **I18N-2 DONE — armv7 English ASR = `zipformer-en-20M` (measured, not guessed).** Downloaded both candidates and ran
   them locally on a shared LibriSpeech clip set (WER is architecture-independent, so the head-to-head is valid off the
   WB7): `zipformer-en-20M` = 43.6 MB int8, WER 0.091, streaming, proven `linux_armv7l`, ~zero code delta (reuses the

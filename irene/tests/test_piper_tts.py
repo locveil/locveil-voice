@@ -12,11 +12,22 @@ from irene.providers.tts.piper import PiperTTSProvider, _float_to_pcm16
 
 def test_voice_descriptors_are_extractable_tarballs():
     urls = PiperTTSProvider._get_default_model_urls()
-    assert set(urls) == {"irina", "ruslan", "denis", "dmitri"}
+    ru = {"irina", "ruslan", "denis", "dmitri"}
+    en = {"amy", "lessac", "ryan"}  # I18N-3
+    assert set(urls) == ru | en
     for name, d in urls.items():
         assert d["extract"] is True
-        assert d["url"].endswith(f"vits-piper-ru_RU-{name}-medium.tar.bz2")
+        locale = "ru_RU" if name in ru else "en_US"
+        assert d["url"].endswith(f"vits-piper-{locale}-{name}-medium.tar.bz2")
         assert "k2-fsa/sherpa-onnx/releases" in d["url"]
+
+
+def test_english_voice_reports_en_us_language():
+    # I18N-3: a config selecting an en_US voice reports en-US, not the ru default.
+    p = PiperTTSProvider({"voice": "amy", "language": "en"})
+    assert p.voice == "amy"
+    assert p.get_capabilities()["languages"] == ["en-US"]
+    assert "amy" in p.get_capabilities()["voices"]
 
 
 def test_deps_are_sherpa_runtime_no_torch():

@@ -46,6 +46,14 @@ class SileroV3TTSProvider(SileroTTSBase):
     _default_speakers = ["xenia", "aidar", "baya", "kseniya", "eugene"]
     _model_info_id = "v3_ru"
 
+    # Silero v3 ships a separate model per language (I18N-7); speakers + the Russian accent/yo
+    # controls follow the LOADED model, selected by config `model` (v3_ru / v3_en / …).
+    _SPEAKERS_BY_MODEL = {
+        "v3_ru": ["xenia", "aidar", "baya", "kseniya", "eugene"],
+        "v3_en": [f"en_{i}" for i in range(118)],  # v3_en speakers: en_0 … en_117
+    }
+    _LANG_TAG_BY_MODEL = {"v3_ru": "ru-RU", "v3_en": "en-US", "v3_de": "de-DE", "v3_es": "es-ES"}
+
     def __init__(self, config: Dict[str, Any]):
         """
         Initialize SileroV3TTSProvider with configuration.
@@ -54,16 +62,26 @@ class SileroV3TTSProvider(SileroTTSBase):
             config: Provider configuration including model_path, default_speaker, etc.
         """
         super().__init__(config)
-        # v3-specific synthesis controls
-        self.put_accent = config.get("put_accent", True)
-        self.put_yo = config.get("put_yo", True)
+        # Speakers + Russian-only accent handling follow the loaded model (I18N-7).
+        self._is_russian = self.model_id == "v3_ru"
+        speakers = self._SPEAKERS_BY_MODEL.get(self.model_id)
+        if speakers:
+            self._speakers = list(speakers)
+        # If the configured default speaker isn't valid for this model, use the model's first speaker
+        # (e.g. the base default "xenia" is Russian — pick "en_0" for v3_en).
+        if self.default_speaker not in self._speakers and self._speakers:
+            self.default_speaker = self._speakers[0]
+
+        # put_accent / put_yo are Russian-only Silero features — default off for other languages,
+        # and (below) not passed to apply_tts/save_wav for non-Russian models at all.
+        self.put_accent = config.get("put_accent", self._is_russian)
+        self.put_yo = config.get("put_yo", self._is_russian)
         self.threads = config.get("threads", 4)
 
-        # Speaker mapping based on assistant name
-        self.speaker_by_assname = config.get("speaker_by_assname", {
-            "николай|николаю": "aidar",
-            "ирина|ирине": "xenia"
-        })
+        # Assistant-name → speaker mapping is a Russian-persona feature; empty for other languages.
+        self.speaker_by_assname = config.get(
+            "speaker_by_assname",
+            {"николай|николаю": "aidar", "ирина|ирине": "xenia"} if self._is_russian else {})
 
     @classmethod
     def _get_default_directory(cls) -> str:
@@ -131,18 +149,15 @@ class SileroV3TTSProvider(SileroTTSBase):
 
 
     def get_capabilities(self) -> Dict[str, Any]:
-        """Return provider capabilities information"""
+        """Return provider capabilities information (language follows the loaded model)."""
+        features = ["neural_synthesis", "multi_speaker", "text_normalization", "async_generation"]
+        if self._is_russian:
+            features.insert(2, "stress_placement")  # put_accent/put_yo — Russian-only
         return {
-            "languages": ["ru-RU"],
+            "languages": [self._LANG_TAG_BY_MODEL.get(self.model_id, "ru-RU")],
             "voices": self._speakers,
             "formats": ["wav"],
-            "features": [
-                "neural_synthesis",
-                "multi_speaker",
-                "stress_placement",
-                "text_normalization",
-                "async_generation"
-            ],
+            "features": features,
             "quality": "high",
             "speed": "medium"
         }
@@ -163,8 +178,8 @@ class SileroV3TTSProvider(SileroTTSBase):
         if not self.model_file.exists():
             logger.info("Downloading Silero v3 model...")
 
-            # Get model info from asset manager
-            model_info = self.asset_manager.get_model_info("silero", "v3_ru")
+            # Get model info from asset manager (the actually-selected model, not a hardcoded RU one)
+            model_info = self.asset_manager.get_model_info("silero", self.model_id)
             if model_info:
                 logger.info(f"Downloading Silero v3 model (size: {model_info.get('size', 'unknown')})")
 
@@ -211,8 +226,10 @@ class SileroV3TTSProvider(SileroTTSBase):
         """Run Silero v3 `apply_tts` and convert the waveform to int16 PCM (called from a thread)."""
         if not self._model:
             raise RuntimeError("Silero v3 model not loaded")
-        audio = self._model.apply_tts(text=text, speaker=speaker, sample_rate=sample_rate,
-                                      put_accent=put_accent, put_yo=put_yo)
+        # put_accent/put_yo carry Russian stress/ё semantics — meaningless for non-RU models
+        # (v3_en accepts the kwargs but they only make sense for Russian), so omit them for e.g. v3_en.
+        extra = {"put_accent": put_accent, "put_yo": put_yo} if self._is_russian else {}
+        audio = self._model.apply_tts(text=text, speaker=speaker, sample_rate=sample_rate, **extra)
         samples = audio.detach().cpu().numpy() if hasattr(audio, "detach") else audio
         return float_to_pcm16(samples)
 
@@ -233,13 +250,13 @@ class SileroV3TTSProvider(SileroTTSBase):
             raise RuntimeError("Silero v3 model not loaded")
 
         try:
-            # Generate audio
+            # Generate audio (put_accent/put_yo are Russian-only — omit for non-RU models like v3_en)
+            extra = {"put_accent": put_accent, "put_yo": put_yo} if self._is_russian else {}
             generated_path = self._model.save_wav(
                 text=text,
                 speaker=speaker,
-                put_accent=put_accent,
-                put_yo=put_yo,
-                sample_rate=sample_rate
+                sample_rate=sample_rate,
+                **extra
             )
 
             # Move to desired location

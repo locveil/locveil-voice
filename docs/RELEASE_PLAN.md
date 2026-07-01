@@ -339,20 +339,6 @@ _Trace-driven system testing (design `docs/design/trace_system_testing.md`, TEST
 _Real English deployment across all three Docker arches (armv7/aarch64/x86_64) + English eval. Design
 `docs/design/multilingual_deployment.md` (I18N-1 ✓) → the implementation slices below. English models are slim and
 size-matched to the Russian stack; language is a per-config/deployment choice (auto-detect is NOT wired to ASR/TTS)._
-- [ ] **I18N-3** [ASSET] (P3) `[deferred]` — **English Piper TTS voices (the two torch-free satellites: armv7 +
-      aarch64).** Generalize the `ru_RU`-hardcoded Piper catalog (`irene/providers/tts/piper.py`) to a locale parameter
-      and add **`en_US-amy-medium`** (default) + `lessac`/`ryan`. Same k2-fsa `.tar.bz2` medium packs, same sherpa-onnx
-      runtime, ~same size as the Russian voices — no provider/runtime change. (The x86_64 standalone stays on torch
-      Silero — I18N-7, not Piper.) Eval runs `wants_audio=false`, so this is a deployment need, not an eval need. See
-      design §2/§5.
-- [ ] **I18N-7** [ASSET] (P3) `[deferred]` — **Silero v3 English for the x86_64 standalone (torch TTS parity).** The
-      standalone runs `silero_v4 baya` (torch) for Russian; Silero **froze English at `v3_en`** (no `v4_en`/`v5_en`
-      exists — `silero_v4.py:54`), so torch parity means `v3_en` (torch `.pt`, ~same size, one quality tier below RU
-      `v4_ru` — an accepted trade to keep the standalone image torch-only, not pull in the sherpa-onnx runtime for
-      Piper). The `silero_v3` provider **already exists** and already lists `v3_en` (`silero_v3.py:78`) — this is an
-      *adjustment*, not a new provider: pull `model_id` (`v3_ru`/`v3_en`) + the matching speaker set (`en_0…en_117`) by
-      language instead of the Russian hardcode (`_default_speakers`/`speaker_by_assname`, `get_capabilities` →
-      `["ru-RU"]` at `:136`), and skip the Russian `put_accent`/`put_yo` path for English. See design §2/§5.
 - [ ] **I18N-4** [CONFIG] (P3) `[deferred]` — **`*-en.toml` config variants** for the three deployment arches: flip
       `default_language`/`supported_languages` (at **both** `[asr]` and `[asr.providers.<p>]` levels — see design §2a),
       `auto_detect_language=false`. Per-arch: `embedded-armv7-en` (EN ASR = `zipformer-en-20M`, `model_type="zipformer-streaming"` per I18N-2 ✓; TTS Piper `amy`),

@@ -165,9 +165,8 @@ plus the top-level/workflow `default_language`.
 
 ## 7. Implementation tasks (filed off this design)
 - **I18N-2** [ASSET] ✓ — armv7 EN ASR spike → **zipformer-en-20M** chosen + added to the sherpa catalog (§2c).
-- **I18N-3** [ASSET] — EN Piper voices (satellites): generalize the `ru_RU` catalog, add `en_US-amy-medium` (default) + variants.
-- **I18N-7** [ASSET] — Silero v3 English (standalone torch TTS): adjust the existing `silero_v3` provider to pull the
-  model + speakers by language (`v3_en`), not a new provider (§5).
+- **I18N-3** [ASSET] ✓ — EN Piper voices (satellites): catalog generalized to a locale param, added `en_US-amy`/`lessac`/`ryan`; capabilities report per-instance language.
+- **I18N-7** [ASSET] ✓ — Silero v3 English (standalone): `silero_v3` now pulls speakers/accent/language by model (`v3_en` → `en_0…en_117`, no Russian `put_accent`). Real `v3_en` synthesis verified (57 MB, `en_0` OK).
 - **I18N-4** [CONFIG] — the three `*-en.toml` variants (§4).
 - **I18N-5** [EVAL] — `LANG` axis + `metadata.language` tag + `profiles/langs/*`; EN rubrics; EN fixtures.
 - **I18N-6** [CONTENT] — audit `en.json` donation completeness across handlers.

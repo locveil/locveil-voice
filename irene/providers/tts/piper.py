@@ -172,9 +172,12 @@ class PiperTTSProvider(TTSProvider):
             w.writeframes(pcm)
 
     # ---------------------------------------------------------- capabilities
+    _LANG_TAG = {"ru": "ru-RU", "en": "en-US"}
+
     def get_capabilities(self) -> Dict[str, Any]:
         return {
-            "languages": ["ru-RU"],
+            # per-instance language (the configured voice's locale) — the catalog now spans ru + en.
+            "languages": [self._LANG_TAG.get(self.language, self.language)],
             "voices": list(self._get_default_model_urls().keys()),
             "formats": ["wav"],
             "features": ["neural_synthesis", "offline", "streaming"],
@@ -193,22 +196,28 @@ class PiperTTSProvider(TTSProvider):
 
     @classmethod
     def _get_default_model_urls(cls) -> Dict[str, Any]:
-        # k2-fsa Piper ru_RU voices (medium). Each is a self-contained `.tar.bz2` pack
+        # k2-fsa Piper voices (medium). Each is a self-contained `.tar.bz2` pack
         # (model.onnx + tokens.txt + espeak-ng-data/); `extract` tells the AssetManager to unpack
-        # it into piper/<voice>/ on first run.
-        def voice(name: str, note: str) -> Dict[str, Any]:
+        # it into piper/<voice>/ on first run. Same pack shape + sherpa runtime for every locale, so
+        # English is just a different locale in the URL (I18N-3) — no provider/runtime change.
+        def voice(name: str, note: str, locale: str = "ru_RU") -> Dict[str, Any]:
             return {
-                "url": f"{cls._K2_RELEASE}/vits-piper-ru_RU-{name}-medium.tar.bz2",
+                "url": f"{cls._K2_RELEASE}/vits-piper-{locale}-{name}-medium.tar.bz2",
                 "extract": True,
                 "size": "~60-75 MB",
                 "description": note,
             }
 
         return {
+            # Russian (ru_RU) — the satellite default persona
             "irina": voice("irina", "female — best-quality ru voice (alphacephei eval)"),
             "ruslan": voice("ruslan", "male"),
             "denis": voice("denis", "male"),
             "dmitri": voice("dmitri", "male"),
+            # English (en_US) — I18N-3. `amy` is the default EN voice (female, close to the ru persona).
+            "amy": voice("amy", "female — default en_US voice", "en_US"),
+            "lessac": voice("lessac", "neutral en_US", "en_US"),
+            "ryan": voice("ryan", "male en_US", "en_US"),
         }
 
     @classmethod

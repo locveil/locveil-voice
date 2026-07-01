@@ -24,6 +24,22 @@ def test_v3_default_is_russian():
     p = SileroV3TTSProvider({})
     assert p.model_id == "v3_ru"
     assert p.model_file.name == "v3_ru.pt"
+    # RU model keeps the Russian speaker set + accent controls (I18N-7 regression guard).
+    assert p.default_speaker == "xenia"
+    assert p.put_accent is True and p.put_yo is True
+    assert p.get_capabilities()["languages"] == ["ru-RU"]
+    assert "stress_placement" in p.get_capabilities()["features"]
+
+
+def test_v3_en_selects_english_speakers_and_disables_accent():
+    # I18N-7: model=v3_en pulls the English speaker set + drops the Russian accent/yo path.
+    p = SileroV3TTSProvider({"model": "v3_en"})
+    assert p._speakers[:2] == ["en_0", "en_1"] and len(p._speakers) == 118
+    assert p.default_speaker == "en_0"            # ru default "xenia" is invalid → model's first
+    assert p.put_accent is False and p.put_yo is False
+    assert p.get_capabilities()["languages"] == ["en-US"]
+    assert "stress_placement" not in p.get_capabilities()["features"]
+    assert p.speaker_by_assname == {}             # Russian-persona mapping is off for English
 
 
 def test_v4_routes_by_model_id():
