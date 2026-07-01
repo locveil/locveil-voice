@@ -59,6 +59,14 @@ on the standalone.
 | VAD | silero / energy — language-neutral | same | — | no |
 | Wake word | ESP32 on-device (armv7) / disabled | English wake phrase model where wake is enabled | — | out of scope for now |
 
+**NLU last-resort (LLM) note — bilingual, no change needed (verified 2026-07-01).** The `[nlu.providers.llm]`
+classifier tier (QUAL-50/51) is already language-parameterized on `context.language`: `_build_system_prompt(language)`
+filters the intent taxonomy to the utterance language by script, `_ABSTAIN_EXAMPLES` carries **both `ru` and `en`**
+anti-hallucination exemplars, and positive few-shot is sourced from the language-matched donation examples; instructions
+are language-neutral English and output is language-neutral JSON. Verified by rendering the EN prompt: English taxonomy +
+English abstain/positive exemplars, zero Russian leakage. So the conservative "abstain over guess" safety holds for
+English too — no adjustment required for the English deployment.
+
 **Standalone TTS note.** The standalone runs `silero_v4` (torch) for Russian, but **Silero never shipped an improved
 English model** — the official `models.yml` has `v3_ru→v4_ru→v5_ru` for Russian yet English stops at `v3_en` (no
 `v4_en`/`v5_en`; the code comment at `silero_v4.py:54` confirms it). So torch parity on the standalone means accepting
