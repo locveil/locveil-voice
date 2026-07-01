@@ -18,6 +18,16 @@ CONFIG    ?= embedded-armv7
 CONFIGS   ?= embedded-armv7 standalone
 PROMPTFOO ?= promptfoo
 
+# EVAL_LANG (I18N-5) — which language's fixtures/traces/cases a run uses. Test cases are duplicated
+# per language (tagged metadata.language) and reference fixtures/{{env.EVAL_LANG}}/… so a run selects
+# one language via the case filter + the fixture subdir. Derived from the CONFIG name (`*-en` → en)
+# so it tracks the SUT config automatically; override explicitly for a remote (wb7) SUT.
+# NOT named LANG: that is the POSIX locale var and would leak into the SUT/promptfoo environment.
+EVAL_LANG ?= $(if $(filter %-en,$(CONFIG)),en,ru)
+# Room name for the WS registration — echoed in the "no devices in session <room>" failure reply, so
+# it must match the run language (else an English reply carries a Russian room word and fails the rubric).
+EVAL_ROOM ?= $(if $(filter en,$(EVAL_LANG)),Kitchen,Кухня)
+
 # TEST-13 failure-trace capture (live WS). With TRACE=1, after the run the failing cases' traces are
 # kept under FAILURES_DIR and the rest pruned — a failed case becomes replayable (`make replay`).
 # The SUT must be launched with tracing writing into TRACES_DIR (e.g. `[trace] traces_dir`); on a
@@ -46,6 +56,9 @@ export WS_AUDIO_URL HEALTH_URL MQTT_HOST MQTT_PORT
 # Config profile (local bring-up only) — optional; ignored if absent.
 -include profiles/configs/$(CONFIG).env
 export IRENE_CONFIG_FILE
+# EVAL_LANG is read by the test YAML as {{env.EVAL_LANG}} (fixture/trace subdir) and drives the
+# per-language case filter below; EVAL_ROOM is read as {{env.EVAL_ROOM}}.
+export EVAL_LANG EVAL_ROOM
 
 .DEFAULT_GOAL := help
 .PHONY: help setup setup-record cli ws ux record record-list record-devices replay replay-judge serve compare view clean
@@ -55,7 +68,7 @@ RECORD := $(PROMPTFOO_PYTHON) -m eval_commons.record.cli --from-yaml ws.promptfo
 help:
 	@sed -n 's/^#   //p' $(MAKEFILE_LIST) | head -8
 	@echo ""
-	@echo "TARGET=$(TARGET)  CONFIG=$(CONFIG)  ->  WS_AUDIO_URL=$(WS_AUDIO_URL)"
+	@echo "TARGET=$(TARGET)  CONFIG=$(CONFIG)  EVAL_LANG=$(EVAL_LANG)  ->  WS_AUDIO_URL=$(WS_AUDIO_URL)"
 
 setup:                        ## install the shared providers into the project venv (uv)
 	uv pip install --python $(PROMPTFOO_PYTHON) -e ../../eval-commons
@@ -68,16 +81,16 @@ cli:                          ## CLI contract tests (argparse console scripts) �
 
 ws:                           ## streaming-ASR system tests over /ws/audio (needs a running SUT; TRACE=1 keeps failing traces)
 ifeq ($(TRACE),1)
-	@$(PROMPTFOO) eval -c ws.promptfooconfig.yaml -o results-ws-$(TARGET).json; code=$$?; \
-	  $(PROMPTFOO_PYTHON) -m eval_commons.failures --results results-ws-$(TARGET).json \
+	@$(PROMPTFOO) eval -c ws.promptfooconfig.yaml --filter-metadata language=$(EVAL_LANG) -o results-ws-$(TARGET)-$(EVAL_LANG).json; code=$$?; \
+	  $(PROMPTFOO_PYTHON) -m eval_commons.failures --results results-ws-$(TARGET)-$(EVAL_LANG).json \
 	    --traces-dir $(TRACES_DIR) --out $(FAILURES_DIR) --prune; \
 	  exit $$code
 else
-	$(PROMPTFOO) eval -c ws.promptfooconfig.yaml -o results-ws-$(TARGET).json
+	$(PROMPTFOO) eval -c ws.promptfooconfig.yaml --filter-metadata language=$(EVAL_LANG) -o results-ws-$(TARGET)-$(EVAL_LANG).json
 endif
 
 ux:                           ## only the DeepSeek-judged UX cases (needs DEEPSEEK_API_KEY)
-	$(PROMPTFOO) eval -c ws.promptfooconfig.yaml --filter-metadata kind=ux
+	$(PROMPTFOO) eval -c ws.promptfooconfig.yaml --filter-metadata kind=ux --filter-metadata language=$(EVAL_LANG)
 
 record:                       ## record missing voice fixtures interactively (mic; run `make setup-record` once first)
 	$(RECORD) $(FIXTURE)      # e.g. make record  |  make record FIXTURE=timer_10min
@@ -89,10 +102,10 @@ record-devices:               ## list input devices to fill REC_INPUT_DEVICE in 
 	$(PROMPTFOO_PYTHON) -m eval_commons.record.cli --devices
 
 replay:                       ## golden-trace regression — offline replay of recorded traces (needs models, no SUT)
-	$(PROMPTFOO) eval -c trace.promptfooconfig.yaml -o results-replay.json
+	$(PROMPTFOO) eval -c trace.promptfooconfig.yaml --filter-metadata language=$(EVAL_LANG) -o results-replay-$(EVAL_LANG).json
 
 replay-judge:                 ## the trace-ux tier of the replay suite (DeepSeek-judged; needs DEEPSEEK_API_KEY)
-	$(PROMPTFOO) eval -c trace.promptfooconfig.yaml --filter-metadata kind=trace-ux
+	$(PROMPTFOO) eval -c trace.promptfooconfig.yaml --filter-metadata kind=trace-ux --filter-metadata language=$(EVAL_LANG)
 
 serve:                        ## bring Irene up LOCALLY with CONFIG (foreground; Ctrl-C to stop)
 	@echo ">> Irene local: IRENE_CONFIG_FILE=$(IRENE_CONFIG_FILE)  (serving for $(WS_AUDIO_URL))"

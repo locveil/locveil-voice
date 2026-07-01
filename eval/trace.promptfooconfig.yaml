@@ -26,13 +26,23 @@ providers:
 
 tests:
   # ── trace-system tier: deterministic (ASR / cheap NLU / rule-handlers) → assert exit 0. ──────
-  - description: golden — «поставь таймер на 10 минут» still sets the timer
-    metadata: { kind: trace-system }
+  # Golden path + config are language-partitioned (I18N-5): traces/{{env.EVAL_LANG}}/… replayed under
+  # the run's config ({{env.IRENE_CONFIG_FILE}}, the deployment the golden represents — D-4 CONFIG axis).
+  - description: RU golden — «поставь таймер на 10 минут» still sets the timer
+    metadata: { kind: trace-system, language: ru }
     vars:
-      # The golden is recorded + replayed under the deployment config it represents (D-4: CONFIG axis).
-      cmd: "irene-replay-trace -t eval/traces/timer_set_10min.json --config configs/embedded-armv7.toml"
+      cmd: "irene-replay-trace -t eval/traces/{{env.EVAL_LANG}}/timer_set_10min.json --config {{env.IRENE_CONFIG_FILE}}"
     assert:
       - { type: javascript, value: "JSON.parse(output).exit_code === 0" }   # 0 = matched the oracle
+
+  # English golden — pending recording (traces/en/timer_set_10min.json under an -en config). Runs only
+  # under EVAL_LANG=en (make replay CONFIG=embedded-armv7-en); red until the golden is recorded.
+  - description: EN golden — "set a timer for ten minutes" still sets the timer
+    metadata: { kind: trace-system, language: en }
+    vars:
+      cmd: "irene-replay-trace -t eval/traces/{{env.EVAL_LANG}}/timer_set_10min.json --config {{env.IRENE_CONFIG_FILE}}"
+    assert:
+      - { type: javascript, value: "JSON.parse(output).exit_code === 0" }
 
   # ── trace-ux tier (kind=ux/trace-ux): LLM replies are non-deterministic, so they are NOT
   #    exit-code asserted — replay with --record-out and judge the reply (DeepSeek). None yet;

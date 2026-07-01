@@ -13,6 +13,19 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **I18N-5 (harness DONE) — bilingual eval; only mic-recorded English audio remains.** Built the multilingual eval
+  harness and verified it end-to-end. Design decision (user-confirmed): **fixtures/traces partitioned by language
+  subdirectory** (`fixtures/<lang>/`, `traces/<lang>/`) — same scenario filenames across languages so parity is a
+  directory diff; moved the Russian assets into `ru/`. Added an **`EVAL_LANG`** axis to `eval/Makefile` (default `ru`,
+  derived from the `*-en` CONFIG name; deliberately *not* `LANG`, which is the POSIX locale var), driving the fixture/
+  trace subdir (`{{env.EVAL_LANG}}`) + `--filter-metadata language=$(EVAL_LANG)` (promptfoo ANDs it with `kind=ux`), plus
+  an `EVAL_ROOM` (Кухня/Kitchen) since the room name is echoed in the failure reply. Cases are duplicated per language and
+  tagged `metadata.language`; added EN config profiles and **EN rubrics** `shared/rubrics/en-ux.yaml` (co-equal, mirroring
+  the TEST-16 structure). **Validated:** RU suite green under the new layout (`make ws CONFIG=embedded-armv7` = 4/4), and
+  the EN rubrics scored **7/7** live against DeepSeek (pass genuine English; fail Russian/error/rude/non-confirmation) —
+  first-try clean, consistent with DeepSeek's better English. Also migrated the RU ws cases to the co-equal rubrics
+  (closes the TEST-16 loop) and fixed a stale `voice` config ref in `eval/README`. **Only remaining:** record
+  `fixtures/en/*` + a `traces/en/` golden (needs a mic). The English stack is otherwise complete and runnable.
 - **I18N-6 DONE — English donation audit: functional parity, no fill needed.** Compared `en.json` vs `ru.json` across
   all 13 handlers (structure, phrase coverage, examples/patterns). Result: full structural parity (identical methods +
   parameters, no stubs) and adequate idiomatic English phrases throughout. The only systematic difference is empty

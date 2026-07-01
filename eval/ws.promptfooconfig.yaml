@@ -1,16 +1,17 @@
 # System tests: the shipped streaming-ASR endpoint /ws/audio (ARCH-10, irene/runners/webapi_router.py).
-# PURE YAML — all execution logic lives in ../../eval-commons. Run via the Makefile so the
-# (target × config) axes and the project venv are wired for you:
+# PURE YAML — all execution logic lives in ../../eval-commons. Run via the Makefile so the axes and the
+# project venv are wired for you:
 #
-#   make ws TARGET=local          # against a locally-running Irene
-#   make ws TARGET=wb7            # against Irene on the WB7 controller (remote)
-#   make ux TARGET=local          # only the DeepSeek-judged UX cases (needs DEEPSEEK_API_KEY)
+#   make ws  TARGET=local  CONFIG=embedded-armv7      # Russian suite (EVAL_LANG=ru derived)
+#   make ws  TARGET=local  CONFIG=embedded-armv7-en   # English suite (EVAL_LANG=en derived)
+#   make ux  TARGET=local  CONFIG=...                 # only the DeepSeek-judged UX cases (needs DEEPSEEK_API_KEY)
 #
-# The endpoint is injected from the target profile via {{env.WS_AUDIO_URL}} — never hard-coded
-# (promptfoo resolves {{env.VAR}} at config-load time). The config the SUT runs is an EXTERNAL
-# axis (Makefile bring-up / what's deployed on WB7); these tests are config-agnostic.
+# THREE external axes, none baked into a case: TARGET (endpoint, {{env.WS_AUDIO_URL}}), CONFIG (which
+# SUT config runs), EVAL_LANG (which language — fixtures/{{env.EVAL_LANG}}/… + the metadata.language
+# filter the Makefile applies). Cases are duplicated per language and tagged `language`; a run selects
+# one. Keep the two languages' cases in lockstep (same scenarios).
 
-description: wb-mqtt-voice — streaming ASR + Russian conversational UX (system tests over /ws/audio)
+description: wb-mqtt-voice — streaming ASR + conversational UX over /ws/audio (ru + en)
 
 # The rendered prompt handed to the provider is just the audio fixture path for each case.
 prompts:
@@ -21,7 +22,9 @@ providers:
     label: ws-audio
     config:
       ws_url: "{{ env.WS_AUDIO_URL | default('ws://localhost:6000/ws/audio') }}"
-      room_name: Кухня
+      # Room name is echoed back in the "no devices in session <room>" failure reply, so it must match
+      # the run language (else an otherwise-English reply carries a Russian word and fails the rubric).
+      room_name: "{{ env.EVAL_ROOM | default('Кухня') }}"
       sample_rate: 16000
       mode: streaming
       return_mode: full          # output = JSON {transcript, response_text, intent_name, success, ...}
@@ -33,11 +36,12 @@ defaultTest:
       file://../../eval-commons/shared/deepseek-judge.yaml
 
 tests:
+  # ═══════════════════════════ RUSSIAN (language: ru) ═══════════════════════════
   # ── 1. ASR transcript accuracy (deterministic, WER via jiwer) ──────────────────
-  - description: ASR accuracy — «поставь таймер на десять минут»
-    metadata: { kind: system }
+  - description: RU ASR accuracy — «поставь таймер на десять минут»
+    metadata: { kind: system, language: ru }
     vars:
-      audio: fixtures/timer_10min.wav
+      audio: fixtures/{{env.EVAL_LANG}}/timer_10min.wav
       reference: поставь таймер на десять минут
       wer_threshold: 0.15
     assert:
@@ -45,44 +49,101 @@ tests:
         value: file://../../eval-commons/eval_commons/assertions/wer_scorer.py
 
   # ── 2. Intent recognition (deterministic, parse the full-JSON output) ──────────
-  - description: Intent — timer set is recognized
-    metadata: { kind: system }
+  - description: RU Intent — timer set is recognized
+    metadata: { kind: system, language: ru }
     vars:
-      audio: fixtures/timer_10min.wav
+      audio: fixtures/{{env.EVAL_LANG}}/timer_10min.wav
     assert:
       - type: is-json
-      # Intent name confirmed against a live run: Irene's timer handler emits 'timer.set'.
       - type: javascript
         value: JSON.parse(output).intent_name === 'timer.set' && JSON.parse(output).success === true
 
-  # ── 3. Conversational UX (LLM-as-human judge: DeepSeek) ────────────────────────
-  #   transform extracts the user-facing reply so the judge scores the answer, not the JSON.
-  - description: UX — assistant confirms the timer in natural Russian
-    metadata: { kind: ux }
+  # ── 3. Conversational UX (DeepSeek judge; co-equal rubric, cf. shared/rubrics/ru-ux.yaml) ──
+  - description: RU UX — assistant confirms the timer in natural Russian
+    metadata: { kind: ux, language: ru }
     vars:
-      audio: fixtures/timer_10min.wav
+      audio: fixtures/{{env.EVAL_LANG}}/timer_10min.wav
     assert:
       - type: llm-rubric
         transform: JSON.parse(output).response_text
         value: >
-          Ассистент явно и однозначно подтвердил на естественном русском языке, что
-          таймер установлен (например «таймер на десять минут установлен»), без
-          англоязычных вставок и без сырых технических ошибок. Технические
-          идентификаторы оценивать не нужно.
+          Ответ оценивается как подтверждение выполненного действия. Оцени как пройдено ТОЛЬКО
+          если одновременно выполнены ВСЕ условия: (1) ответ полностью на русском языке, без
+          англоязычных слов или фраз; (2) ясно и однозначно подтверждено, что запрошенное
+          действие выполнено (например «готово», «таймер установлен»), без неоднозначности об
+          успехе; (3) нет сырой технической ошибки или трейсбека. Технические идентификаторы
+          устройств оценивать не нужно. Если хотя бы одно условие не выполнено — оцени как НЕ пройдено.
 
-  # ── 4. Graceful-failure UX (unreachable device, judged on tone/clarity) ────────
-  - description: UX — polite, human-readable failure when a device is unreachable
-    metadata: { kind: ux }
+  # ── 4. Graceful-failure UX (unreachable device) ────────────────────────────────
+  - description: RU UX — polite, human-readable failure when a device is unreachable
+    metadata: { kind: ux, language: ru }
     vars:
-      audio: fixtures/light_unreachable.wav
-      # `reference` here is the line to SPEAK when recording this fixture (the recorder reads it);
-      # this is a judge case, so nothing asserts WER against it. Target a device that is unreachable
-      # in the SUT's config — confirmed live: the SUT replies with a polite "no devices" message.
+      # `reference` is the line to SPEAK when recording this fixture (the recorder reads it); this is a
+      # judge case, so nothing asserts WER. Target a device unreachable in the SUT's config.
+      audio: fixtures/{{env.EVAL_LANG}}/light_unreachable.wav
       reference: включи свет в гараже
     assert:
       - type: llm-rubric
         transform: JSON.parse(output).response_text
         value: >
-          Когда действие невозможно, ассистент вежливо и понятно сообщает о проблеме на
-          русском языке, не выдаёт трейсбек или сырую ошибку, и по возможности предлагает
-          следующий шаг. Пройдено, если сообщение доброжелательно и человекочитаемо.
+          Ответ оценивается как сообщение о невозможности выполнить действие. Оцени как пройдено
+          ТОЛЬКО если одновременно выполнены ВСЕ условия: (1) ответ полностью на русском языке,
+          без англоязычных слов или фраз; (2) тон вежливый и доброжелательный, без грубости;
+          (3) нет сырой технической ошибки, кода ошибки или трейсбека; (4) проблема объяснена
+          понятно и человекочитаемо, по возможности предложен следующий шаг. Если хотя бы одно
+          условие не выполнено — оцени как НЕ пройдено.
+
+  # ═══════════════════════════ ENGLISH (language: en) ═══════════════════════════
+  # Same four scenarios, English audio/reference/rubric. Fixtures pending recording (fixtures/en/*).
+  # ── 1. ASR transcript accuracy ─────────────────────────────────────────────────
+  - description: EN ASR accuracy — "set a timer for ten minutes"
+    metadata: { kind: system, language: en }
+    vars:
+      audio: fixtures/{{env.EVAL_LANG}}/timer_10min.wav
+      reference: set a timer for ten minutes
+      wer_threshold: 0.15
+    assert:
+      - type: python
+        value: file://../../eval-commons/eval_commons/assertions/wer_scorer.py
+
+  # ── 2. Intent recognition (intent names are language-agnostic → same timer.set) ─
+  - description: EN Intent — timer set is recognized
+    metadata: { kind: system, language: en }
+    vars:
+      audio: fixtures/{{env.EVAL_LANG}}/timer_10min.wav
+    assert:
+      - type: is-json
+      - type: javascript
+        value: JSON.parse(output).intent_name === 'timer.set' && JSON.parse(output).success === true
+
+  # ── 3. Conversational UX (co-equal rubric, cf. shared/rubrics/en-ux.yaml#confirms_action_en) ──
+  - description: EN UX — assistant confirms the timer in natural English
+    metadata: { kind: ux, language: en }
+    vars:
+      audio: fixtures/{{env.EVAL_LANG}}/timer_10min.wav
+    assert:
+      - type: llm-rubric
+        transform: JSON.parse(output).response_text
+        value: >
+          The reply is evaluated as a confirmation that the requested action was carried out. Rate as
+          passed ONLY if ALL of the following hold: (1) the reply is entirely in English, with no
+          foreign-language words or phrases; (2) it clearly and unambiguously confirms the requested
+          action was done (e.g. "done", "timer set"), with no ambiguity about success; (3) there is no
+          raw technical error or traceback. Device technical identifiers need not be evaluated. If any
+          condition is not met, rate as NOT passed.
+
+  # ── 4. Graceful-failure UX ──────────────────────────────────────────────────────
+  - description: EN UX — polite, human-readable failure when a device is unreachable
+    metadata: { kind: ux, language: en }
+    vars:
+      audio: fixtures/{{env.EVAL_LANG}}/light_unreachable.wav
+      reference: turn on the light in the garage
+    assert:
+      - type: llm-rubric
+        transform: JSON.parse(output).response_text
+        value: >
+          The reply is evaluated as a message that the action cannot be performed. Rate as passed ONLY
+          if ALL of the following hold: (1) the reply is entirely in English, with no foreign-language
+          words or phrases; (2) the tone is polite and friendly, without rudeness; (3) there is no raw
+          technical error, error code, or traceback; (4) the problem is explained clearly and
+          human-readably, ideally with a suggested next step. If any condition is not met, rate as NOT passed.

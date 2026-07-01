@@ -11,32 +11,37 @@ YAML + a thin Makefile (deployment glue, no test logic).
 
 ```
 eval/
-  Makefile                     # the only entrypoint — owns the (target × config) matrix
+  Makefile                     # the only entrypoint — owns the (target × config × lang) matrix
   cli.promptfooconfig.yaml     # CLI contract tests (argparse console scripts)
-  ws.promptfooconfig.yaml      # streaming-ASR system + UX tests over /ws/audio
+  ws.promptfooconfig.yaml      # streaming-ASR system + UX tests over /ws/audio (ru + en cases)
+  trace.promptfooconfig.yaml   # offline golden-trace regression (per-language)
   profiles/
     targets/{local,wb7}.env    # WHERE the SUT is  → WS_AUDIO_URL, HEALTH_URL, MQTT_*
     configs/*.env              # WHICH config it runs (local bring-up) → IRENE_CONFIG_FILE
-  fixtures/                    # audio fixtures — committed test inputs (see fixtures/README.md)
+  fixtures/<lang>/             # audio fixtures per language — committed test inputs (see fixtures/README.md)
+  traces/<lang>/               # golden traces per language (see traces/README.md)
 ```
 
-## The two run axes (both external to the test YAML)
+## The three run axes (all external to the test YAML)
 
 | Axis | Selects | Mechanism | Applies to |
 |---|---|---|---|
 | **TARGET** | `local` vs `wb7` (remote controller) | `profiles/targets/<TARGET>.env` → `{{env.WS_AUDIO_URL}}` | system suites (ws) |
-| **CONFIG** | `voice` / `standalone` / `embedded-*` / `custom` | `profiles/configs/<CONFIG>.env` → `IRENE_CONFIG_FILE` | local SUT bring-up |
+| **CONFIG** | `embedded-armv7[-en]` / `embedded-aarch64[-en]` / `standalone[-en]` / `custom` | `profiles/configs/<CONFIG>.env` → `IRENE_CONFIG_FILE` | local SUT bring-up |
+| **EVAL_LANG** | `ru` (default) / `en` | derived from the CONFIG name (`*-en` → `en`); picks `fixtures/<lang>/` + the `language` case filter | ws + trace suites |
 
-Test cases never change across combinations. `TARGET` just swaps the endpoint; `CONFIG` is a
-deployment concern (what the SUT runs) — for `wb7` it's whatever is deployed on the controller.
+Test cases never change across combinations. `TARGET` swaps the endpoint; `CONFIG` is what the SUT
+runs (for `wb7`, whatever is deployed); `EVAL_LANG` picks which language's cases + fixtures run — cases
+are duplicated per language and tagged, so one run = one language. `EVAL_LANG` tracks `CONFIG` (a `-en`
+config runs the English set) unless overridden, e.g. `EVAL_LANG=en` for a remote English SUT.
 
 ## Surfaces
 
 | Config | Kind | Needs running | Needs key | Needs fixtures | Status |
 |---|---|---|---|---|---|
 | `cli.promptfooconfig.yaml` | CLI contracts | nothing | no | no | ✅ **passing (5/5)** |
-| `ws.promptfooconfig.yaml` (system) | ASR + intent | Irene on the target | no | yes (WAV) | ✅ passing live — WER ✓ + intent ✓ |
-| `ws.promptfooconfig.yaml` (ux) | DeepSeek judge | Irene on the target | `DEEPSEEK_API_KEY` | yes (WAV) | ✅ runs live (judge calibration still advisory) |
+| `ws.promptfooconfig.yaml` (system) | ASR + intent | Irene on the target | no | yes (WAV) | ✅ ru live (WER ✓ + intent ✓); en harness ready, `fixtures/en/*` pending |
+| `ws.promptfooconfig.yaml` (ux) | DeepSeek judge | Irene on the target | `DEEPSEEK_API_KEY` | yes (WAV) | ✅ ru live; en rubrics validated live (fixtures pending) |
 
 ## Setup (uv)
 
@@ -59,15 +64,17 @@ scripts resolve. No `activate` needed when going through `make`.
 ## Run
 
 ```bash
-make cli                                   # CLI contracts — runs today, no prerequisites
-make record                                # record the WS audio fixtures interactively (mic; see fixtures/README.md)
-make ws  TARGET=local                      # WS suite vs a locally-running Irene (start it first: make serve)
-make ws  TARGET=local TRACE=1              # ... and keep each FAILING case's execution trace (see below)
-make ws  TARGET=wb7                        # WS suite vs Irene on the WB7 controller
-make ux  TARGET=local                      # only the DeepSeek-judged UX cases
-make serve CONFIG=voice                    # bring Irene up locally with a config (foreground)
-make compare CONFIGS="voice standalone"    # WER/UX comparison across configs (local bring-up loop)
-make view                                  # results UI
+make cli                                        # CLI contracts — runs today, no prerequisites
+make record                                     # record the ru WS fixtures (mic; see fixtures/README.md)
+make record EVAL_LANG=en                        # record the en fixtures
+make ws  TARGET=local CONFIG=embedded-armv7     # Russian WS suite (start the SUT first: make serve)
+make ws  TARGET=local CONFIG=embedded-armv7-en  # English WS suite (EVAL_LANG=en derived)
+make ws  TARGET=local TRACE=1                    # ... and keep each FAILING case's execution trace (see below)
+make ws  TARGET=wb7                              # WS suite vs Irene on the WB7 controller
+make ux  TARGET=local CONFIG=embedded-armv7-en   # only the DeepSeek-judged UX cases (en)
+make serve CONFIG=embedded-armv7                 # bring Irene up locally with a config (foreground)
+make compare CONFIGS="embedded-armv7 standalone" # WER/UX comparison across configs (local bring-up loop)
+make view                                        # results UI
 ```
 
 For model comparison, `make compare` writes `results-ws-<target>-<config>.json` per config so you

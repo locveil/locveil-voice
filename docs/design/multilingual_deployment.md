@@ -118,17 +118,27 @@ quick harness); the real English WER measurement rides with I18N-5's English fix
 
 ---
 
-## 3. Eval design — one bulk per language
+## 3. Eval design — one bulk per language (I18N-5, harness ✓; fixtures pending)
 
-The voice pipeline is monolingual-per-config (§1a), so language is a **run-level axis**, exactly like `TARGET`/`CONFIG`:
-- **`LANG` axis** in `eval/Makefile` (`make ws LANG=en`), default `ru`.
-- Each test case carries **`metadata.language`**; a run filters with `--filter-metadata language=$(LANG)` — the same
-  mechanism `make ux` already uses for `kind=ux`. One test file, both languages, run one language at a time.
-- `profiles/langs/{ru,en}.env` selects the language-appropriate bring-up **config** (`IRENE_CONFIG_FILE`) for local runs.
-  For `TARGET=wb7` the SUT's language is whatever is deployed on the controller — `LANG` must match it (documented).
-- **EN rubrics** in eval-commons `shared/rubrics/` (`polite_helpful_en`, `confirms_action_en`, `graceful_failure_en`),
-  mirroring the co-equal-conditions structure validated for the Russian rubrics under TEST-16.
-- **EN fixtures** — recorded English audio mirroring the Russian fixtures (or derived from golden traces).
+The voice pipeline is monolingual-per-config (§1a), so language is a **run-level axis**, exactly like `TARGET`/`CONFIG`.
+As built:
+- **`EVAL_LANG` axis** in `eval/Makefile` (default `ru`), **derived from the CONFIG name** (`*-en` → `en`) so it tracks
+  the SUT config; override-able for a remote SUT. Named `EVAL_LANG`, **not `LANG`** — the latter is the POSIX locale var
+  and would leak into the SUT/promptfoo environment.
+- **Fixtures + traces are language subdirectories** — `fixtures/<lang>/`, `traces/<lang>/`, same scenario filenames
+  across languages (coverage parity = a directory diff). Cases resolve `fixtures/{{env.EVAL_LANG}}/…` and
+  `traces/{{env.EVAL_LANG}}/…`, so the *path* is language-agnostic; only the fixture bytes + `reference` + rubric differ.
+- Each case carries **`metadata.language`**; a run filters `--filter-metadata language=$(EVAL_LANG)` (composes with
+  `kind=ux` — promptfoo ANDs multiple `--filter-metadata`). One test file, both languages, one language per run.
+- **`EVAL_ROOM`** (derived from `EVAL_LANG`: `Кухня`/`Kitchen`) — the WS room name is echoed in the "no devices in
+  session <room>" failure reply, so it must match the run language or an English reply carries a Russian word.
+- **EN config profiles** `profiles/configs/*-en.env` point local bring-up at the `-en` toml (I18N-4).
+- **EN rubrics** `shared/rubrics/en-ux.yaml` (`polite_helpful_en`/`confirms_action_en`/`graceful_failure_en`) — co-equal
+  conditions mirroring the TEST-16 Russian structure. **Validated live** against DeepSeek: 7/7 agreement (passes genuine
+  English, fails Russian/error/rude/non-confirmation). The RU ws cases were also migrated to the co-equal rubrics.
+- **Verified:** the Russian suite is green under the new layout (`make ws CONFIG=embedded-armv7` = 4/4).
+- **Remaining (mic-dependent):** record `fixtures/en/{timer_10min,light_unreachable}.wav` and the `traces/en/`
+  golden — the only piece that needs a person at a microphone; everything else (axis, rubrics, cases, configs) is done.
 
 ---
 
@@ -184,5 +194,5 @@ not a deployment.)
 - **I18N-3** [ASSET] ✓ — EN Piper voices (satellites): catalog generalized to a locale param, added `en_US-amy`/`lessac`/`ryan`; capabilities report per-instance language.
 - **I18N-7** [ASSET] ✓ — Silero v3 English (standalone): `silero_v3` now pulls speakers/accent/language by model (`v3_en` → `en_0…en_117`, no Russian `put_accent`). Real `v3_en` synthesis verified (57 MB, `en_0` OK).
 - **I18N-4** [CONFIG] ✓ — the three `*-en.toml` variants (§4); also made the three RU configs explicitly RU-only (symmetry: `default_language`/`supported_languages`/`auto_detect_language=false`).
-- **I18N-5** [EVAL] — `LANG` axis + `metadata.language` tag + `profiles/langs/*`; EN rubrics; EN fixtures.
+- **I18N-5** [EVAL] ~ — harness ✓ (`EVAL_LANG` axis, language-subdir fixtures/traces, en config profiles, en rubrics validated 7/7, ru suite green); **only `fixtures/en/*` + `traces/en/*` recording remains** (mic).
 - **I18N-6** [CONTENT] ✓ — audited `en.json` donations: functional parity across all 13 handlers (structure + phrases); empty English lemmas are appropriate (additive, morphological — English needs none). No fill required.
