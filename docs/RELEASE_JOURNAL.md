@@ -13,6 +13,17 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **I18N-2 leading candidate = `moonshine-tiny-en-quantized-2026-02-27` (offline, 43 MB); WER `ten`/`10` fix applied.**
+  ChatGPT surfaced a newer Moonshine build; verified it: it's the *merged-`.ort`* quantized export at **43 MB** (not the
+  123 MB `-int8` that was rejected), offline (no head-drop), **loads on our sherpa-onnx 1.13.2 with no bump** (merged
+  decoder via `OfflineMoonshineModelConfig(encoder=, merged_decoder=)`, since `from_moonshine` doesn't expose it), and
+  transcribes the real recorded fixtures cleanly (a slower re-record of the timer fixed the earlier fast-speech miss —
+  pace, not the model). `linux_armv7l` wheels ship; offline → batch → dodges BUG-13. Distributed as a k2-fsa GitHub
+  `.tar.bz2` (not HF), so it uses the URL+extract download path. **Planned wiring: a subclass**
+  `SherpaMoonshineASRProvider(SherpaOnnxASRProvider)` (mirrors `piper_ruaccent ⊂ piper`) to isolate the tarball
+  download + merged-decoder construction; the base stays clean. Recorded as the I18N-2 leading candidate (design §2d).
+  Applied the `ten`/`10` fix in eval-commons `wer_scorer` (`a7b8a1e`: fold English number-words to digits) — the timer
+  case now scores 0.000. **Only open gate: on-device armv7 runtime/RAM on the WB7** (currently unreachable).
 - **I18N-2 REOPENED + BUG-13 filed — the first real English `make ws` exposed that zipformer-en-20M is unusable.** The
   recorded English fixtures (I18N-8) are good (offline Moonshine transcribed them, one perfectly), but `make ws
   CONFIG=embedded-armv7-en` came back 4/4 TimeoutError. Diagnosis: `zipformer-en-20M` (the I18N-2 pick) is a **streaming**

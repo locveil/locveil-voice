@@ -126,6 +126,29 @@ suite 1105, import-linter 9/9, config-validator 100%). **Residual (not blocking)
 checkbox folded into I18N-4 — it cannot flip a size/arch decision this lopsided. The ~9% WER is indicative (2 clips,
 quick harness); the real English WER measurement rides with I18N-5's English fixtures through the live provider.
 
+### 2d. Leading candidate — `moonshine-tiny-en-quantized-2026-02-27` (offline, 43 MB)
+The reopen needed a *small offline* English ASR. The rejection of Moonshine was against the old **123 MB** `-int8`
+build; the newer **quantized merged-`.ort`** export is **43 MB** (`encoder_model.ort` 13M + `decoder_model_merged.ort`
+30M) — the vosk-small tier. Verified (scratch, x86_64):
+- **Offline** → whole-buffer → no head-drop. On the real recorded fixtures: light **0.000**; timer **0.000** (after a
+  slower re-record + the `ten`/`10` WER-normalization fix — the model output "10 minutes", correct).
+- **Loads on our sherpa-onnx 1.13.2 — no bump.** The merged decoder isn't exposed by the `from_moonshine()` helper, but
+  it is settable via `OfflineMoonshineModelConfig(encoder=…, merged_decoder=…)` (the field exists in 1.13.2).
+- `linux_armv7l` wheels ship (1.13.2/1.13.3); RTF ~0.056. Offline → **batch branch → dodges BUG-13**.
+- **Distribution:** k2-fsa GitHub-release `.tar.bz2` (asr-models tag) — **not** an HF repo, so it uses the URL+extract
+  download path (like Piper), not the HF-pack path the other sherpa ASRs use.
+
+**Implementation shape = a subclass** `SherpaMoonshineASRProvider(SherpaOnnxASRProvider)` (mirrors `piper_ruaccent` ⊂
+`piper`): Moonshine diverges from the base's HF-pack families on *download* (tarball, not HF), *pack shape* (merged
+`.ort`, not 4 `.onnx` members), and *construction* (manual config + internal recognizer, since `from_moonshine` lacks
+`merged_decoder`) — so override `_load_recognizer` + `_get_default_model_urls` + `get_provider_name` in a subclass and
+inherit the offline transcription path (`_decode`, `supports_streaming=False`, `get_supported_languages → ["en"]`). This
+keeps the base (vosk/whisper/streaming, HF-pack, public `from_*` factories) clean.
+
+**Only open gate: on-device armv7 runtime + RAM on the WB7** — the wheel exists but Moonshine actually *running* on
+armv7l (and its footprint) is unverified; it can only be closed on the controller. Everything else (offline behavior,
+size, load-on-1.13.2, real-fixture accuracy) is confirmed.
+
 ---
 
 ## 3. Eval design — one bulk per language (I18N-5, harness ✓; fixtures pending)
@@ -200,8 +223,9 @@ not a deployment.)
   armv7); acceptable for a command-oriented assistant with keyword NLU.
 
 ## 7. Implementation tasks (filed off this design)
-- **I18N-2** [ASSET] ⚠ REOPENED — zipformer-en-20M rejected (streaming → head-drop on bounded commands; §2c). Need a
-  small OFFLINE arm32 English ASR (NOT Moonshine — 124 MB). Related: **BUG-13** (`/ws/audio` streaming branch hangs).
+- **I18N-2** [ASSET] ⚠ REOPENED — zipformer-en-20M rejected (streaming → head-drop; §2c). **Leading candidate:
+  `moonshine-tiny-en-quantized` (offline, 43 MB, loads on 1.13.2, real fixtures 0.000)** — planned as a subclass; only
+  the on-device armv7 runtime/RAM check remains (WB7). Related: **BUG-13** (`/ws/audio` streaming branch hangs).
 - **I18N-3** [ASSET] ✓ — EN Piper voices (satellites): catalog generalized to a locale param, added `en_US-amy`/`lessac`/`ryan`; capabilities report per-instance language.
 - **I18N-7** [ASSET] ✓ — Silero v3 English (standalone): `silero_v3` now pulls speakers/accent/language by model (`v3_en` → `en_0…en_117`, no Russian `put_accent`). Real `v3_en` synthesis verified (57 MB, `en_0` OK).
 - **I18N-4** [CONFIG] ✓ — the three `*-en.toml` variants (§4); also made the three RU configs explicitly RU-only (symmetry: `default_language`/`supported_languages`/`auto_detect_language=false`).

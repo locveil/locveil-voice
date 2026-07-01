@@ -361,11 +361,21 @@ size-matched to the Russian stack; language is a per-config/deployment choice (a
       failure modes: (a) a streaming ASR routes `/ws/audio` into the streaming branch, which **hangs** for bounded
       delivery → **BUG-13**; (b) even forced to batch it loses heads (online warm-up). RU works because
       `vosk-model-small-ru` is **offline** (whole-buffer). **New constraint: an OFFLINE, torch-free (sherpa), arm32,
-      ~vosk-small-ru-size English ASR.** **Moonshine-tiny-en is OUT — 124 MB int8 is too big** (offline + accurate but
-      ~3× the tier). Find a small offline English transducer (or accept a size tier). Until resolved, `embedded-armv7-en`
-      ASR is non-functional; the `zipformer-en-20M` catalog entry + `zipformer-streaming` model_type stay as an
-      evaluated-and-rejected option. **aarch64/x86_64 English is unaffected** (Whisper is offline → batch → no head-drop).
-      Design §2c. _Discovered via the first real English `make ws` (I18N-8 fixtures)._
+      ~vosk-small-ru-size English ASR.** Until resolved, `embedded-armv7-en` ASR is non-functional; the `zipformer-en-20M`
+      catalog entry + `zipformer-streaming` model_type stay as an evaluated-and-rejected option. **aarch64/x86_64 English
+      is unaffected** (Whisper is offline → batch → no head-drop). Design §2c. _Discovered via the first real English
+      `make ws` (I18N-8 fixtures)._
+      **LEADING CANDIDATE (2026-07-01): `sherpa-onnx-moonshine-tiny-en-quantized-2026-02-27`.** Offline, English-only,
+      **43 MB** (`encoder_model.ort` 13M + `decoder_model_merged.ort` 30M — the newer *merged* `.ort` export, NOT the
+      123 MB `-int8` build that was rejected). Verified locally: **loads on our sherpa-onnx 1.13.2 with NO bump** (the
+      merged decoder isn't exposed by `from_moonshine` but is settable via `OfflineMoonshineModelConfig(encoder=,
+      merged_decoder=)`); transcribes the **real** recorded fixtures correctly (light 0.000; timer 0.000 after re-record
+      + the `ten`/`10` WER fix); RTF ~0.056; `linux_armv7l` wheels ship. Offline → batch branch → **dodges BUG-13**.
+      **Planned wiring = a SUBCLASS** `SherpaMoonshineASRProvider(SherpaOnnxASRProvider)` — Moonshine diverges from the
+      base's HF-pack families (k2-fsa GitHub-release `.tar.bz2` not an HF repo; merged `.ort`; non-public construction),
+      so isolate download + build in a subclass (mirrors `piper_ruaccent` subclassing `piper`) and inherit the offline
+      transcription path. **Only open item: on-device armv7 runtime + RAM on the WB7** (wheel exists; runtime unverified —
+      needs the WB7 online). Then swap `embedded-armv7-en` ASR to it + retire the zipformer.
 - [ ] **I18N-8** [EVAL] (P3) `[deferred]` — **English eval assets — fixtures recorded + validated; blocked on I18N-2.**
       `fixtures/en/{timer_10min,light_unreachable}.wav` are recorded (16 kHz mono PCM16) and **validated good** (offline
       Moonshine transcribed them, one perfectly — the audio is fine; the armv7 failure is the ASR model, I18N-2). The
