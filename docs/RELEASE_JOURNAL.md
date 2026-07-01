@@ -25,6 +25,9 @@ newest entries near the top of each dated section.
   bridge is the consumer — neither needs the other running. Filed **TEST-17** (contract bundle) + **TEST-18** (capture
   provider + producer tests) here; **VWB-15** (emit artifact) + **VWB-16** (consumer test) added to the `wb-mqtt-bridge`
   ledger (uncommitted there, per the user). ARCH-26 moved active→done; eval README "Future surfaces" updated.
+  _Clarified same day (publish boundary): the bridge is the generator and commits its reference artifacts in the **bridge
+  repo** — it does NOT write to eval-commons; TEST-17 owns the one-way pin into `eval-commons/contracts/`. Tightened §14,
+  TEST-17, and VWB-15 so a bridge dev isn't left guessing where to publish._
 - **ARCH-26 filed — two Irene↔bridge catalog-contract clarifications to settle before ARCH-8 PR-2.** A multi-agent MQTT
   status review surfaced a real design gap: `mqtt_integration.md` §5a/PR-2 have Irene *subscribe* to the retained MQTT
   topic `bridge/catalog/version`, while §8 asserts Flow 2 adds no MQTT dependency — contradictory (you can't subscribe

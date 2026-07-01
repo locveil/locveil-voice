@@ -440,6 +440,10 @@ repos pin:
 - Generated **bridge-side** (source of truth; pydantic `CatalogResponse` emits JSON Schema, a `catalog dump`
   command emits the sample), kept honest by a **CI drift check + version stamp** so Irene knows which bridge
   build it's coded against. (Bridge work = **VWB-15**.)
+- **Publish boundary — no cross-repo writes.** The bridge commits its reference artifacts **in the bridge
+  repo** and does **not** write into eval-commons; the **voice/eval side pins a copy into
+  `eval-commons/contracts/`** (TEST-17), a one-way sync with a version stamp naming the bridge commit. Both
+  repos' tests read the eval-commons copy. So the bridge's "publish target" is its own repo, not eval-commons.
 
 **14.3 Bidirectional contract tests around shared `{utterance → expected canonical command}` fixtures.**
 - **Irene = producer test:** given `(utterance, golden-catalog)`, assert Irene emits the expected canonical

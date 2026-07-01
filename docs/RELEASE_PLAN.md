@@ -372,9 +372,11 @@ _Trace-driven system testing (design `docs/design/trace_system_testing.md`, TEST
       `global`/`all_lights` aggregates, every capability incl. sensor-read, `{wire,canonical,labels}` enum triplets,
       param schemas, localized ru/en names/aliases); (c) a **real WB7 catalog dump** as a realism check; (d) the
       canonical `DeviceCommand` schema + a set of **`{utterance → expected canonical command}` crossover fixtures** both
-      sides test against; (e) a **schema-validation/drift check**. Unblocks ARCH-8 PR-1/PR-3 (build the `DeviceCatalog`
-      + resolver offline). **Gated on VWB-15** (bridge emits the openapi + golden/real samples). Doubles as the eval
-      `mqtt`/`http` seed. Design §14; pairs with TEST-18.
+      sides test against; (e) a **schema-validation/drift check**. **This task owns the one-way sync:** it pins a copy of
+      the bridge's committed reference artifacts into `eval-commons/contracts/` (with a version stamp naming the bridge
+      commit) — the bridge does **not** write into eval-commons (§14 publish boundary). Unblocks ARCH-8 PR-1/PR-3 (build
+      the `DeviceCatalog` + resolver offline). **Gated on VWB-15** (bridge emits + commits the openapi + golden/real
+      samples in its own repo). Doubles as the eval `mqtt`/`http` seed. Design §14; pairs with TEST-18.
 - [ ] **TEST-18** [EVAL][MQTT] (P3) `[deferred]` — **The `device_command` capture provider + Irene producer contract
       tests (ARCH-26 §14).** A new eval-commons promptfoo provider that drives Irene with an utterance and returns the
       emitted canonical `DeviceCommand` (captured by the PR-1 capturing bridge `OutputPort`, not POSTed) for assertion
