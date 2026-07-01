@@ -13,6 +13,20 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **TEST-16 (partial) — calibrated the DeepSeek Russian UX judge; hardened the shared rubrics.** The live UX suite's
+  two cases are both expected-PASS happy paths, so they can't tell a working judge from one that rubber-stamps. A
+  12-case balanced probe (both classes, run through the *same* `llm-rubric`→DeepSeek path, in scratchpad) showed the
+  judge is **deterministic at temp 0** (stable across 4 runs) but **PASS-biased** — every disagreement was a
+  false-accept, including an all-English graceful-failure reply passing. Fix attempt #1 (an emphatic "оцени как НЕ
+  пройдено, если ответ не на русском" *override*) fixed English but **regressed the tone check** — the rude reply
+  flipped FAIL→PASS (verified stable under both old and new rubric, so a real rubric side-effect, not variance): the
+  override hijacked the judge's attention. Fix #2 (shipped) restructures `confirms_action_ru` + `graceful_failure_ru`
+  in `../eval-commons/shared/rubrics/ru-ux.yaml` into **co-equal numbered conditions** (language is one condition among
+  several, not an override) → probe agreement 83%→92%, `graceful_failure` 6/6, 0 false-rejects, 1 residual borderline
+  false-accept. **Lesson:** happy-path-only judge suites are blind to the judge's dominant failure mode (leniency), and
+  patching one rubric criterion can silently degrade another — re-measure ALL cases after any rubric edit. Full
+  calibration (human/Russian-speaker gold labels, more negatives, Cohen's κ, propagate the rubrics into the live
+  suite) stays open under TEST-16; the probe stays in scratchpad (not committed).
 - **TEST-15 DONE — WS suite now scores ASR/WER, and the whole `make ws` is green live (WER + intent + UX).** The
   ledger assumed the SUT had to be changed to expose the recognized transcript; a live probe flipped that
   (`task-start-reconciliation`): the SUT **already** surfaces it at `metadata.audio_processing.transcribed_text` on the

@@ -314,6 +314,24 @@ _Discrete functional defects (distinct from QUAL refactors/quality work). Surfac
 _Trace-driven system testing (design `docs/design/trace_system_testing.md`, TEST-11 ✓) — all implementation slices
 (TEST-12/13/14/15) done; see `RELEASE_PLAN_DONE.md`._
 
+- [ ] **TEST-16** [EVAL][UX] (P3) `[deferred]` — **Calibrate the DeepSeek Russian UX judge before trusting its
+      pass/fail in CI** (eval-commons ARCHITECTURE §7.1: "DeepSeek Russian grading reliability — unestablished").
+      **Partial (2026-07-01):** a 12-case balanced probe (both classes, run through the *same* llm-rubric→DeepSeek
+      path) exposed the live UX suite's blind spot — both shipped UX cases are **expected-PASS happy paths**, so they
+      can only confirm the judge says PASS and cannot detect a judge that rubber-stamps (a 2/2-positive set has zero
+      discriminative power). The probe found the judge is **deterministic at temp 0** (verdicts stable across 4 runs)
+      but **PASS-biased** (all disagreements were false-accepts, never false-rejects): it passed an all-English
+      graceful-failure reply. **Landed:** restructured `confirms_action_ru` + `graceful_failure_ru`
+      (`shared/rubrics/ru-ux.yaml`) from prose into **co-equal numbered conditions** (an emphatic "fail if not Russian"
+      *override* was tried first and **regressed the tone check** — a bandaid that hijacked the judge's attention;
+      the co-equal form fixed both) → probe agreement 83%→**92%**, `graceful_failure` 6/6, 0 false-rejects. **Remaining:**
+      (a) a **human-scored** Russian calibration set with more negatives per rubric (Claude's gold labels are
+      provisional — the 1 residual false-accept is a borderline label a Russian speaker must adjudicate); (b) report
+      Cohen's κ, not just raw agreement; (c) house the set in eval-commons `examples/` (per §7.1); (d) propagate the
+      improved shared rubrics into the live `eval/ws.promptfooconfig.yaml` UX cases (they still use weaker inline
+      near-duplicates). Gate: mark UX verdicts CI-trustworthy only once agreement is measured against **Russian-speaker
+      gold labels (the user)**, not Claude.
+
 ### Build & CI (BUILD)
 
 ### Models & Assets (ASSET)
