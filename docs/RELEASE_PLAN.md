@@ -349,6 +349,17 @@ _Trace-driven system testing (design `docs/design/trace_system_testing.md`, TEST
       gold labels (the user)**, not Claude.
 
 ### Build & CI (BUILD)
+- [ ] **BUILD-8** [BUILD][DESIGN] (P3) `[deferred]` — **Review/redesign the GitHub image-build workflow
+      (`.github/workflows/build-images.yml`).** Today it's **manual (`workflow_dispatch`), one target at a time**, and
+      **RU-only** — it maps `armv7`/`aarch64`/`standalone` to the Russian `CONFIG_PROFILE`s (`embedded-armv7`,
+      `embedded-aarch64`, `standalone-x86_64`) → GHCR. **Known need: add English image builds** (the new `*-en`
+      `CONFIG_PROFILE`s — `embedded-armv7-en`, `embedded-aarch64-en`, `standalone-x86_64-en`; the Dockerfiles already
+      parameterize on `CONFIG_PROFILE`, so this is a workflow/matrix change, not a Dockerfile one) with a language
+      dimension in the tags/image names. **The user has additional asks** — this is a **design task**: gather the full
+      requirements at task start, then produce the redesign (e.g. a language × arch matrix, tagging scheme, when it
+      triggers, whether to keep it manual). Deliverable = the design + follow-up implementation task(s). Downstream of
+      I18N-4 (the `*-en` configs exist) and BUG-14 (the armv7 image now builds on bookworm + the onnxruntime patch).
+      _Filed 2026-07-01 at user request; scope to be finalized with the user (additional asks pending)._
 
 ### Internationalization (I18N)
 _Real English deployment across all three Docker arches (armv7/aarch64/x86_64) + English eval. Design
