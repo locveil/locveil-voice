@@ -381,35 +381,16 @@ _Trace-driven system testing (design `docs/design/trace_system_testing.md`, TEST
 _Real English deployment across all three Docker arches (armv7/aarch64/x86_64) + English eval. Design
 `docs/design/multilingual_deployment.md` (I18N-1 ✓) → the implementation slices below. English models are slim and
 size-matched to the Russian stack; language is a per-config/deployment choice (auto-detect is NOT wired to ASR/TTS)._
-- [ ] **I18N-2** [ASSET] (P3) `[deferred]` — **REOPENED 2026-07-01: armv7 (WB7) English ASR — need a SMALL OFFLINE
-      model.** The original pick **`zipformer-en-20M`** was **wrong**: it's a *streaming* (online) transducer, and real
-      recorded fixtures (I18N-8) showed a streaming model **drops the utterance head** on bounded commands — "set a timer
-      for ten minutes" → `''`, "turn on the light in the garage" → `"T IN THE GARRAGE"` (tail only); even garbled with
-      lead-in padding. The I18N-2 spike scored it on clean LibriSpeech clips (which have lead-in), which masked this. Two
-      failure modes: (a) a streaming ASR routes `/ws/audio` into the streaming branch, which **hangs** for bounded
-      delivery → **BUG-13**; (b) even forced to batch it loses heads (online warm-up). RU works because
-      `vosk-model-small-ru` is **offline** (whole-buffer). **New constraint: an OFFLINE, torch-free (sherpa), arm32,
-      ~vosk-small-ru-size English ASR.** Until resolved, `embedded-armv7-en` ASR is non-functional; the `zipformer-en-20M`
-      catalog entry + `zipformer-streaming` model_type stay as an evaluated-and-rejected option. **aarch64/x86_64 English
-      is unaffected** (Whisper is offline → batch → no head-drop). Design §2c. _Discovered via the first real English
-      `make ws` (I18N-8 fixtures)._
-      **DECISION (2026-07-01): armv7 English ASR = `sherpa-onnx-moonshine-tiny-en-quantized-2026-02-27`** (offline,
-      **43 MB** merged `.ort`, English-only). Validated on x86_64: transcribes the real recorded fixtures cleanly (light
-      0.000; timer 0.000 after re-record + the `ten`/`10` WER fix); RTF ~0.056; offline → batch branch → **dodges
-      BUG-13**. **Prerequisite BUG-14 ✓ DONE (2026-07-01)** — the armv7 Docker now runs sherpa **1.12.36** (bookworm base
-      + `patch_onnx_align.py`); Moonshine **proven on the WB7** (RTF ~0.7, 134 MB). So I18N-2 is now **unblocked**.
-      **Remaining implementation:** a subclass `SherpaMoonshineASRProvider(SherpaOnnxASRProvider)` isolating the k2-fsa
-      GitHub `.tar.bz2` (URL+extract, not HF) download + the merged-decoder build (mirrors `piper_ruaccent ⊂ piper`;
-      inherits the offline path), a catalog entry, and swap `embedded-armv7-en` ASR from the zipformer to it (retiring the
-      `zipformer-en-20M` entry). Then I18N-8 (English suite green on the WB7 build). aarch64/x86_64 unaffected (whisper,
-      sherpa ≥1.13). Design §2d.
-- [ ] **I18N-8** [EVAL] (P3) `[deferred]` — **English eval assets — fixtures recorded + validated; blocked on I18N-2.**
+- [ ] **I18N-8** [EVAL] (P3) `[deferred]` — **English eval assets — fixtures recorded + validated; the armv7 ASR
+      blocker (I18N-2) is now DONE.**
       `fixtures/en/{timer_10min,light_unreachable}.wav` are recorded (16 kHz mono PCM16) and **validated good** (offline
       Moonshine transcribed them, one perfectly — the audio is fine; the armv7 failure is the ASR model, I18N-2). The
       recorder is now language-aware (eval-commons `629fb8d`). **Remaining:** the `traces/en/` golden + a green
-      `make ws CONFIG=embedded-armv7-en` both wait on I18N-2 (a working offline armv7 ASR). The harness itself is proven
-      (RU 4/4, EN rubrics 7/7); the English suite can be greened today on an offline 64-bit config (`embedded-aarch64-en`,
-      Whisper) to decouple from the armv7 model. See design §3.
+      `make ws CONFIG=embedded-armv7-en`. I18N-2 (the offline Moonshine armv7 ASR) is now wired, so the SUT can bring up
+      the English config; the green run needs a **bz2-capable env** (the Moonshine `.tar.bz2` extraction — the dev `.venv`
+      Python lacks `libbz2`, same gap that blocks Piper amy locally), i.e. the WB7/Docker image or a `bz2`-enabled local
+      Python. The harness itself is proven (RU 4/4, EN rubrics 7/7); alternatively the English suite can be greened on an
+      offline 64-bit config (`embedded-aarch64-en`, Whisper) to decouple from the armv7 model. See design §3.
 
 ### Models & Assets (ASSET)
 

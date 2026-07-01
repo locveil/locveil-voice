@@ -126,7 +126,13 @@ suite 1105, import-linter 9/9, config-validator 100%). **Residual (not blocking)
 checkbox folded into I18N-4 — it cannot flip a size/arch decision this lopsided. The ~9% WER is indicative (2 clips,
 quick harness); the real English WER measurement rides with I18N-5's English fixtures through the live provider.
 
-### 2d. armv7 English ASR = `moonshine-tiny-en-quantized-2026-02-27` (offline, 43 MB) — **BUG-14 ✓, now unblocked**
+### 2d. armv7 English ASR = `moonshine-tiny-en-quantized-2026-02-27` (offline, 43 MB) — **I18N-2 ✓ IMPLEMENTED**
+> **Implemented (2026-07-01, I18N-2):** `SherpaMoonshineASRProvider(SherpaOnnxASRProvider)`
+> (`irene/providers/asr/sherpa_moonshine.py`, entry point `sherpa_moonshine`); `configs/embedded-armv7-en.toml` ASR
+> swapped to it; the rejected `zipformer-en-20M` catalog entry retired. Validated end-to-end on x86_64 (both fixtures
+> clean); gates green (pyright 0, suite 1113, import-linter 9/9). Follow-up **I18N-8** (green `make ws`) needs a
+> bz2-capable env for the `.tar.bz2` extraction (dev `.venv` lacks `libbz2`).
+>
 > **Decision (2026-07-01):** Moonshine is the armv7 English ASR. The one obstacle — running sherpa ≥1.12 on the WB7 —
 > was **BUG-14**, now **fixed and proven on hardware**. Two problems: sherpa 1.12+'s onnxruntime `.so` has 64 KB-aligned
 > LOAD segments the WB7's 4 KB-page loader rejects (`… not properly aligned`), and its C++ module needs GLIBCXX_3.4.30
@@ -137,7 +143,6 @@ quick harness); the real English WER measurement rides with I18N-5's English fix
 > fixtures perfect. Next: wire the Moonshine subclass + swap the EN config (I18N-2). aarch64/x86_64 unaffected.
 
 (Model evaluation:)
-The reopen needed a *small offline* English ASR. The rejection of Moonshine was against the old **123 MB** `-int8`
 The reopen needed a *small offline* English ASR. The rejection of Moonshine was against the old **123 MB** `-int8`
 build; the newer **quantized merged-`.ort`** export is **43 MB** (`encoder_model.ort` 13M + `decoder_model_merged.ort`
 30M) — the vosk-small tier. Verified (scratch, x86_64):
@@ -156,9 +161,9 @@ build; the newer **quantized merged-`.ort`** export is **43 MB** (`encoder_model
 inherit the offline transcription path (`_decode`, `supports_streaming=False`, `get_supported_languages → ["en"]`). This
 keeps the base (vosk/whisper/streaming, HF-pack, public `from_*` factories) clean.
 
-**Only open gate: on-device armv7 runtime + RAM on the WB7** — the wheel exists but Moonshine actually *running* on
-armv7l (and its footprint) is unverified; it can only be closed on the controller. Everything else (offline behavior,
-size, load-on-1.13.2, real-fixture accuracy) is confirmed.
+**On-device armv7 runtime + RAM on the WB7 — CLOSED (BUG-14).** Moonshine runs on the controller (patched sherpa
+1.12.36 on bookworm): RTF ~0.7, 134 MB RSS, both fixtures perfect. Everything (offline behavior, size,
+merged-decoder load, real-fixture accuracy, on-device runtime) is confirmed; the provider is implemented (I18N-2).
 
 ---
 
@@ -234,9 +239,9 @@ not a deployment.)
   armv7); acceptable for a command-oriented assistant with keyword NLU.
 
 ## 7. Implementation tasks (filed off this design)
-- **I18N-2** [ASSET] — armv7 English ASR = **`moonshine-tiny-en-quantized` (offline, 43 MB; chosen §2d)**. **BUG-14 ✓** →
-  unblocked; remaining = the `SherpaMoonshineASRProvider` subclass + catalog + swap `embedded-armv7-en` ASR. Related:
-  **BUG-13** (`/ws/audio` streaming branch hangs).
+- **I18N-2** [ASSET] ✓ **DONE** — armv7 English ASR = **`moonshine-tiny-en-quantized` (offline, 43 MB; §2d)**.
+  `SherpaMoonshineASRProvider` subclass + catalog + `embedded-armv7-en` swap shipped; `zipformer-en-20M` retired.
+  **BUG-14 ✓** (unblocker). Related: **BUG-13** (`/ws/audio` streaming branch hangs — dodged by the offline path).
 - **BUG-14** [ASR][BUILD] ✓ DONE — armv7 Docker now runs sherpa 1.12.36 (bookworm base + `patch_onnx_align.py` for the
   onnxruntime ELF alignment); Moonshine proven on the WB7 (RTF ~0.7, 134 MB). Full image buildx is a deploy checkpoint.
 - **I18N-3** [ASSET] ✓ — EN Piper voices (satellites): catalog generalized to a locale param, added `en_US-amy`/`lessac`/`ryan`; capabilities report per-instance language.

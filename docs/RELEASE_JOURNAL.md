@@ -13,6 +13,26 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **I18N-2 DONE — offline Moonshine wired as the armv7 English ASR (subclass, end-to-end validated).** Implemented
+  **`SherpaMoonshineASRProvider(SherpaOnnxASRProvider)`** (`irene/providers/asr/sherpa_moonshine.py`, entry point
+  `sherpa_moonshine`) for `sherpa-onnx-moonshine-tiny-en-quantized-2026-02-27` (43 MB merged `.ort`, English-only,
+  offline). Subclass (not a base `model_type`) because Moonshine diverges from the VOSK/Whisper families on all three
+  axes the base assumes shared: **distribution** — a k2-fsa GitHub `.tar.bz2` via `AssetManager.download_model`
+  (URL+extract, like Piper voices), not an HF model-pack; **pack shape** — merged `encoder_model.ort` +
+  `decoder_model_merged.ort` + `tokens.txt` (resolved recursively); **construction** — the merged decoder isn't exposed
+  by `OfflineRecognizer.from_moonshine()`, so the recognizer is built directly from `OfflineMoonshineModelConfig(…,
+  merged_decoder=…)` using the internal `_Recognizer` grabbed from the factory's globals (version-agnostic). Mirrors
+  `piper_ruaccent ⊂ piper`. Everything else inherits — crucially the **offline** path (`supports_streaming` False →
+  `/ws/audio` batch branch → **dodges BUG-13**, the streaming-head-drop that sank the original zipformer pick). Swapped
+  `configs/embedded-armv7-en.toml` ASR to `sherpa_moonshine` and **retired** the rejected `zipformer-en-20M` catalog
+  entry in `sherpa_onnx.py` (kept the `zipformer-streaming` model_type as a generic online-transducer alias). The
+  dynamic sherpa construction is annotated against `Any` (its Python objects are built at import and the merged-decoder
+  path isn't in the typed API) — honest imports, no `# type: ignore`. **Validated end-to-end on x86_64** (sherpa
+  1.13.2): both real recorded fixtures transcribe cleanly (`light_unreachable`, `timer_10min`). Gates: pyright 0,
+  config-validator ✓, suite **1113** (+3 new Moonshine unit tests), import-linter 9/9. Unblocked by BUG-14 (bookworm +
+  p_align patch + sherpa 1.12.36, proven on the WB7). Remaining follow-up **I18N-8** — a green English `make ws` — needs
+  a bz2-capable env for the `.tar.bz2` extraction (the dev `.venv` Python lacks `libbz2`, the same gap that blocks Piper
+  amy locally; the WB7/Docker image has it).
 - **BUG-14 DONE — armv7 Docker fixed to run sherpa 1.12.36 + Moonshine (proven on the WB7).** Implemented the
   user-approved "build the libs in Docker" fix in `docker/Dockerfile.armv7`: base bullseye→**bookworm** (for
   GLIBCXX_3.4.30, which sherpa ≥1.12's C++ module needs; +4.4 MB on the WB7), a new **`docker/patch_onnx_align.py`** step

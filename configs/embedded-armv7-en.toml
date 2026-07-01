@@ -87,19 +87,18 @@ nlu_analysis = true             # kept for traces (see build-time lean-down abov
 # ============================================================
 [asr]
 enabled = true
-default_provider = "sherpa_onnx"
+default_provider = "sherpa_moonshine"
 fallback_providers = []
 default_language = "en"
 
-[asr.providers.sherpa_onnx]
+[asr.providers.sherpa_moonshine]
 enabled = true
-model = "zipformer-en-20M"         # English streaming transducer, ~44 MB int8 (I18N-2); armv7-proven
-model_type = "zipformer-streaming"
-default_language = "en"
-sample_rate = 16000
+model = "moonshine-tiny-en"        # offline Moonshine, 43 MB merged .ort (I18N-2); WB7-proven RTF ~0.7,
+default_language = "en"            # 134 MB RSS. Offline → batch branch → dodges BUG-13. Needs sherpa
+sample_rate = 16000               # >=1.12 (armv7 pin 1.12.36 + the BUG-14 onnxruntime patch/bookworm).
 num_threads = 2                    # leave 2 of the 4 A7 cores for the co-hosted wb-mqtt-bridge/ui
 decoding_method = "greedy_search"
-preload_models = true              # pay the ~38 s graph-init at boot, off the first-utterance path
+preload_models = true              # pay the graph-init at boot, off the first-utterance path
 
 # ============================================================
 # TTS — Piper direct (VITS via sherpa-onnx; espeak-ng stress)

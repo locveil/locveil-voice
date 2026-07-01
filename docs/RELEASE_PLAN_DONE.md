@@ -2029,6 +2029,24 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       generalization. armv7 EN ASR is a spike (zipformer-en-20M vs moonshine-tiny-en); EN Piper voice = `amy`. Eval =
       one-bulk-per-language (`LANG` axis). **Completing the design ≠ shipped:** filed implementation slices
       **I18N-2/3/4/5/6** (active ledger). Web-sourced (sherpa-onnx HF/PyPI arm32, k2-fsa Piper release, Moonshine).
+- [x] **I18N-2** [ASSET] (P3) `[deferred]` — **DONE 2026-07-01.** armv7 (WB7) English ASR = offline
+      **`sherpa-onnx-moonshine-tiny-en-quantized-2026-02-27`** (43 MB merged `.ort`, English-only), implemented as a
+      subclass **`SherpaMoonshineASRProvider(SherpaOnnxASRProvider)`** (`irene/providers/asr/sherpa_moonshine.py`,
+      entry point `sherpa_moonshine`). The subclass isolates the three axes where Moonshine diverges from the base's
+      VOSK/Whisper families: **distribution** (a k2-fsa GitHub-release `.tar.bz2` → `AssetManager.download_model`
+      URL+extract, not an HF model-pack), **pack shape** (merged `encoder_model.ort` + `decoder_model_merged.ort` +
+      `tokens.txt`, resolved recursively), and **construction** (the merged decoder isn't exposed by
+      `OfflineRecognizer.from_moonshine()`, so the recognizer is built directly from `OfflineMoonshineModelConfig(…,
+      merged_decoder=…)` via the internal `_Recognizer` grabbed from the factory's globals — tracks whatever sherpa
+      version is installed). Everything else inherits: offline `transcribe_audio`/`_decode` (`supports_streaming` False →
+      `/ws/audio` batch branch → **dodges BUG-13**), capabilities, warm-up, build/deps meta. Swapped
+      `configs/embedded-armv7-en.toml` ASR to `sherpa_moonshine` and **retired** the rejected `zipformer-en-20M` catalog
+      entry in `sherpa_onnx.py` (the `zipformer-streaming` model_type stays as a generic online-transducer alias).
+      **Prerequisite BUG-14 ✓** (bookworm base + `patch_onnx_align.py` + sherpa 1.12.36; Moonshine proven on the WB7,
+      RTF ~0.7 / 134 MB RSS). **Validated end-to-end on x86_64** (sherpa 1.13.2): transcribes both real recorded
+      fixtures cleanly (`light_unreachable`, `timer_10min`). Gates: pyright 0, config-validator ✓, suite **1113** (+3
+      new Moonshine unit tests), import-linter 9/9. Design §2d. Follow-up: **I18N-8** (green English `make ws` — needs a
+      bz2-capable env for the `.tar.bz2` extraction; the dev `.venv` Python lacks `libbz2`).
 - [x] **I18N-3** [ASSET] (P3) `[deferred]` — **DONE 2026-07-01.** English Piper TTS voices for the two torch-free
       satellites (armv7/aarch64). Generalized the `ru_RU`-hardcoded catalog (`irene/providers/tts/piper.py`) to a
       `locale` parameter and added `en_US-amy-medium` (default) + `lessac`/`ryan` — same k2-fsa `.tar.bz2` medium packs,

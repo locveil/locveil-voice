@@ -293,6 +293,7 @@ vosk = "irene.providers.asr.vosk:VoskASRProvider"
 whisper = "irene.providers.asr.whisper:WhisperASRProvider"
 google_cloud = "irene.providers.asr.google_cloud:GoogleCloudASRProvider"
 sherpa_onnx = "irene.providers.asr.sherpa_onnx:SherpaOnnxASRProvider"
+sherpa_moonshine = "irene.providers.asr.sherpa_moonshine:SherpaMoonshineASRProvider"
 
 [project.entry-points."irene.providers.llm"]
 console = "irene.providers.llm.console:ConsoleLLMProvider"

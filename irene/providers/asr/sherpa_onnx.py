@@ -352,19 +352,9 @@ class SherpaOnnxASRProvider(ASRProvider):
                 "streaming": True,
                 "size": "small streaming",
             },
-            # English streaming transducer (I18N-2): the WB7 armv7 English ASR. Same
-            # encoder/decoder/joiner/tokens pack + online path as the RU streaming model.
-            # ~44 MB int8 (vosk-small-ru size tier), proven linux_armv7l wheels. Use with
-            # model_type="zipformer-streaming". Chosen over moonshine-tiny-en (3x the size,
-            # arm32 unproven) for the torch-free satellite; 64-bit arches use multilingual whisper.
-            "zipformer-en-20M": {
-                "type": "sherpa-pack",
-                "repo": "csukuangfj/sherpa-onnx-streaming-zipformer-en-20M-2023-02-17",
-                "members": transducer,
-                "prefer": "int8",
-                "streaming": True,
-                "size": "~44MB int8 (English, streaming)",
-            },
+            # (English armv7 ASR is offline Moonshine — see `sherpa_moonshine.py` / I18N-2. The earlier
+            # streaming zipformer-en-20M was rejected: online models drop the utterance head on bounded
+            # commands. The `zipformer-streaming` model_type stays here as a generic online-transducer alias.)
             # Whisper exported to ONNX (sherpa-onnx) — multilingual, 64-bit only.
             "whisper-tiny": {
                 "type": "sherpa-pack",
