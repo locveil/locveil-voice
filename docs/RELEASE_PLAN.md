@@ -345,7 +345,7 @@ size-matched to the Russian stack; language is a per-config/deployment choice (a
       unconfirmed**) on: arm32 runtime support, int8 size/RAM on the WB7 budget, English WER on the eval fixtures,
       streaming-vs-offline. Then add the winner to the sherpa catalog (`irene/providers/asr/sherpa_onnx.py`) + a
       `zipformer-streaming`/`moonshine` `model_type` if needed. Interim default: zipformer-en-20M (proven). aarch64 +
-      x86_64 need **no** new ASR asset (Whisper is multilingual → config-only). See design §2/§2a.
+      x86_64 need **no** new ASR asset (Whisper is multilingual → config-only). See design §2/§2c.
 - [ ] **I18N-3** [ASSET] (P3) `[deferred]` — **English Piper TTS voices.** Generalize the `ru_RU`-hardcoded Piper
       catalog (`irene/providers/tts/piper.py`) to a locale parameter and add **`en_US-amy-medium`** (default) +
       `lessac`/`ryan`. Same k2-fsa `.tar.bz2` medium packs, same sherpa-onnx runtime, ~same size as the Russian voices —

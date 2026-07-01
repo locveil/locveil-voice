@@ -65,7 +65,22 @@ Sources: sherpa-onnx `zipformer-en-20M` (HF `csukuangfj/sherpa-onnx-streaming-zi
 sherpa-onnx arm-embedded install docs + `linux_armv7l` PyPI wheels, Piper en_US voices in the k2-fsa `tts-models`
 release, sherpa-onnx Moonshine support (`sherpa-onnx-moonshine-tiny-en-int8`).
 
-### 2a. armv7 ASR decision = a spike (I18N-2), not a guess
+### 2a. "Config-only" for the 64-bit Whisper path — what it means, and that it is already wired
+For aarch64/x86_64, English needs **no code and no new asset** because Whisper is multilingual **and the
+`default_language` flag is already consumed at inference** — verified end-to-end:
+- **Torch Whisper (x86_64)** reads `default_language` (`irene/providers/asr/whisper.py:50`) and passes it **per
+  transcribe** → `model.transcribe(..., language=language)` (`whisper.py:105,124`).
+- **Sherpa Whisper (aarch64)** bakes it into the recognizer **at construction** → `from_whisper(..., language=language)`
+  (`irene/providers/asr/sherpa_onnx.py:112,121`), from `[asr.providers.sherpa_onnx].default_language` (`:55`).
+- The ASR component forwards `[asr].default_language` on every call (`asr_component.py:161,214,243/282`).
+
+So an EN config just flips the flag — but at **two levels that must agree**: `[asr].default_language` (component;
+drives torch-Whisper + is passed down) **and** `[asr.providers.<provider>].default_language` (provider; drives
+sherpa-Whisper at build). The shipped RU configs set both to `"ru"` (`config-master.toml:264,282`); EN sets both to
+`"en"`. **Contrast armv7:** `vosk-model-small-ru` is a *monolingual* transducer — no flag can make it emit English,
+hence the model swap (I18N-2). This is the exact line between "config-only" (64-bit) and "new asset" (armv7).
+
+### 2c. armv7 ASR decision = a spike (I18N-2), not a guess
 Measure and decide on:
 - **arm32/armv7 runtime support** — zipformer: proven; Moonshine: must be verified (edge-oriented but 32-bit unconfirmed).
 - **int8 on-disk size + RAM** on the WB7 budget.
@@ -93,14 +108,16 @@ The voice pipeline is monolingual-per-config (§1a), so language is a **run-leve
 
 ## 4. Config plan — `*-en.toml` per architecture
 
-Config-only overrides (from the §2 matrix), one variant per deployment arch:
-- `embedded-armv7-en.toml` — `default_language="en"` + `supported_languages`; ASR `model` → the spike winner +
-  matching `model_type`/`default_language`; TTS Piper `voice="amy"`; `auto_detect_language=false`; workflow
-  `default_language="en"`.
-- `embedded-aarch64-en.toml` — ASR `whisper-small` stays (multilingual) with `default_language="en"`; TTS Piper `amy`
-  (replaces `piper_ruaccent`, which is Russian-stress-specific).
-- `standalone-x86_64-en.toml` — ASR torch-whisper `default_language="en"` (model stays); TTS → Piper `amy` (replaces
-  `silero_v4`, which has no English model).
+Config-only overrides (from the §2 matrix), one variant per deployment arch. **Language flag = set `default_language`
+at BOTH levels and keep them equal** (per §2a): `[asr].default_language` **and** `[asr.providers.<active>].default_language`,
+plus the top-level/workflow `default_language`.
+- `embedded-armv7-en.toml` — top-level `default_language="en"` + `supported_languages`; ASR `model` → the spike winner +
+  matching `model_type` + `[asr]`/`[asr.providers.sherpa_onnx].default_language="en"`; TTS Piper `voice="amy"`;
+  `auto_detect_language=false`; workflow `default_language="en"`. (armv7 is the ASR **model swap**, not just a flag.)
+- `embedded-aarch64-en.toml` — ASR `whisper-small` stays (multilingual); flip `[asr]` + `[asr.providers.sherpa_onnx].default_language="en"`
+  (already wired at inference, §2a); TTS Piper `amy` (replaces `piper_ruaccent`, which is Russian-stress-specific).
+- `standalone-x86_64-en.toml` — ASR torch-whisper model stays; flip `[asr]` + `[asr.providers.whisper].default_language="en"`
+  (already wired, §2a); TTS → Piper `amy` (replaces `silero_v4`, which has no English model).
 
 `config-master.toml` stays the canonical reference; these are deployment variants (`config-master-canonical`).
 
