@@ -35,8 +35,8 @@ deployment concern (what the SUT runs) — for `wb7` it's whatever is deployed o
 | Config | Kind | Needs running | Needs key | Needs fixtures | Status |
 |---|---|---|---|---|---|
 | `cli.promptfooconfig.yaml` | CLI contracts | nothing | no | no | ✅ **passing (5/5)** |
-| `ws.promptfooconfig.yaml` (system) | ASR + intent | Irene on the target | no | yes (WAV) | ✅ runs live — intent ✓; ASR/WER tier pending |
-| `ws.promptfooconfig.yaml` (ux) | DeepSeek judge | Irene on the target | `DEEPSEEK_API_KEY` | yes (WAV) | ⏳ needs key + calibration |
+| `ws.promptfooconfig.yaml` (system) | ASR + intent | Irene on the target | no | yes (WAV) | ✅ passing live — WER ✓ + intent ✓ |
+| `ws.promptfooconfig.yaml` (ux) | DeepSeek judge | Irene on the target | `DEEPSEEK_API_KEY` | yes (WAV) | ✅ runs live (judge calibration still advisory) |
 
 ## Setup (uv)
 
@@ -124,9 +124,10 @@ These are non-obvious and have already caused (and cost) bugs — keep them in m
 - **Fixtures are recorded + committed** — `fixtures/{timer_10min,light_unreachable}.wav`, 16 kHz mono PCM16. Re-record
   with **`make record`** (`make setup-record` once first; see `fixtures/README.md`) only if you change the spoken reference.
 - **Intent name** `timer.set` is **confirmed against a live run** — the intent case passes.
-- **ASR/WER tier:** offline ASR (sherpa_onnx/vosk) emits no streaming `partial`s, so the provider returns the
-  assistant's *reply* as the transcript proxy — a WER assertion against the spoken reference can't pass until the SUT
-  surfaces the recognized transcript in the response `metadata`. Tracked separately; the intent tier works today.
+- **ASR/WER tier works.** Offline ASR (sherpa_onnx/vosk) emits no streaming `partial`s, but the SUT already surfaces
+  the *recognized speech* at `metadata.audio_processing.transcribed_text` on the batch path — the provider reads that
+  (falling back to a partial, then the reply text), so the WER assertion scores ASR accuracy, not the assistant's
+  reply. Confirmed live: `«поставь таймер на десять минут»` → WER 0.
 - **DeepSeek-as-judge on Russian is unvalidated.** Hand-score a few replies and check agreement
   before trusting UX pass/fail in CI (eval-commons `ARCHITECTURE.md` §7.1). Treat UX verdicts as
   indicative for now.

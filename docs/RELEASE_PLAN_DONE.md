@@ -1794,6 +1794,20 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       runner overriding component config is its own smell — relevant to the `--set` work, worth a future look._
 
 ### Tests (TEST)
+- [x] **TEST-15** [EVAL][WS] (P3) `[deferred]` — **DONE 2026-07-01.** The WS system suite now asserts ASR/WER for
+      offline ASR. **task-start-reconciliation flipped the premise:** the ledger assumed the SUT had to be changed to
+      surface the recognized transcript, but a live probe showed the SUT **already** exposes it at
+      `metadata.audio_processing.transcribed_text` on the batch path (`_process_single_audio_pipeline` writes it; the
+      `/ws/audio` handler forwards it in `_meta`). So the fix is **eval-side only** (user-confirmed approach): the shared
+      `ws_audio_provider` (in `../eval-commons`) now resolves the transcript in priority order —
+      `metadata.audio_processing.transcribed_text` → last streaming `partial` → reply text — so WER scores the
+      *recognized speech*, not the assistant's reply. **No SUT change.** Verified live against `configs/embedded-armv7`:
+      `make ws TARGET=local` = **4/4 pass** (WER 0 on `«поставь таймер на десять минут»`; intent `timer.set`; both
+      DeepSeek-judged UX cases pass with `DEEPSEEK_API_KEY` set), `make cli` still 5/5. Cleared the now-confirmed
+      intent-name + unreachable-device TODOs in `ws.promptfooconfig.yaml`; refreshed `eval/README` (WER tier works, UX
+      runs live). **This closes the trace-driven system-testing implementation slices** (TEST-12/13/14/15); the WS
+      suite is fully green where a local SUT can assert it. (DeepSeek Russian judge *calibration* remains advisory, not
+      a blocker — a standing UX-tier note, not a TEST- task.)
 - [x] **TEST-14** [EVAL] (P3) `[deferred]` — **DONE 2026-06-28.** Trace↔WAV unification (S3 / D-9): a golden audio
       trace already carries its captured audio (base64 PCM16, the same bytes `--listen` plays), so a new
       `irene-replay-trace --extract-wav <file.wav>` decodes it to a standard WAV — **record once, test twice** (one

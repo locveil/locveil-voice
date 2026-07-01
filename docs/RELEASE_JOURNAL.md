@@ -13,6 +13,19 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **TEST-15 DONE — WS suite now scores ASR/WER, and the whole `make ws` is green live (WER + intent + UX).** The
+  ledger assumed the SUT had to be changed to expose the recognized transcript; a live probe flipped that
+  (`task-start-reconciliation`): the SUT **already** surfaces it at `metadata.audio_processing.transcribed_text` on the
+  batch path (`_process_single_audio_pipeline` writes it, `/ws/audio` forwards it in `_meta`), matching the spoken
+  reference exactly. User-confirmed approach = **eval-side only, no SUT change**: `ws_audio_provider` (in
+  `../eval-commons`) now resolves the transcript in priority order — `metadata.audio_processing.transcribed_text` →
+  last streaming `partial` → reply text — so WER scores the *recognized speech*, not the reply. Verified live vs
+  `configs/embedded-armv7` with `DEEPSEEK_API_KEY` set: `make ws TARGET=local` = **4/4 pass** (WER 0 on «поставь таймер
+  на десять минут»; intent `timer.set`; both DeepSeek-judged UX cases pass — 726 grading tokens confirm the judge ran),
+  `make cli` still 5/5. Cleared the now-confirmed intent-name + unreachable-device TODOs in `ws.promptfooconfig.yaml`;
+  refreshed `eval/README`. **Lesson:** reconcile against the *code*, not just the task text — the "missing" contract was
+  already there; the only gap was the harness not reading it. Closes the trace-driven system-testing slices
+  (TEST-12/13/14/15). DeepSeek Russian-judge *calibration* stays advisory (a standing UX-tier caveat, not a task).
 - **BUG-12 DONE — the `make ws` "SUT failure" was promptfoo's response cache, not a hang/provider/SUT bug.** Chasing
   the apparent hang: it wasn't a hang (my Bash timeout) and the eval-commons `ws_audio_provider` is correct (`call_api`
   succeeds directly). The real cause: an early `make ws` against a mis-launched SUT cached "ASR provider 'whisper' not

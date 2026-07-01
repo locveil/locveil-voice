@@ -51,7 +51,7 @@ tests:
       audio: fixtures/timer_10min.wav
     assert:
       - type: is-json
-      # TODO: confirm the exact intent name Irene's timer handler emits (placeholder 'timer.set').
+      # Intent name confirmed against a live run: Irene's timer handler emits 'timer.set'.
       - type: javascript
         value: JSON.parse(output).intent_name === 'timer.set' && JSON.parse(output).success === true
 
@@ -77,7 +77,7 @@ tests:
       audio: fixtures/light_unreachable.wav
       # `reference` here is the line to SPEAK when recording this fixture (the recorder reads it);
       # this is a judge case, so nothing asserts WER against it. Target a device that is unreachable
-      # in the SUT's config. TODO: confirm against a live run that this stays unreachable.
+      # in the SUT's config — confirmed live: the SUT replies with a polite "no devices" message.
       reference: включи свет в гараже
     assert:
       - type: llm-rubric
