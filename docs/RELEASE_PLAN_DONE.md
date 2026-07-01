@@ -2014,6 +2014,18 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       generalization. armv7 EN ASR is a spike (zipformer-en-20M vs moonshine-tiny-en); EN Piper voice = `amy`. Eval =
       one-bulk-per-language (`LANG` axis). **Completing the design ≠ shipped:** filed implementation slices
       **I18N-2/3/4/5/6** (active ledger). Web-sourced (sherpa-onnx HF/PyPI arm32, k2-fsa Piper release, Moonshine).
+- [x] **I18N-2** [ASSET] (P3) `[deferred]` — **DONE 2026-07-01.** armv7 (WB7) English ASR chosen + wired:
+      **`zipformer-en-20M`**. Ran both candidates locally (WER is architecture-independent): `zipformer-en-20M` =
+      43.6 MB int8 / WER 0.091 / streaming / proven `linux_armv7l` / ~zero code delta (reuses the online-transducer
+      path); `moonshine-tiny-en` = 123.5 MB int8 (~3×) / WER 0.030 / offline / arm32 unproven / new `from_moonshine`
+      branch. Moonshine is more accurate but has **no home** — too big/unproven on armv7, redundant with multilingual
+      Whisper on the 64-bit arches — so zipformer wins the *slim + arm32-proven + torch-free* tier (small-model WER is
+      the same accuracy-for-size trade `vosk-small-ru` makes for Russian). Shipped: catalog entry `zipformer-en-20M` +
+      `model_type="zipformer-streaming"` (routes the existing `_is_streaming` online path) + language-derived
+      `get_supported_languages` in `irene/providers/asr/sherpa_onnx.py`; test updated for the new streaming alias.
+      Gates: pyright 0, suite **1105 passed**, import-linter 9/9, config-validator 100%. Residual (not blocking): on-WB7
+      RAM/latency is a deployment checkbox folded into I18N-4; the real English WER measurement rides with I18N-5's
+      English fixtures. Design §2c. Bench artifacts in the session scratchpad (not committed).
 
 ### Build & CI (BUILD)
 - [x] **BUILD-1** (P0) — Verify clean `uv sync` + CLI and WebAPI boot at v15. **DONE 2026-06-01** (`bab6f97`):

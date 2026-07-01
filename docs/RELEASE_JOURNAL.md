@@ -13,6 +13,16 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **I18N-2 DONE — armv7 English ASR = `zipformer-en-20M` (measured, not guessed).** Downloaded both candidates and ran
+  them locally on a shared LibriSpeech clip set (WER is architecture-independent, so the head-to-head is valid off the
+  WB7): `zipformer-en-20M` = 43.6 MB int8, WER 0.091, streaming, proven `linux_armv7l`, ~zero code delta (reuses the
+  existing online-transducer path); `moonshine-tiny-en` = 123.5 MB int8 (~3×), WER 0.030, offline, arm32 unproven, new
+  `from_moonshine` branch. Moonshine is more accurate but **has no home** — too big/unproven for the armv7 tier,
+  redundant with multilingual Whisper on the 64-bit arches — so zipformer wins the *slim + arm32-proven + torch-free*
+  WB7 slot (small-model WER is the same accuracy-for-size trade `vosk-small-ru` makes for Russian). Wired: catalog
+  `zipformer-en-20M` + `model_type="zipformer-streaming"` + language-derived `get_supported_languages` in
+  `irene/providers/asr/sherpa_onnx.py`; streaming-alias test updated. Gates: pyright 0, suite 1105, import-linter 9/9,
+  config-validator 100%. Residual on-WB7 RAM/latency folded into I18N-4; real English WER rides with I18N-5 fixtures.
 - **I18N design refinement — standalone TTS is torch Silero, not Piper; Silero English caps at `v3_en`.** Corrected an
   over-unification in the I18N-1 design: TTS is per-architecture (Piper on the two torch-free satellites; the x86_64
   standalone runs `silero_v4` torch for Russian). The authoritative Silero `models.yml` shows Russian advanced

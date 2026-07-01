@@ -339,13 +339,6 @@ _Trace-driven system testing (design `docs/design/trace_system_testing.md`, TEST
 _Real English deployment across all three Docker arches (armv7/aarch64/x86_64) + English eval. Design
 `docs/design/multilingual_deployment.md` (I18N-1 ✓) → the implementation slices below. English models are slim and
 size-matched to the Russian stack; language is a per-config/deployment choice (auto-detect is NOT wired to ASR/TTS)._
-- [ ] **I18N-2** [ASSET] (P3) `[deferred]` — **armv7 English ASR spike + catalog.** Decide the WB7 (torch-free) English
-      ASR by measuring **`sherpa-onnx-streaming-zipformer-en-20M`** (43.6 MB int8, proven `linux_armv7l`, streaming) vs
-      **`moonshine-tiny-en`** (27M params, English-only, offline, ~48% lower WER than whisper-tiny, **arm32 support
-      unconfirmed**) on: arm32 runtime support, int8 size/RAM on the WB7 budget, English WER on the eval fixtures,
-      streaming-vs-offline. Then add the winner to the sherpa catalog (`irene/providers/asr/sherpa_onnx.py`) + a
-      `zipformer-streaming`/`moonshine` `model_type` if needed. Interim default: zipformer-en-20M (proven). aarch64 +
-      x86_64 need **no** new ASR asset (Whisper is multilingual → config-only). See design §2/§2c.
 - [ ] **I18N-3** [ASSET] (P3) `[deferred]` — **English Piper TTS voices (the two torch-free satellites: armv7 +
       aarch64).** Generalize the `ru_RU`-hardcoded Piper catalog (`irene/providers/tts/piper.py`) to a locale parameter
       and add **`en_US-amy-medium`** (default) + `lessac`/`ryan`. Same k2-fsa `.tar.bz2` medium packs, same sherpa-onnx
@@ -362,7 +355,7 @@ size-matched to the Russian stack; language is a per-config/deployment choice (a
       `["ru-RU"]` at `:136`), and skip the Russian `put_accent`/`put_yo` path for English. See design §2/§5.
 - [ ] **I18N-4** [CONFIG] (P3) `[deferred]` — **`*-en.toml` config variants** for the three deployment arches: flip
       `default_language`/`supported_languages` (at **both** `[asr]` and `[asr.providers.<p>]` levels — see design §2a),
-      `auto_detect_language=false`. Per-arch: `embedded-armv7-en` (EN ASR = I18N-2 winner; TTS Piper `amy`),
+      `auto_detect_language=false`. Per-arch: `embedded-armv7-en` (EN ASR = `zipformer-en-20M`, `model_type="zipformer-streaming"` per I18N-2 ✓; TTS Piper `amy`),
       `embedded-aarch64-en` (ASR `whisper-small`, config-only; TTS Piper `amy`), `standalone-x86_64-en` (ASR torch-whisper,
       config-only; TTS `silero_v3 v3_en` per I18N-7). Config-only; no `CoreConfig` schema change (config-ui unaffected).
       `config-master.toml` stays canonical. See design §4.

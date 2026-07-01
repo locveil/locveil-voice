@@ -146,10 +146,16 @@ class TestStreaming:
         assert picks["tokens"] == "lang/tokens.txt"
 
     def test_streaming_flag_routes(self):
-        # Construction-free check of the model_type → streaming routing flag.
-        p = SherpaOnnxASRProvider.__new__(SherpaOnnxASRProvider)
-        p.model_type = "vosk-streaming"
-        p._is_streaming = p.model_type in ("vosk-streaming", "vosk-streaming-transducer")
-        assert p._is_streaming is True
-        assert p.get_capabilities()["streaming"] is True
-        assert p.get_capabilities()["offline"] is False
+        # Construction-free check of the model_type → streaming routing flag. Both the RU
+        # ("vosk-streaming") and EN ("zipformer-streaming", I18N-2) online types must route streaming.
+        streaming_types = (
+            "vosk-streaming", "vosk-streaming-transducer", "zipformer-streaming", "streaming-transducer")
+        for mt in ("vosk-streaming", "zipformer-streaming"):
+            p = SherpaOnnxASRProvider.__new__(SherpaOnnxASRProvider)
+            p.model_type = mt
+            p.default_language = "en"
+            p._is_streaming = p.model_type in streaming_types
+            assert p._is_streaming is True
+            assert p.get_capabilities()["streaming"] is True
+            assert p.get_capabilities()["offline"] is False
+            assert p.get_supported_languages() == ["en"]

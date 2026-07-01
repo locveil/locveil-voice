@@ -88,15 +88,25 @@ sherpa-Whisper at build). The shipped RU configs set both to `"ru"` (`config-mas
 `"en"`. **Contrast armv7:** `vosk-model-small-ru` is a *monolingual* transducer — no flag can make it emit English,
 hence the model swap (I18N-2). This is the exact line between "config-only" (64-bit) and "new asset" (armv7).
 
-### 2c. armv7 ASR decision = a spike (I18N-2), not a guess
-Measure and decide on:
-- **arm32/armv7 runtime support** — zipformer: proven; Moonshine: must be verified (edge-oriented but 32-bit unconfirmed).
-- **int8 on-disk size + RAM** on the WB7 budget.
-- **English WER** on the eval fixtures.
-- **streaming vs offline** — zipformer is streaming (could later feed real streaming partials, closing the TEST-15 gap
-  for EN); Moonshine is offline.
+### 2c. armv7 ASR decision (I18N-2 ✓) — **zipformer-en-20M**, measured
+Both candidates were run locally (WER is architecture-independent, so the head-to-head is valid off-WB7):
 
-Interim default if the spike is deferred: **zipformer-en-20M** (proven arm32, streaming).
+| | zipformer-en-20M | moonshine-tiny-en |
+|---|---|---|
+| int8 on-disk | **43.6 MB** (≈ `vosk-small-ru` 27 MB tier) | 123.5 MB (~3×; whisper-base tier) |
+| WER (2 LibriSpeech clips, shared refs) | 0.091 | **0.030** |
+| streaming | yes (online transducer) | no (offline) |
+| arm32 wheels | **proven** (`linux_armv7l`) | unconfirmed |
+| code delta | **~zero** (reuses the `_is_streaming` online-transducer path) | new `model_type` + `from_moonshine` (4-file pack) |
+
+**Decision: zipformer-en-20M.** Moonshine is more accurate but **has no home** — on armv7 it is ~3× the size budget and
+arm32-unproven; on aarch64/x86_64 it is redundant with multilingual Whisper (which beats both). The armv7 tier is
+*slim + arm32-proven + torch-free*, and zipformer fits it, accepting small-model WER (the same accuracy-for-size trade
+`vosk-small-ru` makes for Russian). Shipped: catalog entry `zipformer-en-20M` + `model_type="zipformer-streaming"`
+(routes through the existing online-transducer path) in `irene/providers/asr/sherpa_onnx.py`; gates green (pyright 0,
+suite 1105, import-linter 9/9, config-validator 100%). **Residual (not blocking):** on-WB7 RAM/latency is a deployment
+checkbox folded into I18N-4 — it cannot flip a size/arch decision this lopsided. The ~9% WER is indicative (2 clips,
+quick harness); the real English WER measurement rides with I18N-5's English fixtures through the live provider.
 
 ---
 
@@ -154,7 +164,7 @@ plus the top-level/workflow `default_language`.
   armv7); acceptable for a command-oriented assistant with keyword NLU.
 
 ## 7. Implementation tasks (filed off this design)
-- **I18N-2** [ASSET] — armv7 EN ASR spike (zipformer-en-20M vs moonshine-tiny-en) → decide + add to the sherpa catalog.
+- **I18N-2** [ASSET] ✓ — armv7 EN ASR spike → **zipformer-en-20M** chosen + added to the sherpa catalog (§2c).
 - **I18N-3** [ASSET] — EN Piper voices (satellites): generalize the `ru_RU` catalog, add `en_US-amy-medium` (default) + variants.
 - **I18N-7** [ASSET] — Silero v3 English (standalone torch TTS): adjust the existing `silero_v3` provider to pull the
   model + speakers by language (`v3_en`), not a new provider (§5).

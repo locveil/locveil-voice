@@ -4,9 +4,10 @@ sherpa-onnx ASR provider — ONNX inference for the alphacep VOSK Zipformer2 fam
 Part of ARCH-10 / PR-1 (see docs/design/onnx_inference_layer.md). Runs **alongside**
 the Kaldi `vosk` and torch `whisper` providers — a config choice, not a replacement.
 
-Two offline model families on one provider/runtime, selected by config `model_type`:
-- `vosk-transducer` → `OfflineRecognizer.from_transducer` (encoder/decoder/joiner/tokens)
-- `whisper`         → `OfflineRecognizer.from_whisper`    (encoder/decoder/tokens, no joiner)
+Model families on one provider/runtime, selected by config `model_type`:
+- `vosk-transducer`      → `OfflineRecognizer.from_transducer` (encoder/decoder/joiner/tokens, offline)
+- `whisper`             → `OfflineRecognizer.from_whisper`    (encoder/decoder/tokens, no joiner)
+- `vosk-streaming` (RU) / `zipformer-streaming` (EN) → `OnlineRecognizer.from_transducer` (online/streaming)
 
 Whisper-ONNX (PR-2) drops torch from 64-bit ASR images that don't otherwise need it.
 
@@ -49,7 +50,8 @@ class SherpaOnnxASRProvider(ASRProvider):
 
         # Model pack selection (id resolves against _get_default_model_urls()).
         self.model_id: str = config.get("model", "vosk-model-small-ru")
-        # Model family: "vosk-transducer" (RU Zipformer2) | "whisper" (whisper-onnx).
+        # Model family: "vosk-transducer" (RU Zipformer2, offline) | "whisper" (whisper-onnx) |
+        # streaming transducer ("vosk-streaming" RU | "zipformer-streaming" EN — same online path).
         self.model_type: str = config.get("model_type", "vosk-transducer")
 
         self.default_language: str = config.get("default_language", "ru")
@@ -57,7 +59,8 @@ class SherpaOnnxASRProvider(ASRProvider):
         self.feature_dim: int = config.get("feature_dim", 80)
         self.decoding_method: str = config.get("decoding_method", "greedy_search")
         self.policy = InferencePolicy.for_platform(config.get("num_threads"))
-        self._is_streaming = self.model_type in ("vosk-streaming", "vosk-streaming-transducer")
+        self._is_streaming = self.model_type in (
+            "vosk-streaming", "vosk-streaming-transducer", "zipformer-streaming", "streaming-transducer")
 
         self._recognizer: Any = None
 
@@ -141,7 +144,7 @@ class SherpaOnnxASRProvider(ASRProvider):
         else:
             raise NotImplementedError(
                 f"model_type '{self.model_type}' not supported "
-                "(use 'vosk-transducer', 'whisper', or 'vosk-streaming')"
+                "(use 'vosk-transducer', 'whisper', 'vosk-streaming', or 'zipformer-streaming')"
             )
 
         # onnxruntime graph init is blocking (~38 s on armv7) — keep it off the loop.
@@ -286,7 +289,8 @@ class SherpaOnnxASRProvider(ASRProvider):
     def get_supported_languages(self) -> List[str]:
         if self.model_type in ("whisper", "whisper-onnx"):
             return ["ru", "en", "auto"]  # whisper packs are multilingual
-        return ["ru"]  # the alphacep VOSK packs wired here are Russian
+        # transducer / streaming packs are single-language (RU vosk, EN zipformer) — the pack's own.
+        return [self.default_language]
 
     def get_supported_formats(self) -> List[str]:
         return ["pcm16", "wav", "raw"]
@@ -347,6 +351,19 @@ class SherpaOnnxASRProvider(ASRProvider):
                 "prefer": "chunk64",
                 "streaming": True,
                 "size": "small streaming",
+            },
+            # English streaming transducer (I18N-2): the WB7 armv7 English ASR. Same
+            # encoder/decoder/joiner/tokens pack + online path as the RU streaming model.
+            # ~44 MB int8 (vosk-small-ru size tier), proven linux_armv7l wheels. Use with
+            # model_type="zipformer-streaming". Chosen over moonshine-tiny-en (3x the size,
+            # arm32 unproven) for the torch-free satellite; 64-bit arches use multilingual whisper.
+            "zipformer-en-20M": {
+                "type": "sherpa-pack",
+                "repo": "csukuangfj/sherpa-onnx-streaming-zipformer-en-20M-2023-02-17",
+                "members": transducer,
+                "prefer": "int8",
+                "streaming": True,
+                "size": "~44MB int8 (English, streaming)",
             },
             # Whisper exported to ONNX (sherpa-onnx) — multilingual, 64-bit only.
             "whisper-tiny": {
