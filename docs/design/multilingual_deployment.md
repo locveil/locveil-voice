@@ -96,7 +96,17 @@ sherpa-Whisper at build). The shipped RU configs set both to `"ru"` (`config-mas
 `"en"`. **Contrast armv7:** `vosk-model-small-ru` is a *monolingual* transducer — no flag can make it emit English,
 hence the model swap (I18N-2). This is the exact line between "config-only" (64-bit) and "new asset" (armv7).
 
-### 2c. armv7 ASR decision (I18N-2 ✓) — **zipformer-en-20M**, measured
+### 2c. armv7 ASR decision — **REVERSED** (I18N-2 reopened; zipformer-en-20M rejected)
+> **2026-07-01 — the pick below was WRONG.** The first real English `make ws` (with recorded fixtures, I18N-8) showed
+> `zipformer-en-20M` is a *streaming* (online) transducer that **drops the utterance head** on bounded commands — "set a
+> timer for ten minutes" → `''`, "turn on the light in the garage" → `"T IN THE GARRAGE"` (tail only). The spike below
+> scored it on clean LibriSpeech clips (which have lead-in silence), which masked it. It also routes `/ws/audio` into a
+> streaming branch that **hangs** for bounded delivery (**BUG-13**). RU works because `vosk-small-ru` is **offline**
+> (whole-buffer). **New requirement: a SMALL OFFLINE torch-free arm32 English ASR** (~`vosk-small-ru` size). Moonshine
+> (offline, accurate) is **rejected — 124 MB is too big** (~3× the tier). I18N-2 is reopened to find one. aarch64/x86_64
+> are unaffected (Whisper is offline). _Lesson: benchmark ASR on the actual utterance shape (bounded commands), not just
+> clean corpus clips._ The original spike (kept below for the record):
+
 Both candidates were run locally (WER is architecture-independent, so the head-to-head is valid off-WB7):
 
 | | zipformer-en-20M | moonshine-tiny-en |
@@ -190,7 +200,8 @@ not a deployment.)
   armv7); acceptable for a command-oriented assistant with keyword NLU.
 
 ## 7. Implementation tasks (filed off this design)
-- **I18N-2** [ASSET] ✓ — armv7 EN ASR spike → **zipformer-en-20M** chosen + added to the sherpa catalog (§2c).
+- **I18N-2** [ASSET] ⚠ REOPENED — zipformer-en-20M rejected (streaming → head-drop on bounded commands; §2c). Need a
+  small OFFLINE arm32 English ASR (NOT Moonshine — 124 MB). Related: **BUG-13** (`/ws/audio` streaming branch hangs).
 - **I18N-3** [ASSET] ✓ — EN Piper voices (satellites): catalog generalized to a locale param, added `en_US-amy`/`lessac`/`ryan`; capabilities report per-instance language.
 - **I18N-7** [ASSET] ✓ — Silero v3 English (standalone): `silero_v3` now pulls speakers/accent/language by model (`v3_en` → `en_0…en_117`, no Russian `put_accent`). Real `v3_en` synthesis verified (57 MB, `en_0` OK).
 - **I18N-4** [CONFIG] ✓ — the three `*-en.toml` variants (§4); also made the three RU configs explicitly RU-only (symmetry: `default_language`/`supported_languages`/`auto_detect_language=false`).

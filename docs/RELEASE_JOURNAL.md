@@ -13,6 +13,17 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **I18N-2 REOPENED + BUG-13 filed — the first real English `make ws` exposed that zipformer-en-20M is unusable.** The
+  recorded English fixtures (I18N-8) are good (offline Moonshine transcribed them, one perfectly), but `make ws
+  CONFIG=embedded-armv7-en` came back 4/4 TimeoutError. Diagnosis: `zipformer-en-20M` (the I18N-2 pick) is a **streaming**
+  (online) transducer — it **drops the utterance head** on bounded commands ("set a timer for ten minutes" → `''`;
+  "turn on the light in the garage" → `"T IN THE GARRAGE"`), and it routes `/ws/audio` into a streaming branch that
+  **hangs** for bounded delivery (no partial/response, 30 s timeout). RU works because vosk-small-ru is **offline**
+  (whole-buffer). The I18N-2 spike scored zipformer on clean LibriSpeech clips (lead-in silence), which masked the
+  head-drop — the lesson is to benchmark on the actual utterance shape, not corpus clips. **Reopened I18N-2** for a
+  small OFFLINE arm32 English ASR (**Moonshine rejected — 124 MB too big**, per user); **filed BUG-13** for the
+  streaming-branch hang. aarch64/x86_64 English is unaffected (Whisper is offline). The English harness + rubrics remain
+  proven; the suite can be greened on an offline 64-bit config meanwhile. Committed the validated `fixtures/en/*`.
 - **Recorder made language-aware (enables I18N-8).** The fixture recorder read raw YAML, so the bilingual ws config
   broke it two ways: `fixtures/{{env.EVAL_LANG}}/…` stayed literal and the ru+en cases collided on the fixture key with
   different reference text (spurious conflict) — a gap in the I18N-5 harness (I'd validated the eval run, not the record

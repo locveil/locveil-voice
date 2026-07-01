@@ -293,6 +293,20 @@ _Apply to every remediation task below (from the 4 review docs + QUAL-25/26). So
 ### Bugs (BUG)
 _Discrete functional defects (distinct from QUAL refactors/quality work). Surfaced from any source; filed before fixing._
 
+- [ ] **BUG-13** [ASR][WS] (P3) `[deferred]` — **`/ws/audio` server-authoritative *streaming* branch hangs for
+      bounded (device-signalled) utterances.** When the client registers `mode="streaming"` **and** the ASR reports
+      `supports_streaming()` (a real online recognizer), the handler takes the streaming branch
+      (`irene/runners/webapi_router.py` ~824: `async for … asr.transcribe_stream_segments(_pcm_frames())`). Driven by a
+      bounded utterance (PCM frames + `{"type":"end"}`, as the ESP32 satellite and the eval provider send), it emits
+      **no partial, no response** — the connection just sits until the client's 30 s timeout, then closes. Reproduced
+      2026-07-01 with a streaming ASR (`zipformer-en-20M`) via `make ws CONFIG=embedded-armv7-en` (4/4 TimeoutError; SUT
+      log shows register → open → 30 s → close, nothing between). The **batch** branch (`process_audio_input`) responds
+      correctly for the same input, so the streaming branch never finalizes on stream-end for this delivery shape.
+      Never caught before because the eval's ASRs were all **offline** (`supports_streaming()` False → batch branch).
+      Fix options: finalize the streaming branch on `{"type":"end"}` / generator exhaustion, or don't route
+      bounded-utterance clients into it. Low current impact (the shipped satellite path is batch; see I18N-2 — armv7
+      English will use an offline ASR anyway), but a real latent defect in the streaming path.
+
 - [ ] **BUG-5** [NLU/I18N/DONATION] (P3) `[deferred]` — **Donation en files missing user-facing translations
       (recognition enrichment).** The translation audit (under BUG-4) found Russian donation files richer than English:
       ~28 params across 13 handlers have RU `aliases` (param-name synonyms) with no EN equivalent, and ~9 params have
@@ -339,14 +353,26 @@ _Trace-driven system testing (design `docs/design/trace_system_testing.md`, TEST
 _Real English deployment across all three Docker arches (armv7/aarch64/x86_64) + English eval. Design
 `docs/design/multilingual_deployment.md` (I18N-1 ✓) → the implementation slices below. English models are slim and
 size-matched to the Russian stack; language is a per-config/deployment choice (auto-detect is NOT wired to ASR/TTS)._
-- [ ] **I18N-8** [EVAL] (P3) `[deferred]` — **Record the English eval assets** (the mic-dependent tail of I18N-5, which
-      delivered the bilingual harness). Record `fixtures/en/{timer_10min,light_unreachable}.wav` (16 kHz mono PCM16 — say
-      "set a timer for ten minutes" / "turn on the light in the garage") via `make record EVAL_LANG=en`, and a
-      `traces/en/timer_set_10min.json` golden under an `-en` config. Then `make ws CONFIG=embedded-armv7-en` runs the full
-      English suite green (harness already validated: RU 4/4, EN rubrics 7/7). The recorder is now **language-aware**
-      (eval-commons `629fb8d`: `resolve_worklist` filters by `metadata.language` + resolves `{{env.EVAL_LANG}}` in the
-      fixture path — a gap in the I18N-5 harness; verified via `make record-list EVAL_LANG=en`), so the record command
-      works. Needs a microphone — the one piece not doable headless. See design §3.
+- [ ] **I18N-2** [ASSET] (P3) `[deferred]` — **REOPENED 2026-07-01: armv7 (WB7) English ASR — need a SMALL OFFLINE
+      model.** The original pick **`zipformer-en-20M`** was **wrong**: it's a *streaming* (online) transducer, and real
+      recorded fixtures (I18N-8) showed a streaming model **drops the utterance head** on bounded commands — "set a timer
+      for ten minutes" → `''`, "turn on the light in the garage" → `"T IN THE GARRAGE"` (tail only); even garbled with
+      lead-in padding. The I18N-2 spike scored it on clean LibriSpeech clips (which have lead-in), which masked this. Two
+      failure modes: (a) a streaming ASR routes `/ws/audio` into the streaming branch, which **hangs** for bounded
+      delivery → **BUG-13**; (b) even forced to batch it loses heads (online warm-up). RU works because
+      `vosk-model-small-ru` is **offline** (whole-buffer). **New constraint: an OFFLINE, torch-free (sherpa), arm32,
+      ~vosk-small-ru-size English ASR.** **Moonshine-tiny-en is OUT — 124 MB int8 is too big** (offline + accurate but
+      ~3× the tier). Find a small offline English transducer (or accept a size tier). Until resolved, `embedded-armv7-en`
+      ASR is non-functional; the `zipformer-en-20M` catalog entry + `zipformer-streaming` model_type stay as an
+      evaluated-and-rejected option. **aarch64/x86_64 English is unaffected** (Whisper is offline → batch → no head-drop).
+      Design §2c. _Discovered via the first real English `make ws` (I18N-8 fixtures)._
+- [ ] **I18N-8** [EVAL] (P3) `[deferred]` — **English eval assets — fixtures recorded + validated; blocked on I18N-2.**
+      `fixtures/en/{timer_10min,light_unreachable}.wav` are recorded (16 kHz mono PCM16) and **validated good** (offline
+      Moonshine transcribed them, one perfectly — the audio is fine; the armv7 failure is the ASR model, I18N-2). The
+      recorder is now language-aware (eval-commons `629fb8d`). **Remaining:** the `traces/en/` golden + a green
+      `make ws CONFIG=embedded-armv7-en` both wait on I18N-2 (a working offline armv7 ASR). The harness itself is proven
+      (RU 4/4, EN rubrics 7/7); the English suite can be greened today on an offline 64-bit config (`embedded-aarch64-en`,
+      Whisper) to decouple from the armv7 model. See design §3.
 
 ### Models & Assets (ASSET)
 
