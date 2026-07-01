@@ -177,4 +177,4 @@ not a deployment.)
 - **I18N-7** [ASSET] ✓ — Silero v3 English (standalone): `silero_v3` now pulls speakers/accent/language by model (`v3_en` → `en_0…en_117`, no Russian `put_accent`). Real `v3_en` synthesis verified (57 MB, `en_0` OK).
 - **I18N-4** [CONFIG] ✓ — the three `*-en.toml` variants (§4); also made the three RU configs explicitly RU-only (symmetry: `default_language`/`supported_languages`/`auto_detect_language=false`).
 - **I18N-5** [EVAL] — `LANG` axis + `metadata.language` tag + `profiles/langs/*`; EN rubrics; EN fixtures.
-- **I18N-6** [CONTENT] — audit `en.json` donation completeness across handlers.
+- **I18N-6** [CONTENT] ✓ — audited `en.json` donations: functional parity across all 13 handlers (structure + phrases); empty English lemmas are appropriate (additive, morphological — English needs none). No fill required.

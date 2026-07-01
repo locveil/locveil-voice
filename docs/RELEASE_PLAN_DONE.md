@@ -2055,6 +2055,17 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       English worked-example pointer to `docs/guides/howto-new-language.md`. Gates: config-validator ✓ (12 configs),
       suite **1110 passed** (+3 = the parametrized per-config canonical test now covers the `-en` files), pyright 0.
       Design §4.
+- [x] **I18N-6** [CONTENT] (P3) `[deferred]` — **DONE 2026-07-01 (audit only, no fill).** Audited `en.json` vs `ru.json`
+      across all **13 handlers** three ways: (1) **structural parity** — identical method sets + parameter specs, no
+      stubs, all `language="en"` (13/13); (2) **phrase coverage** — genuine idiomatic English everywhere, adequate even
+      where the count is below Russian (English needs fewer variants); (3) examples/token-patterns/action-patterns
+      comparable. The **only** systematic difference is **empty English lemmas** (0 in 10/13) — and that is
+      **appropriate, not a gap**: the keyword matcher treats `lemmas` as *additive* keywords "if available"
+      (`hybrid_keyword_matcher.py:315-317`); Russian lemmas are morphological roots (`поставить`/`таймер`) that normalize
+      its heavy inflection, whereas English carries base forms in its multi-word phrases and relies on fuzzy matching
+      (`threshold 0.8`) for its light inflection. Adding single-word English lemmas (`set`/`stop`/`time`) would *hurt*
+      precision by over-matching common words. **Conclusion (user-confirmed):** English intent coverage is at functional
+      parity with Russian; no donation changes needed. No code/asset change. Design §2.
 
 ### Build & CI (BUILD)
 - [x] **BUILD-1** (P0) — Verify clean `uv sync` + CLI and WebAPI boot at v15. **DONE 2026-06-01** (`bab6f97`):

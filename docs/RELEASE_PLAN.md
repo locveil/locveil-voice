@@ -344,9 +344,6 @@ size-matched to the Russian stack; language is a per-config/deployment choice (a
       **English rubrics** (`polite_helpful_en`/`confirms_action_en`/`graceful_failure_en` in eval-commons
       `shared/rubrics/`, mirroring the TEST-16 co-equal structure); record **English fixtures**. Satisfies the original
       "we have RU UX rubrics but nothing for EN" request. Depends on I18N-4 (an EN bring-up config). See design §3.
-- [ ] **I18N-6** [CONTENT] (P3) `[deferred]` — **Audit `en.json` donation completeness** across handlers (the EN NLU
-      path selects `en.json` by `default_language`; spaCy `en_core_web` + `ovos-number-parser` en are already wired).
-      Fill gaps so English intent coverage matches Russian. See design §2.
 
 ### Models & Assets (ASSET)
 

@@ -13,6 +13,14 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **I18N-6 DONE — English donation audit: functional parity, no fill needed.** Compared `en.json` vs `ru.json` across
+  all 13 handlers (structure, phrase coverage, examples/patterns). Result: full structural parity (identical methods +
+  parameters, no stubs) and adequate idiomatic English phrases throughout. The only systematic difference is empty
+  English lemmas — and that's correct, not a gap: lemmas are *additive* matcher keywords, Russian needs them for its
+  heavy inflection (roots like `поставить`/`таймер`), English carries base forms in multi-word phrases and leans on
+  fuzzy matching; single-word English lemmas (`set`/`stop`/`time`) would over-match and hurt precision. Closed as
+  audit-only (user-confirmed) — no donation changes. This completes the buildable English stack (I18N-2/3/4/6/7);
+  I18N-5 (English eval + fixtures) is the last open slice.
 - **I18N-4 DONE — English deployment configs for all three arches; RU configs made explicitly RU-only.** Added
   `configs/{embedded-armv7,embedded-aarch64,standalone-x86_64}-en.toml` as full copies of their Russian counterparts
   with only the language-bearing fields swapped: armv7 → `zipformer-en-20M`/`zipformer-streaming` + Piper `amy`; aarch64
