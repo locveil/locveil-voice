@@ -13,6 +13,12 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **Recorder made language-aware (enables I18N-8).** The fixture recorder read raw YAML, so the bilingual ws config
+  broke it two ways: `fixtures/{{env.EVAL_LANG}}/…` stayed literal and the ru+en cases collided on the fixture key with
+  different reference text (spurious conflict) — a gap in the I18N-5 harness (I'd validated the eval run, not the record
+  path). Fixed in eval-commons `629fb8d`: `resolve_worklist(yaml, language=)` filters by `metadata.language` (`EVAL_LANG`)
+  and resolves `{{env.VAR}}` in the audio path. Verified: `make record-list EVAL_LANG=en` lists the two `fixtures/en/*`
+  with English prompts; `=ru` lists the existing ones. 5 recorder tests green. `make record EVAL_LANG=en` now works.
 - **I18N-5 closed as DONE (harness); English audio recording split to I18N-8.** The harness is a complete, committed,
   validated unit, so it moves to the done ledger; the one mic-dependent remainder (record `fixtures/en/*` + a `traces/en/`
   golden) is now its own task **I18N-8** rather than a long-lived partial. No code change — a ledger split for accuracy.

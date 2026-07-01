@@ -343,8 +343,10 @@ size-matched to the Russian stack; language is a per-config/deployment choice (a
       delivered the bilingual harness). Record `fixtures/en/{timer_10min,light_unreachable}.wav` (16 kHz mono PCM16 — say
       "set a timer for ten minutes" / "turn on the light in the garage") via `make record EVAL_LANG=en`, and a
       `traces/en/timer_set_10min.json` golden under an `-en` config. Then `make ws CONFIG=embedded-armv7-en` runs the full
-      English suite green (harness already validated: RU 4/4, EN rubrics 7/7). Needs a microphone — the one piece not
-      doable headless. See design §3.
+      English suite green (harness already validated: RU 4/4, EN rubrics 7/7). The recorder is now **language-aware**
+      (eval-commons `629fb8d`: `resolve_worklist` filters by `metadata.language` + resolves `{{env.EVAL_LANG}}` in the
+      fixture path — a gap in the I18N-5 harness; verified via `make record-list EVAL_LANG=en`), so the record command
+      works. Needs a microphone — the one piece not doable headless. See design §3.
 
 ### Models & Assets (ASSET)
 
