@@ -20,6 +20,23 @@ but these rules apply to any task). **Single source of truth** (relocated here f
   - **REST API endpoints / parameter schemas / analysis endpoints** → `src/utils/apiClient.ts`, the analysis components.
   - Definition-of-done addendum: `cd config-ui && npm run check && npm run build` passes (`check` = type-check **+**
     the strict ESLint gate). _Pairs with `user-facing-docs-are-done` — config-ui is the user-facing **app**._
+- **`cross-repo-source-of-truth`** — for any artifact **shared with a sibling repo**, know which side *owns* it and
+  don't write across the boundary the wrong way.
+  - **The Irene↔bridge catalog / canonical-command contract is owned by `../wb-mqtt-bridge`** (its generator / source
+    of truth). This repo is a **consumer**: it **pins its own copy** into `eval-commons/contracts/` — a one-way
+    *inward*, version-stamped sync from the bridge's committed artifacts (TEST-17) — and never hand-edits that copy,
+    treats it as source, or writes into the bridge repo (re-pin when the bridge's artifact moves).
+  - **`../eval-commons` is the shared test framework** — test *execution logic* (providers/scorers/judge) lives there,
+    changed **there not here** (this repo carries only eval YAML + the thin `eval/Makefile`; see *Testing &
+    evaluation*). This repo *does* write to `eval-commons` (it co-develops the framework and owns the contract pin
+    above) — the asymmetry with the bridge, which only reads it.
+  - **Cross-repo task filings arrive uncommitted, either direction.** When voice-side work spawns a sibling task (e.g.
+    the bridge emitting the artifact), file it into that repo's ledger **but leave it uncommitted** for its maintainer
+    to verify against live code + accept; symmetrically, a filing that lands **here** from a sibling is verified before
+    accepting (`task-start-reconciliation`) and then needs its own ID (`every-task-in-the-ledger`).
+  - The contract's *content* (schemas/endpoints/task pairing) lives in `docs/design/mqtt_integration.md` §14 + the
+    `voice-bridge-catalog-contract` memory — **referenced, not duplicated here** (avoid drift). Pairs with
+    `../wb-mqtt-bridge/CLAUDE.md`'s same-named invariant (the other direction).
 - **`read-at-start-record-at-completion`** — AFFIRMATIVE & NON-NEGOTIABLE until release.
   - **At task START:** read **not only the ledger item but also its related review doc(s)** (per the ledger's index)
     — the ledger item is a spine entry; the review doc holds the evidence, file:line refs, detail.
