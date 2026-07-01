@@ -13,6 +13,17 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **WB7 on-hardware test → BUG-14 filed; Moonshine is the armv7 English ASR, gated on an onnxruntime build.** SSH'd to
+  the WB7 (root@192.168.110.250) and ran Moonshine in the deployment-base container. Found `import sherpa_onnx` fails at
+  the native lib — `libonnxruntime.so: ELF load command address/offset not properly aligned` — for sherpa 1.13.2 (PyPI)
+  **and** 1.12.36 (PiWheels), on the host py3.9 (cp39) **and** a py3.11 container (cp311). Digging into the "proven on
+  hardware" evidence reconciled it: `onnx_inference_layer.md` §4 **already documented this** and pinned
+  `sherpa-onnx==1.10.46` (applied at `pyproject.toml:59`) — I'd tested the wrong versions. But 1.10.46 has **no**
+  `OfflineMoonshineModelConfig`, and the merged Moonshine needs sherpa ≥1.12 → a version pincer. Filed **BUG-14** (the
+  onnxruntime armv7 alignment defect, now load-bearing for English). **User decision:** this does not block Moonshine —
+  build the corrected onnxruntime in the armv7 Docker (patchelf/rebuild) + bump the pin. So the ledger now reads:
+  **armv7 English ASR = Moonshine (chosen), sequence BUG-14 → I18N-2.** WB7 left clean (workdir removed, no new
+  containers/images — all reused/`--rm`). aarch64/x86_64 unaffected.
 - **I18N-2 leading candidate = `moonshine-tiny-en-quantized-2026-02-27` (offline, 43 MB); WER `ten`/`10` fix applied.**
   ChatGPT surfaced a newer Moonshine build; verified it: it's the *merged-`.ort`* quantized export at **43 MB** (not the
   123 MB `-int8` that was rejected), offline (no head-drop), **loads on our sherpa-onnx 1.13.2 with no bump** (merged

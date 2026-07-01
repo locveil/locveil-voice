@@ -293,6 +293,23 @@ _Apply to every remediation task below (from the 4 review docs + QUAL-25/26). So
 ### Bugs (BUG)
 _Discrete functional defects (distinct from QUAL refactors/quality work). Surfaced from any source; filed before fixing._
 
+- [ ] **BUG-14** [ASR][BUILD] (P3) `[deferred]` — **onnxruntime armv7 ELF-alignment defect pins the WB7 to
+      `sherpa-onnx==1.10.46`, which blocks newer-sherpa models (Moonshine).** Known + documented
+      (`onnx_inference_layer.md` §4: latest sherpa fails to load — `libonnxruntime.so: ELF load command address/offset
+      not properly aligned`; the fix was to **pin 1.10.46**, applied at `pyproject.toml:59`). **Re-confirmed on the WB7
+      2026-07-01** via SSH + the deployment-base container: sherpa **1.13.2 (PyPI) and 1.12.36 (PiWheels) both fail
+      `import sherpa_onnx`** with that error — on the host Python 3.9 (cp39) **and** a `python:3.11-slim` container
+      (cp311), so it is systemic (the prebuilt onnxruntime `.so` has 64 KB-aligned LOAD segments a 4 KB-page armv7
+      loader rejects; onnxruntime has **no** armv7 wheel — sherpa bundles it). **New consequence (I18N-2):** the merged
+      Moonshine needs `OfflineMoonshineModelConfig` (sherpa **≥1.12**), but 1.12+ ELF-fails on the WB7 and the working
+      1.10.46 has **no** Moonshine support — so Moonshine can't run on the WB7. **Fix approach (user-approved
+      2026-07-01): build the corrected native libs as part of the armv7 Docker build** — either `patchelf` the segment
+      alignment on the shipped onnxruntime `.so`, or compile onnxruntime for armv7 with the right `MAX_PAGE_SIZE` — then
+      **bump the armv7 sherpa pin** (`pyproject.toml:59`) to the version Moonshine needs (≥1.12). Unblocks Moonshine +
+      streaming + newer sherpa on armv7. The design already flagged "track upstream; re-test newer releases"
+      (`onnx_inference_layer.md` §4) — this is that task, now load-bearing for English (**I18N-2 depends on it**).
+      aarch64/x86_64 unaffected.
+
 - [ ] **BUG-13** [ASR][WS] (P3) `[deferred]` — **`/ws/audio` server-authoritative *streaming* branch hangs for
       bounded (device-signalled) utterances.** When the client registers `mode="streaming"` **and** the ASR reports
       `supports_streaming()` (a real online recognizer), the handler takes the streaming branch
@@ -365,17 +382,16 @@ size-matched to the Russian stack; language is a per-config/deployment choice (a
       catalog entry + `zipformer-streaming` model_type stay as an evaluated-and-rejected option. **aarch64/x86_64 English
       is unaffected** (Whisper is offline → batch → no head-drop). Design §2c. _Discovered via the first real English
       `make ws` (I18N-8 fixtures)._
-      **LEADING CANDIDATE (2026-07-01): `sherpa-onnx-moonshine-tiny-en-quantized-2026-02-27`.** Offline, English-only,
-      **43 MB** (`encoder_model.ort` 13M + `decoder_model_merged.ort` 30M — the newer *merged* `.ort` export, NOT the
-      123 MB `-int8` build that was rejected). Verified locally: **loads on our sherpa-onnx 1.13.2 with NO bump** (the
-      merged decoder isn't exposed by `from_moonshine` but is settable via `OfflineMoonshineModelConfig(encoder=,
-      merged_decoder=)`); transcribes the **real** recorded fixtures correctly (light 0.000; timer 0.000 after re-record
-      + the `ten`/`10` WER fix); RTF ~0.056; `linux_armv7l` wheels ship. Offline → batch branch → **dodges BUG-13**.
-      **Planned wiring = a SUBCLASS** `SherpaMoonshineASRProvider(SherpaOnnxASRProvider)` — Moonshine diverges from the
-      base's HF-pack families (k2-fsa GitHub-release `.tar.bz2` not an HF repo; merged `.ort`; non-public construction),
-      so isolate download + build in a subclass (mirrors `piper_ruaccent` subclassing `piper`) and inherit the offline
-      transcription path. **Only open item: on-device armv7 runtime + RAM on the WB7** (wheel exists; runtime unverified —
-      needs the WB7 online). Then swap `embedded-armv7-en` ASR to it + retire the zipformer.
+      **DECISION (2026-07-01): armv7 English ASR = `sherpa-onnx-moonshine-tiny-en-quantized-2026-02-27`** (offline,
+      **43 MB** merged `.ort`, English-only). Validated on x86_64: transcribes the real recorded fixtures cleanly (light
+      0.000; timer 0.000 after re-record + the `ten`/`10` WER fix); RTF ~0.056; offline → batch branch → **dodges
+      BUG-13**. **Prerequisite: BUG-14** — the merged decoder needs `OfflineMoonshineModelConfig` (sherpa **≥1.12**),
+      which currently ELF-fails on the WB7 (pinned-working `1.10.46` has no Moonshine support). Per user (2026-07-01)
+      this does **not** block Moonshine: **BUG-14 builds the corrected onnxruntime in the armv7 Docker + bumps the sherpa
+      pin**. **Implementation (after BUG-14):** a subclass `SherpaMoonshineASRProvider(SherpaOnnxASRProvider)` isolating
+      the k2-fsa GitHub `.tar.bz2` (URL+extract, not HF) download + the merged-decoder build (mirrors `piper_ruaccent ⊂
+      piper`; inherits the offline path), a catalog entry, and swap `embedded-armv7-en` ASR to it (retiring the
+      zipformer). **Sequence: BUG-14 → I18N-2.** aarch64/x86_64 unaffected (whisper, sherpa ≥1.13). Design §2d.
 - [ ] **I18N-8** [EVAL] (P3) `[deferred]` — **English eval assets — fixtures recorded + validated; blocked on I18N-2.**
       `fixtures/en/{timer_10min,light_unreachable}.wav` are recorded (16 kHz mono PCM16) and **validated good** (offline
       Moonshine transcribed them, one perfectly — the audio is fine; the armv7 failure is the ASR model, I18N-2). The

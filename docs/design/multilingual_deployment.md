@@ -126,7 +126,18 @@ suite 1105, import-linter 9/9, config-validator 100%). **Residual (not blocking)
 checkbox folded into I18N-4 — it cannot flip a size/arch decision this lopsided. The ~9% WER is indicative (2 clips,
 quick harness); the real English WER measurement rides with I18N-5's English fixtures through the live provider.
 
-### 2d. Leading candidate — `moonshine-tiny-en-quantized-2026-02-27` (offline, 43 MB)
+### 2d. armv7 English ASR = `moonshine-tiny-en-quantized-2026-02-27` (offline, 43 MB) — gated on BUG-14
+> **Decision (2026-07-01):** Moonshine is the armv7 English ASR. It's a great model (below), and the one obstacle —
+> the WB7 — is a build problem the user has chosen to solve. On hardware, sherpa **1.12+ ELF-fails to load**
+> (`libonnxruntime.so: … not properly aligned`, confirmed on host py3.9 + a py3.11 container, PyPI *and* PiWheels), and
+> the pinned-working **`sherpa-onnx==1.10.46` has no Moonshine support**. That's **BUG-14** — a documented
+> onnxruntime-armv7 alignment defect (`onnx_inference_layer.md` §4 pinned 1.10.46 as the workaround). **User-approved
+> fix: build the corrected onnxruntime in the armv7 Docker (patchelf the segment alignment, or compile with the right
+> `MAX_PAGE_SIZE`) and bump the armv7 sherpa pin to ≥1.12.** Sequence: **BUG-14 → I18N-2** (then wire the Moonshine
+> subclass + swap the config). aarch64/x86_64 are unaffected (whisper, sherpa ≥1.13).
+
+(Model evaluation:)
+The reopen needed a *small offline* English ASR. The rejection of Moonshine was against the old **123 MB** `-int8`
 The reopen needed a *small offline* English ASR. The rejection of Moonshine was against the old **123 MB** `-int8`
 build; the newer **quantized merged-`.ort`** export is **43 MB** (`encoder_model.ort` 13M + `decoder_model_merged.ort`
 30M) — the vosk-small tier. Verified (scratch, x86_64):
@@ -223,9 +234,11 @@ not a deployment.)
   armv7); acceptable for a command-oriented assistant with keyword NLU.
 
 ## 7. Implementation tasks (filed off this design)
-- **I18N-2** [ASSET] ⚠ REOPENED — zipformer-en-20M rejected (streaming → head-drop; §2c). **Leading candidate:
-  `moonshine-tiny-en-quantized` (offline, 43 MB, loads on 1.13.2, real fixtures 0.000)** — planned as a subclass; only
-  the on-device armv7 runtime/RAM check remains (WB7). Related: **BUG-13** (`/ws/audio` streaming branch hangs).
+- **I18N-2** [ASSET] — armv7 English ASR = **`moonshine-tiny-en-quantized` (offline, 43 MB; chosen §2d)**. Subclass wiring
+  (`SherpaMoonshineASRProvider`); **gated on BUG-14** (build corrected onnxruntime in the armv7 Docker + bump sherpa pin
+  ≥1.12 — user-approved). Related: **BUG-13** (`/ws/audio` streaming branch hangs).
+- **BUG-14** [ASR][BUILD] — onnxruntime armv7 ELF-alignment pins the WB7 to sherpa 1.10.46 (no Moonshine); build the
+  corrected libs in the armv7 Docker + bump the pin. Enables I18N-2 (Moonshine) + streaming + newer sherpa.
 - **I18N-3** [ASSET] ✓ — EN Piper voices (satellites): catalog generalized to a locale param, added `en_US-amy`/`lessac`/`ryan`; capabilities report per-instance language.
 - **I18N-7** [ASSET] ✓ — Silero v3 English (standalone): `silero_v3` now pulls speakers/accent/language by model (`v3_en` → `en_0…en_117`, no Russian `put_accent`). Real `v3_en` synthesis verified (57 MB, `en_0` OK).
 - **I18N-4** [CONFIG] ✓ — the three `*-en.toml` variants (§4); also made the three RU configs explicitly RU-only (symmetry: `default_language`/`supported_languages`/`auto_detect_language=false`).
