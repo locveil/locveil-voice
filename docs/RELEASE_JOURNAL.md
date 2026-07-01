@@ -13,6 +13,16 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **Doc + dev-env follow-ups to BUG-14 (no repo behavior change).** (1) Annotated the stale
+  `docs/design/onnx_inference_layer.md` §4 — its `sherpa-onnx==1.10.46` armv7 pin was **superseded** by BUG-14 (the
+  ELF-alignment failure is now patched in-build via `patch_onnx_align.py` + bookworm base; pin is **1.12.36**). Added a
+  supersession banner + inline notes on the two live-reading pin recommendations, pointing to `multilingual_deployment.md`
+  §2d and the Dockerfile.armv7 header. (2) Confirmed the user-facing `docs/guides/build-docker.md` needs **no** change —
+  it abstracts above the base OS / onnxruntime, and BUG-14's patch runs in the *builder* stage so "nothing build-only is
+  left behind" still holds. (3) Rebased the local dev `.venv` off the source-built `/usr/local` Python 3.11.4 (compiled
+  **without `_bz2`** → `.tar.bz2` model extraction failed locally, though deployment images are fine) onto uv-managed
+  **cpython-3.11.12** (`_bz2` present); identical 204-dep closure, both editables (irene + eval-commons) restored, suite
+  **1115 passed / 7 skipped** (2 formerly-skipped bz2-gated tests now run). Unblocks a fully-local I18N-8 run.
 - **I18N-2 DONE — offline Moonshine wired as the armv7 English ASR (subclass, end-to-end validated).** Implemented
   **`SherpaMoonshineASRProvider(SherpaOnnxASRProvider)`** (`irene/providers/asr/sherpa_moonshine.py`, entry point
   `sherpa_moonshine`) for `sherpa-onnx-moonshine-tiny-en-quantized-2026-02-27` (43 MB merged `.ort`, English-only,

@@ -77,6 +77,15 @@ Silero TTS.** You do not reach a single runtime — TFLite (wake) and possibly v
 
 ## 4. The armv7 target is decisive — measured on real hardware (Wirenboard 7)
 
+> **⚠️ SUPERSEDED (2026-07-01, BUG-14) — the `sherpa-onnx==1.10.46` pin below is stale.** The ELF-alignment
+> failure of newer wheels was **fixed**, not worked around by pinning: the armv7 Docker build now (a) rewrites the
+> bundled `libonnxruntime.so` LOAD-segment `p_align` 64 KB→4 KB (`docker/patch_onnx_align.py`) so it loads on the WB7's
+> 4 KB-page kernel, and (b) moves to a **bookworm** base (GLIBCXX_3.4.30 for sherpa ≥1.12's C++ module). The armv7 pin
+> is now **`sherpa-onnx==1.12.36`** (`pyproject.toml`), which serves both RU vosk (`from_transducer`) and EN Moonshine's
+> merged-`.ort` decoder (I18N-2), **proven on the WB7** (Moonshine RTF ~0.7, 134 MB RSS). Read §4's `1.10.46` references
+> below as the *historical* state that motivated the investigation; the current pin/rationale is BUG-14 (see
+> `docs/design/multilingual_deployment.md` §2d and the Dockerfile.armv7 header).
+
 The key target is a **Wirenboard 7.2 (A40i)** controller. Measured via SSH + a container matching the real deployment:
 
 - **Platform:** `armv7l` (Allwinner sun8i, **quad Cortex-A7 ~1 GHz**, NEON/VFPv4), **Debian 11 / glibc 2.31**
@@ -98,6 +107,7 @@ MODEL DISK : 26.7 MB int8   |   LOAD: 38.2 s
 1. **Pin `sherpa-onnx==1.10.46`.** Latest (1.13.2) fails to load on this kernel — `libonnxruntime.so: ELF load
    command address/offset not properly aligned` (an armv7 segment-alignment bug in the prebuilt wheel). 1.10.46 is the
    newest *working* armv7 build and still supports the Zipformer2 format. **→ track upstream; re-test newer releases.**
+   _(Superseded by BUG-14: the alignment bug is now patched in-build — pin is **1.12.36**; see the §4 banner.)_
 2. **`onnxruntime` (pip) has NO armv7 wheel** (`No matching distribution found`). sherpa-onnx works only because it
    **bundles its own onnxruntime**. This is why **vosk-tts and any plain-onnxruntime model cannot run on armv7**.
 3. **RTF ≈ 1.15 → offline only, with a latency tax** (a 3 s command ≈ 3.5 s to transcribe). Rules out streaming on this
@@ -366,3 +376,4 @@ VAD is currently a **util** (`irene/utils/vad.py`), not a selectable seam. Promo
 ## Appendix A — upstream issue to track
 `sherpa-onnx >= 1.11` armv7 wheels fail to load on the WB7 kernel (`ELF load command address/offset not properly
 aligned`). Pinned to **1.10.46**. File/track upstream and re-test newer releases to lift the pin.
+_(Done — BUG-14 lifted the pin to **1.12.36** by patching the wheel's `.so` alignment in-build; see the §4 banner.)_
