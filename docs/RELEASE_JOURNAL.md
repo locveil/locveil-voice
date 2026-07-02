@@ -13,6 +13,21 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-02 — QUAL-57 DONE — general architecture review + memory-overconsumption audit (user-requested).**
+  Deliverable frozen at `docs/review/arch_memory_review_2026-07-02.md`. Ran as 3 parallel deep-reads (architecture
+  map / multi-turn memory / F&F re-verification + `create_task` census); the 3 headline memory findings were then
+  spot-verified directly in code. Architecture verdict: top-quartile bones (enforced hexagonal layering with zero
+  live violations, entry-point provider discovery, donation-driven NLU cascade, real streaming-ASR seam for ESP32),
+  with the SOTA gaps at the interaction layer — no barge-in, whole-utterance TTS, no per-client concurrency
+  isolation, weak session continuity (A1–A4, recorded for user decision). F&F: **all 10** QUAL-8 findings verified
+  resolved by the QUAL-28 store redesign — the historically-worst memory offender is now clean. The live memory risk
+  sits in the request path instead: filed **BUG-16** (metrics session leak — `record_session_end` key mismatch makes
+  every REST call/WS connection permanently grow the singleton collector), **BUG-17** (`/ws/audio` batch floor
+  accumulates PCM with no cap — ~115 MB/h per stuck client), **BUG-18** (LLM conversation store unbounded;
+  `max_context_length` config is dead), plus **QUAL-58** (M4–M8 hygiene sweep) and **QUAL-59** (capability drift +
+  dead Phase-3.5 code). A5 (in-memory action store, nothing survives restart) confirms QUAL-56's premise — that
+  deferred task stands unchanged. Ledger: QUAL-57 moved active→done; review index row added.
+
 - **ARCH-26 DONE — Irene↔bridge catalog contract settled (interactive design session).** Both questions decided with
   the user and recorded in `mqtt_integration.md` (banner + §5a/§8/§12/§13.3 + new **§14**). **(1)** Catalog refresh is
   **lazy** (startup pull + re-pull on a resolution/actuation miss) — Irene runs **no MQTT client**, does not subscribe

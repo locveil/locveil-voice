@@ -724,6 +724,18 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       Dependabot alerts (commits 05aa763/4e05a38) — no risky major bumps. **No code until scheduled + green-lit.**
 
 ### Code Quality & Review (QUAL)
+- [x] **QUAL-57** [QUAL][REVIEW][ARCH] (P2) `[release]` — **DONE 2026-07-02.** **General architecture review +
+      memory-overconsumption analysis** (user-requested). Deliverable: `docs/review/arch_memory_review_2026-07-02.md`.
+      Method: 3 parallel deep-reads (architecture map / multi-turn memory audit / F&F QUAL-8 re-verification +
+      `create_task` census); the 3 headline memory findings spot-verified directly. **Verdicts:** architecture =
+      top-quartile for its class (enforced hexagonal layering — zero live violations, entry-point provider model,
+      donation-driven NLU cascade, true streaming-ASR seam) but not SOTA at the interaction layer (no barge-in,
+      whole-utterance TTS, no per-client concurrency isolation, weak session continuity — A1–A4 recorded for user
+      decision, not filed). **F&F path now clean:** all 10 QUAL-8 findings resolved by the QUAL-28 store redesign
+      (re-verified). **Live memory risk moved to the request path:** metrics session leak growing on every REST
+      call/WS connection (→ BUG-16), uncapped `/ws/audio` batch PCM accumulator ≈115 MB/h per bad client (→ BUG-17),
+      untrimmed LLM conversation store with dead `max_context_length` config (→ BUG-18); small-item sweep → QUAL-58;
+      capability drift + dead code → QUAL-59. A5 (no action durability) confirms QUAL-56's premise — that task stands.
 - [x] **QUAL-54** [APICONTRACT] (P2) `[release]` — **DONE 2026-06-27.** Targeted fix of the live-bug subset from
       `docs/review/api_result_contract_review.md` (F2 WS half + F5): the `/ws/audio` response now surfaces intent under
       `intent_name` (remapped from the orchestrator's `original_intent`, keeping the raw metadata) at both send sites

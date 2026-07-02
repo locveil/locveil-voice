@@ -42,6 +42,7 @@ Living findings behind the tasks (`read-at-start-record-at-completion`). `[x]` =
 
 | Doc (`docs/review/` unless noted) | Covers | Backs |
 |---|---|---|
+| `arch_memory_review_2026-07-02.md` `[x]` (2026-07-02) | QUAL-57 — general architecture assessment (SOTA gaps A1–A7) + memory-overconsumption audit (M1–M8, ranked) + F&F QUAL-8 re-verification (all 10 resolved) + `create_task` census + verified-fine list | QUAL-57 ✓, BUG-16/17/18, QUAL-58/59, QUAL-56 (premise confirmed) |
 | `phase0_static_baseline.md` `[x]` | static baseline: phantom refs, hidden type debt, dead code, layering | QUAL-1/2 ✓, QUAL-3/4/5/6, TEST-1 |
 | `phase1_architecture_map.md` `[x]` | architecture map, doc-harmonization audit, hexagon target | ARCH-0 ✓, ARCH-1..8, ARCH-11/12, DOC-4/5✓/5b/6✓ |
 | `fire_and_forget_review.md` `[x]` | F&F lifecycle + gap analysis (6 legacy issues re-validated) | QUAL-8 ✓, QUAL-9, TEST-3, DOC-4 |
@@ -191,6 +192,27 @@ See `docs/review/phase1_architecture_map.md` §5.
       `torch_free_armv7_voice.md`, `esp32_satellite.md` §4.4/§12, BUILD-3, ARCH-10.
 
 ### Code Quality & Review (QUAL)
+- [ ] **QUAL-58** [MEM][QUAL] (P3) `[deferred]` — **Memory-hygiene sweep (QUAL-57 M4–M8).** Bundle of small bounded-
+      but-wasteful / slow-growth items from `docs/review/arch_memory_review_2026-07-02.md`: **(M4)**
+      `AudioTranscoder._resampling_cache` retains up to 100 full audio blobs at ~0% hit rate on live audio
+      (`audio_helpers.py:546-676`, reply-conform path caches full TTS replies) — remove or key it usefully; **(M5)**
+      `ClientRegistry` per-identity history keysets (`_recent_actions`/`_failed_actions`/`_action_error_count`,
+      `client_registry.py:171-173`) never delete identity keys — prune with sessions; **(M6)** wire the advertised but
+      never-called `reap_dead_actions()` + `cleanup_expired_clients()` (`client_registry.py:393-413,502-509`) into a
+      periodic sweep (or delete the dead layer + fix the 4-layer docstring); **(M7)** `NotificationService` queue
+      maxsize + kill the consumer-less `get_notification_service()` mint path (`notifications.py:81,531-536`); hold
+      refs for the six orphaned provider `warm_up` `create_task` preloads (whisper/vosk/sherpa_onnx ASR,
+      piper/silero/vosk TTS); **(M8)** trace-dir rotation/cap (full base64 audio per traced utterance, unbounded
+      disk). _Filed 2026-07-02 from QUAL-57._
+- [ ] **QUAL-59** [API][QUAL] (P3) `[deferred]` — **Capability drift + dead code (QUAL-57 A6/A7).**
+      **(A6)** `/system/capabilities` hardcodes provider/workflow lists diverging from entry-point reality
+      (`webapi_router.py:716-719` advertises `continuous_listening`; only `unified_voice_assistant` exists) — derive
+      from discovery; **(A7)** delete-or-fix the domain-keyed dead Phase-3.5 action-management methods
+      (`handlers/base.py:963-975,1114-1115,1228-1252` — would mis-cancel/double-record if wired; REST stubs
+      `intent_component.py:532-559`), the zero-caller `get_context_for_intent_processing` machinery
+      (`context.py:274-343`), cwd-dependent hardcoded paths in NLU donation conversion (`nlu_component.py:641,
+      661-671`), stale `metrics.py:115` key comment. Evidence: `docs/review/arch_memory_review_2026-07-02.md`.
+      _Filed 2026-07-02 from QUAL-57._
 - [ ] **QUAL-56** [QUAL][REVIEW][ARCH] (P3) `[deferred]` — **Review + critique the fire-and-forget (F&F) action design &
       implementation through the "durable"-execution pattern lens.** F&F = long-running intent actions (timers, etc.)
       launched by handlers, tracked as `active_actions` on the conversation context, with **deferred completion
@@ -312,6 +334,33 @@ _Apply to every remediation task below (from the 4 review docs + QUAL-25/26). So
 _Discrete functional defects (distinct from QUAL refactors/quality work). Surfaced from any source; filed before fixing._
 
 
+- [ ] **BUG-16** [METRICS][MEM] (P2) `[release]` — **Metrics session leak: every session permanently grows the
+      process-lifetime `MetricsCollector`.** `record_session_start` (called per new session, `context.py:101`) stores
+      `_active_actions["session_{sid}:session"]` + a `_domain_metrics["session_{sid}"]` entry (~1-1.5 KB);
+      `record_session_end` checks `if domain in self._active_actions` (`metrics.py:752`) but keys are
+      `"{domain}:{action_name}"` → **always false**, completion never fires, and nothing ever deletes the
+      `_domain_metrics` session entries (eviction paths don't even call `record_session_end`). Amplifier: REST mints a
+      fresh session **per request** (`webapi_router.py:223,283`), `/ws/audio` per connection (`:779`) → permanent
+      growth on every API call; `current_concurrent_actions` permanently inflated; dashboards iterate ever-growing
+      dicts. Fix shape: complete/remove the session action with the real key, delete (or ring-buffer) session domain
+      metrics on eviction, and call `record_session_end` from the eviction paths. Evidence:
+      `docs/review/arch_memory_review_2026-07-02.md` §M1 (QUAL-57). _Filed 2026-07-02._
+- [ ] **BUG-17** [WS][MEM] (P2) `[release]` — **`/ws/audio` batch floor accumulates PCM without any cap.** The
+      utterance loop `frames = bytearray()` grows per binary frame until `{"type":"end"}` or disconnect
+      (`webapi_router.py:852-861`) — no max-bytes/max-duration bound, no backpressure: a client that never sends "end"
+      (buggy satellite firmware) grows ~32 KB/s ≈ 115 MB/h per connection on a 1 GB box, +2× peak at `bytes(frames)`.
+      The mic/VAD path is bounded (`audio_processor.py:331-340`); only this floor isn't. Fix shape: cap by
+      max-utterance bytes/duration (reuse the VAD path's `max_segment_duration_s` notion), force-finalize or close on
+      overflow. Evidence: `docs/review/arch_memory_review_2026-07-02.md` §M2 (QUAL-57). _Filed 2026-07-02._
+- [ ] **BUG-18** [INTENTS][LLM][MEM] (P2) `[release]` — **LLM conversation store unbounded; `max_context_length` is
+      dead config.** `handler_contexts["conversation"]["messages"]` appends system/user/assistant entries every turn
+      (`conversation.py:423-447`) and domain threads likewise (`context_models.py:664-679`); `max_context_length` is
+      read (`conversation.py:44-85`, `config/models.py:574`, `config-master.toml:508`) and **never applied** — no trim
+      exists; each turn ships the **full** history to the LLM (`conversation.py:596`) → unbounded prompt growth
+      (latency + token cost). Room-scoped sessions have stable ids (`session_manager.py:37-39`), so the primary
+      household use-case grows for days. Fix shape: enforce `max_context_length` on messages + threads at append time
+      (window or summarize); config key finally becomes real. Evidence:
+      `docs/review/arch_memory_review_2026-07-02.md` §M3 (QUAL-57). _Filed 2026-07-02._
 - [ ] **BUG-13** [ASR][WS] (P3) `[deferred]` — **`/ws/audio` server-authoritative *streaming* branch hangs for
       bounded (device-signalled) utterances.** When the client registers `mode="streaming"` **and** the ASR reports
       `supports_streaming()` (a real online recognizer), the handler takes the streaming branch
