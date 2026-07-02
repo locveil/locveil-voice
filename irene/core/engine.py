@@ -11,7 +11,6 @@ from pathlib import Path
 
 from ..config.models import CoreConfig
 from ..intents.context import ContextManager
-from .timers import AsyncTimerManager
 from .components import ComponentManager
 from .workflow_manager import WorkflowManager
 from .metrics import MetricsCollector
@@ -52,7 +51,6 @@ class AsyncVACore:
         output_manager: Any = None,
         event_bus: Any = None,
         context_manager: ContextManager,
-        timer_manager: AsyncTimerManager,
         metrics_collector: MetricsCollector,
         workflow_manager: WorkflowManager,
         config_path: Optional[Path] = None,
@@ -69,7 +67,6 @@ class AsyncVACore:
         self.output_manager = output_manager  # ARCH-15 PR-5: delivery layer (typed Any; core keeps no edge to irene.outputs)
         self.event_bus = event_bus            # ARCH-15 PR-6: process-wide pipeline event bus
         self.context_manager = context_manager
-        self.timer_manager = timer_manager
         self.metrics_collector = metrics_collector
         self.workflow_manager = workflow_manager
         self.audio_negotiator = None  # ARCH-18: shared audio negotiator (built at startup, see start())
@@ -106,7 +103,6 @@ class AsyncVACore:
             self.component_manager.context_manager = self.context_manager
             
             await self.context_manager.start()
-            await self.timer_manager.start()
 
             # Initialize workflow manager with components
             await self.workflow_manager.initialize()
@@ -157,7 +153,6 @@ class AsyncVACore:
         self._running = False
 
         try:
-            await self.timer_manager.stop()
             await self.context_manager.stop()
             await self.workflow_manager.cleanup()
             await self.input_manager.close()

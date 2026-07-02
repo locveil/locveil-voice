@@ -16,7 +16,6 @@ from ..config.models import CoreConfig
 from ..core.engine import AsyncVACore
 from ..core.components import ComponentManager
 from ..core.workflow_manager import WorkflowManager
-from ..core.timers import AsyncTimerManager
 from ..core.metrics import get_metrics_collector
 from ..intents.context import ContextManager
 from ..core.event_bus import EventBus
@@ -43,7 +42,6 @@ def build_core(config: CoreConfig, config_path: Optional[Path] = None) -> AsyncV
         default_language=config.default_language,
         supported_languages=config.supported_languages,
     )
-    timer_manager = AsyncTimerManager()
     metrics_collector = get_metrics_collector()  # Phase 2: unified metrics
     workflow_manager = WorkflowManager(component_manager, config, event_bus=event_bus)
 
@@ -55,7 +53,6 @@ def build_core(config: CoreConfig, config_path: Optional[Path] = None) -> AsyncV
         output_manager=output_manager,
         event_bus=event_bus,
         context_manager=context_manager,
-        timer_manager=timer_manager,
         metrics_collector=metrics_collector,
         workflow_manager=workflow_manager,
     )

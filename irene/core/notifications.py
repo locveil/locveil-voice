@@ -65,8 +65,8 @@ class NotificationMessage:
     created_at: float = field(default_factory=time.time)
     delivered_at: Optional[float] = None
     delivery_status: Dict[DeliveryMethod, bool] = field(default_factory=dict)
-    retry_count: int = 0
-    max_retries: int = 3
+    # (retry_count/max_retries removed — QUAL-61: written, never read. Redelivery is the
+    # durable store's job, not a requeue counter's.)
     # ARCH-28 (D-6): durable-action completions flagged for redelivery survive an offline
     # reply channel — on drop they are queued in the durable store (TTL = grace window) and
     # drained when the owning client's output re-attaches.

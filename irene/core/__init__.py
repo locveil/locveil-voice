@@ -5,15 +5,15 @@ This module contains the main AsyncVACore engine and core system components.
 """
 
 from .engine import AsyncVACore
-from .timers import AsyncTimerManager
 # CommandResult removed - use IntentResult instead
+# AsyncTimerManager removed (QUAL-61): it never scheduled anything — the durable-action
+# store + startup reconciler (ARCH-28) is the scheduler.
 from .components import ComponentManager, ComponentNotAvailable
 from .metadata import EntryPointMetadata
 
 __all__ = [
     "AsyncVACore",
-    "AsyncTimerManager",
     "ComponentManager",
     "ComponentNotAvailable",
     "EntryPointMetadata"
-] 
+]

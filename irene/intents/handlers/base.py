@@ -107,8 +107,6 @@ class IntentHandler(EntryPointMetadata, ABC):
         domain: str,
         context: UnifiedConversationContext,
         timeout: Optional[float] = None,
-        max_retries: int = 0,
-        retry_delay: float = 1.0,
         completion_message: Optional[str] = None,
         durable: bool = False,
         redeliver_on_reconnect: bool = False,
@@ -144,8 +142,6 @@ class IntentHandler(EntryPointMetadata, ABC):
             room_id=context.client_id or context.room_name,
             source=getattr(context, "request_source", None),
             timeout=timeout,
-            max_retries=max_retries,
-            retry_delay=retry_delay,
             language=getattr(context, "language", None),
             completion_message=completion_message,
             durable=durable,
@@ -665,8 +661,6 @@ class IntentHandler(EntryPointMetadata, ABC):
         room_id: Optional[str] = None,
         source: Optional[str] = None,
         timeout: Optional[float] = None,
-        max_retries: int = 0,
-        retry_delay: float = 1.0,
         language: Optional[str] = None,
         completion_message: Optional[str] = None,
         durable: bool = False,
@@ -704,12 +698,10 @@ class IntentHandler(EntryPointMetadata, ABC):
                 # re-arm params and must round-trip JSON. Raises before the task is created.
                 rearm_params = json.loads(json.dumps(kwargs))
 
-            if max_retries > 0:
-                task = asyncio.create_task(self._execute_with_retry(
-                    _checked_action, action_name, domain, max_retries, retry_delay, **kwargs
-                ))
-            else:
-                task = asyncio.create_task(_checked_action(**kwargs))
+            # QUAL-61 (ARCH-27 D-7): the generic retry wrapper was cut — blind whole-coroutine
+            # re-invocation is unsafe without per-action idempotency; a handler that needs
+            # retries owns them domain-specifically, backstopped by the failure announcement.
+            task = asyncio.create_task(_checked_action(**kwargs))
 
             record = ActionRecord(
                 action_name=action_name,
@@ -725,7 +717,6 @@ class IntentHandler(EntryPointMetadata, ABC):
                 room_id=room_id,
                 source=source,
                 metadata={"handler": self.__class__.__name__, "timeout": timeout,
-                          "max_retries": max_retries, "retry_count": 0,
                           # BUG-4/F&F: carry the request language + the request-language-rendered
                           # completion message so the deferred completion announces in the user's language.
                           "language": language, "completion_message": completion_message},
@@ -890,104 +881,6 @@ class IntentHandler(EntryPointMetadata, ABC):
         finally:
             self._timeout_tasks.pop(timeout_key, None)
 
-    async def _execute_with_retry(self, action_func: Callable[..., Coroutine[Any, Any, Any]], 
-                                action_name: str, domain: str, max_retries: int, retry_delay: float,
-                                *args, **kwargs) -> Any:
-        """
-        Execute an action with retry logic for transient failures.
-        
-        Args:
-            action_func: The async function to execute
-            action_name: Name of the action for logging
-            domain: Action domain
-            max_retries: Maximum number of retry attempts
-            retry_delay: Delay between retries in seconds
-            *args: Arguments to pass to action function
-            **kwargs: Keyword arguments to pass to action function
-            
-        Returns:
-            Result of the action function
-            
-        Raises:
-            Exception: The last exception if all retries fail
-        """
-        last_exception = None
-        
-        for attempt in range(max_retries + 1):  # +1 for initial attempt
-            try:
-                if attempt > 0:
-                    self.logger.info(f"Retrying action {action_name} (attempt {attempt + 1}/{max_retries + 1})")
-                    await asyncio.sleep(retry_delay)
-                
-                result = await action_func(*args, **kwargs)
-                
-                if attempt > 0:
-                    self.logger.info(f"Action {action_name} succeeded on retry attempt {attempt + 1}")
-                
-                return result
-                
-            except Exception as e:
-                last_exception = e
-                
-                # Check if this is a transient failure that should be retried
-                if attempt < max_retries and self._is_transient_failure(e):
-                    self.logger.warning(f"Transient failure in action {action_name} (attempt {attempt + 1}): {e}")
-                    continue
-                else:
-                    # Either max retries reached or non-transient failure
-                    if attempt >= max_retries:
-                        self.logger.error(f"Action {action_name} failed after {max_retries + 1} attempts: {e}")
-                    else:
-                        self.logger.error(f"Non-transient failure in action {action_name}: {e}")
-                    break
-        
-        # All retries exhausted, raise the last exception
-        if last_exception is not None:
-            raise last_exception
-        # The loop always records an exception before breaking; this is a defensive guard.
-        raise RuntimeError(f"Action {action_name} failed without a captured exception")
-    
-    def _is_transient_failure(self, error: Exception) -> bool:
-        """
-        Determine if an error represents a transient failure that should be retried.
-        
-        Args:
-            error: The exception to analyze
-            
-        Returns:
-            True if the error is likely transient and should be retried
-        """
-        error_str = str(error).lower()
-        
-        # Common transient failure patterns
-        transient_patterns = [
-            'timeout',
-            'connection reset',
-            'connection refused',
-            'temporary failure',
-            'service unavailable',
-            'too many requests',
-            'rate limit',
-            'network is unreachable',
-            'connection timed out'
-        ]
-        
-        # Check for transient error patterns
-        for pattern in transient_patterns:
-            if pattern in error_str:
-                return True
-        
-        # Check for specific exception types that are typically transient
-        transient_exceptions = [
-            'TimeoutError',
-            'ConnectionError',
-            'ConnectionResetError',
-            'ConnectionRefusedError'
-        ]
-        
-        exception_name = error.__class__.__name__
-        return exception_name in transient_exceptions
-    
     async def cleanup_timeout_tasks(self) -> None:
         """Clean up all timeout monitoring tasks during shutdown"""
         if self._timeout_tasks:

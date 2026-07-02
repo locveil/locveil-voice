@@ -19,6 +19,7 @@ Run: `.venv/bin/python -m pytest irene/tests/test_smoke_e2e.py -v`
 """
 
 import json
+import os
 import signal
 import socket
 import subprocess
@@ -55,15 +56,41 @@ def _get(base: str, path: str, timeout: int = 15):
         return r.status, r.read()
 
 
+def _offline_env() -> dict:
+    """SUT env with every LLM key BLANKED (BUG-20). Covers keys from the shell AND the
+    repo ``.env`` (dotenv never overrides an existing var, so empty wins over both)."""
+    env = dict(os.environ)
+    key_names = {k for k in env if k.endswith("_API_KEY")}
+    dotenv = REPO / ".env"
+    if dotenv.exists():
+        for line in dotenv.read_text().splitlines():
+            name = line.split("=", 1)[0].strip()
+            if name.endswith("_API_KEY"):
+                key_names.add(name)
+    for name in key_names:
+        env[name] = ""
+    return env
+
+
 @pytest.fixture(scope="module")
 def webapi():
-    """Boot the WebAPI runner once for the module; tear it down with SIGINT."""
+    """Boot the WebAPI runner once for the module; tear it down with SIGINT.
+
+    BUG-20: the SUT's LLM ``*_API_KEY`` env vars are BLANKED (not stripped) — the smoke
+    suite asserts OFFLINE behavior (LLM degrade), but real keys leak in from two places:
+    the developer shell (e.g. the eval judge's DEEPSEEK_API_KEY) and the repo-root
+    ``.env`` that every runner ``load_dotenv()``s. Blanking works for both, because
+    dotenv does not override an env var that already exists — stripping alone would
+    leave the ``.env`` leak, silently turning "offline degrade" into a live DeepSeek
+    call that flakes on slow API responses.
+    """
     port = _free_port()
     base = f"http://127.0.0.1:{port}"
     proc = subprocess.Popen(
         [str(VENV_BIN / "irene-webapi"), "-c", CONFIG, "--host", "127.0.0.1", "--port", str(port)],
         stdout=subprocess.DEVNULL,
         stderr=subprocess.STDOUT,
+        env=_offline_env(),
     )
     try:
         deadline = time.time() + 120
@@ -148,6 +175,7 @@ def test_cli_headless_boots_and_responds():
         capture_output=True,
         text=True,
         timeout=180,
+        env=_offline_env(),  # BUG-20: hermetic — blanked LLM keys beat shell AND .env
     )
     assert res.returncode == 0, res.stderr[-2000:]
     # A response was rendered through the output hexagon (ARCH-15 PR-3: the CLI now delivers via

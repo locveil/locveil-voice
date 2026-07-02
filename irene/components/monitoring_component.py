@@ -622,10 +622,6 @@ class MonitoringComponent(Component, WebAPIPlugin):
         """Get metrics collector instance"""
         return self.metrics_collector
     
-    def get_action_debugger(self):
-        """Get action debugger instance"""
-        return self.action_debugger
-    
     def get_analytics_dashboard(self):
         """Get analytics dashboard instance"""
         return self.analytics_dashboard

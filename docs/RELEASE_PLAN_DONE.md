@@ -761,6 +761,17 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       Dependabot alerts (commits 05aa763/4e05a38) — no risky major bumps. **No code until scheduled + green-lit.**
 
 ### Code Quality & Review (QUAL)
+- [x] **QUAL-61** [QUAL][FAF] (P3) `[deferred]` — **DONE 2026-07-02.** Dead-capability removal, all three cuts per
+      ARCH-27 D-7 (user preference: dead code removed). **(1)** Retry machinery: `_execute_with_retry` +
+      `_is_transient_failure` deleted (−98 LOC), `max_retries`/`retry_delay` launch params removed from both F&F
+      launch methods, retry metadata keys dropped from the action record; **(2)** `AsyncTimerManager`: `core/timers.py`
+      deleted + all wiring (engine ctor/attr/start/stop, composition root, `core/__init__` export, the
+      `service_mapping['timer_manager']` entry) — the durable store + reconciler IS the scheduler (ARCH-28);
+      **(3)** dead inspection path: `inspect_active_action` + `InspectionLevel`/`ActionInspectionResult`/
+      `TestActionConfig` + vestigial history/test-action state removed from `debug_tools.py` (67 lines remain:
+      `get_debugging_status` for the live `/debug` endpoint), `monitoring_component.get_action_debugger()` accessor
+      removed; `NotificationMessage.retry_count`/`max_retries` fields removed (written, never read). Gates: 1156
+      passed / 7 skipped; pyright clean (8 files); lint-imports 10/10.
 - [x] **QUAL-62** [ARCH][QUAL] (P2) `[release]` — **DONE 2026-07-02 (filed + completed same day, user-requested
       ARCH-28 follow-up).** The new `DurableActionStorePort` seam is now reflected in the hexagon gate: 10th
       import-linter contract **"Durable-action store is reached only through its seam (ARCH-28)"** — no
@@ -1761,6 +1772,17 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       console-LLM fallback / `fallback_providers` — left as-is; not in scope here.)
 
 ### Bugs (BUG)
+- [x] **BUG-20** [TEST] (P2) `[release]` — **DONE 2026-07-02 (filed + fixed same day; surfaced by the QUAL-61 gate
+      runs).** The smoke suite's "offline degrades gracefully" test was **not offline**: the SUT subprocess inherited
+      real LLM keys from the developer shell (the eval judge's `DEEPSEEK_API_KEY`) AND from the repo-root `.env`
+      that every runner `load_dotenv()`s — so the test made a **live DeepSeek call** and flaked whenever the API
+      answered slower than the 25s client timeout (the mysterious 59s full-suite runs WERE the slow-API runs;
+      causality was backwards from the "load flake" hypothesis journaled under ARCH-28). Fix: the smoke fixtures
+      launch the SUT with every `*_API_KEY` **blanked, not stripped** — dotenv never overrides an existing var, so
+      an empty value beats both leak paths (`_offline_env()` collects key names from the shell env AND `.env`).
+      Result: the offline degrade path is proven genuinely fast (smoke 6/6 in 12.5s), and the full suite dropped
+      from 24–59s to ~20s — it had been quietly calling DeepSeek on every run. Regression-proof by construction
+      (the test now fails if the degrade path ever regresses, instead of being rescued by a live LLM).
 - [x] **BUG-19** [FAF] (P2) `[release]` — **DONE 2026-07-02.** Action-store correctness fixes independent of the
       ARCH-27 design (QUAL-56 F2/F3). **(1) Collision-proofing + identity safety:** audio/TTS action names get a
       uuid suffix (same-ms launches used to collide); `remove_action` gained an `expected=` identity guard (the

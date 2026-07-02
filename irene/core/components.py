@@ -280,7 +280,6 @@ class ComponentManager(ComponentControlRegistryPort):
             # Map service names to core services
             service_mapping = {
                 'context_manager': getattr(core, 'context_manager', None),  # Use unified context manager
-                'timer_manager': getattr(core, 'timer_manager', None),
                 'workflow_manager': getattr(core, 'workflow_manager', None),
                 'input_manager': getattr(core, 'input_manager', None),
                 'config': self.config

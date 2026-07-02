@@ -194,19 +194,6 @@ See `docs/review/phase1_architecture_map.md` §5.
       `torch_free_armv7_voice.md`, `esp32_satellite.md` §4.4/§12, BUILD-3, ARCH-10.
 
 ### Code Quality & Review (QUAL)
-- [ ] **QUAL-61** [QUAL][FAF] (P3) `[deferred]` — **Dead-capability removal from the F&F/scheduling perimeter**
-      (QUAL-56 F5; user preference: dead code removed — see `dead-code-remove-not-fix`). **(1)** `AsyncTimerManager`
-      (`core/timers.py`) — instantiated at the composition root, injected, started/stopped (`composition.py:46`,
-      `engine.py:53,70,107,138`) but **zero non-test schedule callers**: remove class + wiring (unless ARCH-27's
-      design claims it as the substrate's re-arm executor — check there first, `task-start-reconciliation`);
-      **(2)** `ActionDebugger.inspect_active_action` + the `get_action_debugger()` accessor — zero callers
-      post-QUAL-59 (`debug_tools.py:90-170`, `monitoring_component.py:605`); keep `get_debugging_status()` (live
-      `/debug` endpoint); **(3)** `NotificationMessage.retry_count`/`max_retries` — never read
-      (`notifications.py:66-67`) — remove unless ARCH-27 decides to wire notification redelivery. All three gated on
-      the ARCH-27 design's keep-or-cut calls — do this task right after that design lands. _Filed 2026-07-02 from
-      QUAL-56._ **★ UNBLOCKED 2026-07-02 — ARCH-27 design agreed (`durable_actions.md` D-7): cut ALL THREE** (the
-      substrate re-arms by relaunch, so `AsyncTimerManager` has no role; retries are handler-owned if ever needed;
-      redelivery uses the durable store, not the notification retry fields). Runnable any time after ARCH-28 slice 2.
 - [ ] **QUAL-60** [INTENTS][LLM] (P3) `[deferred]` — **Summarize-then-truncate for the LLM conversation window
       (BUG-18 follow-up; user chose "window now + file summarization" 2026-07-02).** BUG-18 bounds the conversation
       store with a plain rolling window (last `max_context_length` turns; seed system prompt pinned) — older context
