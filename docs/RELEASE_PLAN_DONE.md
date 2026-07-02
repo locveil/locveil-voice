@@ -724,6 +724,20 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       Dependabot alerts (commits 05aa763/4e05a38) — no risky major bumps. **No code until scheduled + green-lit.**
 
 ### Code Quality & Review (QUAL)
+- [x] **QUAL-56** [QUAL][REVIEW][ARCH] (P3) `[deferred]` — **DONE 2026-07-02.** F&F design critiqued through the
+      durable-execution lens + (user-requested) comparative analysis of `wb-mqtt-bridge` device-state persistence.
+      Deliverable: `docs/review/faf_durable_execution_review.md`. Verdict: **zero on every durability axis by
+      explicit design** — in-memory store ("NEVER persisted"), restart = silent total loss (a 24h timer vanishes;
+      "list timers" denies it existed), no scheduler durability (`AsyncTimerManager` = dead capability), no
+      idempotency (+ live-record overwrite on name collision), delivery at-most-once with 5 silent-drop points
+      (failure notifications suppressed by default), retry machinery dead config, no recovery, aggregate-only
+      amnesiac observability. Bridge comparison: right persistence shape to borrow (generic key→JSON SQLite behind a
+      port, chokepoint dirty-write, ephemeral filter, reconcile-by-diff restore, shutdown-artifact protection) + two
+      cautionary failure modes (persist-without-restore rot; stale `active_scenario` resurrecting on restart — filed
+      to the bridge as **VWB-18**, uncommitted). User scope statements recorded: future handlers will require
+      durability → platform substrate; "a fix + rules for new handlers would be required". Follow-ups filed:
+      **ARCH-27** (substrate design + handler rules), **BUG-19** (store/status correctness), **QUAL-61** (dead
+      capability removal, gated on ARCH-27's keep-or-cut).
 - [x] **QUAL-59** [API][QUAL] (P3) `[deferred]` — **DONE 2026-07-02.** Capability drift + dead code (QUAL-57 A6/A7);
       user directive: dead code **removed**, not repaired. **(A6)** `/system/capabilities` now derives
       `nlu/voice_trigger/text_processing` provider lists from the loaded components' `providers` dicts and

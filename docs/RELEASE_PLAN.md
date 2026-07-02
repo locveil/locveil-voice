@@ -42,6 +42,7 @@ Living findings behind the tasks (`read-at-start-record-at-completion`). `[x]` =
 
 | Doc (`docs/review/` unless noted) | Covers | Backs |
 |---|---|---|
+| `faf_durable_execution_review.md` `[x]` (2026-07-02) | QUAL-56 — F&F vs the durable-execution reference model (8 dimensions, all zero by design; delivery = at-most-once with 5 drop points; retry machinery dead) + comparative `wb-mqtt-bridge` persistence analysis (patterns to borrow + persist-without-restore / stale-intent pitfalls) | QUAL-56 ✓, ARCH-27, BUG-19, QUAL-61, VWB-18 (bridge, uncommitted) |
 | `arch_memory_review_2026-07-02.md` `[x]` (2026-07-02) | QUAL-57 — general architecture assessment (SOTA gaps A1–A7) + memory-overconsumption audit (M1–M8, ranked) + F&F QUAL-8 re-verification (all 10 resolved) + `create_task` census + verified-fine list | QUAL-57 ✓, BUG-16/17/18, QUAL-58/59, QUAL-56 (premise confirmed) |
 | `phase0_static_baseline.md` `[x]` | static baseline: phantom refs, hidden type debt, dead code, layering | QUAL-1/2 ✓, QUAL-3/4/5/6, TEST-1 |
 | `phase1_architecture_map.md` `[x]` | architecture map, doc-harmonization audit, hexagon target | ARCH-0 ✓, ARCH-1..8, ARCH-11/12, DOC-4/5✓/5b/6✓ |
@@ -131,6 +132,26 @@ and the structural refactors **move code** — so blind refactoring/fixing is th
 Target pattern: **Hexagonal (Ports & Adapters)** — SIGNED OFF 2026-06-01. Code is already ~80% there
 (interfaces=ports, providers=adapters, components=app services, entry-points=registry).
 See `docs/review/phase1_architecture_map.md` §5.
+- [ ] **ARCH-27** [FAF][DESIGN] (P2) `[release]` — **Design: durable-action substrate + handler-authoring
+      durability rules** (`design-then-implement`; from QUAL-56 → `docs/review/faf_durable_execution_review.md` F1/F4/
+      F6/F8). User scope statement (2026-07-02): only timers need it today, but **future intent handlers (smart-home
+      arc) will require durability** — so this is a platform substrate at the existing single choke point
+      (`execute_fire_and_forget_with_context` + the done-callback), NOT a timer patch. Deliverable = a design doc
+      under `docs/design/` covering: **(1) persistence** — persisted action records (candidate: the bridge's pattern,
+      tiny key→JSON SQLite store behind a hexagonal port, dirty-write at launch, **delete atomically with in-memory
+      removal at completion** — the bridge's stale-`active_scenario` resurrection bug is the cautionary tale), with an
+      ephemeral-field filter (no task refs on disk); **(2) recovery** — startup reconciliation: re-arm timers from
+      stored deadlines, fire-with-apology or expire-with-announcement for missed deadlines, per-domain re-arm hooks
+      for future device actions (reconcile-by-diff, not command-log replay); **ships persist + restore + a restart
+      test together** (anti persist-without-restore rot); **(3) delivery guarantees** — decide the completion/failure
+      notification policy end-to-end (today: at-most-once, 5 silent-drop points, failure notifications suppressed by
+      default, prefs lost on eviction — QUAL-56 §D4/D5); **(4) idempotency** — launch-key scheme replacing colliding
+      ms-timestamp/counter names (BUG-19 fixes the overwrite; the design owns the naming contract); **(5) the
+      handler-authoring RULES** — the durability contract every new handler declares against (durability class,
+      re-arm hook, no hand-rolled `asyncio.sleep` schedules outside the substrate), destined for the handler-authoring
+      docs so ARCH-8's device handlers land on it; **(6) observability** — REST enumeration of in-flight actions +
+      per-identity history (QUAL-56 §D7); **(7) keep-or-cut** the dead retry machinery (§D5). On design completion,
+      file the implementation task(s). _Filed 2026-07-02 from QUAL-56._
 - [ ] **ARCH-8** [MQTT] (P-TBD) — **★ ARCH-22 (2026-06-14):** the **voice-confirmation of actuation** feature (T-B,
       `docs/design/esp32_satellite.md` §10) rides this task — a sequenced `DEVICE_COMMAND → bridge rich DeliveryResult →
       derive text → SPEECH to the origin device` (opt-in `confirm_actuation_by_voice`; device-transparent, reply via
@@ -192,6 +213,17 @@ See `docs/review/phase1_architecture_map.md` §5.
       `torch_free_armv7_voice.md`, `esp32_satellite.md` §4.4/§12, BUILD-3, ARCH-10.
 
 ### Code Quality & Review (QUAL)
+- [ ] **QUAL-61** [QUAL][FAF] (P3) `[deferred]` — **Dead-capability removal from the F&F/scheduling perimeter**
+      (QUAL-56 F5; user preference: dead code removed — see `dead-code-remove-not-fix`). **(1)** `AsyncTimerManager`
+      (`core/timers.py`) — instantiated at the composition root, injected, started/stopped (`composition.py:46`,
+      `engine.py:53,70,107,138`) but **zero non-test schedule callers**: remove class + wiring (unless ARCH-27's
+      design claims it as the substrate's re-arm executor — check there first, `task-start-reconciliation`);
+      **(2)** `ActionDebugger.inspect_active_action` + the `get_action_debugger()` accessor — zero callers
+      post-QUAL-59 (`debug_tools.py:90-170`, `monitoring_component.py:605`); keep `get_debugging_status()` (live
+      `/debug` endpoint); **(3)** `NotificationMessage.retry_count`/`max_retries` — never read
+      (`notifications.py:66-67`) — remove unless ARCH-27 decides to wire notification redelivery. All three gated on
+      the ARCH-27 design's keep-or-cut calls — do this task right after that design lands. _Filed 2026-07-02 from
+      QUAL-56._
 - [ ] **QUAL-60** [INTENTS][LLM] (P3) `[deferred]` — **Summarize-then-truncate for the LLM conversation window
       (BUG-18 follow-up; user chose "window now + file summarization" 2026-07-02).** BUG-18 bounds the conversation
       store with a plain rolling window (last `max_context_length` turns; seed system prompt pinned) — older context
@@ -202,22 +234,6 @@ See `docs/review/phase1_architecture_map.md` §5.
       `ConversationIntentHandler._trim_llm_context` / `UnifiedConversationContext.trim_handler_messages` — the trim
       call is already the single choke point, so summarization slots in front of it without touching call sites.
       _Filed 2026-07-02 from BUG-18._
-- [ ] **QUAL-56** [QUAL][REVIEW][ARCH] (P3) `[deferred]` — **Review + critique the fire-and-forget (F&F) action design &
-      implementation through the "durable"-execution pattern lens.** F&F = long-running intent actions (timers, etc.)
-      launched by handlers, tracked as `active_actions` on the conversation context, with **deferred completion
-      callbacks** routed back to the originating channel (room/device) — QUAL-28 action store, QUAL-11 lifecycle. Code:
-      `irene/intents/orchestrator.py` (active-action disambiguation/confirmation, ~156/445/558), `irene/intents/context.py`
-      (`active_actions`, F&F completion, room-scoped deferred completion — ~87/107/143/479), `irene/intents/handlers/base.py`
-      (launch + completion), `irene/intents/models.py:52` (`action_metadata`), `irene/core/notifications.py`. **Lens —
-      treat it as a classic durable pattern and critique against it:** is the action state **persisted or in-memory**
-      (it looks in-memory: `asyncio.create_task` + context dicts)? **What survives a process restart / crash** — are
-      in-flight actions lost (e.g. a timer set before a restart never fires; a deferred completion never delivered)?
-      **Idempotency** (replays/duplicates), **delivery guarantees** (at-least-once / exactly-once to the reply channel),
-      **scheduling durability** (timers vs a durable scheduler), **reconciliation on restart**, **retry / failure
-      handling**, **observability** (can you inspect/resume an in-flight action?). Compare to the durable-execution
-      reference model (persisted event log + idempotent steps + recovery). **Deliverable = a review doc under
-      `docs/review/` (frozen evidence)**; on completion file follow-up ledger tasks for findings worth acting on
-      (`review-then-remediate` — a finding isn't scope until it has an ID). _Filed 2026-07-01 at user request._
 - [ ] **QUAL-18** [STREAMAPI] (P-TBD) — Act on QUAL-17 (per `streaming_api_review.md` §5): **(1)** vendor + wire the
       official `@asyncapi/web-component` at `/asyncapi`, delete the bespoke renderer (≈ −900 LOC); **(2)** fix the
       lossy `_clean_property_for_asyncapi` union/nullable handling; **(3, scoped separately)** emit AsyncAPI 3.0 +
@@ -323,6 +339,18 @@ _Apply to every remediation task below (from the 4 review docs + QUAL-25/26). So
 _Discrete functional defects (distinct from QUAL refactors/quality work). Surfaced from any source; filed before fixing._
 
 
+- [ ] **BUG-19** [FAF] (P2) `[release]` — **Action-store correctness fixes independent of the ARCH-27 design**
+      (QUAL-56 → `faf_durable_execution_review.md` F2/F3). **(1)** `add_action` silently overwrites a live record on
+      action-name collision (`client_registry.py:457-460`; ms-timestamp names collide same-ms —
+      `audio_playback_handler.py:67`, `voice_synthesis_handler.py:77`; removal has no record-identity check so the
+      old task's done-callback later evicts the *new* record, `base.py:741` + `client_registry.py:487-495`) — make
+      names collision-proof (uuid suffix) AND make `add_action`/`remove_action` identity-safe; **(2)** the
+      32/identity cap eviction drops a record **without cancelling its task** (`client_registry.py:464-468`) —
+      cancel on evict; **(3)** TTS/audio action coroutines swallow failures as `return False` "success"
+      (`voice_synthesis_handler.py:410-413`, `audio_playback_handler.py:279-281`) — raise so the failure path runs;
+      **(4)** timeout-cancelled actions are recorded as plain `"cancelled"` and `timeout_occurred` is never set
+      (`base.py:728-729`, `metrics.py:229-231`) — distinguish timeout from user-cancel in history + metrics.
+      _Filed 2026-07-02 from QUAL-56._
 - [ ] **BUG-13** [ASR][WS] (P3) `[deferred]` — **`/ws/audio` server-authoritative *streaming* branch hangs for
       bounded (device-signalled) utterances.** When the client registers `mode="streaming"` **and** the ASR reports
       `supports_streaming()` (a real online recognizer), the handler takes the streaming branch

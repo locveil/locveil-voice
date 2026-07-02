@@ -13,6 +13,27 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-02 — QUAL-56 DONE — F&F durability critique + comparative bridge persistence analysis
+  (user-requested).** Deliverable frozen at `docs/review/faf_durable_execution_review.md` (two parallel
+  deep-reads: the F&F subsystem across 8 durability dimensions; how `../wb-mqtt-bridge` persists device state).
+  **Verdict: zero on every durable-execution axis, by explicit design** — the action store is deliberately
+  runtime-only, so a restart silently loses a 24h timer ("list timers" then denies it existed); delivery of
+  deferred completions is at-most-once with five independent silent-drop points (incl. a preference gate that
+  suppresses sub-30s completions and *all* non-critical failures by default); the retry machinery is dead config
+  (`max_retries=0` everywhere); TTS/audio coroutines mask their own failures as success; name collisions can
+  silently overwrite a *live* store record; `AsyncTimerManager` is instantiated-but-never-used dead capability.
+  **Bridge comparison** sharpened the design brief: borrow its generic key→JSON SQLite store behind a hexagonal
+  port, chokepoint dirty-write, ephemeral-field filter, and reconcile-by-diff restore — and design against its
+  two demonstrated failure modes: persist-without-restore rot (device-state restore is still a logging stub) and
+  the stale-intent key (deactivated scenario **resurrects on restart** and powers AV gear back on — filed to the
+  bridge as **VWB-18**, left uncommitted per `cross-repo-source-of-truth`, with the restore-stub and
+  toggle-inversion findings). **User scope statements recorded in the review:** durability is a platform
+  requirement (future smart-home handlers), and the remedy = "a fix + rules for new handlers". Follow-ups filed
+  accordingly: **ARCH-27** `[release]` (design: durable-action substrate at the F&F choke point + the
+  handler-authoring durability rules, per `design-then-implement`), **BUG-19** `[release]` (collision-safe
+  names + identity-safe add/remove, cancel-on-cap-evict, unmask TTS/audio failures, timeout≠cancel), **QUAL-61**
+  `[deferred]` (dead-capability removal, gated on ARCH-27's keep-or-cut calls). QUAL-56 moved active→done.
+
 - **2026-07-02 — QUAL-59 DONE — capability drift fixed + dead code deleted (user directive: "I prefer dead code
   to be removed").** **(A6)** `/system/capabilities` now derives its provider/workflow lists from what is actually
   loaded (components' `providers` dicts + `workflow_manager.workflows`) instead of hardcoded lists that advertised
