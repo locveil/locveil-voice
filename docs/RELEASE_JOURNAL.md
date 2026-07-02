@@ -15,6 +15,18 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-02 — VWB-18 accepted + fixed bridge-side; cross-repo loop closed.** The bridge maintainer verified
+  the QUAL-56-filed restart-durability triad against live code at intake (per their `cross-repo-source-of-truth`),
+  confirmed all three findings, found one aggravation our review missed (boot persisted default device state
+  *before* the restore stub ran — clobbering the last-good snapshot every boot), and fixed everything same day:
+  `deactivate()` now clears the persisted `active_scenario` atomically (no restart resurrection), device state is
+  restored at boot via a new `DevicePort.restore_state` seam (persist-without-restore rot closed — they chose
+  *implement restore* over re-scoping the doc), and the toggle-power inversion closes as a consequence. Bridge
+  suite 502 passing; their §7.1 doc overpromise corrected. Voice-side: review-index row + a one-time status
+  pointer in `faf_durable_execution_review.md` updated (the frozen findings stand — they were verified correct).
+  No voice-side scope change: VWB-18 was bridge-internal; TEST-17 still gates on VWB-15 (contract artifact),
+  which remains open bridge-side.
+
 - **2026-07-02 — QUAL-61 + BUG-20 DONE — the durability arc closed with the cuts, and the gate run flushed out
   a real test-hermeticity bug.** **QUAL-61** (all three ARCH-27 D-7 cuts): the never-invoked retry machinery
   deleted from `handlers/base.py` (−98 LOC + the `max_retries`/`retry_delay` launch params); `AsyncTimerManager`

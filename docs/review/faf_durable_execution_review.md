@@ -17,7 +17,10 @@ handlers, scenario-like actions), not a timer-only nicety.
 **Follow-ups filed:** → tracked as **ARCH-27** (durable-action substrate design + handler-authoring rules),
 **BUG-19** (store/status correctness fixes independent of the design), **QUAL-61** (dead capability removal).
 Bridge-side findings → **VWB-18** (filed uncommitted in `../wb-mqtt-bridge/docs/action_plan.md` per
-`cross-repo-source-of-truth`).
+`cross-repo-source-of-truth`). _One-time status pointer (2026-07-02): VWB-18 was verified at intake, accepted
+and **fixed** by the bridge maintainer same day — all three findings (F7) confirmed real, plus an aggravation
+this review missed (boot persisted default state before the restore stub ran, clobbering last-good on every
+boot). See the bridge's `action_plan_DONE.md`._
 
 ---
 
