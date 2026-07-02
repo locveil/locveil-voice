@@ -1,15 +1,16 @@
 # Docker builds
 
-Irene ships as three Docker images, one per deployment role and CPU architecture. Each image installs only
-what its config profile needs — the [build analyzer](build-system.md) turns the profile into a minimal
-dependency set at build time — and bakes that one profile in. The differences between the three are the CPU
-they target, the speech models they carry, and whether they run the microphone locally:
+Irene ships as a family of Docker images: one per deployment role, CPU architecture, and **language**. Each
+image installs only what its config profile needs — the [build analyzer](build-system.md) turns the profile
+into a minimal dependency set at build time — and bakes that one profile in. Russian images carry the
+original, unsuffixed names; English variants add an `-en` suffix:
 
 | Image | Architecture | Role |
 |---|---|---|
-| `wb-mqtt-voice-standalone` | x86_64 | Full local voice box — mic → wake-word → ASR → intent → TTS → playback. |
-| `wb-mqtt-voice-aarch64` | aarch64 (WB8.5 / Pi) | Satellite server — ASR + intent + TTS for ESP32 satellites; no local mic. |
-| `wb-mqtt-voice-armv7` | armv7 (WB7) | Satellite server, smaller models; no local mic. |
+| `wb-mqtt-voice-standalone` / `-standalone-en` | x86_64 | Full local voice box — mic → wake-word → ASR → intent → TTS → playback. |
+| `wb-mqtt-voice-aarch64` / `-aarch64-en` | aarch64 (WB8.5 / Pi) | Satellite server — ASR + intent + TTS for ESP32 satellites; no local mic. |
+| `wb-mqtt-voice-armv7` / `-armv7-en` | armv7 (WB7) | Satellite server, smaller models; no local mic. |
+| `wb-mqtt-voice-ui` | multi-arch (one manifest) | The configuration editor as a static site (see below). |
 
 On the satellites the ESP32 owns the microphone, voice activity detection, wake-word, and playback; the
 container only does recognition and speech synthesis and streams the reply back over the web API. The
@@ -18,13 +19,26 @@ standalone image is the one that drives audio hardware itself.
 ## Published images
 
 Each image is published to the GitHub Container Registry and tagged `latest`, `sha-<short>`, and
-`v<date>-<sha>`:
+`v<date>-<sha>` (pin the date tag to roll back):
 
 ```bash
-docker pull ghcr.io/droman42/wb-mqtt-voice-standalone:latest
-docker pull ghcr.io/droman42/wb-mqtt-voice-aarch64:latest
-docker pull ghcr.io/droman42/wb-mqtt-voice-armv7:latest
+docker pull ghcr.io/droman42/wb-mqtt-voice-standalone:latest      # Russian
+docker pull ghcr.io/droman42/wb-mqtt-voice-armv7-en:latest        # English
+docker pull ghcr.io/droman42/wb-mqtt-voice-ui:latest              # configuration editor
 ```
+
+Publishing is a deliberate act, not a side effect of pushing code: every push runs the fast health checks,
+and images are built only when the CI workflow is dispatched manually — one dispatch builds the whole
+matrix by default (all architectures × both languages + the UI), and each image is gated on its green
+checks. Narrow a dispatch with the workflow inputs, e.g.:
+
+```bash
+gh workflow run CI                                    # everything
+gh workflow run CI -f targets=armv7 -f languages=en -f build_ui=false
+```
+
+Every published backend image is verified at build time to ship an **empty** `/app/assets` — speech models
+are never baked in — and its size is checked against a per-target budget and reported in the run summary.
 
 ## Config and assets
 
@@ -36,9 +50,12 @@ Assets — donation phrasings, prompts, templates, and the downloaded speech mod
 image under a single assets root, so they survive upgrades and can be shared between containers. Mount a host
 directory at `/app/assets`:
 
-- The donations / prompts / templates tree is published alongside each image build as an `irene-assets-<target>`
-  artifact. Extract it into your host assets directory once.
+- The donations / prompts / templates tree lives in this repository under `assets/` — copy it from a checkout
+  into your host assets directory (`rsync -a assets/ /path/to/assets/`), and refresh it the same way after a
+  `git pull`. (A small `ops/` update script automating this on the controller is on its way.)
 - Speech models are **not** in the image; they download into the same directory on first boot and stay there.
+- Runtime state the assistant writes (`models/`, `cache/`, `state/`, `traces/`) lives under the same root —
+  never delete it as part of an assets refresh.
 
 | Env var | Default | Purpose |
 |---|---|---|
@@ -103,6 +120,25 @@ docker buildx build --platform linux/arm/v7 -f docker/Dockerfile.armv7 \
 ```bash
 uv run python -m irene.tools.build_analyzer --config configs/standalone-x86_64.toml --docker
 uv run python -m irene.tools.build_analyzer --list-profiles
+```
+
+## The configuration editor image
+
+The donation/configuration editor ships as `wb-mqtt-voice-ui`: a small nginx container serving the built
+static app on **port 3000**, published as a single multi-arch manifest (the same tag runs on x86_64, aarch64,
+and armv7). It is not part of the standard controller deployment — run it wherever convenient when you need
+to edit donations or configuration:
+
+```bash
+docker run --rm -p 3000:3000 ghcr.io/droman42/wb-mqtt-voice-ui:latest
+```
+
+By default the app talks to Irene on **the same host it is served from**, port 6000. Point it elsewhere with
+the `API_BASE_URL` environment variable:
+
+```bash
+docker run --rm -p 3000:3000 -e API_BASE_URL=http://192.168.110.250:6000 \
+  ghcr.io/droman42/wb-mqtt-voice-ui:latest
 ```
 
 ## How the image is built

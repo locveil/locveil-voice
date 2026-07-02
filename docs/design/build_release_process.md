@@ -58,10 +58,14 @@ git-tag releases (a ceremony neither repo has; **version→tag coupling recorded
 currently hand-bump versions that are never stamped into images, and fixing that is a joint decision for later).
 
 ### D-4 — config-ui ships as a bridge-style nginx image — but not to the controller (yet)
-A seventh package **`wb-mqtt-voice-ui`**: `nginx:alpine` serving the built `dist/`, bridge proxy pattern
-(`BACKEND_HOST/PORT` env → `/api` proxied to Irene on `:6000`), **one multi-arch manifest**
-(amd64+arm64+armv7 — static files are arch-independent, so this adds no matrix burden). Built on the
-`build_ui` dispatch toggle, `needs: frontend-health`. **User scope note: it is NOT deployed on the controller
+A seventh package **`wb-mqtt-voice-ui`**: `nginx:alpine` serving the built `dist/`, **one multi-arch
+manifest** (amd64+arm64+armv7 — static files are arch-independent, so this adds no matrix burden). Built on
+the `build_ui` dispatch toggle, `needs: frontend-health`.
+_Amended at implementation (BUILD-9): **no nginx proxy** — the bridge's `/api` proxy doesn't map onto Irene
+(whose API has no path prefix), and Irene already serves permissive CORS. Instead, the bridge's
+**runtime-config pattern**: the entrypoint writes `/runtime-config.js` from an `API_BASE_URL` env var;
+empty/absent defaults to `http://<page-hostname>:6000` in the app, which covers both dev and the
+UI-next-to-backend deployment with zero configuration._ **User scope note: it is NOT deployed on the controller
 for now** — the `ops/` compose (D-5) ships with the UI service **commented out / profile-gated**, ready to
 enable when the donation editor graduates from developer tool to operator tool. This closes the
 "CI builds it, then it goes nowhere" drift with a real ship path that costs nothing at deploy time.

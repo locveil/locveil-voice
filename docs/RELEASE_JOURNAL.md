@@ -15,6 +15,26 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-02 — BUILD-9 DONE — the one gated CI/publish workflow is live in the tree.** `ci.yml` replaces the
+  three disconnected workflows (`backend-health`/`frontend-health`/`build-images`, deleted): a `changes`
+  path-filter fans out to `ledger-guard` (`check_scope.py` finally runs in CI), `backend-health` (the shared
+  **py-dev-gates@v0.1.1** trio with `install-extras: all,dev`, a NEW `uv lock --check` step to keep lockfile
+  honesty since the gate env is pip-resolved, plus the voice-specific analyzer/config/dependency/arch gates and
+  pytest), and `frontend-health`; publishing is dispatch-only, a `plan` job expands `targets`×`languages`
+  inputs (default: all 6 backend images), every publish `needs:` green health — the publish-from-red-tree hole
+  is closed. RU images keep unsuffixed names, EN adds `-en`; buildx cache per `<target>-<language>`. **D-6
+  guards are live:** each pushed image is pulled by digest and the run fails if `/app/assets` is non-empty;
+  size is budget-checked (placeholders 3.5/4.5/10 GB, to be tightened from the first dispatch's summary).
+  **config-ui ships:** `config-ui/Dockerfile` (node:22 → nginx:alpine, one multi-arch manifest) with the
+  runtime-config pattern — D-4 amended at implementation: NO nginx proxy (Irene's API has no path prefix and
+  already serves permissive CORS); the entrypoint writes `/runtime-config.js` from `API_BASE_URL`, and the app
+  defaults to `http://<page-hostname>:6000`. Verified locally: image built and smoke-run (env injection, SPA
+  fallback, 200s), config-ui `check`/`build`/`test` green (40 tests). The assets GHA artifact is dropped
+  (BUILD-10's git-pull sync replaces it; `build-docker.md` bridges the gap with a manual rsync note and now
+  documents the 7-package family, EN pulls, dispatch UX, and the models-never-baked guarantee). Note: the
+  workflow YAML parses clean; its live expression paths get validated by the first real dispatch. BUILD-9
+  moved active→done; BUILD-10 (`ops/`) is next.
+
 - **2026-07-02 — BUILD-8 DONE — build/release redesigned bridge-style (interactive; design at
   `docs/design/build_release_process.md`).** Requirements finalized with the user: organize the build the way
   `wb-mqtt-bridge` does. Two comparative maps showed we already share the tagging/GHCR/3-stage-lean-venv DNA

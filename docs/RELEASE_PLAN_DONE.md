@@ -2327,6 +2327,25 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       parity with Russian; no donation changes needed. No code/asset change. Design §2.
 
 ### Build & CI (BUILD)
+- [x] **BUILD-9** [BUILD] (P2) `[release]` — **DONE 2026-07-02.** Bridge-aligned CI/publish workflow implemented
+      per `build_release_process.md` D-1…D-4/D-6/D-7. **`ci.yml`** replaces `backend-health` + `frontend-health` +
+      `build-images` (all three deleted): `changes` path-filter → `ledger-guard` (`check_scope.py` now runs in CI) +
+      `backend-health` (**py-dev-gates@v0.1.1** with `install-extras: all,dev` for the lint-imports/no-type-checking/
+      pyright trio; NEW `uv lock --check` step keeps lockfile honesty since the gate env is pip-resolved; the voice
+      gates + pytest kept) + `frontend-health`; publish jobs are dispatch-only, `needs:` green health (the
+      publish-from-red-tree hole is closed). **Matrix:** a `plan` job expands `targets`/`languages` choice inputs
+      (default all) into ≤6 backend builds — RU unsuffixed, EN `-en`, per-`<target>-<language>` buildx cache, tag
+      triple unchanged. **D-6 guards live:** after push, the image is pulled by digest and the run FAILS if
+      `/app/assets` is non-empty; size vs per-target budget (placeholders 3.5/4.5/10 GB — tighten after the first
+      dispatch prints actuals to the summary). **UI image:** `config-ui/Dockerfile` (node:22 → nginx:alpine, ONE
+      multi-arch manifest amd64+arm64+armv7) + nginx.conf + entrypoint writing `/runtime-config.js` from
+      `API_BASE_URL`; `apiClient` default = injected base → else `http://<page-hostname>:6000` (D-4 amended at
+      implementation: **no proxy** — Irene's API has no path prefix and serves permissive CORS; runtime-config
+      pattern instead). The assets GHA artifact is gone (BUILD-10's git-pull sync replaces it; the guide bridges the
+      gap with a manual rsync note). Docs: `build-docker.md` rewritten (7-package table, EN pulls, dispatch UX, D-6
+      guarantee, UI image section). **Verified:** UI image built + smoke-run locally (runtime-config injection, SPA
+      fallback, healthy 200s); config-ui `check`/`build`/`test` green (40 tests); `ci.yml` YAML-parses; the live
+      expression paths validate on the first real dispatch (noted). No backend code touched.
 - [x] **BUILD-8** [BUILD][DESIGN] (P3) `[deferred]` — **DONE 2026-07-02 (design agreed, interactive).** The
       "additional asks" arrived: organize this repo's build the way `../wb-mqtt-bridge` does. Two comparative
       maps (voice vs bridge build machinery) fed the design at `docs/design/build_release_process.md`; four

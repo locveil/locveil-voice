@@ -103,10 +103,28 @@ interface RequestOptions extends RequestInit {
   headers?: Record<string, string>;
 }
 
+declare global {
+  interface Window {
+    /** Runtime API base, injected by /runtime-config.js (BUILD-9: set per-deployment
+     *  via the nginx image's API_BASE_URL env). Empty/absent → same-hostname fallback. */
+    __IRENE_API_BASE__?: string;
+  }
+}
+
+/** Resolve the backend base URL: deploy-time injection wins; otherwise assume Irene
+ *  runs on the same host as the page, on its standard port 6000 (covers both local
+ *  dev at localhost and the deployed UI served next to the backend). */
+function defaultApiBase(): string {
+  const injected = typeof window !== 'undefined' ? window.__IRENE_API_BASE__ : undefined;
+  if (injected) return injected;
+  const hostname = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
+  return `http://${hostname}:6000`;
+}
+
 class IreneApiClient {
   private baseUrl: string;
 
-  constructor(baseUrl: string = 'http://localhost:6000') {
+  constructor(baseUrl: string = defaultApiBase()) {
     this.baseUrl = baseUrl;
   }
 

@@ -384,21 +384,6 @@ _Trace-driven system testing (design `docs/design/trace_system_testing.md`, TEST
       **and TEST-17.** Design §14.
 
 ### Build & CI (BUILD)
-- [ ] **BUILD-9** [BUILD] (P2) `[release]` — **Implement the bridge-aligned CI/publish workflow** per
-      `docs/design/build_release_process.md` (BUILD-8, D-1…D-4/D-6/D-7). **(1)** merge `backend-health` +
-      `frontend-health` + `build-images` into one **`ci.yml`**: `changes` path-filter job → `ledger-guard`
-      (`check_scope.py` finally runs in CI) + `backend-health` (adopt `droman42/py-dev-gates@v0.1.1` for the
-      lint-imports/no-type-checking/pyright trio; keep the voice-specific gates + pytest verbatim) +
-      `frontend-health`; **(2)** dispatch-only publish job with a **targets × languages matrix** (default all
-      6): RU images keep unsuffixed names, EN adds `-en` (`wb-mqtt-voice-armv7-en` …), tag triple unchanged,
-      buildx cache scope `<target>-<language>`, `needs:` green health jobs (today an image can publish from a
-      red tree — closes); **(3)** **D-6 guards**: publish step fails if the built image's `/app/assets` is
-      non-empty + per-image size budgets (measure current sizes, add headroom) printed to the job summary;
-      **(4)** `config-ui` nginx image `wb-mqtt-voice-ui` (bridge proxy pattern, ONE multi-arch manifest
-      amd64+arm64+armv7, `build_ui` dispatch toggle, `needs: frontend-health`) — NOT deployed to the controller
-      for now (D-4); **(5)** drop the assets GHA artifact (BUILD-10 replaces it); delete the three superseded
-      workflows; update `docs/guides/build-docker.md` (dispatch UX, 7-package table, EN images)
-      (`user-facing-docs-are-done`). _Filed 2026-07-02 on BUILD-8 completion (`design-then-implement`)._
 - [ ] **BUILD-10** [BUILD][OPS] (P2) `[release]` — **`ops/` deploy story** per `build_release_process.md` D-5
       (bridge "deploy = pull, not build" pattern): `ops/docker-compose.yml` (Irene `:6000`, assets volume,
       mem limits, log caps; UI service present but disabled per D-4), `ops/update.sh` (rsync the repo
