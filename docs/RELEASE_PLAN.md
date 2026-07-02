@@ -202,18 +202,6 @@ See `docs/review/phase1_architecture_map.md` §5.
       `ConversationIntentHandler._trim_llm_context` / `UnifiedConversationContext.trim_handler_messages` — the trim
       call is already the single choke point, so summarization slots in front of it without touching call sites.
       _Filed 2026-07-02 from BUG-18._
-- [ ] **QUAL-58** [MEM][QUAL] (P3) `[deferred]` — **Memory-hygiene sweep (QUAL-57 M4–M8).** Bundle of small bounded-
-      but-wasteful / slow-growth items from `docs/review/arch_memory_review_2026-07-02.md`: **(M4)**
-      `AudioTranscoder._resampling_cache` retains up to 100 full audio blobs at ~0% hit rate on live audio
-      (`audio_helpers.py:546-676`, reply-conform path caches full TTS replies) — remove or key it usefully; **(M5)**
-      `ClientRegistry` per-identity history keysets (`_recent_actions`/`_failed_actions`/`_action_error_count`,
-      `client_registry.py:171-173`) never delete identity keys — prune with sessions; **(M6)** wire the advertised but
-      never-called `reap_dead_actions()` + `cleanup_expired_clients()` (`client_registry.py:393-413,502-509`) into a
-      periodic sweep (or delete the dead layer + fix the 4-layer docstring); **(M7)** `NotificationService` queue
-      maxsize + kill the consumer-less `get_notification_service()` mint path (`notifications.py:81,531-536`); hold
-      refs for the six orphaned provider `warm_up` `create_task` preloads (whisper/vosk/sherpa_onnx ASR,
-      piper/silero/vosk TTS); **(M8)** trace-dir rotation/cap (full base64 audio per traced utterance, unbounded
-      disk). _Filed 2026-07-02 from QUAL-57._
 - [ ] **QUAL-59** [API][QUAL] (P3) `[deferred]` — **Capability drift + dead code (QUAL-57 A6/A7).**
       **(A6)** `/system/capabilities` hardcodes provider/workflow lists diverging from entry-point reality
       (`webapi_router.py:716-719` advertises `continuous_listening`; only `unified_voice_assistant` exists) — derive

@@ -543,10 +543,17 @@ class AudioTranscoder:
     """
     
     # Phase 6: Performance optimization - resampling cache
+    # QUAL-58 (M4): bounded by BYTES as well as count — cached values are full audio blobs
+    # (the reply-conform path used to retain complete synthesized TTS replies: tens of MB on
+    # rate-mismatch deployments). Oversized results are never cached: anything that big is a
+    # one-off utterance, not a repeatable clip.
     _resampling_cache: Dict[tuple, bytes] = {}
     _cache_hits = 0
     _cache_misses = 0
     _max_cache_size = 100  # Maximum cached conversions
+    _max_cache_bytes = 4 * 1024 * 1024   # total budget for cached values
+    _max_entry_bytes = 1024 * 1024       # larger results bypass the cache
+    _cache_bytes = 0
     
     # Phase 6: Buffer management for conversion operations  
     _conversion_buffers: Dict[int, bytes] = {}
@@ -562,9 +569,11 @@ class AudioTranscoder:
             'cache_misses': cls._cache_misses,
             'hit_rate': hit_rate,
             'cache_size': len(cls._resampling_cache),
-            'max_cache_size': cls._max_cache_size
+            'max_cache_size': cls._max_cache_size,
+            'cache_bytes': cls._cache_bytes,
+            'max_cache_bytes': cls._max_cache_bytes
         }
-    
+
     @classmethod
     def clear_cache(cls):
         """Clear resampling cache to free memory."""
@@ -572,6 +581,26 @@ class AudioTranscoder:
         cls._conversion_buffers.clear()
         cls._cache_hits = 0
         cls._cache_misses = 0
+        cls._cache_bytes = 0
+
+    @classmethod
+    def _cache_store(cls, cache_key: tuple, data: bytes) -> None:
+        """Insert a resampled result, enforcing count AND byte bounds (QUAL-58 M4).
+
+        FIFO eviction on either bound; results over ``_max_entry_bytes`` are not cached
+        (full TTS replies / long utterances are one-offs — retaining them was the leak).
+        """
+        if len(data) > cls._max_entry_bytes:
+            return
+        old = cls._resampling_cache.pop(cache_key, None)
+        if old is not None:
+            cls._cache_bytes -= len(old)
+        cls._resampling_cache[cache_key] = data
+        cls._cache_bytes += len(data)
+        while cls._resampling_cache and (len(cls._resampling_cache) > cls._max_cache_size
+                                         or cls._cache_bytes > cls._max_cache_bytes):
+            oldest_key = next(iter(cls._resampling_cache))
+            cls._cache_bytes -= len(cls._resampling_cache.pop(oldest_key))
     
     @classmethod
     def _get_buffer(cls, size: int) -> bytes:
@@ -667,13 +696,8 @@ class AudioTranscoder:
             duration_ms = (time.time() - start_time) * 1000
             
             # Phase 6: Cache the resampled result for future use (ASR optimization)
-            if len(AudioTranscoder._resampling_cache) < AudioTranscoder._max_cache_size:
-                AudioTranscoder._resampling_cache[cache_key] = resampled_data
-            elif len(AudioTranscoder._resampling_cache) >= AudioTranscoder._max_cache_size:
-                # Remove oldest entry (simple FIFO eviction)
-                oldest_key = next(iter(AudioTranscoder._resampling_cache))
-                del AudioTranscoder._resampling_cache[oldest_key]
-                AudioTranscoder._resampling_cache[cache_key] = resampled_data
+            # QUAL-58 (M4): bounded insert — count + byte budget, oversized results skipped.
+            AudioTranscoder._cache_store(cache_key, resampled_data)
             
             # Create new AudioData with resampled data and preserved metadata
             return AudioData(

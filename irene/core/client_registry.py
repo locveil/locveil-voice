@@ -393,7 +393,12 @@ class ClientRegistry:
     async def cleanup_expired_clients(self) -> int:
         """
         Remove clients that haven't been seen recently.
-        
+
+        Deliberately NOT auto-wired into the periodic sweep (QUAL-58 decision): nothing
+        refreshes ``last_seen`` during a long-lived WS connection, so auto-expiry would
+        unregister a live-but-quiet satellite and drop its room/device metadata. Callable
+        for admin/manual housekeeping; auto-expiry needs a liveness touch first.
+
         Returns:
             Number of clients removed
         """
@@ -443,8 +448,10 @@ class ClientRegistry:
     # ------------------------------------------------------------------ #
     # Runtime action store (QUAL-28) — zombie-resistant, never persisted.  #
     # Reaper layers: (1) completion callback removes; (2) read-time        #
-    # liveness filter; (3) periodic sweep reap_dead_actions(); (4) TTL via #
-    # ActionRecord.expected_end + a hard per-identity cap.                  #
+    # liveness filter; (3) periodic sweep reap_dead_actions(), driven by   #
+    # the ContextManager cleanup loop (QUAL-58 — it previously had no      #
+    # runtime caller); (4) TTL via ActionRecord.expected_end + a hard      #
+    # per-identity cap.                                                    #
     # ------------------------------------------------------------------ #
 
     def add_action(self, record: ActionRecord) -> None:
@@ -531,6 +538,28 @@ class ClientRegistry:
 
     def get_recent_actions(self, physical_id: str) -> List[Dict[str, Any]]:
         return list(self._recent_actions.get(physical_id, []))
+
+    def prune_stale_history(self, max_age_seconds: float = 3600.0) -> int:
+        """Drop per-identity completed-action history whose NEWEST entry is older than the TTL
+        (QUAL-58 M5). The per-identity lists are capped (10 recent / 20 failed) but the identity
+        KEYS were never deleted — with session-derived physical ids, every ephemeral session that
+        ran a fire-and-forget action left a permanent keyset entry. History is short-term context
+        ("what just happened here"), so an hour-stale identity has nothing left to say. Driven by
+        the ContextManager cleanup loop alongside reap_dead_actions(). Returns identities pruned."""
+        now = time.time()
+        stale = []
+        for pid in set(self._recent_actions) | set(self._failed_actions) | set(self._action_error_count):
+            entries = self._recent_actions.get(pid, []) + self._failed_actions.get(pid, [])
+            newest = max((e.get("completed_at", 0.0) for e in entries), default=0.0)
+            if now - newest > max_age_seconds:
+                stale.append(pid)
+        for pid in stale:
+            self._recent_actions.pop(pid, None)
+            self._failed_actions.pop(pid, None)
+            self._action_error_count.pop(pid, None)
+        if stale:
+            logger.debug(f"Pruned completed-action history for {len(stale)} stale identit(ies)")
+        return len(stale)
 
     def get_failed_actions(self, physical_id: str) -> List[Dict[str, Any]]:
         return list(self._failed_actions.get(physical_id, []))

@@ -724,6 +724,24 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       Dependabot alerts (commits 05aa763/4e05a38) — no risky major bumps. **No code until scheduled + green-lit.**
 
 ### Code Quality & Review (QUAL)
+- [x] **QUAL-58** [MEM][QUAL] (P3) `[deferred]` — **DONE 2026-07-02.** Memory-hygiene sweep (QUAL-57 M4–M8), all five
+      items: **(M4)** `AudioTranscoder._resampling_cache` now bounded by BYTES too — 4 MB total budget + 1 MB
+      per-entry bypass (full TTS replies / long utterances are never cached; they were the tens-of-MB retention),
+      FIFO eviction on either bound, `cache_bytes` in stats; **(M5)** `ClientRegistry.prune_stale_history(3600s)` —
+      per-identity completed-action history keys (`_recent_actions`/`_failed_actions`/`_action_error_count`) are
+      dropped once their newest entry is an hour stale (keysets grew monotonically with session-derived ids);
+      **(M6)** the ContextManager cleanup loop (every `cleanup_interval`) now drives `reap_dead_actions()` (the
+      advertised layer-3 sweep finally has a runtime caller — docstring corrected) + the M5 prune;
+      `cleanup_expired_clients` deliberately stays manual — nothing refreshes `last_seen` on a live WS connection,
+      so auto-expiry would unregister a live-but-quiet satellite (documented in its docstring); **(M7)**
+      `NotificationService` queue bounded (maxsize 1000, `put_nowait` + drop-with-warning on overflow — never blocks
+      the F&F completion path) and `send_notification` lazily starts the processing loop, killing the consumer-less
+      getter-minted-instance path; the six provider `warm_up` preloads hold their task refs
+      (`self._warmup_task` — were GC-cancellable mid-model-load); **(M8)** trace dir rotated to the newest
+      `MAX_TRACE_FILES = 500` on every save (each file embeds full base64 audio; constant not config — same
+      safety-net reasoning as BUG-17). Regression: `test_memory_hygiene.py` (7 tests across M4/M5/M7/M8);
+      cache-stats shape test extended. Full suite 1139 passed / 7 skipped; pyright clean on all 11 touched files.
+      Evidence: `docs/review/arch_memory_review_2026-07-02.md` §M4–M8.
 - [x] **QUAL-57** [QUAL][REVIEW][ARCH] (P2) `[release]` — **DONE 2026-07-02.** **General architecture review +
       memory-overconsumption analysis** (user-requested). Deliverable: `docs/review/arch_memory_review_2026-07-02.md`.
       Method: 3 parallel deep-reads (architecture map / multi-turn memory audit / F&F QUAL-8 re-verification +

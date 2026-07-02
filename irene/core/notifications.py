@@ -78,7 +78,9 @@ class NotificationService:
     def __init__(self):
         self.logger = logging.getLogger(f"{__name__}.NotificationService")
         self._delivery_handlers: Dict[DeliveryMethod, Callable] = {}
-        self._notification_queue: asyncio.Queue = asyncio.Queue()
+        # QUAL-58 (M7): bounded — an unbounded queue with a stalled/absent consumer grows
+        # without limit; overflow drops with a warning (never blocks the F&F completion path).
+        self._notification_queue: asyncio.Queue = asyncio.Queue(maxsize=1000)
         self._processing_task: Optional[asyncio.Task] = None
         self._running = False
         self._metrics = {
@@ -163,9 +165,17 @@ class NotificationService:
             True if queued successfully, False otherwise
         """
         try:
-            await self._notification_queue.put(notification)
+            # QUAL-58 (M7): a getter-minted instance had no consumer — anything enqueued sat
+            # forever. Lazily start the processing loop so a producer always has a consumer.
+            if not self._running:
+                await self.start()
+            self._notification_queue.put_nowait(notification)
             self.logger.debug(f"Queued notification: {notification.type.value} - {notification.title}")
             return True
+        except asyncio.QueueFull:
+            self._metrics["failed_deliveries"] += 1
+            self.logger.warning(f"Notification queue full — dropped: {notification.type.value} - {notification.title}")
+            return False
         except Exception as e:
             self.logger.error(f"Failed to queue notification: {e}")
             return False

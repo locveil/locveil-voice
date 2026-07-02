@@ -55,7 +55,7 @@ class WhisperASRProvider(ASRProvider):
         if preload_models:
             # Schedule model loading for startup
             import asyncio
-            asyncio.create_task(self.warm_up())
+            self._warmup_task = asyncio.create_task(self.warm_up())  # QUAL-58: hold the ref (unreferenced tasks are GC-cancellable mid-load)
     
     @classmethod
     def _get_default_extension(cls) -> str:

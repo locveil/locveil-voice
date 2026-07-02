@@ -65,7 +65,7 @@ class PiperTTSProvider(TTSProvider):
         self._tts: Any = None  # sherpa_onnx.OfflineTts, lazily built
 
         if config.get("preload_models", False):
-            asyncio.create_task(self.warm_up())
+            self._warmup_task = asyncio.create_task(self.warm_up())  # QUAL-58: hold the ref (unreferenced tasks are GC-cancellable mid-load)
 
     def get_provider_name(self) -> str:
         return "piper"

@@ -75,7 +75,7 @@ class VoskTTSProvider(TTSProvider):
         if preload_models and self._available:
             # Schedule model loading for startup
             import asyncio
-            asyncio.create_task(self.warm_up())
+            self._warmup_task = asyncio.create_task(self.warm_up())  # QUAL-58: hold the ref (unreferenced tasks are GC-cancellable mid-load)
     
     async def is_available(self) -> bool:
         """Check if provider dependencies are available and functional"""

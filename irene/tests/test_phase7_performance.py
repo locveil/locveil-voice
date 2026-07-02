@@ -115,6 +115,7 @@ def test_get_cache_stats_shape():
     stats = AudioTranscoder.get_cache_stats()
     assert set(stats) == {
         "cache_hits", "cache_misses", "hit_rate", "cache_size", "max_cache_size",
+        "cache_bytes", "max_cache_bytes",  # QUAL-58 M4: byte budget
     }
     # empty cache => no division-by-zero, hit_rate defined
     assert stats["hit_rate"] == 0.0

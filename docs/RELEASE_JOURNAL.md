@@ -13,6 +13,26 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-02 — QUAL-58 DONE — memory-hygiene sweep (QUAL-57 M4–M8), all five items, user-requested same-day.**
+  **(M4)** the resampling cache is now byte-bounded: 4 MB total budget + 1 MB per-entry bypass (full synthesized
+  TTS replies are never cached — that was the tens-of-MB retention), FIFO on either bound, `cache_bytes` surfaced
+  in stats. **(M5)** new `ClientRegistry.prune_stale_history()` drops per-identity completed-action history keys
+  once their newest entry is an hour stale — the keysets grew monotonically with session-derived physical ids.
+  **(M6)** the ContextManager cleanup loop now drives the registry's hygiene each cycle: `reap_dead_actions()`
+  (the advertised layer-3 sweep finally has a runtime caller; the 4-layer docstring corrected) + the M5 prune.
+  Judgment call: `cleanup_expired_clients` deliberately left manual — nothing refreshes `last_seen` during a
+  live WS connection, so auto-expiry would unregister a live-but-quiet satellite mid-connection; documented in
+  its docstring (the ledger text offered wire-or-document). **(M7)** `NotificationService` queue bounded
+  (maxsize 1000; `put_nowait` + drop-with-warning so the F&F completion path never blocks) and
+  `send_notification` lazily starts the processing loop — the consumer-less getter-minted-instance path is dead;
+  the six provider `warm_up` preloads now hold their task refs (were GC-cancellable mid-model-load). **(M8)**
+  the trace dir is rotated to the newest `MAX_TRACE_FILES = 500` on every save (each file embeds full base64
+  audio); constant not config, same safety-net reasoning as BUG-17's cap. Gates: full suite 1139 passed /
+  7 skipped (7 new tests in `test_memory_hygiene.py`; cache-stats shape test extended); pyright clean on all 11
+  touched files; no user-facing doc describes any of these internals (checked); no config/REST shape change →
+  config-ui untouched. QUAL-58 moved active→done. Of the QUAL-57 memory findings only QUAL-60 (deferred
+  summarization enhancement) remains.
+
 - **2026-07-02 — BUG-18 DONE — LLM conversation store bounded; `max_context_length` finally real (user chose
   "window now + file summarization").** The config key was read and never applied — the conversation handler's
   message store and domain threads grew per turn for the session's life, and every turn shipped the full history

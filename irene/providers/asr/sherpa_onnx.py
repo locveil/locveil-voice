@@ -67,7 +67,7 @@ class SherpaOnnxASRProvider(ASRProvider):
         preload_models = config.get("preload_models", False)
         if preload_models:
             # Pay the ~38 s graph-init at boot, off the first-utterance critical path.
-            asyncio.create_task(self.warm_up())
+            self._warmup_task = asyncio.create_task(self.warm_up())  # QUAL-58: hold the ref (unreferenced tasks are GC-cancellable mid-load)
 
     # ------------------------------------------------------------------ identity
     def get_provider_name(self) -> str:

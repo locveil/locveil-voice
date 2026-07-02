@@ -885,11 +885,19 @@ class ContextManager:
                 # Log cleanup activity
                 if expired_sessions:
                     logger.info(f"Cleaned up {len(expired_sessions)} expired contexts")
-                    
+
                     # Record cleanup metrics (if method exists)
                     if hasattr(self.metrics_collector, 'record_session_cleanup'):
                         self.metrics_collector.record_session_cleanup(len(expired_sessions))
-                
+
+                # QUAL-58 (M6): this loop also drives the ClientRegistry's periodic hygiene —
+                # the action-store layer-3 reaper and the completed-action-history TTL prune
+                # both had no runtime caller before. (cleanup_expired_clients stays manual:
+                # nothing refreshes last_seen on a live WS connection — see its docstring.)
+                registry = get_client_registry()
+                registry.reap_dead_actions()
+                registry.prune_stale_history()
+
                 # Update last cleanup time
                 self.last_cleanup = time.time()
                 

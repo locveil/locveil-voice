@@ -1004,8 +1004,29 @@ def resolve_traces_dir(trace_config: Any, assets_config: Any) -> Path:
     return assets_config.traces_root
 
 
+# QUAL-58 (M8): every trace file embeds the FULL utterance audio as base64 — an always-on
+# traced deployment grows the trace dir without bound. Rotation cap: newest files win. A
+# constant, not config — a disk safety net, not a tunable (same reasoning as BUG-17's cap).
+MAX_TRACE_FILES = 500
+
+
+def _prune_trace_dir(traces_dir: Path, max_files: int = MAX_TRACE_FILES) -> None:
+    """Delete the oldest trace JSONs beyond ``max_files`` (QUAL-58 M8). Best-effort."""
+    try:
+        files = sorted(traces_dir.glob("*.json"), key=lambda f: f.stat().st_mtime)
+        for stale in files[:-max_files] if max_files > 0 else []:
+            stale.unlink()
+        if len(files) > max_files > 0:
+            logger.debug(f"Trace rotation removed {len(files) - max_files} old trace(s) from {traces_dir}")
+    except OSError as e:
+        logger.warning(f"Trace rotation failed for {traces_dir}: {e}")
+
+
 def save_trace(trace: Optional["TraceContext"], trace_config: Any, assets_config: Any) -> Optional[Path]:
-    """Persist a trace to `<traces_dir>/<request_id>.json` — only when startup tracing is on (D-17)."""
+    """Persist a trace to `<traces_dir>/<request_id>.json` — only when startup tracing is on (D-17).
+
+    After each save the directory is rotated to the newest ``MAX_TRACE_FILES`` (QUAL-58 M8).
+    """
     if trace is None or not trace.enabled:
         return None
     if not trace_config or not getattr(trace_config, "enabled", False):
@@ -1014,6 +1035,7 @@ def save_trace(trace: Optional["TraceContext"], trace_config: Any, assets_config
         out = resolve_traces_dir(trace_config, assets_config) / f"{trace.request_id}.json"
         trace.to_file(out)
         logger.debug(f"Saved trace {trace.request_id} → {out}")
+        _prune_trace_dir(out.parent)
         return out
     except Exception as e:
         logger.error(f"Failed to save trace {trace.request_id}: {e}")
