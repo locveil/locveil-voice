@@ -2,7 +2,8 @@
 # IRENE — WB7 (armv7l) SATELLITE-SERVER — ENGLISH (I18N-4)
 # ============================================================
 # English deployment variant of embedded-armv7.toml. Only the language-bearing fields differ:
-# ASR = sherpa_onnx + zipformer-en-20M (English streaming transducer, ~44 MB int8 — I18N-2),
+# ASR = sherpa_moonshine + moonshine-tiny-en (offline English, 43 MB merged .ort — I18N-2; the
+# earlier streaming zipformer-en-20M was rejected: online models drop the head of bounded commands),
 # TTS = piper voice "amy" (en_US — I18N-3), and default_language flipped to "en" everywhere with
 # auto-detect OFF (language is fixed per deployment; the voice pipeline is monolingual — see
 # docs/design/multilingual_deployment.md). All other settings mirror the Russian armv7 config.

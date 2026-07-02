@@ -30,6 +30,13 @@ logger = logging.getLogger(__name__)
 # force-finalized (the VAD path's `max_segment_duration_s` semantics) and the loop continues.
 WS_MAX_UTTERANCE_SECONDS = 60
 
+# BUG-13: the streaming branch's read-idle bound. A bounded client that stops sending
+# without {"type":"end"} would otherwise hang forever — silence-less bounded audio never
+# trips the model's endpoint detector, and the receive() blocks indefinitely. After this
+# many seconds with NO frames, the current utterance is force-finalized. Always-on devices
+# stream continuously (silence included), so this never fires for them.
+WS_STREAMING_IDLE_TIMEOUT_SECONDS = 10.0
+
 
 async def _generate_asyncapi_spec(core: AsyncVACore) -> Dict[str, Any]:
     """Generate combined AsyncAPI specification from all components"""
@@ -842,28 +849,45 @@ def create_webapi_router(
             asr: Any = core.component_manager.get_component('asr') if core.component_manager else None
             if reg.get("mode") == "streaming" and asr is not None and getattr(asr, "supports_streaming", None) \
                     and asr.supports_streaming():
+                # BUG-13 (re-scoped): the streaming path serves MULTIPLE utterances per
+                # connection (batch-floor parity — each {"type":"end"} / idle force-finalize
+                # ends one utterance and the loop re-arms), and a bounded client that stops
+                # sending WITHOUT an end frame is force-finalized after the idle timeout
+                # instead of hanging on an endpoint that bounded audio never triggers.
+                disconnected = False
+
                 async def _pcm_frames():
+                    nonlocal disconnected
                     while True:
-                        msg = await websocket.receive()
+                        try:
+                            msg = await asyncio.wait_for(
+                                websocket.receive(), timeout=WS_STREAMING_IDLE_TIMEOUT_SECONDS)
+                        except asyncio.TimeoutError:
+                            return  # idle — force-finalize whatever was streamed (BUG-13)
                         if msg.get("type") == "websocket.disconnect":
+                            disconnected = True
                             return
                         if msg.get("bytes") is not None:
                             yield msg["bytes"]
                         elif msg.get("text") is not None and (json.loads(msg["text"]) or {}).get("type") == "end":
                             return  # a device hard-finalize is still honored
-                async for text, is_final in asr.transcribe_stream_segments(_pcm_frames()):
-                    if not is_final:
-                        await websocket.send_json({"type": "partial", "text": text})
-                        continue
-                    result = await core.workflow_manager.process_text_input(
-                        text=text, session_id=session_id, wants_audio=False,
-                        client_context=client_context)
-                    # QUAL-54: surface intent under `intent_name` like REST /execute (the orchestrator
-                    # stores it as `original_intent`); keep the rest of the raw metadata.
-                    _meta = {**(result.metadata or {}), "intent_name": (result.metadata or {}).get("original_intent")}
-                    await websocket.send_json({"type": "response", "text": result.text,
-                                               "success": result.success, "metadata": _meta})
-                    await _route_reply(result)
+
+                while not disconnected:
+                    async for text, is_final in asr.transcribe_stream_segments(_pcm_frames()):
+                        if not is_final:
+                            await websocket.send_json({"type": "partial", "text": text})
+                            continue
+                        result = await core.workflow_manager.process_text_input(
+                            text=text, session_id=session_id, wants_audio=False,
+                            client_context=client_context)
+                        # QUAL-54: surface intent under `intent_name` like REST /execute (the orchestrator
+                        # stores it as `original_intent`); keep the rest of the raw metadata.
+                        _meta = {**(result.metadata or {}), "intent_name": (result.metadata or {}).get("original_intent")}
+                        await websocket.send_json({"type": "response", "text": result.text,
+                                                   "success": result.success, "metadata": _meta})
+                        await _route_reply(result)
+                    # Utterance ended (end frame / idle / disconnect) — re-arm unless the
+                    # client is gone. A fresh recognizer stream is created per utterance.
                 return
 
             # Step 2 (batch floor) — utterance loop: accumulate binary PCM until an {"type":"end"}

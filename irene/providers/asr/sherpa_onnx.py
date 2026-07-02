@@ -63,6 +63,10 @@ class SherpaOnnxASRProvider(ASRProvider):
             "vosk-streaming", "vosk-streaming-transducer", "zipformer-streaming", "streaming-transducer")
 
         self._recognizer: Any = None
+        # BUG-13: the boot warm-up task and the first request used to RACE _load_recognizer
+        # (the None-check guards only the entry, not the whole download+build body) — two
+        # recognizer instances, 2× model RAM. One loads, the other waits.
+        self._load_lock = asyncio.Lock()
 
         preload_models = config.get("preload_models", False)
         if preload_models:
@@ -90,8 +94,16 @@ class SherpaOnnxASRProvider(ASRProvider):
         return bool(self.asset_manager.get_model_info(provider, self.model_id))
 
     async def _load_recognizer(self) -> None:
+        """Load once, under the lock — concurrent callers (warm-up + first request) wait
+        instead of double-loading (BUG-13). Subclasses override :meth:`_do_load_recognizer`."""
         if self._recognizer is not None:
             return
+        async with self._load_lock:
+            if self._recognizer is not None:
+                return
+            await self._do_load_recognizer()
+
+    async def _do_load_recognizer(self) -> None:
         import sherpa_onnx
 
         # First-run download of the multi-file pack into the mounted asset folder (§6).

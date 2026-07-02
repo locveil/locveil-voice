@@ -61,9 +61,8 @@ class SherpaMoonshineASRProvider(SherpaOnnxASRProvider):
             ) from e
         return {"encoder": encoder, "merged_decoder": merged, "tokens": tokens}
 
-    async def _load_recognizer(self) -> None:
-        if self._recognizer is not None:
-            return
+    async def _do_load_recognizer(self) -> None:
+        # (BUG-13: load-locking lives in the base `_load_recognizer`; this is the guarded body.)
         import sherpa_onnx
         # sherpa-onnx's Python objects are dynamically built and the merged-decoder path isn't in its
         # typed public API (from_moonshine only exposes the old 4-file layout), so build against `Any`.

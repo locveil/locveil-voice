@@ -15,6 +15,21 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-02 — BUG-13 DONE (re-scoped with the user) — the streaming-branch hang is unreproducible; three
+  real defects found by the repro are fixed.** Reconciliation ran a live repro (RU streaming pack, bounded
+  utterance + `end`): the response arrives — the EOF-finalize has been in the tree since 2026-06-04, and the
+  filed 30s hang belonged to the few-hours zipformer window (model rejected + removed same day; its
+  endpoint-chops-bounded-commands behavior confirmed live — the online model loses "10 минут", exactly why
+  satellites use offline Moonshine). Per the user's "re-scope + fix now": **(1)** the streaming branch now
+  serves multiple utterances per connection (used to close after the first response — batch-floor parity
+  restored); **(2)** a bounded client that stops sending without `end` no longer hangs forever — a 10s read-idle
+  timeout force-finalizes (the plausible original culprit and a real hole regardless); **(3)** warm-up and the
+  first request no longer race `_load_recognizer` into TWO model instances (2× RAM on the WB7) — double-checked
+  lock in the base loader, subclass inherits. Stale zipformer claim in the EN config header corrected.
+  Verified three ways: 2 new WS regression tests + 1 legacy fake made sherpa-honest; live SUT run (3 utterances
+  on one socket, with and without `end`, all answered; recognizer loaded ONCE — was twice). Suite 1158 / 7
+  skipped; pyright clean. BUG-13 moved active→done.
+
 - **2026-07-02 — BUILD-10 DONE — the `ops/` deploy story lands; the BUILD-8 arc closes.** First: CI run 5
   (`7e2c50b`) is **fully green** — the new `ci.yml` gate side is validated end to end after the four-defect
   shakeout. Then the bridge's "deploy = pull, not build" pattern arrived here: `ops/docker-compose.yml` (Irene

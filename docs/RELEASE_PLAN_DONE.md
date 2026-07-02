@@ -1772,6 +1772,24 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       console-LLM fallback / `fallback_providers` — left as-is; not in scope here.)
 
 ### Bugs (BUG)
+- [x] **BUG-13** [ASR][WS] (P3) `[deferred]` — **DONE 2026-07-02 (re-scoped with the user after
+      reconciliation).** **The filed 30s hang does not reproduce**: live repro (RU streaming pack
+      `vosk-model-small-streaming-ru`, `mode="streaming"`, bounded utterance + `{"type":"end"}`) gets a response —
+      the provider's EOF-finalize (in the tree since 2026-06-04) works, and the eval provider does send `end`. The
+      original 4/4-timeout existed only in the few-hours zipformer-en-20M window on 2026-07-01; that model was
+      rejected (endpoint chops bounded commands — confirmed live: the online model loses the duration in "таймер
+      на 10 минут") and removed from the catalog the same day, so the exact conditions left the tree. **The repro
+      surfaced 3 real defects in the streaming branch, fixed now (user: "re-scope + fix"):** **(1)** the branch
+      served ONE utterance then closed the connection — now a `while` loop with batch-floor parity (each
+      end/idle/finalize re-arms; fresh recognizer stream per utterance); **(2)** a bounded client that stops
+      sending WITHOUT `end` hung forever (bounded audio never trips the model endpoint; `receive()` blocked) — new
+      `WS_STREAMING_IDLE_TIMEOUT_SECONDS = 10` force-finalizes the utterance; **(3)** boot warm-up and the first
+      request RACED `_load_recognizer` → two recognizer instances, 2× model RAM — double-checked `asyncio.Lock`
+      in the base loader (`_do_load_recognizer` split; Moonshine subclass inherits), live-verified: 1 load (was 2).
+      Also: stale `embedded-armv7-en.toml` header (claimed zipformer; body is Moonshine) corrected. Regression: 2
+      new WS tests (multi-utterance on one socket; no-end force-finalize with patched timeout) + the legacy fake
+      made sherpa-honest (empty stream finalizes to nothing). Live verification: 3 utterances on one connection
+      (with end ×2, without end ×1) all answered, single model load. Suite 1158 passed / 7 skipped; pyright clean.
 - [x] **BUG-21** [BUILD][TOOLS] (P2) `[release]` — **DONE 2026-07-02 (filed + fixed same day; surfaced by the
       BUILD-9 live CI runs + the user's local `--validate-all-profiles` output).** Double defect in the
       build-analyzer validation gate: **(1) stale rule** — "TTS providers enabled but no audio output providers

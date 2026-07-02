@@ -310,20 +310,6 @@ _Apply to every remediation task below (from the 4 review docs + QUAL-25/26). So
 _Discrete functional defects (distinct from QUAL refactors/quality work). Surfaced from any source; filed before fixing._
 
 
-- [ ] **BUG-13** [ASR][WS] (P3) `[deferred]` — **`/ws/audio` server-authoritative *streaming* branch hangs for
-      bounded (device-signalled) utterances.** When the client registers `mode="streaming"` **and** the ASR reports
-      `supports_streaming()` (a real online recognizer), the handler takes the streaming branch
-      (`irene/runners/webapi_router.py` ~824: `async for … asr.transcribe_stream_segments(_pcm_frames())`). Driven by a
-      bounded utterance (PCM frames + `{"type":"end"}`, as the ESP32 satellite and the eval provider send), it emits
-      **no partial, no response** — the connection just sits until the client's 30 s timeout, then closes. Reproduced
-      2026-07-01 with a streaming ASR (`zipformer-en-20M`) via `make ws CONFIG=embedded-armv7-en` (4/4 TimeoutError; SUT
-      log shows register → open → 30 s → close, nothing between). The **batch** branch (`process_audio_input`) responds
-      correctly for the same input, so the streaming branch never finalizes on stream-end for this delivery shape.
-      Never caught before because the eval's ASRs were all **offline** (`supports_streaming()` False → batch branch).
-      Fix options: finalize the streaming branch on `{"type":"end"}` / generator exhaustion, or don't route
-      bounded-utterance clients into it. Low current impact (the shipped satellite path is batch; see I18N-2 — armv7
-      English will use an offline ASR anyway), but a real latent defect in the streaming path.
-
 - [ ] **BUG-5** [NLU/I18N/DONATION] (P3) `[deferred]` — **Donation en files missing user-facing translations
       (recognition enrichment).** The translation audit (under BUG-4) found Russian donation files richer than English:
       ~28 params across 13 handlers have RU `aliases` (param-name synonyms) with no EN equivalent, and ~9 params have

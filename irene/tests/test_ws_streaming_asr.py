@@ -88,6 +88,8 @@ def test_ws_streaming_path_fires_nlu_per_final_segment():
             received = bytearray()
             async for chunk in audio_stream:           # drains until {"type":"end"} / disconnect
                 received.extend(chunk)
+            if not received:
+                return  # BUG-13 re-arm cycle with no audio → nothing to finalize (like sherpa)
             captured["stream_len"] = len(received)
             for seg in [("привет", False), ("привет мир", True), ("спасибо", True)]:
                 yield seg
@@ -175,3 +177,114 @@ def test_ws_streaming_request_falls_back_to_batch_when_asr_not_streaming():
         assert ws.receive_json()["text"] == "готово"
 
     assert captured["audio_len"] == 320
+
+
+def test_ws_streaming_serves_multiple_utterances_per_connection():
+    """BUG-13 (re-scoped): each {"type":"end"} finalizes ONE utterance and the connection
+    re-arms for the next — batch-floor parity (used to close after the first response)."""
+    pytest.importorskip("fastapi")
+    from fastapi.testclient import TestClient
+
+    class _ASR:
+        def __init__(self):
+            self.calls = 0
+
+        def supports_streaming(self, provider=None):
+            return True
+
+        async def transcribe_stream_segments(self, audio_stream, **kwargs):
+            self.calls += 1
+            n = 0
+            async for chunk in audio_stream:
+                n += len(chunk)
+            if n:  # empty re-arm cycles (idle/disconnect) finalize to nothing, like sherpa
+                yield (f"утт{self.calls}", True)
+
+    class _CM:
+        def __init__(self, asr):
+            self._asr = asr
+        def get_component(self, name):
+            return self._asr if name == "asr" else None
+        def get_components(self):
+            return {}
+
+    class _WM:
+        async def process_text_input(self, text, session_id=None, wants_audio=False,
+                                     client_context=None, trace_context=None):
+            return types.SimpleNamespace(text=f"ответ: {text}", success=True,
+                                         metadata={}, should_speak=True)
+
+    class _Core:
+        def __init__(self):
+            self.workflow_manager = _WM()
+            self.config = None
+            self.component_manager = _CM(_ASR())
+            self.plugin_manager = None
+            self.output_manager = None
+
+    with TestClient(_make_app(_Core())).websocket_connect("/ws/audio") as ws:
+        ws.send_text(json.dumps({"type": "register", "client_id": "kitchen_node",
+                                 "room_name": "Кухня", "mode": "streaming", "sample_rate": 16000}))
+        assert ws.receive_json()["type"] == "registered"
+
+        ws.send_bytes(b"\x00\x01" * 320)
+        ws.send_text(json.dumps({"type": "end"}))
+        assert ws.receive_json()["text"] == "ответ: утт1"
+
+        # the connection survives — second utterance, same socket
+        ws.send_bytes(b"\x00\x01" * 320)
+        ws.send_text(json.dumps({"type": "end"}))
+        assert ws.receive_json()["text"] == "ответ: утт2"
+
+
+def test_ws_streaming_bounded_client_without_end_is_force_finalized(monkeypatch):
+    """BUG-13 (re-scoped): a bounded client that stops sending WITHOUT an end frame used to
+    hang forever (bounded audio never trips the model endpoint; receive() blocked). The idle
+    timeout now force-finalizes the utterance."""
+    pytest.importorskip("fastapi")
+    from fastapi.testclient import TestClient
+    from irene.runners import webapi_router as wr
+
+    monkeypatch.setattr(wr, "WS_STREAMING_IDLE_TIMEOUT_SECONDS", 0.3)
+
+    class _ASR:
+        def supports_streaming(self, provider=None):
+            return True
+
+        async def transcribe_stream_segments(self, audio_stream, **kwargs):
+            n = 0
+            async for chunk in audio_stream:
+                n += len(chunk)
+            if n:
+                yield ("таймер на десять минут", True)
+
+    class _CM:
+        def __init__(self, asr):
+            self._asr = asr
+        def get_component(self, name):
+            return self._asr if name == "asr" else None
+        def get_components(self):
+            return {}
+
+    class _WM:
+        async def process_text_input(self, text, session_id=None, wants_audio=False,
+                                     client_context=None, trace_context=None):
+            return types.SimpleNamespace(text=f"ответ: {text}", success=True,
+                                         metadata={}, should_speak=True)
+
+    class _Core:
+        def __init__(self):
+            self.workflow_manager = _WM()
+            self.config = None
+            self.component_manager = _CM(_ASR())
+            self.plugin_manager = None
+            self.output_manager = None
+
+    with TestClient(_make_app(_Core())).websocket_connect("/ws/audio") as ws:
+        ws.send_text(json.dumps({"type": "register", "client_id": "kitchen_node",
+                                 "room_name": "Кухня", "mode": "streaming", "sample_rate": 16000}))
+        assert ws.receive_json()["type"] == "registered"
+        ws.send_bytes(b"\x00\x01" * 320)
+        # NO end frame — the idle timeout must finalize and answer anyway
+        resp = ws.receive_json()
+        assert resp["type"] == "response" and resp["text"] == "ответ: таймер на десять минут"
