@@ -15,6 +15,20 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-02 — BUG-21 DONE + BUILD-9 CI shakeout — four live runs, four real defects, none of them the
+  workflow's logic.** Greening the new `ci.yml` on real pushes surfaced, in order: **(1)** `.python-version` is a
+  gitignored local pin → py-dev-gates needs an explicit `python-version: "3.11"`; **(2)** the `all` extra wasn't
+  all — `tts-ruaccent` + `vad-tflite` missing (masked for months by `uv sync --all-extras`; exposed by the
+  action's `pip install .[all,dev]`; pyright failed on `ruaccent`/`pymicro_vad` imports — packaging metadata, NOT
+  a TTS-provider regression); **(3)** the config-validator step lost its `--config-dir configs/` arg in the port;
+  **(4) = BUG-21**, spotted by the user's local run: the build-analyzer's "TTS but no audio output" rule predates
+  ARCH-22 (satellites synthesize + stream to the ESP32 reply channel with no local audio — all four satellite
+  profiles ❌ INVALID), AND `--validate-all-profiles` returned 0 regardless — the CI gate had been decorative in
+  the old workflow too. Fixed: the rule now errors only when TTS has neither a local audio provider nor
+  `web_api_enabled` (recorded on `BuildRequirements`), the tool exits 1 on any invalid profile, and
+  `test_smoke_e2e.VENV_BIN` resolves next to `sys.executable` (the hardcoded `.venv/bin` broke in the pip-based
+  CI env). All 12 profiles VALID; suite 1156 passed / 7 skipped locally.
+
 - **2026-07-02 — BUILD-9 DONE — the one gated CI/publish workflow is live in the tree.** `ci.yml` replaces the
   three disconnected workflows (`backend-health`/`frontend-health`/`build-images`, deleted): a `changes`
   path-filter fans out to `ledger-guard` (`check_scope.py` finally runs in CI), `backend-health` (the shared

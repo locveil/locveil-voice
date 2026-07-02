@@ -46,7 +46,11 @@ class BuildRequirements:
     
     # Configuration profile name
     profile_name: str = ""
-    
+
+    # BUG-21: whether the profile serves the web API — a TTS reply can leave through the
+    # WS reply channel (ARCH-22 satellites) even with no local audio provider.
+    web_api_enabled: bool = False
+
     # Validation results
     validation_errors: List[str] = field(default_factory=list)
     validation_warnings: List[str] = field(default_factory=list)
@@ -156,6 +160,9 @@ class IreneBuildAnalyzer:
         
         # Initialize requirements
         requirements = BuildRequirements(profile_name=config_file.stem)
+        # BUG-21: record the web-API reply-channel capability for validation (see
+        # _validate_critical_providers — satellite profiles do TTS with no local audio).
+        requirements.web_api_enabled = bool(config.get("system", {}).get("web_api_enabled", False))
         
         # Analyze enabled providers across all namespaces
         self._analyze_providers(config, requirements)
@@ -821,8 +828,13 @@ class IreneBuildAnalyzer:
         tts_providers = requirements.enabled_providers.get("irene.providers.tts", [])
         audio_providers = requirements.enabled_providers.get("irene.providers.audio", [])
         
-        if tts_providers and not audio_providers:
-            result.errors.append("TTS providers enabled but no audio output providers configured")
+        # BUG-21: TTS needs SOME way out — a local audio provider OR the web API's reply
+        # channel (ARCH-22: satellite profiles synthesize and stream to the ESP32; they
+        # deliberately have no local audio output). Only TTS with NEITHER path is dead.
+        if tts_providers and not audio_providers and not requirements.web_api_enabled:
+            result.errors.append(
+                "TTS providers enabled but no output path configured "
+                "(no audio provider and web_api_enabled is false)")
         
         # Check for ASR if microphone input is expected
         components = requirements.enabled_providers.get("irene.components", [])
@@ -1071,8 +1083,10 @@ Examples:
                         print(f"  ERROR: {error}")
                     for warning in result["warnings"]:
                         print(f"  WARNING: {warning}")
-            
-            return 0
+
+            # BUG-21: this used to `return 0` unconditionally — the CI gate that runs
+            # --validate-all-profiles was decorative. Invalid profiles now fail the run.
+            return 0 if all(r["valid"] for r in results.values()) else 1
         
         if not args.config:
             parser.error("--config is required unless using --list-profiles or --validate-all-profiles")

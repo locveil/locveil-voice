@@ -1772,6 +1772,18 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       console-LLM fallback / `fallback_providers` — left as-is; not in scope here.)
 
 ### Bugs (BUG)
+- [x] **BUG-21** [BUILD][TOOLS] (P2) `[release]` — **DONE 2026-07-02 (filed + fixed same day; surfaced by the
+      BUILD-9 live CI runs + the user's local `--validate-all-profiles` output).** Double defect in the
+      build-analyzer validation gate: **(1) stale rule** — "TTS providers enabled but no audio output providers
+      configured" flagged all four satellite profiles as INVALID, but that combination is the ARCH-22 design:
+      satellites synthesize TTS and stream the reply over the WS reply channel with deliberately no local audio
+      provider. Fixed: the analyzer records `system.web_api_enabled` on `BuildRequirements` and errors only when TTS
+      has NEITHER a local audio provider NOR the web-API reply channel (a truly dead TTS). **(2) swallowed exit
+      code** — `--validate-all-profiles` printed ❌ INVALID and `return 0` unconditionally, so the CI gate (old
+      backend-health AND the new ci.yml) had been decorative all along; it now exits 1 when any profile is invalid.
+      Also in this change: `test_smoke_e2e.VENV_BIN` resolves console scripts next to `sys.executable` instead of
+      the hardcoded `.venv/bin` (absent in the pip-based CI env — run-4 failure). Verified: all 12 profiles VALID,
+      tool exit honest, full suite 1156 passed / 7 skipped.
 - [x] **BUG-20** [TEST] (P2) `[release]` — **DONE 2026-07-02 (filed + fixed same day; surfaced by the QUAL-61 gate
       runs).** The smoke suite's "offline degrades gracefully" test was **not offline**: the SUT subprocess inherited
       real LLM keys from the developer shell (the eval judge's `DEEPSEEK_API_KEY`) AND from the repo-root `.env`

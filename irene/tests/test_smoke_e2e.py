@@ -23,6 +23,7 @@ import os
 import signal
 import socket
 import subprocess
+import sys
 import time
 import urllib.request
 from pathlib import Path
@@ -31,7 +32,9 @@ import pytest
 
 REPO = Path(__file__).resolve().parents[2]
 CONFIG = str(REPO / "configs" / "config-master.toml")
-VENV_BIN = REPO / ".venv" / "bin"
+# Console scripts live next to the running interpreter — .venv/bin locally, the runner's
+# tool env in CI (which has no .venv; the old hardcoded REPO/.venv/bin broke there).
+VENV_BIN = Path(sys.executable).parent
 
 
 def _free_port() -> int:
