@@ -136,9 +136,13 @@ These are non-obvious and have already caused (and cost) bugs — keep them in m
   the *recognized speech* at `metadata.audio_processing.transcribed_text` on the batch path — the provider reads that
   (falling back to a partial, then the reply text), so the WER assertion scores ASR accuracy, not the assistant's
   reply. Confirmed live: `«поставь таймер на десять минут»` → WER 0.
-- **DeepSeek-as-judge on Russian is unvalidated.** Hand-score a few replies and check agreement
-  before trusting UX pass/fail in CI (eval-commons `ARCHITECTURE.md` §7.1). Treat UX verdicts as
-  indicative for now.
+- **DeepSeek-as-judge on Russian is CALIBRATED** (2026-07-02): a 20-case human-labeled set
+  (native speaker) measured 16/16 agreement, Cohen's κ = 1.0 in-sample against the shipped shared
+  rubrics — see eval-commons `examples/ru-ux-calibration/` for the set, method and caveats.
+  Russian UX pass/fail is CI-trustworthy; re-run the calibration set after **any** rubric edit
+  (a past fix silently regressed a neighboring criterion), and note the English rubrics carry the
+  same structure but are uncalibrated. The live UX cases reference the shared rubric files
+  directly (`file://…/shared/rubrics/{ru,en}/*.txt`) — edit them there, never inline.
 - **`serve`/`compare`** launch Irene with `uv run irene-webapi --port 6000`; adjust the command in
   the Makefile if your runner takes the config/port differently.
 - **Next refinement:** once the WS suite has run once, the inline cases can be split into

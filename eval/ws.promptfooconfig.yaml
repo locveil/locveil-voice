@@ -58,7 +58,7 @@ tests:
       - type: javascript
         value: JSON.parse(output).intent_name === 'timer.set' && JSON.parse(output).success === true
 
-  # ── 3. Conversational UX (DeepSeek judge; co-equal rubric, cf. shared/rubrics/ru-ux.yaml) ──
+  # ── 3. Conversational UX (DeepSeek judge; calibrated shared rubric — eval-commons examples/ru-ux-calibration) ──
   - description: RU UX — assistant confirms the timer in natural Russian
     metadata: { kind: ux, language: ru }
     vars:
@@ -66,13 +66,8 @@ tests:
     assert:
       - type: llm-rubric
         transform: JSON.parse(output).response_text
-        value: >
-          Ответ оценивается как подтверждение выполненного действия. Оцени как пройдено ТОЛЬКО
-          если одновременно выполнены ВСЕ условия: (1) ответ полностью на русском языке, без
-          англоязычных слов или фраз; (2) ясно и однозначно подтверждено, что запрошенное
-          действие выполнено (например «готово», «таймер установлен»), без неоднозначности об
-          успехе; (3) нет сырой технической ошибки или трейсбека. Технические идентификаторы
-          устройств оценивать не нужно. Если хотя бы одно условие не выполнено — оцени как НЕ пройдено.
+        # TEST-16: the CALIBRATED shared rubric — single source, no inline drift.
+        value: "file://../../eval-commons/shared/rubrics/ru/confirms_action_ru.txt"
 
   # ── 4. Graceful-failure UX (unreachable device) ────────────────────────────────
   - description: RU UX — polite, human-readable failure when a device is unreachable
@@ -85,13 +80,8 @@ tests:
     assert:
       - type: llm-rubric
         transform: JSON.parse(output).response_text
-        value: >
-          Ответ оценивается как сообщение о невозможности выполнить действие. Оцени как пройдено
-          ТОЛЬКО если одновременно выполнены ВСЕ условия: (1) ответ полностью на русском языке,
-          без англоязычных слов или фраз; (2) тон вежливый и доброжелательный, без грубости;
-          (3) нет сырой технической ошибки, кода ошибки или трейсбека; (4) проблема объяснена
-          понятно и человекочитаемо, по возможности предложен следующий шаг. Если хотя бы одно
-          условие не выполнено — оцени как НЕ пройдено.
+        # TEST-16: the CALIBRATED shared rubric — single source, no inline drift.
+        value: "file://../../eval-commons/shared/rubrics/ru/graceful_failure_ru.txt"
 
   # ═══════════════════════════ ENGLISH (language: en) ═══════════════════════════
   # Same four scenarios, English audio/reference/rubric. Fixtures pending recording (fixtures/en/*).
@@ -116,7 +106,7 @@ tests:
       - type: javascript
         value: JSON.parse(output).intent_name === 'timer.set' && JSON.parse(output).success === true
 
-  # ── 3. Conversational UX (co-equal rubric, cf. shared/rubrics/en-ux.yaml#confirms_action_en) ──
+  # ── 3. Conversational UX (shared rubric, uncalibrated EN twin of the calibrated RU set) ──
   - description: EN UX — assistant confirms the timer in natural English
     metadata: { kind: ux, language: en }
     vars:
@@ -124,13 +114,8 @@ tests:
     assert:
       - type: llm-rubric
         transform: JSON.parse(output).response_text
-        value: >
-          The reply is evaluated as a confirmation that the requested action was carried out. Rate as
-          passed ONLY if ALL of the following hold: (1) the reply is entirely in English, with no
-          foreign-language words or phrases; (2) it clearly and unambiguously confirms the requested
-          action was done (e.g. "done", "timer set"), with no ambiguity about success; (3) there is no
-          raw technical error or traceback. Device technical identifiers need not be evaluated. If any
-          condition is not met, rate as NOT passed.
+        # TEST-16: the CALIBRATED shared rubric — single source, no inline drift.
+        value: "file://../../eval-commons/shared/rubrics/en/confirms_action_en.txt"
 
   # ── 4. Graceful-failure UX ──────────────────────────────────────────────────────
   - description: EN UX — polite, human-readable failure when a device is unreachable
@@ -141,9 +126,5 @@ tests:
     assert:
       - type: llm-rubric
         transform: JSON.parse(output).response_text
-        value: >
-          The reply is evaluated as a message that the action cannot be performed. Rate as passed ONLY
-          if ALL of the following hold: (1) the reply is entirely in English, with no foreign-language
-          words or phrases; (2) the tone is polite and friendly, without rudeness; (3) there is no raw
-          technical error, error code, or traceback; (4) the problem is explained clearly and
-          human-readably, ideally with a suggested next step. If any condition is not met, rate as NOT passed.
+        # TEST-16: the CALIBRATED shared rubric — single source, no inline drift.
+        value: "file://../../eval-commons/shared/rubrics/en/graceful_failure_en.txt"

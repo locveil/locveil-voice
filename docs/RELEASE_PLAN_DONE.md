@@ -2051,6 +2051,23 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       runner overriding component config is its own smell — relevant to the `--set` work, worth a future look._
 
 ### Tests (TEST)
+- [x] **TEST-16** [EVAL][UX] (P3) `[deferred]` — **DONE 2026-07-02 (user suspected obsolete; reconciliation
+      showed it was blocked on the user's own gold labels — completed interactively in-session).** The DeepSeek
+      Russian UX judge is now **calibrated against native-Russian-speaker gold labels**: a regenerated 20-case set
+      (the 2026-07-01 probe lived in a session scratchpad and was gone), user-labeled live (16 confident + 4
+      borderline, excluded from κ), graded through the same llm-rubric→DeepSeek path against the SHIPPED rubrics.
+      Iterations with re-measure-all discipline: shipped rubric 81%/κ0.625 (judge too strict on terse replies,
+      lenient on bureaucratese — the OPPOSITE bias profile of the Claude-labeled probe, vindicating the human
+      gate) → terse-passes/bureaucratese-fails/next-step-optional 94%/κ0.875 → in-condition mixed-language example
+      **16/16, κ=1.0 in-sample, verdicts stable across repeat runs**. All four borderlines got defensible verdicts.
+      **Housed** in eval-commons `examples/ru-ux-calibration/` (set + gold + scorer + README, commit `4dd73d7`).
+      **Rubric infrastructure fixed en route:** the documented `file://…yaml#anchor` pattern NEVER worked in
+      promptfoo (fragment treated as filename — why the live suite had inline copies); shared rubrics split into
+      per-rubric `{ru,en}/*.txt` files, the yaml files retired, ARCHITECTURE §7.1 flipped to CALIBRATED, and the
+      live `ws.promptfooconfig.yaml` UX cases (RU+EN ×4) now reference the shared files directly (path proven live
+      from `eval/`). EN rubrics carry the same structural improvements, marked uncalibrated. **Gate met: Russian
+      UX pass/fail is CI-trustworthy** — standing caveats: κ is in-sample (add fresh negatives as suites grow) and
+      the calibration set must be re-run after ANY rubric edit.
 - [x] **TEST-15** [EVAL][WS] (P3) `[deferred]` — **DONE 2026-07-01.** The WS system suite now asserts ASR/WER for
       offline ASR. **task-start-reconciliation flipped the premise:** the ledger assumed the SUT had to be changed to
       surface the recognized transcript, but a live probe showed the SUT **already** exposes it at

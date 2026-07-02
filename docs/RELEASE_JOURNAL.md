@@ -15,6 +15,24 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-02 — TEST-16 DONE — the Russian UX judge is calibrated against the user's own gold labels
+  (κ = 1.0 in-sample).** The user suspected the task obsolete; reconciliation showed the opposite — it was
+  blocked on exactly one thing only they could provide, so it was finished interactively: a regenerated 20-case
+  set (the old probe died with its session scratchpad) was labeled live by the user (16 confident + 4 genuine
+  borderlines, excluded from κ), then graded through the same llm-rubric→DeepSeek path as production. The human
+  labels **inverted** the Claude-labeled probe's bias profile — the judge was too STRICT on terse voice replies
+  («Окей.» is a fine confirmation) and too LENIENT on bureaucratese («код 502, обратитесь к администратору») —
+  vindicating the human-gold gate. Two disciplined rubric iterations (re-measure everything each time):
+  81%/κ0.625 → 94%/κ0.875 → **16/16, κ=1.0, stable across repeat runs**. En route, a real infrastructure find:
+  the documented `file://…yaml#anchor` rubric-reference pattern NEVER worked in promptfoo (the fragment is
+  treated as part of the filename — which is why the live suite carried inline copies); shared rubrics are now
+  per-rubric `{ru,en}/*.txt` files, the yamls retired, and all four live UX cases reference the shared files
+  directly (path proven live from `eval/`). Calibration set + gold + scorer + method housed in eval-commons
+  `examples/ru-ux-calibration/` (their commit `4dd73d7`); ARCHITECTURE §7.1 flipped to CALIBRATED; EN rubrics
+  got the same structural improvements, marked uncalibrated. **Russian UX pass/fail is now CI-trustworthy**,
+  with the recorded caveats: κ is in-sample (fresh negatives as suites grow) and the set must be re-run after
+  ANY rubric edit. TEST-16 moved active→done.
+
 - **2026-07-02 — BUG-13 DONE (re-scoped with the user) — the streaming-branch hang is unreproducible; three
   real defects found by the repro are fixed.** Reconciliation ran a live repro (RU streaming pack, bounded
   utterance + `end`): the response arrives — the EOF-finalize has been in the tree since 2026-06-04, and the
