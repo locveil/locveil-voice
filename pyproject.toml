@@ -544,6 +544,34 @@ forbidden_modules = [
 ]
 
 [[tool.importlinter.contracts]]
+# ARCH-28: the durable-action store is a SEAM with exactly three legitimate clients — the F&F
+# launch/completion choke point (intents.handlers.base), the startup reconciler (core.engine),
+# and the notification redelivery queue (core.notifications). Everything else uses those seams:
+# delivery layers drain via NotificationService, application services launch via `durable=`,
+# observability reads the runtime registry — never the persisted store directly. This contract
+# pins that: no application/delivery/adapter layer may import the store module.
+name = "Durable-action store is reached only through its seam (ARCH-28)"
+type = "forbidden"
+source_modules = [
+    "irene.components",
+    "irene.workflows",
+    "irene.providers",
+    "irene.web_api",
+    "irene.runners",
+    "irene.inputs",
+    "irene.outputs",
+]
+forbidden_modules = ["irene.core.durable_actions"]
+# The three seam edges are the sanctioned gateways — ignoring them here means a chain that
+# goes THROUGH the seam (e.g. webapi_router -> core.notifications -> durable_actions, the
+# drain call) doesn't count, while a NEW direct import from any outer layer still fails.
+ignore_imports = [
+    "irene.intents.handlers.base -> irene.core.durable_actions",
+    "irene.core.engine -> irene.core.durable_actions",
+    "irene.core.notifications -> irene.core.durable_actions",
+]
+
+[[tool.importlinter.contracts]]
 # ARCH-12: utils is the foundational kernel — it must not reach UP into any application/config/delivery
 # layer. The two residual upward edges were removed: utils.vad->core.metrics (a dead import) and
 # utils.logging->config.models (the LogLevel enum, relocated INTO utils.logging and re-exported by

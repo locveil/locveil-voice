@@ -13,6 +13,15 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-02 — QUAL-62 DONE — the ARCH-28 seam is now in the hexagon gate (user: "shouldn't we reflect it
+  in our hexagon gate?").** New 10th import-linter contract *"Durable-action store is reached only through its
+  seam (ARCH-28)"*: no application/delivery/adapter layer may import `irene.core.durable_actions`; the three
+  sanctioned gateways (F&F choke point in `intents.handlers.base`, reconciler in `core.engine`, redelivery in
+  `core.notifications`) are `ignore_imports` edges, so chains THROUGH the seam pass while any new direct import
+  from an outer layer fails. The contract demonstrated it bites during introduction — it flagged the transitive
+  `webapi_router → notifications → durable_actions` drain chain until the gateway edges were sanctioned. Design
+  doc D-2 annotated with the gate. lint-imports 10/10 kept; contract test green. Filed + completed same day.
+
 - **2026-07-02 — ARCH-28 DONE — durable-action substrate implemented (all 7 design slices, same-day as the
   design).** A timer is now literally restart-proof end-to-end: launch persists a schema-v1 intent record to
   `<assets_root>/state/durable_actions.json` (new `AssetConfig.state_root`, asset-managed + volume-mounted;

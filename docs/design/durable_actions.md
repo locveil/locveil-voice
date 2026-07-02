@@ -33,6 +33,12 @@ dependencies, human-debuggable, and at voice scale (a handful of concurrent dura
 launch/completion/redelivery) single-process asyncio makes races a non-issue. SQLite (the bridge's `aiosqlite`
 pattern) remains the drop-in upgrade behind the same port if device actions ever raise the write rate.
 
+**The seam is gate-enforced (user follow-up 2026-07-02).** An import-linter contract
+(*"Durable-action store is reached only through its seam (ARCH-28)"*) pins the store's three legitimate
+clients — the F&F choke point, the startup reconciler, the notification redelivery queue — and forbids every
+application/delivery/adapter layer from importing the store module directly; chains *through* the seam are
+sanctioned via `ignore_imports` on the three gateway edges.
+
 **Location is load-bearing (user correction 2026-07-02).** The store lives under the **asset-management tree**
 — a new **`state/` folder** exposed as `AssetConfig.state_root` (sibling of `models_root`/`cache_root`/
 `traces_root`, created by `_create_directories`, path resolved through the asset config, root controlled by

@@ -761,6 +761,15 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       Dependabot alerts (commits 05aa763/4e05a38) — no risky major bumps. **No code until scheduled + green-lit.**
 
 ### Code Quality & Review (QUAL)
+- [x] **QUAL-62** [ARCH][QUAL] (P2) `[release]` — **DONE 2026-07-02 (filed + completed same day, user-requested
+      ARCH-28 follow-up).** The new `DurableActionStorePort` seam is now reflected in the hexagon gate: 10th
+      import-linter contract **"Durable-action store is reached only through its seam (ARCH-28)"** — no
+      application/delivery/adapter layer (`components/workflows/providers/web_api/runners/inputs/outputs`) may
+      import `irene.core.durable_actions`; the three sanctioned gateways (`intents.handlers.base` choke point,
+      `core.engine` reconciler, `core.notifications` redelivery) are `ignore_imports` edges so chains THROUGH the
+      seam pass while new direct imports fail. The contract proved itself during introduction: it flagged the
+      transitive `webapi_router → notifications → durable_actions` chain until the gateway edges were sanctioned.
+      Design doc D-2 annotated. Gates: lint-imports 10/10 kept; `test_import_contracts.py` green.
 - [x] **QUAL-56** [QUAL][REVIEW][ARCH] (P3) `[deferred]` — **DONE 2026-07-02.** F&F design critiqued through the
       durable-execution lens + (user-requested) comparative analysis of `wb-mqtt-bridge` device-state persistence.
       Deliverable: `docs/review/faf_durable_execution_review.md`. Verdict: **zero on every durability axis by
