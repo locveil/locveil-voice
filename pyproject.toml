@@ -244,7 +244,10 @@ headless = []
 
 # All optional components - Fixed: Re-enabled
 all = [
-    "irene-voice-assistant[voice,cloud-asr,advanced-asr,asr-onnx,llm]"
+    # BUILD-9: `all` must be genuinely all (CI type-checks the full provider surface with
+    # `pip install .[all,dev]`). Previously missed tts-ruaccent + vad-tflite (pyright
+    # missing-import failures) and the api/headless/audio-input-* umbrella aliases.
+    "irene-voice-assistant[voice,cloud-asr,advanced-asr,asr-onnx,llm,tts-ruaccent,vad-tflite,api,headless,audio-input-complete,audio-input-enhanced]"
 ]
 
 [project.scripts]
