@@ -15,6 +15,23 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-05 — VWB-23 analyzed + contract RE-PINNED — «включи свет» became one REST call; the boundary
+  is now address-form polymorphic.** The bridge shipped room-scoped group addressing (`canonical_first.md`
+  §10, surfaced by this side's TEST-18 Slice A question "what does «включи свет в детской» resolve to?"):
+  `POST /rooms/{room_id}/canonical {group, action, scope: auto|all|one}` — the depth doctrine (resolve only
+  as deep as the utterance specifies; the device pick is bridge POLICY via `group_defaults`, not resolver
+  heuristics), a `group` overlay on capabilities (37 illumination `power` caps tagged `light`; oven/plugs
+  split to `power_switch` so «свет» can never reach them), all 10 rooms defaulting `light` → `<room>_spots`,
+  fan-out allow-listed to `light`+`cover`, per-member aggregate responses. Verified against the committed
+  artifacts and **re-pinned** into eval-commons (`e0d6b45`, catalog `91909b54`, all 8 pin guards green —
+  the guard suite did its job on its first real re-pin). Ledger adjusted: ARCH-8 gained the
+  three-address-form addendum (PR-1 models device + room-group commands; PR-4 noun lexicon bound to catalog
+  `group` truth + singular/«весь»→scope mapping + aggregate-response speech); QUAL-35 gained the depth
+  doctrine + the no-power-fan-out fence; TEST-18 Slice A: **Q1 (room lights) RESOLVED by VWB-23**, Q2
+  narrowed to light-subset pairs only («ночники»/«тумбочки» — cover pairs dissolved into room-group
+  fan-out), Q3/Q4 still open, fixture schema gains the `room-group` expect kind. Slice A stays paused on
+  the three remaining user decisions.
+
 - **2026-07-05 — TEST-17 DONE — the contract is pinned; both repos now test against the same committed
   boundary.** The bridge's v1.1 artifacts (bridge `59f4f46`, catalog `7a1149c7`) copied byte-identical into
   `eval-commons/contracts/` with a voice-side `PIN.json` and a consumer README (bridge generates, voice

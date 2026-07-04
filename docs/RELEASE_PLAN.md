@@ -156,13 +156,24 @@ See `docs/review/phase1_architecture_map.md` §5.
       `unit`/`values`/`options_from`; ru+en enum labels; `aliases` schema; empty capability husks SUPPRESSED —
       the parser will not see actionless/fieldless entries), **`VWB-21`** (household alias vocabulary authored:
       34 devices + 3 rooms, e.g. «зал»→living_room). **Sequencing: TEST-17 pins v1.1 FIRST** (bridge `59f4f46`,
-      catalog `7a1149c7`), then PR-1. **Build notes from the 2026-07-04/05 contract analysis (recorded from
+      catalog `7a1149c7` — DONE, since re-pinned @ `91909b54` post-VWB-23), then PR-1. **Build notes from the 2026-07-04/05 contract analysis (recorded from
       chat):** PR-2's catalog parser codes against typed `CatalogParam` — a param carries EITHER `values`
       (stable enum `{wire,canonical,labels}` triplets) OR `options_from` (a dynamic set enumerated at
       resolution time via `GET /devices/{id}/options/<kind>` — installed apps etc.); PR-3's resolver consumes
       `names`+`aliases` per locale. Donations stay device-agnostic — the catalog supplies the entity/value
       vocabulary at runtime; donations are NEVER generated from the contract (ARCH-26 lazy refresh decouples
-      the deploy cycles). _Orig:_ **★ ARCH-22 (2026-06-14):** the **voice-confirmation of actuation** feature (T-B,
+      the deploy cycles). **★ VWB-23 addendum (2026-07-05; re-pinned @ bridge `ee0a71d` / catalog
+      `91909b54`): the boundary is ADDRESS-FORM POLYMORPHIC** — three canonical forms: device
+      (`POST /devices/{id}/canonical`), scenario (rides the device form via `scenario_manager_*`), and
+      **room-group** (`POST /rooms/{room_id}/canonical {group, action, params?, scope: auto|all|one}` —
+      the depth doctrine: resolve only as deep as the utterance specifies; a bare capability noun is a
+      room-group command, the BRIDGE picks the target via `group_defaults`). PR-1 models BOTH command shapes
+      and the capturing `OutputPort` captures both; PR-2 parses `CatalogCapability.group` +
+      `CatalogRoom.group_defaults` and adds the room endpoint to `BridgeClient`; PR-4 adds the noun lexicon
+      («свет»→`light`, «шторы»→`cover` — bound to catalog `group` truth, not convention), the
+      singular/«весь»→`scope auto/all` mapping, and speaks the per-member aggregate response incl.
+      partial failures (`canonical_first.md` §10.4 pre-scripts it: «включила весь свет, бра не ответило»).
+      _Orig:_ **★ ARCH-22 (2026-06-14):** the **voice-confirmation of actuation** feature (T-B,
       `docs/design/esp32_satellite.md` §10) rides this task — a sequenced `DEVICE_COMMAND → bridge rich DeliveryResult →
       derive text → SPEECH to the origin device` (opt-in `confirm_actuation_by_voice`; device-transparent, reply via
       ARCH-21). Implement it with ARCH-8's rich `DeliveryResult`. **★ Catalog contract amended 2026-06-15:** the bridge's
@@ -308,6 +319,13 @@ _Apply to every remediation task below (from the 4 review docs + QUAL-25/26). So
         `donation-choice-surfaces-rule` the contract stays canonical; matching is Irene's job).
         **(3) The v1 command set EXCLUDES input switching** («переключи на CD») — select-form capabilities
         aren't canonically routable until bridge `VWB-19` lands; don't author donations that promise it.
+        **(4) The depth doctrine (VWB-23, 2026-07-05):** resolve only as deep as the utterance specifies —
+        a named device → device-canonical; a bare capability noun («включи свет», «закрой шторы») → a
+        room-group command (`{room, group, action, scope}`); the noun lexicon binds group nouns to catalog
+        `CatalogCapability.group` values, NOT to convention; singular → `scope: auto` (the bridge's
+        `group_defaults` picks the device), «весь»/plural → `scope: all`.
+        **(5) No power-group fan-out promises** in donations — the bridge allow-lists fan-out to
+        `light`+`cover` only and 409s the rest by design («выключи все розетки» must not work).
 - [ ] **QUAL-44** `[deferred]` [DFLOW] (P2, enhancement; split from QUAL-31) — **Answer-vs-new-command arbitration on a
       clarifying turn.** QUAL-31's resume pre-check (`workflows/voice_assistant.py` `_process_pipeline`, the
       `take_pending_clarification` branch) **unconditionally** treats the turn that follows a clarification as the answer:
@@ -362,17 +380,26 @@ _Trace-driven system testing (design `docs/design/trace_system_testing.md`, TEST
 
 - [ ] **TEST-18** [EVAL][MQTT] (P3) `[deferred]` — **The `device_command` capture provider + Irene producer contract
       tests (ARCH-26 §14).** Two slices (fixtures-first fold, user 2026-07-05):
-      • **Slice A — crossover fixtures — DOING, PAUSED mid-interactive 2026-07-05** (user thinking; resume
-        point): a 17-fixture draft table was produced against the pin (real ids/aliases); **4 decisions are
-        OPEN with the user**: **(1)** room-level light control — VERIFIED: no per-room «свет» device/alias
-        exists in the catalog (only global `all_lights` «Весь свет»; the «Подсветка…» devices carry no
-        aliases), so «включи свет в детской» is unresolvable today — user is considering **bridge-side
-        per-room light aggregates** (would be an uncommitted bridge filing); **(2)** plural-pair aliases
-        («тумбочки»/«ночники»/«полки»/«жалюзи» each match TWO devices, no aggregate) — pair-aggregates vs
-        clarify vs multi-command; **(3)** same-room ambiguity policy («поставь на паузу» → TV+AppleTV;
-        «22 градуса» → обогрев+кондиционер) — clarify vs priority rules; **(4)** include sensor-read fixtures
-        now or defer to PR-5. Fixture file shape agreed in-session: `eval-commons/contracts/` JSON with
-        `catalog_version` + fixtures `{id, tier, utterance.ru, context.room?, expect: actuate|read|clarify}`.
+      • **Slice A — crossover fixtures — DOING, PAUSED 2026-07-05 (resume point v2, post-VWB-23).**
+        **Step 0 DONE: contract RE-PINNED** @ bridge `ee0a71d` / catalog `91909b54` (eval-commons `e0d6b45`;
+        all 8 pin guards green) — picks up **VWB-23 room-scoped group addressing** (`canonical_first.md` §10):
+        `POST /rooms/{room_id}/canonical {group, action, params?, scope: auto|all|one, wait?}`,
+        `CatalogCapability.group` (37 illumination `power` caps tagged `light`; oven/plugs split to
+        `power_switch` — unreachable by «свет»), `CatalogRoom.group_defaults` (all 10 rooms: `light` →
+        `<room>_spots`; `global` none — `all_lights` master IS its membership), fan-out allow-list
+        `light`+`cover`, per-member aggregate response. **Q1 (room lights) RESOLVED by VWB-23:** «включи свет
+        в детской» = ONE room-group command `{room, group: light, action: on, scope: auto}` — the fixture
+        schema gains a THIRD expect kind, `room-group {room_id, group, action, scope}`; Irene detects
+        singular vs «весь»/plural → `scope: auto` vs `all`. **Q2 NARROWED:** cover pairs solved («закрой
+        шторы»/«жалюзи» → room-group `cover`, auto → fan-out to both); **light-subset pairs still OPEN**
+        («ночники»/«тумбочки»/«полки» name 2 of bedroom's 7 light members — group over-reaches, one device
+        under-reaches): clarify vs bridge pair-aggregates vs drop-from-v1. **Q3 still OPEN:** same-room
+        capability ambiguity («поставь на паузу» → TV+AppleTV; «22 градуса» → обогрев+кондиционер) — clarify
+        vs priority rules. **Q4 still OPEN:** sensor-read fixtures in Slice A or deferred to PR-5. Draft
+        rework on resume: #7 «шторы» + #9/#10 «весь свет» become room-form; #1/#5 stay device-form (named
+        devices). A 17-fixture draft table exists in the 2026-07-05 chat; fixture file shape:
+        `eval-commons/contracts/` JSON with `catalog_version` + fixtures
+        `{id, tier, utterance.ru, context.room?, expect: actuate|room-group|read|clarify}`.
         _Orig:_ **(UNGATED — startable now, pure data against the TEST-17 pin).** Author the
         `{utterance → expected canonical command}` set into `eval-commons/contracts/` next to the pinned golden:
         every parse+resolution path the golden exercises — power on/off via alias («включи свет в детской»),
