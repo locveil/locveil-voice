@@ -8,6 +8,8 @@ batch loop stays the permanent floor and is exercised by `test_ws_driving_input`
 import json
 import types
 
+from irene.intents.models import IntentResult
+
 import pytest
 
 from irene.providers.asr.base import ASRProvider
@@ -107,7 +109,7 @@ def test_ws_streaming_path_fires_nlu_per_final_segment():
                                      client_context=None, trace_context=None):
             captured["texts"].append(text)
             captured["client_context"] = client_context
-            return types.SimpleNamespace(text=f"ответ: {text}", success=True,
+            return IntentResult(text=f"ответ: {text}",
                                          metadata={}, should_speak=True)
 
     class _Core:
@@ -158,7 +160,7 @@ def test_ws_streaming_request_falls_back_to_batch_when_asr_not_streaming():
         async def process_audio_input(self, audio_data, session_id=None, wants_audio=False,
                                       client_context=None, trace_context=None):
             captured["audio_len"] = len(audio_data.data)
-            return types.SimpleNamespace(text="готово", success=True, metadata={}, should_speak=True)
+            return IntentResult(text="готово", metadata={})
 
     class _Core:
         def __init__(self):
@@ -211,7 +213,7 @@ def test_ws_streaming_serves_multiple_utterances_per_connection():
     class _WM:
         async def process_text_input(self, text, session_id=None, wants_audio=False,
                                      client_context=None, trace_context=None):
-            return types.SimpleNamespace(text=f"ответ: {text}", success=True,
+            return IntentResult(text=f"ответ: {text}",
                                          metadata={}, should_speak=True)
 
     class _Core:
@@ -269,7 +271,7 @@ def test_ws_streaming_bounded_client_without_end_is_force_finalized(monkeypatch)
     class _WM:
         async def process_text_input(self, text, session_id=None, wants_audio=False,
                                      client_context=None, trace_context=None):
-            return types.SimpleNamespace(text=f"ответ: {text}", success=True,
+            return IntentResult(text=f"ответ: {text}",
                                          metadata={}, should_speak=True)
 
     class _Core:

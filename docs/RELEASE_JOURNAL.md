@@ -15,6 +15,21 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-04 — QUAL-55 DONE — the five execution surfaces speak one result shape.** The review's root
+  cause (`api_result_contract_review.md`: no shared serializer, five hand-built dicts drifting apart) is
+  closed with `irene/api/serializers.py::serialize_intent_result` — canonical
+  `text`/`success`/`error`/`confidence`/`intent_name`/`timestamp`/`metadata`, with `intent_name` lifted from
+  the orchestrator's `original_intent` and endpoint extras merged INTO the raw metadata rather than replacing
+  it. REST `/execute/*` renamed `response`→`text` (the planned breaking change; `CommandResponse` reshaped),
+  `/trace/*` `final_result` and both WS `response` frames now emit the same payload (superseding QUAL-54's
+  metadata-injection stopgap). The "executed successfully" invented-prose fallbacks died with it (fail-loud).
+  Cross-repo co-changes: config-ui types regenerated from the re-dumped OpenAPI (check+build green; no
+  runtime consumer of the old field existed), eval-commons `ws_audio_provider` reads top-level `intent_name`
+  with a metadata fallback so it spans SUT versions. The WS test fakes were replaced with the real
+  `IntentResult` — hand-rolled fakes lacking `error` broke immediately, re-proving the review's F5 lesson
+  that wrong-shaped fakes hide live bugs. Suite 1180 + smoke (live server asserts the canonical keys) +
+  hexagon gate green.
+
 - **2026-07-04 — REL-1 DONE — the Definition of Release is signed off; the road to release is now a closed,
   explicit list.** Interactive session. The checklist was reconciled criterion-by-criterion against current
   reality first: 6 of 8 exit criteria are already met with evidence (clean `uv sync` + CLI/WebAPI boots via the

@@ -854,6 +854,21 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       call/WS connection (→ BUG-16), uncapped `/ws/audio` batch PCM accumulator ≈115 MB/h per bad client (→ BUG-17),
       untrimmed LLM conversation store with dead `max_context_length` config (→ BUG-18); small-item sweep → QUAL-58;
       capability drift + dead code → QUAL-59. A5 (no action durability) confirms QUAL-56's premise — that task stands.
+- [x] **QUAL-55** [APICONTRACT] (P2) `[release]` — **DONE 2026-07-04. One canonical `IntentResult → API`
+      serializer across the five execution surfaces** (retires F1/F3/F4 + the rest of F2,
+      `docs/review/api_result_contract_review.md`). New `irene/api/serializers.py` →
+      `serialize_intent_result(result, extra_metadata=None)`: canonical keys `text` (F1 — `/execute/*` renamed
+      from `response`), `success`/`error`, `confidence` top-level (F4), `intent_name` lifted from the
+      orchestrator's `original_intent` (F2), `timestamp`, raw `metadata` with endpoint extras merged IN, never
+      replacing (F3). All five surfaces route through it: REST `/execute/command|audio` (`CommandResponse`
+      reshaped: `text`/`confidence`/`intent_name` fields; the invented "executed successfully" fallback prose
+      dropped — fail-loud ①), `/trace/command|audio` `final_result`, both WS `/ws/audio` response frames
+      (supersedes QUAL-54's metadata-injection). Co-changes: **config-ui** `openapi.json` re-dumped +
+      `openapi.gen.ts` regenerated, `npm run check` + `build` green (no runtime component consumed the old
+      field); **eval-commons** `ws_audio_provider` reads top-level `intent_name` with metadata fallback (spans
+      SUT versions). WS test fakes replaced with the real `IntentResult` (a wrong-shaped fake is how F5 hid a
+      live None — same lesson). Tests: `test_api_result_serializer.py` (7); smoke e2e asserts the canonical
+      keys against a live server. Suite 1180 green; 10 import contracts kept.
 - [x] **QUAL-54** [APICONTRACT] (P2) `[release]` — **DONE 2026-06-27.** Targeted fix of the live-bug subset from
       `docs/review/api_result_contract_review.md` (F2 WS half + F5): the `/ws/audio` response now surfaces intent under
       `intent_name` (remapped from the orchestrator's `original_intent`, keeping the raw metadata) at both send sites

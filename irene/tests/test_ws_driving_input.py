@@ -7,6 +7,8 @@ Proves the core contract: the registration handshake populates the physical iden
 """
 import json
 
+from irene.intents.models import IntentResult
+
 import pytest
 
 from irene.core.client_registry import resolve_physical_id, ClientRegistration
@@ -80,11 +82,10 @@ def test_ws_audio_adapter_handshake_and_pipeline():
             captured["client_context"] = client_context
             captured["audio_len"] = len(audio_data.data)
 
-            class _R:
-                text = "готово"
-                success = True
-                metadata = {"ok": True}
-            return _R()
+            # Real IntentResult, not a hand-rolled fake — a wrong-shaped fake is exactly
+            # how F5 hid a live None (api_result_contract_review.md); QUAL-55 serializes
+            # error/confidence/timestamp too, so the fake must carry the full contract.
+            return IntentResult(text="готово", metadata={"ok": True})
 
     class _Core:
         def __init__(self):
@@ -133,11 +134,10 @@ def test_ws_audio_batch_overflow_force_finalizes(monkeypatch):
                                       client_context=None, trace_context=None):
             calls.append({"len": len(audio_data.data), "metadata": dict(audio_data.metadata or {})})
 
-            class _R:
-                text = "готово"
-                success = True
-                metadata = {"ok": True}
-            return _R()
+            # Real IntentResult, not a hand-rolled fake — a wrong-shaped fake is exactly
+            # how F5 hid a live None (api_result_contract_review.md); QUAL-55 serializes
+            # error/confidence/timestamp too, so the fake must carry the full contract.
+            return IntentResult(text="готово", metadata={"ok": True})
 
     class _Core:
         def __init__(self):

@@ -110,6 +110,7 @@ def create_webapi_router(
     
     # Import centralized API schemas
     from ..api.schemas import CommandRequest, CommandResponse, TraceCommandResponse, ExecutionTrace
+    from ..api.serializers import serialize_intent_result
     from ..core.trace_context import TraceContext
     from ..core.session_manager import SessionManager
     from ..utils.loader import get_component_status
@@ -253,16 +254,11 @@ def create_webapi_router(
                 client_context=client_context
             )
             
+            # QUAL-55: the canonical result projection — one serializer for all five surfaces.
             return CommandResponse(
-                success=True,
-                response=result.text or "Command executed successfully",
+                **serialize_intent_result(result),
                 session_id=session_id,
-                room_alias=request.room_alias,  # NEW: Include room alias in response
-                metadata={
-                    "intent_name": result.metadata.get("original_intent") if result.metadata else None,
-                    "confidence": result.confidence,
-                    "execution_time": result.metadata.get("execution_time") if result.metadata else None
-                }
+                room_alias=request.room_alias,
             )
             
         except HTTPException:
@@ -347,28 +343,27 @@ def create_webapi_router(
                 client_context=client_context
             )
             
+            # QUAL-55: canonical projection; the file-info extras ride INSIDE metadata (F3).
             return CommandResponse(
-                success=result.success,
-                response=result.text or f"Audio file '{audio_file.filename}' processed successfully",
-                session_id=session_id,
-                room_alias=room_alias,  # NEW: Include room alias in response
-                metadata={
-                    "processed_via": "audio_api", 
-                    "filename": audio_file.filename, 
+                **serialize_intent_result(result, extra_metadata={
+                    "processed_via": "audio_api",
+                    "filename": audio_file.filename,
                     "file_size_bytes": file_size,
-                    "room_context": bool(room_alias)
-                }
+                    "room_context": bool(room_alias),
+                }),
+                session_id=session_id,
+                room_alias=room_alias,
             )
-            
+
         except HTTPException:
             # Re-raise HTTP exceptions (like file too large)
             raise
-            
+
         except Exception as e:
             logger.error(f"Audio execution error: {e}")
             return CommandResponse(
                 success=False,
-                response="Audio processing failed",
+                text="",
                 session_id=session_id,
                 error=str(e)
             )
@@ -436,13 +431,7 @@ def create_webapi_router(
             
             return TraceCommandResponse(
                 success=result.success,
-                final_result={
-                    "text": result.text,
-                    "success": result.success,
-                    "metadata": result.metadata,
-                    "confidence": result.confidence,
-                    "timestamp": result.timestamp
-                },
+                final_result=serialize_intent_result(result),  # QUAL-55: canonical projection
                 execution_trace=ExecutionTrace.model_validate({
                     "request_id": trace_context.request_id,
                     "pipeline_stages": [
@@ -614,13 +603,7 @@ def create_webapi_router(
             
             return TraceCommandResponse(
                 success=result.success,
-                final_result={
-                    "text": result.text,
-                    "success": result.success,
-                    "metadata": result.metadata,
-                    "confidence": result.confidence,
-                    "timestamp": result.timestamp
-                },
+                final_result=serialize_intent_result(result),  # QUAL-55: canonical projection
                 execution_trace=ExecutionTrace.model_validate({
                     "request_id": trace_context.request_id,
                     "pipeline_stages": [
@@ -880,11 +863,9 @@ def create_webapi_router(
                         result = await core.workflow_manager.process_text_input(
                             text=text, session_id=session_id, wants_audio=False,
                             client_context=client_context)
-                        # QUAL-54: surface intent under `intent_name` like REST /execute (the orchestrator
-                        # stores it as `original_intent`); keep the rest of the raw metadata.
-                        _meta = {**(result.metadata or {}), "intent_name": (result.metadata or {}).get("original_intent")}
-                        await websocket.send_json({"type": "response", "text": result.text,
-                                                   "success": result.success, "metadata": _meta})
+                        # QUAL-55: canonical projection (supersedes the QUAL-54 metadata injection —
+                        # `intent_name` is now a top-level key on every execution surface).
+                        await websocket.send_json({"type": "response", **serialize_intent_result(result)})
                         await _route_reply(result)
                     # Utterance ended (end frame / idle / disconnect) — re-arm unless the
                     # client is gone. A fresh recognizer stream is created per utterance.
@@ -923,11 +904,9 @@ def create_webapi_router(
                 result = await core.workflow_manager.process_audio_input(
                     audio_data=audio, session_id=session_id, wants_audio=False,
                     client_context=client_context)
-                # QUAL-54: surface intent under `intent_name` like REST /execute (orchestrator stores
-                # it as `original_intent`); keep the rest of the raw metadata.
-                _meta = {**(result.metadata or {}), "intent_name": (result.metadata or {}).get("original_intent")}
-                await websocket.send_json({"type": "response", "text": result.text,
-                                           "success": result.success, "metadata": _meta})
+                # QUAL-55: canonical projection (supersedes the QUAL-54 metadata injection —
+                # `intent_name` is now a top-level key on every execution surface).
+                await websocket.send_json({"type": "response", **serialize_intent_result(result)})
                 await _route_reply(result)
         except WebSocketDisconnect:
             logger.debug(f"WS audio driving input disconnected (session {session_id})")

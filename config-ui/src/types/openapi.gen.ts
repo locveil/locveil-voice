@@ -3175,7 +3175,11 @@ export interface components {
         };
         /**
          * CommandResponse
-         * @description Response from command execution
+         * @description Response from command execution — the canonical execution-result shape (QUAL-55).
+         *
+         *     Built by `irene.api.serializers.serialize_intent_result` plus the request context
+         *     (`session_id`/`room_alias`). The same canonical result shape appears as
+         *     `TraceCommandResponse.final_result` and as the WS `/ws/audio` `response` frame.
          */
         CommandResponse: {
             /**
@@ -3189,10 +3193,20 @@ export interface components {
              */
             timestamp?: number;
             /**
-             * Response
-             * @description Command execution result
+             * Text
+             * @description Reply text (canonical field — QUAL-55; formerly `response`)
              */
-            response: string;
+            text: string;
+            /**
+             * Confidence
+             * @description Handler confidence in the reply
+             */
+            confidence?: number | null;
+            /**
+             * Intent Name
+             * @description Recognized intent (the orchestrator's `original_intent`)
+             */
+            intent_name?: string | null;
             /**
              * Session Id
              * @description Session ID used for execution
@@ -3210,7 +3224,7 @@ export interface components {
             error?: string | null;
             /**
              * Metadata
-             * @description Additional response metadata
+             * @description Raw internal result metadata (+ endpoint-specific extras)
              */
             metadata?: {
                 [key: string]: unknown;
@@ -8318,7 +8332,7 @@ export interface components {
             timestamp?: number;
             /**
              * Final Result
-             * @description Normal command execution result (same as CommandResponse)
+             * @description The canonical execution-result payload (serialize_intent_result, QUAL-55): text/success/error/confidence/intent_name/timestamp/metadata
              */
             final_result: {
                 [key: string]: unknown;
@@ -9056,10 +9070,11 @@ export interface components {
          * @description A single wake word — the uniform unit shared by every voice-trigger provider (QUAL-20).
          *
          *     ``name`` is the provider-agnostic label (also the room/satellite identity key); ``model`` is an
-         *     artifact reference (a built-in catalog name, or a path to a custom ``.tflite``/``.onnx`` + manifest —
-         *     the per-ESP32-unit Russian model); ``threshold`` and ``language`` are the per-word knobs. Provider
-         *     mechanics (openWakeWord ``inference_framework``, microWakeWord ``sliding_window_size``) live on the
-         *     provider, not here — uniformity is the shared shape, not a merge of provider internals.
+         *     artifact reference — a built-in/catalog name, a v2 manifest URL, or a path to a custom
+         *     model/manifest (resolution order: `docs/design/wakeword_models.md` D-2); ``threshold`` and
+         *     ``language`` are the per-word knobs. Provider mechanics (openWakeWord ``inference_framework``,
+         *     microWakeWord ``sliding_window_size``) live on the provider, not here — uniformity is the
+         *     shared shape, not a merge of provider internals.
          */
         WakeWordSpec: {
             /**
@@ -9069,7 +9084,7 @@ export interface components {
             name: string;
             /**
              * Model
-             * @description Model ref: a built-in catalog name or a path to a custom model/manifest
+             * @description Model ref: a built-in name, a released-catalog word, a v2 manifest URL, or a path to a custom model/manifest
              */
             model: string;
             /**

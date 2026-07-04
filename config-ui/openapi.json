@@ -5889,10 +5889,34 @@
             "title": "Timestamp",
             "description": "Unix timestamp when response was generated"
           },
-          "response": {
+          "text": {
             "type": "string",
-            "title": "Response",
-            "description": "Command execution result"
+            "title": "Text",
+            "description": "Reply text (canonical field — QUAL-55; formerly `response`)"
+          },
+          "confidence": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence",
+            "description": "Handler confidence in the reply"
+          },
+          "intent_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Intent Name",
+            "description": "Recognized intent (the orchestrator's `original_intent`)"
           },
           "session_id": {
             "type": "string",
@@ -5934,17 +5958,17 @@
               }
             ],
             "title": "Metadata",
-            "description": "Additional response metadata"
+            "description": "Raw internal result metadata (+ endpoint-specific extras)"
           }
         },
         "type": "object",
         "required": [
           "success",
-          "response",
+          "text",
           "session_id"
         ],
         "title": "CommandResponse",
-        "description": "Response from command execution"
+        "description": "Response from command execution — the canonical execution-result shape (QUAL-55).\n\nBuilt by `irene.api.serializers.serialize_intent_result` plus the request context\n(`session_id`/`room_alias`). The same canonical result shape appears as\n`TraceCommandResponse.final_result` and as the WS `/ws/audio` `response` frame."
       },
       "CompletenessReportSchema": {
         "properties": {
@@ -12657,7 +12681,7 @@
             "additionalProperties": true,
             "type": "object",
             "title": "Final Result",
-            "description": "Normal command execution result (same as CommandResponse)"
+            "description": "The canonical execution-result payload (serialize_intent_result, QUAL-55): text/success/error/confidence/intent_name/timestamp/metadata"
           },
           "execution_trace": {
             "$ref": "#/components/schemas/ExecutionTrace",
@@ -13728,7 +13752,7 @@
           "model": {
             "type": "string",
             "title": "Model",
-            "description": "Model ref: a built-in catalog name or a path to a custom model/manifest"
+            "description": "Model ref: a built-in name, a released-catalog word, a v2 manifest URL, or a path to a custom model/manifest"
           },
           "threshold": {
             "type": "number",
@@ -13751,7 +13775,7 @@
           "model"
         ],
         "title": "WakeWordSpec",
-        "description": "A single wake word — the uniform unit shared by every voice-trigger provider (QUAL-20).\n\n``name`` is the provider-agnostic label (also the room/satellite identity key); ``model`` is an\nartifact reference (a built-in catalog name, or a path to a custom ``.tflite``/``.onnx`` + manifest —\nthe per-ESP32-unit Russian model); ``threshold`` and ``language`` are the per-word knobs. Provider\nmechanics (openWakeWord ``inference_framework``, microWakeWord ``sliding_window_size``) live on the\nprovider, not here — uniformity is the shared shape, not a merge of provider internals."
+        "description": "A single wake word — the uniform unit shared by every voice-trigger provider (QUAL-20).\n\n``name`` is the provider-agnostic label (also the room/satellite identity key); ``model`` is an\nartifact reference — a built-in/catalog name, a v2 manifest URL, or a path to a custom\nmodel/manifest (resolution order: `docs/design/wakeword_models.md` D-2); ``threshold`` and\n``language`` are the per-word knobs. Provider mechanics (openWakeWord ``inference_framework``,\nmicroWakeWord ``sliding_window_size``) live on the provider, not here — uniformity is the\nshared shape, not a merge of provider internals."
       },
       "WebInputConfig": {
         "properties": {

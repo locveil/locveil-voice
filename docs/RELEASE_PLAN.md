@@ -312,14 +312,6 @@ _Apply to every remediation task below (from the 4 review docs + QUAL-25/26). So
       (`nlu_component.py` `record_stage("nlu_cascade")`), not each provider's attempt/confidence — so it can't yet explain
       *why* a fall-through happened. First enrich the cascade trace to record per-provider attempts (which tried, each
       one's confidence, why it abstained), then build the analyzer over recorded traces. Needs real usage data → deferred.
-- [ ] **QUAL-55** [APICONTRACT] (P2) `[release]` — **One canonical `WorkflowResult → API` serializer across the five
-      execution surfaces.** `docs/review/api_result_contract_review.md` found the same result is hand-serialized 5 ways
-      (REST `/execute/command|audio`, `/trace/command|audio`, WS `/ws/audio`): reply text is `response` vs `text` (F1),
-      `CommandResponse` carries two different metadata payloads (F3), `confidence` placement differs (F4), intent exposure
-      diverges (F2 — WS half fixed in QUAL-54). Introduce a single serializer (`text`/`success`/`confidence`/`intent_name`
-      + normalized metadata) and route all five through it; retires F1/F3/F4 + the rest of F2. **Renames response fields →
-      `config-ui-stays-functional` co-change** (`apiClient.ts`, `src/types/*`). Filed 2026-06-27 from the review.
-
 ### Bugs (BUG)
 _Discrete functional defects (distinct from QUAL refactors/quality work). Surfaced from any source; filed before fixing._
 

@@ -680,8 +680,18 @@ class CommandRequest(BaseAPIRequest):
 
 
 class CommandResponse(BaseAPIResponse):
-    """Response from command execution"""
-    response: str = Field(description="Command execution result")
+    """Response from command execution — the canonical execution-result shape (QUAL-55).
+
+    Built by `irene.api.serializers.serialize_intent_result` plus the request context
+    (`session_id`/`room_alias`). The same canonical result shape appears as
+    `TraceCommandResponse.final_result` and as the WS `/ws/audio` `response` frame.
+    """
+    text: str = Field(description="Reply text (canonical field — QUAL-55; formerly `response`)")
+    confidence: Optional[float] = Field(default=None, description="Handler confidence in the reply")
+    intent_name: Optional[str] = Field(
+        default=None,
+        description="Recognized intent (the orchestrator's `original_intent`)"
+    )
     session_id: str = Field(description="Session ID used for execution")
     room_alias: Optional[str] = Field(default=None, description="Room alias used for execution")
     error: Optional[str] = Field(
@@ -690,7 +700,7 @@ class CommandResponse(BaseAPIResponse):
     )
     metadata: Optional[Dict[str, Any]] = Field(
         default=None,
-        description="Additional response metadata"
+        description="Raw internal result metadata (+ endpoint-specific extras)"
     )
 
 
@@ -757,7 +767,8 @@ class ExecutionTrace(BaseModel):
 class TraceCommandResponse(BaseAPIResponse):
     """Response for trace command execution with complete pipeline visibility"""
     final_result: Dict[str, Any] = Field(
-        description="Normal command execution result (same as CommandResponse)"
+        description="The canonical execution-result payload (serialize_intent_result, QUAL-55): "
+                    "text/success/error/confidence/intent_name/timestamp/metadata"
     )
     execution_trace: ExecutionTrace = Field(
         description="Complete pipeline execution trace with detailed stage information"

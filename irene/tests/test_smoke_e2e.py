@@ -133,7 +133,7 @@ def test_greeting_executes(webapi):
     code, r = _post(webapi, "/execute/command", {"command": "привет"})
     assert code == 200, r
     assert r["success"] is True, r
-    assert r["metadata"]["intent_name"] == "greeting.hello", r
+    assert r["intent_name"] == "greeting.hello", r  # QUAL-55: canonical top-level key
 
 
 def test_nlu_recognize_responds(webapi):
@@ -150,7 +150,7 @@ def test_conversation_offline_degrades_gracefully(webapi):
     code, r = _post(webapi, "/execute/command", {"command": "расскажи что-нибудь про космос"})
     assert code == 200, r
     assert r["success"] is True, r
-    assert isinstance(r["response"], str) and r["response"].strip(), r
+    assert isinstance(r["text"], str) and r["text"].strip(), r  # QUAL-55: reply under `text`
 
 
 def test_set_timer_end_to_end(webapi):
@@ -163,10 +163,10 @@ def test_set_timer_end_to_end(webapi):
     code, r = _post(webapi, "/execute/command", {"command": "поставь таймер на 5 минут"})
     assert code == 200, r
     assert r["success"] is True, r
-    assert r["metadata"]["intent_name"].startswith("timer"), r
+    assert r["intent_name"].startswith("timer"), r  # QUAL-55: canonical top-level key
     # Correctness, not just success: the unit must be MINUTES (→ 300s, rendered "5 мин"), not the old
     # hardcoded-seconds default ("5 сек"). Guards the QUAL-11 unit-surface + get_param fix.
-    assert "5 мин" in r["response"], r
+    assert "5 мин" in r["text"], r
 
 
 # --- CLI boot (separate process, BUILD-1 path) ----------------------------------
