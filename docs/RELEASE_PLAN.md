@@ -362,7 +362,18 @@ _Trace-driven system testing (design `docs/design/trace_system_testing.md`, TEST
 
 - [ ] **TEST-18** [EVAL][MQTT] (P3) `[deferred]` — **The `device_command` capture provider + Irene producer contract
       tests (ARCH-26 §14).** Two slices (fixtures-first fold, user 2026-07-05):
-      • **Slice A — crossover fixtures (UNGATED — startable now, pure data against the TEST-17 pin).** Author the
+      • **Slice A — crossover fixtures — DOING, PAUSED mid-interactive 2026-07-05** (user thinking; resume
+        point): a 17-fixture draft table was produced against the pin (real ids/aliases); **4 decisions are
+        OPEN with the user**: **(1)** room-level light control — VERIFIED: no per-room «свет» device/alias
+        exists in the catalog (only global `all_lights` «Весь свет»; the «Подсветка…» devices carry no
+        aliases), so «включи свет в детской» is unresolvable today — user is considering **bridge-side
+        per-room light aggregates** (would be an uncommitted bridge filing); **(2)** plural-pair aliases
+        («тумбочки»/«ночники»/«полки»/«жалюзи» each match TWO devices, no aggregate) — pair-aggregates vs
+        clarify vs multi-command; **(3)** same-room ambiguity policy («поставь на паузу» → TV+AppleTV;
+        «22 градуса» → обогрев+кондиционер) — clarify vs priority rules; **(4)** include sensor-read fixtures
+        now or defer to PR-5. Fixture file shape agreed in-session: `eval-commons/contracts/` JSON with
+        `catalog_version` + fixtures `{id, tier, utterance.ru, context.room?, expect: actuate|read|clarify}`.
+        _Orig:_ **(UNGATED — startable now, pure data against the TEST-17 pin).** Author the
         `{utterance → expected canonical command}` set into `eval-commons/contracts/` next to the pinned golden:
         every parse+resolution path the golden exercises — power on/off via alias («включи свет в детской»),
         ranged setters with units («поставь 22 градуса в спальне» → `climate.set_setpoint {temp: 22}`), percent
