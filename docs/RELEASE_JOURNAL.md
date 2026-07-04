@@ -15,6 +15,25 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-05 — The bridge contract is voice-ready; ARCH-8's gate is met and the conclusions are in the
+  ledger.** Closes the loop opened 2026-07-04, when the user asked how smart-home intents get their donations
+  before starting ARCH-8. The analysis of the freshly committed bridge `contracts/` established the story —
+  **donations are NEVER generated from the contract**: donations carry the static device-agnostic grammar
+  (verbs, typed slots), the catalog supplies the entity/value vocabulary at runtime (lazy, ARCH-26), the
+  resolver marries them — and found five gaps (schema-less `CatalogAction.params`, no aliases, EN-only enum
+  labels, no units on params, enum-in-disguise `apps.launch`). Filed bridge-side; intake verified 4 of 5 and
+  **refuted the G5 remedy** (the app set is runtime-dynamic — a static enum in the golden would drift on
+  every app install, the exact disease QUAL-18 diagnosed; corrected to an `options_from` hint +
+  `GET /devices/{id}/options/<kind>`, which adds a clean THIRD vocabulary tier: fully-dynamic per-device
+  sets). Bridge landed **VWB-20 contract patch v1.1** (typed `CatalogParam` with unit/values/options_from,
+  ru+en enum labels, aliases schema, husks suppressed) **and VWB-21** (household alias vocabulary: 34
+  devices + 3 rooms) — all six items verified against the committed artifacts (catalog `7a1149c7`, bridge
+  `59f4f46`). Ledger annotated so the conclusions survive this chat: ARCH-8 gate flipped to MET with the
+  PR-2/PR-3 build notes; QUAL-35 gained the resolver-design notes (options_from as a second CHOICE source
+  with lazy-miss + short-TTL cache; Cyrillic↔Latin transliteration-tolerant matching for device-reported
+  proper nouns — «ютуб» vs "YouTube"; v1 command set excludes input switching until bridge VWB-19);
+  TEST-17 un-deferred → `[release]` P2 with the pin target recorded. Next: TEST-17 pin → ARCH-8 PR-1.
+
 - **2026-07-04 — QUAL-18 DONE (re-scoped) — the AsyncAPI subsystem is retired; the WebSocket protocols
   finally have accurate documentation.** The user asked for a deep dig before implementation, and the dig
   changed everything: the live `/asyncapi.json` emitted **zero channels** (verified against a running

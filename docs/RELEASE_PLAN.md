@@ -148,13 +148,21 @@ and the structural refactors **move code** — so blind refactoring/fixing is th
 Target pattern: **Hexagonal (Ports & Adapters)** — SIGNED OFF 2026-06-01. Code is already ~80% there
 (interfaces=ports, providers=adapters, components=app services, entry-points=registry).
 See `docs/review/phase1_architecture_map.md` §5.
-- [ ] **ARCH-8** [MQTT] (P-TBD) `[release]` — **BLOCKED (2026-07-04, user): wait for bridge `SCN-4` + `VWB-15`.**
-      `VWB-15` supplies the committed catalog/openapi contract artifact (→ TEST-17 pins it; PR-2/PR-3 build
-      against it offline), and `SCN-4` (the bridge's mandatory scenario↔Wirenboard redesign) can reshape what
-      the catalog exposes as actuation targets (scenario/aggregate semantics) — starting the `DeviceCatalog`
-      consumer before it settles risks building against a contract about to change. Do not start (incl. PR-1)
-      until both land bridge-side; when `VWB-15` lands, un-defer **TEST-17** first (pin the artifact), then
-      open PR-1. _Orig:_ **★ ARCH-22 (2026-06-14):** the **voice-confirmation of actuation** feature (T-B,
+- [ ] **ARCH-8** [MQTT] (P-TBD) `[release]` — **GATE MET 2026-07-05** (was BLOCKED 2026-07-04 on bridge
+      `SCN-4`+`VWB-15`): all bridge prerequisites landed and were verified against the committed artifacts —
+      `SCN-4` (scenarios became per-room `scenario_manager_*` catalog devices with a `scenario.set` enum:
+      voice-drivable through the ordinary CHOICE path, **no special-casing needed**), `VWB-15` (`contracts/`
+      artifacts + CI drift guard), **`VWB-20` contract patch v1.1** (typed `CatalogParam` incl.
+      `unit`/`values`/`options_from`; ru+en enum labels; `aliases` schema; empty capability husks SUPPRESSED —
+      the parser will not see actionless/fieldless entries), **`VWB-21`** (household alias vocabulary authored:
+      34 devices + 3 rooms, e.g. «зал»→living_room). **Sequencing: TEST-17 pins v1.1 FIRST** (bridge `59f4f46`,
+      catalog `7a1149c7`), then PR-1. **Build notes from the 2026-07-04/05 contract analysis (recorded from
+      chat):** PR-2's catalog parser codes against typed `CatalogParam` — a param carries EITHER `values`
+      (stable enum `{wire,canonical,labels}` triplets) OR `options_from` (a dynamic set enumerated at
+      resolution time via `GET /devices/{id}/options/<kind>` — installed apps etc.); PR-3's resolver consumes
+      `names`+`aliases` per locale. Donations stay device-agnostic — the catalog supplies the entity/value
+      vocabulary at runtime; donations are NEVER generated from the contract (ARCH-26 lazy refresh decouples
+      the deploy cycles). _Orig:_ **★ ARCH-22 (2026-06-14):** the **voice-confirmation of actuation** feature (T-B,
       `docs/design/esp32_satellite.md` §10) rides this task — a sequenced `DEVICE_COMMAND → bridge rich DeliveryResult →
       derive text → SPEECH to the origin device` (opt-in `confirm_actuation_by_voice`; device-transparent, reply via
       ARCH-21). Implement it with ARCH-8's rich `DeliveryResult`. **★ Catalog contract amended 2026-06-15:** the bridge's
@@ -285,8 +293,21 @@ _Apply to every remediation task below (from the 4 review docs + QUAL-25/26). So
         design it HERE, against the real device-unit requirements: generalize `units.py` to a value+unit type with
         **canonical normalization + externalized (donation/catalog) unit surfaces** so timer + dimming + temperature
         share ONE path. The bridge catalog (ARCH-8) declares each device's unit — that's the requirement source.
+        **★ Satisfied bridge-side 2026-07-05 (VWB-20 v1.1): 27 action params carry `unit` (°C on `set_setpoint`,
+        % on brightness/position) in the typed `CatalogParam`.**
         `QuantityEntityResolver` (`entity_resolver.py`) already holds the non-time nucleus (percent/degrees). _(The ru
         oblique-case numeral gap noted here was resolved separately as BUG-7.)_
+      • **★ Resolver-design notes from the contract analysis (2026-07-04/05, chat → recorded here):**
+        **(1) CHOICE resolution gains a SECOND surface source** — a `CatalogParam` with `options_from` (e.g.
+        `apps.launch app`) enumerates its surfaces at RESOLUTION time via `GET /devices/{id}/options/<kind>`,
+        not from the catalog; generalize the ARCH-26 lazy-miss pattern (resolve → miss → re-fetch → retry once)
+        plus a short-TTL per-device cache — this round-trip sits inside a voice command's latency budget.
+        **(2) Dynamic-set surfaces need transliteration-tolerant matching:** the options endpoint returns
+        device-reported proper nouns ("YouTube", "Netflix") while RU ASR yields «ютуб»/«нетфликс» — the
+        resolver must match Cyrillic↔Latin phonetically/transliterated, NOT by exact equality (per
+        `donation-choice-surfaces-rule` the contract stays canonical; matching is Irene's job).
+        **(3) The v1 command set EXCLUDES input switching** («переключи на CD») — select-form capabilities
+        aren't canonically routable until bridge `VWB-19` lands; don't author donations that promise it.
 - [ ] **QUAL-44** `[deferred]` [DFLOW] (P2, enhancement; split from QUAL-31) — **Answer-vs-new-command arbitration on a
       clarifying turn.** QUAL-31's resume pre-check (`workflows/voice_assistant.py` `_process_pipeline`, the
       `take_pending_clarification` branch) **unconditionally** treats the turn that follows a clarification as the answer:
@@ -339,7 +360,14 @@ _Discrete functional defects (distinct from QUAL refactors/quality work). Surfac
 _Trace-driven system testing (design `docs/design/trace_system_testing.md`, TEST-11 ✓) — all implementation slices
 (TEST-12/13/14/15) done; see `RELEASE_PLAN_DONE.md`._
 
-- [ ] **TEST-17** [EVAL][MQTT] (P3) `[deferred]` — **The Irene↔bridge catalog contract bundle in eval-commons (ARCH-26
+- [ ] **TEST-17** [EVAL][MQTT] (P2) `[release]` — **UNBLOCKED + re-tagged 2026-07-05** (was `[deferred]` P3,
+      gated on VWB-15): the bridge landed VWB-15 **and** the VWB-20 v1.1 contract patch **and** the VWB-21
+      alias vocabulary — pinning waited for v1.1 by design (pin once, never re-pin days later). **Pin target:
+      bridge commit `59f4f46` / catalog version `7a1149c7`** (`contracts/{catalog.golden.json, openapi.json,
+      STAMP.json}`). Re-tagged `[release]` because the recorded ARCH-8 sequencing makes this the first step of
+      the release-scoped MQTT arc (TEST-17 pin → ARCH-8 PR-1). Items (a)–(c)+(e) are ready now; item (d) — the
+      `{utterance → expected canonical command}` crossover fixtures — co-develops with ARCH-8 PR-1/QUAL-35.
+      _Orig:_ **The Irene↔bridge catalog contract bundle in eval-commons (ARCH-26
       §14).** A committed, shared artifact both repos pin so each builds against the boundary with no live counterpart:
       (a) the bridge's FastAPI **`/openapi.json`** pinned (carries **both** `CatalogResponse` and the canonical
       action-request body — no bespoke schema); (b) a **curated golden catalog** ("the works" — rooms, device classes,
