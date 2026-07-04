@@ -9,8 +9,8 @@ digraph esp32_fit {
 
   subgraph cluster_sats {
     label="voice satellites (one per room)"; fontsize=12; color="#ce93d8"; style=rounded; margin=12;
-    k [label="kitchen ESP32\nwake word: “Irene”", fillcolor="#f3e5f5", color="#7b1fa2"];
-    b [label="living-room ESP32\nwake word: “Boris”", fillcolor="#f3e5f5", color="#7b1fa2"];
+    k [label="kitchen ESP32\nwake word: “Ирина”", fillcolor="#f3e5f5", color="#7b1fa2"];
+    b [label="living-room ESP32\nwake word: “Валера”", fillcolor="#f3e5f5", color="#7b1fa2"];
   }
 
   irene  [label="Irene\none brain\n(ASR · NLU · intents)", fillcolor="#e8f5e8", color="#388e3c"];
@@ -22,8 +22,8 @@ digraph esp32_fit {
     bd [label="living-room blinds …", fillcolor="#e3f2fd", color="#1976d2"];
   }
 
-  k -> irene [label="“Irene” → kitchen"];
-  b -> irene [label="“Boris” → living room"];
+  k -> irene [label="“Ирина” → kitchen"];
+  b -> irene [label="“Валера” → living room"];
   irene -> bridge [label="canonical command,\nscoped to the room", style=dashed, color="#9e9e9e"];
   bridge -> kd [style=dashed, color="#9e9e9e"];
   bridge -> bd [style=dashed, color="#9e9e9e"];

@@ -28,8 +28,8 @@ default_provider = "microwakeword"
 [voice_trigger.providers.microwakeword]
 enabled = true
 wake_words = [
-    { name = "irene", model = "/models/irene_ru.tflite", threshold = 0.8, language = "ru" },
-    { name = "boris", model = "/models/boris_ru.tflite", threshold = 0.8, language = "ru" },
+    { name = "irina", model = "irina", threshold = 0.97, language = "ru" },
+    { name = "alexa", model = "alexa", threshold = 0.9, language = "en" },
 ]
 
 [voice_trigger.providers.openwakeword]
@@ -43,22 +43,34 @@ wake_words = [
 Each entry is `{ name, model, threshold, language }`:
 
 - **`name`** — the label you'll see on a detection, and the key that lets a wake word *name a room*
-  ("Irene" for the kitchen, "Boris" for the living room).
-- **`model`** — a built-in catalog name (OpenWakeWord: `hey_jarvis`, `alexa`, `hey_mycroft`; microWakeWord:
-  `okay_nabu`, …) **or** a path to a custom model file.
-- **`threshold`** — detection cut-off, 0–1.
+  («Ирина» for the kitchen, «Валера» for the living room).
+- **`model`** — where the model comes from. For microWakeWord, in order of preference: a **built-in**
+  name (`alexa`, `okay_nabu`, `hey_jarvis`, `hey_mycroft` — English, bundled with the library, nothing
+  to download), a **released catalog** word (`irina` — downloaded once into the models folder, like any
+  other model), a **URL to a model manifest** (e.g. a [microwakeword.com](https://microwakeword.com/)
+  model or one on Hugging Face — the model file is fetched along with it), or a **local path** to a
+  manifest you just trained. For OpenWakeWord: a built-in name (`hey_jarvis`, `alexa`, `hey_mycroft`)
+  or a path to a custom `.onnx`/`.tflite`.
+- **`threshold`** — detection cut-off, 0–1. (microWakeWord models carry their own tuned cut-off in the
+  manifest; the manifest's value wins for them.)
 - **`language`** — two-letter tag, for your own bookkeeping.
 
 Audio is 16 kHz / 16-bit mono PCM — the pipeline's canonical format, which the microphone is transformed to
 once at the input boundary (see [audio](audio.md)).
 
-## Custom (Russian) wake words
+## Russian wake words
 
-Built-in models are English. For per-room Russian names you train your own — the easiest path is the hosted
-[microwakeword.com](https://microwakeword.com/): give it a phrase, it generates Piper samples and returns a
-`.tflite` + a small JSON manifest. Point a `microwakeword` entry's `model` at that file (or the manifest) and
-the same artifact drops onto the ESP32. Expect to tune `threshold` and listen for false accepts — custom
-training is still finicky.
+Built-in models are English. Russian names are trained in-house and released as ready-to-use catalog
+words — **«Ирина»** (`irina`) is the first: put it in `wake_words` and the model is fetched on startup
+(published at [droman42/microwakeword-irina-ru](https://huggingface.co/droman42/microwakeword-irina-ru)).
+More names («Валера», «Наташа») join the catalog as they validate. The same two files a catalog word
+downloads are what an ESP32 satellite gets flashed with — server-side and on-device detection run one
+artifact.
+
+For a word that isn't in the catalog yet, point `model` at a manifest URL (a
+[microwakeword.com](https://microwakeword.com/) model, or any hosted one) or at a local manifest fresh
+out of training — that's how a new word is tested before it's released. Expect to listen for false
+accepts on anything freshly trained; a model earns its catalog spot by holding up on real recordings.
 
 ## Dependencies
 

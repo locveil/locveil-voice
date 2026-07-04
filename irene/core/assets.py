@@ -469,6 +469,11 @@ class AssetManager:
         if not model_info and not url_override:
             raise ValueError(f"No model configuration found for {provider}/{model_id}")
 
+        # Multi-file model (ASSET-5): `files: {filename: url}` fetches a directory pack
+        # (e.g. a microWakeWord v2 manifest + its sibling .tflite) instead of a single file.
+        if model_info.get("files"):
+            return await self._download_files_pack(model_path, model_info["files"])
+
         # Extract URL from model info (a caller-supplied override wins — ASSET-4)
         model_url = url_override or model_info.get("url")
 
@@ -531,6 +536,47 @@ class AssetManager:
             logger.error(f"Failed to download {provider}/{model_id}: {e}")
             raise
     
+    async def _download_files_pack(self, model_path: Path, files: Dict[str, str]) -> Path:
+        """Fetch a multi-file model into the directory `model_path` (ASSET-5).
+
+        Same atomicity idiom as archive extraction: download every file into a staging dir,
+        rename into place only when ALL succeeded — a partial pack never lands at model_path
+        (which the populated-check would otherwise trust on the next run).
+        """
+        model_path.parent.mkdir(parents=True, exist_ok=True)
+        staging = model_path.parent / f".{model_path.name}.incomplete"
+        self._remove_partial(staging)
+        staging.mkdir(parents=True)
+        try:
+            for filename, url in files.items():
+                logger.info(f"Downloading {filename} from {url}")
+                await self._download_file(url, staging / filename)
+        except Exception:
+            self._remove_partial(staging)
+            raise
+        self._remove_partial(model_path)   # clear any stale target
+        staging.rename(model_path)         # atomic on the same filesystem
+        logger.info(f"Successfully downloaded pack: {model_path}")
+        return model_path
+
+    async def download_model_files(self, provider: str, model_id: str,
+                                   files: Dict[str, str], force: bool = False) -> Path:
+        """Download an ad-hoc multi-file model NOT in the provider's catalog (ASSET-5) — e.g. a
+        wake-word pack referenced by manifest URL in the TOML config. Same lock/populated-check/
+        staging semantics as `download_model`."""
+        lock_key = f"{provider}:{model_id}"
+        if lock_key not in self._download_locks:
+            self._download_locks[lock_key] = asyncio.Lock()
+        async with self._download_locks[lock_key]:
+            model_path = self.get_model_path(provider, model_id)
+            if model_path.exists() and not force:
+                if self._is_populated_download(model_path):
+                    logger.info(f"Model already exists: {model_path}")
+                    return model_path
+                logger.warning(f"Model path exists but is empty/partial — re-downloading: {model_path}")
+                self._remove_partial(model_path)
+            return await self._download_files_pack(model_path, files)
+
     async def _download_file(self, url: str, target_path: Path) -> None:
         """Download file with progress tracking"""
         try:

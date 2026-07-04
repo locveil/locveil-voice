@@ -15,6 +15,26 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-04 — ARCH-29 + ASSET-5 DONE — «Ирина» lives in the server: wake-word model acquisition designed
+  (interactive) and implemented; the training factory's first handoff consumed.** The user announced the first
+  validated RU microWakeWord model (HF `droman42/microwakeword-irina-ru`, trained in
+  `~/development/wakeword-training`) and asked for the model-sourcing architecture discussion. Design
+  (`docs/design/wakeword_models.md`): a wake-word model is a v2 two-file pack (manifest + sibling `.tflite`);
+  resolution is a 4-rung chain — local manifest path (pre-release testing) → wheel built-ins (the 4 stock EN
+  packs ship inside pymicro-wakeword byte-identical to the esphome v2 repo, so «Alexa» as «Ирина»'s EN
+  counterpart costs zero downloads) → v2 manifest URL (the escape hatch for microwakeword.com and
+  not-yet-released HF models, per the user's "what if I train more?" question) → the released catalog on the
+  provider class (piper-voices pattern; one line per validated word). Trigger layer stays semantics-free —
+  word→room mapping waits for multi-room (ARCH-22/QUAL-35). Implementation: AssetManager multi-file packs
+  (`files:` entries, staging + atomic rename) + `download_model_files()`; the provider's broken QUAL-20
+  asset stub replaced by the real chain; both standalone configs switched to microwakeword («Ирина» RU /
+  Alexa EN, per user request); voice-trigger guide rewritten; roster fixed everywhere («Борис» dropped — 2
+  syllables; next: «Валера», «Наташа»; diagram regenerated). Live verification through the real provider:
+  pack fetched from HF via the AssetManager, silence stays negative, and **16/16 synthetic + 6/6 real
+  household «Ирина» recordings detect at the manifest's 0.97 cutoff** — an initial 0/16 scare was the harness
+  truncating clips at the word's last sample (the sliding window needs trailing audio; a live mic always
+  provides it). Suite 1173 green; both config validators green; smoke e2e green.
+
 - **2026-07-04 — ASSET-4 DONE — silero VAD model download re-homed into the AssetManager; VAD warmup moved
   off the audio hot path.** A user-requested deep review of the VAD code ("where does the microVAD model come
   from?") answered the question two ways: **microVAD's model is compiled into the `pymicro-vad` wheel**

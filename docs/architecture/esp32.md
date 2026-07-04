@@ -33,8 +33,8 @@ case. The satellite is thin on purpose: no models, no intent logic, just ears an
 
 ![Voice satellites in the picture](../images/esp32-fit.png)
 
-The wake word is also how you choose a room. Each satellite is trained for its **own** word — say "Irene"
-in the kitchen, "Boris" in the living room — so the word you speak already selects the node, and the node
+The wake word is also how you choose a room. Each satellite is trained for its **own** word — say «Ирина»
+in the kitchen, «Валера» in the living room — so the word you speak already selects the node, and the node
 already knows its room (it said so at registration). The command is scoped before Irene has parsed a thing:
 "включи свет" addressed to the kitchen node means the *kitchen's* lights. Any territorial division in the
 house works this way, not only rooms — the wake word names the territory.

@@ -163,21 +163,23 @@ timeout = 30
 enabled = true
 
 # ============================================================
-# VOICE TRIGGER — openWakeWord (local wake-word; onnx, no torch)
+# VOICE TRIGGER — microWakeWord (Alexa — ships inside the
+# pymicro-wakeword wheel, zero download; the EN counterpart of the
+# RU standalone's «Ирина». Same "micro" stack as the ESP32.)
 # ============================================================
 [voice_trigger]
 enabled = true
-default_provider = "openwakeword"
+default_provider = "microwakeword"
 confidence_threshold = 0.8
 buffer_seconds = 1.0
 timeout_seconds = 5.0
 
-[voice_trigger.providers.openwakeword]
+[voice_trigger.providers.microwakeword]
 enabled = true
-inference_framework = "onnx"
+sliding_window_size = 5
 preload_models = true
 wake_words = [
-    { name = "hey_jarvis", model = "hey_jarvis", threshold = 0.8, language = "en" },
+    { name = "alexa", model = "alexa", threshold = 0.9, language = "en" },
 ]
 
 # ============================================================

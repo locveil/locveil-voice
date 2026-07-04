@@ -9,6 +9,16 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
 ---
 
 ### Architecture & Refactor (ARCH)
+- [x] **ARCH-29** [WAKE][ASSET] (P2) `[release]` — **DONE 2026-07-04 (interactive design session).** Server-side
+      wake-word model acquisition design → `docs/design/wakeword_models.md`. Decisions: a wake-word model is a
+      **v2 two-file pack** (manifest + sibling `.tflite`, `from_config` resolves relative); **4-rung resolution**
+      (local path → wheel built-ins [the 4 stock EN packs ship inside pymicro-wakeword, zero download — «Alexa»
+      is the EN counterpart of «Ирина» for free] → v2 manifest URL [the escape hatch for microwakeword.com +
+      not-yet-released HF models] → released catalog on the provider class, piper-voices pattern, starting with
+      `irina` @ HF `droman42/microwakeword-irina-ru`); downloads only via AssetManager (multi-file `files:`
+      support, ASSET-4 rule: no provider self-downloads); trigger layer stays **semantics-free** (word→room
+      deferred to ARCH-22/QUAL-35 where a consumer exists); roster: «Ирина» → next «Валера»/«Наташа», «Борис»
+      dropped (2 syllables). Implementation follow-up filed + completed same-day: **ASSET-5**.
 - [x] **ARCH-28** [FAF] (P2) `[release]` — **DONE 2026-07-02.** Durable-action substrate implemented per
       `docs/design/durable_actions.md`, all 7 slices: **(1)** `AssetConfig.state_root` (`<assets_root>/state/`,
       auto-created) + `DurableActionStorePort` + `JsonFileDurableActionStore` (atomic temp+rename, corrupt-file-safe)
@@ -2602,6 +2612,23 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       (stub feature-extraction; a TF *demo* model, not a real wakeword model), so it's the ESP32/wakeword review's
       keep-fix-cut call, not a URL patch. **Caveat honored:** network is fake-IP mode (all hosts → `198.18.0.0/15`,
       normal); judged on bytes-served vs stall, not the IP. **Torch.hub hedge:** unneeded — `models.silero.ai` is healthy.
+- [x] **ASSET-5** [WAKE][ASSET] (P2) `[release]` — **DONE 2026-07-04. Wake-word packs through the AssetManager**
+      (implements ARCH-29 / `docs/design/wakeword_models.md`; first RU model «Ирина» consumed from HF —
+      the wakeword-training factory's first handoff). AssetManager: multi-file model support (`files:
+      {filename: url}` catalog entries → `_download_files_pack`, staging dir + atomic rename, existing
+      lock/populated-check/healing) + `download_model_files()` for ad-hoc packs. MicroWakeWordProvider:
+      4-rung `_build_detector` (local manifest / wheel built-ins / v2 manifest URL with sibling-`.tflite`
+      derivation / released catalog `{irina: HF droman42/microwakeword-irina-ru}`), `_get_default_extension`
+      → `""` (directory packs `models/microwakeword/<word>/`), catalog advertised in
+      `get_supported_wake_words`; catalog-fetch failures log WARNING (unknown words stay debug). Configs:
+      `standalone-x86_64` → microwakeword/«Ирина» (0.97), `standalone-x86_64-en` → microwakeword/Alexa (0.9);
+      config-master example block. Docs: `voice-trigger.md` rewritten (model sourcing + RU words section),
+      «Борис»→«Валера»/«Наташа» roster fix in `esp32.md` + `esp32-fit.dot` (png regenerated). Tests:
+      `test_wakeword_assets.py` (11, hermetic — fake pmw + patched fetch). **Verified live:** irina pack
+      downloaded from HF via AssetManager (60,968-byte tflite), real pymicro-wakeword detectors: silence
+      negative, **16/16 synthetic + 6/6 real household «Ирина» recordings detected @0.97** (initial 0/16 was
+      a harness artifact — clips ending exactly at the word need trailing audio to flush the sliding window;
+      mic streams always have it).
 - [x] **ASSET-4** [VAD][ASSET] (P2) `[release]` — **DONE 2026-07-04. Silero VAD model download moved into the
       AssetManager; engine never downloads.** (Chat-surfaced VAD review 2026-07-04; findings were inline in this
       entry — no review doc.) Was: `SileroVADEngine._ensure()` ran a raw synchronous `urllib.request.urlretrieve`

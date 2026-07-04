@@ -367,13 +367,19 @@ wake_words = [
 ]
 
 # MicroWakeWord Provider (server-side via pymicro-wakeword; same "micro" stack as the ESP32). `model` is a
-# built-in (okay_nabu | hey_jarvis | hey_mycroft | alexa) or a path to a custom .tflite/manifest (per-unit RU).
+# built-in (okay_nabu | hey_jarvis | hey_mycroft | alexa — ship inside the wheel, no download), a released
+# catalog word (irina — downloaded via the asset manager from HF), a v2 manifest URL (microwakeword.com or
+# a not-yet-released HF model; the .tflite is fetched as the manifest's sibling), or a local manifest path
+# (pre-release testing). Multiple words run as parallel detectors; the fired word is reported upstream.
 [voice_trigger.providers.microwakeword]
 enabled = false                     # Enable MicroWakeWord provider
 sliding_window_size = 5            # Probabilities averaged per detection (micro-specific)
 preload_models = false             # Preload AI models
 wake_words = [
     { name = "okay_nabu", model = "okay_nabu", threshold = 0.8, language = "en" },
+    # { name = "irina", model = "irina", threshold = 0.97, language = "ru" },   # released RU catalog word
+    # { name = "alexa", model = "alexa", threshold = 0.8, language = "en" },    # built-in EN counterpart
+    # { name = "custom", model = "https://example.org/models/custom.json", threshold = 0.9, language = "en" },
 ]
 
 # ============================================================

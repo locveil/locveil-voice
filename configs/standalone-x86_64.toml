@@ -150,21 +150,23 @@ timeout = 30
 enabled = true
 
 # ============================================================
-# VOICE TRIGGER — openWakeWord (local wake-word; onnx, no torch)
+# VOICE TRIGGER — microWakeWord («Ирина», the released RU catalog
+# word — pack fetched from HF via the asset manager; same "micro"
+# stack the ESP32 satellites run on-device)
 # ============================================================
 [voice_trigger]
 enabled = true
-default_provider = "openwakeword"
+default_provider = "microwakeword"
 confidence_threshold = 0.8
 buffer_seconds = 1.0
 timeout_seconds = 5.0
 
-[voice_trigger.providers.openwakeword]
+[voice_trigger.providers.microwakeword]
 enabled = true
-inference_framework = "onnx"
+sliding_window_size = 5
 preload_models = true
 wake_words = [
-    { name = "hey_jarvis", model = "hey_jarvis", threshold = 0.8, language = "en" },
+    { name = "irina", model = "irina", threshold = 0.97, language = "ru" },
 ]
 
 # ============================================================

@@ -4,9 +4,18 @@ microWakeWord Voice Trigger Provider
 Server-side wake-word detection backed by **pymicro-wakeword** (OHF-Voice, Apache-2.0) — the same
 "micro" stack that runs on the ESP32 satellites on-device. The library bundles the micro_speech feature
 frontend, the streaming tflite inference, and a precompiled tflite C lib, so this provider is a thin
-adapter (QUAL-20): it resolves each configured wake word to a `MicroWakeWord` (a built-in model, or a
-custom `.tflite`+manifest trained via microwakeword.com — the per-unit Russian-name plan) and streams
+adapter (QUAL-20): it resolves each configured wake word to a `MicroWakeWord` and streams
 16 kHz / 16-bit mono PCM through it in 10 ms chunks.
+
+A wake-word model is a **two-file v2 pack** — a JSON manifest + the streaming `.tflite` it references
+*relative to itself* (`from_config` loads `manifest_dir / config["model"]`). Resolution order per
+configured word (`docs/design/wakeword_models.md`, ARCH-29/ASSET-5):
+1. local manifest path (pre-release testing of a just-trained model);
+2. built-in — the four stock EN packs ship INSIDE the pymicro-wakeword wheel (zero download);
+3. v2 manifest URL — microwakeword.com or a not-yet-cataloged HF model; the sibling `.tflite` is
+   fetched with it through the AssetManager (`download_model_files`);
+4. the released catalog below (`_get_default_model_urls`) — RU words trained in the in-house
+   factory and published to HF (`droman42/microwakeword-<word>-ru`), one line per released word.
 
 64-bit only — the WB7/armv7 target wakes on-device (ESP32), so this never enters the armv7 image.
 See `docs/review/esp32_wakeword_review.md` and `docs/design/onnx_inference_layer.md` §11.
@@ -99,28 +108,51 @@ class MicroWakeWordProvider(VoiceTriggerProvider):
         logger.info("microWakeWord ready: %d detector(s) for %s", len(self._detectors), self._detector_words)
 
     async def _build_detector(self, pmw: Any, spec: Dict[str, Any]) -> Optional[Any]:
-        """Resolve a wake word's `model` ref to a `MicroWakeWord` (custom manifest, built-in, or asset)."""
-        model_ref = spec["model"]
+        """Resolve a wake word's `model` ref to a `MicroWakeWord` — the 4-rung chain (ASSET-5)."""
+        model_ref = str(spec["model"] or spec["name"])
 
-        # 1) Custom model manifest supplied by path (.json → from_config; the microwakeword.com output).
+        # 1) Local manifest path (pre-release testing of a just-trained model). No copy, no download.
         if model_ref.endswith(".json") and Path(model_ref).exists():
             return pmw.MicroWakeWord.from_config(model_ref)
 
-        # 2) Built-in model by (aliased) name — check the model ref then the label.
+        # 2) Built-in — the four stock EN packs inside the pymicro-wakeword wheel (zero download,
+        #    byte-identical to the esphome v2 repo). Check the model ref, then the label.
         for candidate in (model_ref, spec["name"]):
             member = _BUILTIN_ALIASES.get(str(candidate).lower())
             if member is not None:
                 return pmw.MicroWakeWord.from_builtin(pmw.Model[member])
 
-        # 3) Asset-managed custom model (deployment-supplied manifest registered under "microwakeword").
-        try:
-            resolved = await self.asset_manager.download_model("microwakeword", model_ref)
-            if resolved and Path(resolved).exists() and str(resolved).endswith(".json"):
-                return pmw.MicroWakeWord.from_config(str(resolved))
-        except Exception as e:  # asset miss is not fatal — just means this word has no model
-            logger.debug("No asset-managed microWakeWord model for '%s': %s", model_ref, e)
+        # 3) v2 manifest URL (microwakeword.com, a not-yet-cataloged HF repo, ...). The .tflite is
+        #    the manifest's sibling (v2 manifests reference it relative), fetched with it into
+        #    models/microwakeword/<name>/ via the AssetManager (staging + atomic rename).
+        if model_ref.startswith(("http://", "https://")) and model_ref.endswith(".json"):
+            stem = model_ref.rsplit("/", 1)[-1][:-len(".json")]
+            files = {
+                f"{stem}.json": model_ref,
+                f"{stem}.tflite": model_ref[:-len(".json")] + ".tflite",
+            }
+            try:
+                pack_dir = await self.asset_manager.download_model_files(
+                    "microwakeword", spec["name"], files)
+                return pmw.MicroWakeWord.from_config(Path(pack_dir) / f"{stem}.json")
+            except Exception as e:
+                logger.warning("microWakeWord: failed to fetch pack for '%s' from %s: %s",
+                               spec["name"], model_ref, e)
+                return None
 
-        logger.warning("microWakeWord: no built-in or custom model for '%s' (%s) — skipped",
+        # 4) Released catalog (asset-managed pack under models/microwakeword/<word>/).
+        try:
+            pack_dir = Path(await self.asset_manager.download_model("microwakeword", model_ref))
+            manifest = next(pack_dir.glob("*.json"), None)
+            if manifest is not None:
+                return pmw.MicroWakeWord.from_config(manifest)
+        except ValueError as e:  # not in the catalog — expected for unknown words, stay quiet
+            logger.debug("No catalog microWakeWord model for '%s': %s", model_ref, e)
+        except Exception as e:  # IS in the catalog but the fetch/load failed — must be visible
+            logger.warning("microWakeWord: catalog pack for '%s' failed to fetch/load: %s",
+                           model_ref, e)
+
+        logger.warning("microWakeWord: no built-in, URL, or catalog model for '%s' (%s) — skipped",
                        spec["name"], model_ref)
         return None
 
@@ -173,9 +205,10 @@ class MicroWakeWordProvider(VoiceTriggerProvider):
             self._features.reset()
 
     def get_supported_wake_words(self) -> List[str]:
-        """Built-in catalog plus any custom words that resolved to a detector."""
-        builtin = sorted(set(_BUILTIN_ALIASES))
-        return sorted(set(builtin) | set(self._detector_words))
+        """Built-ins + the released catalog + any custom words that resolved to a detector."""
+        builtin = set(_BUILTIN_ALIASES)
+        catalog = set(self._get_default_model_urls())
+        return sorted(builtin | catalog | set(self._detector_words))
 
     def get_supported_sample_rates(self) -> List[int]:
         return [16000]
@@ -232,7 +265,7 @@ class MicroWakeWordProvider(VoiceTriggerProvider):
 
     @classmethod
     def _get_default_extension(cls) -> str:
-        return ".tflite"
+        return ""  # each model is a DIRECTORY pack: microwakeword/<word>/<word>.json + .tflite (ASSET-5)
 
     @classmethod
     def _get_default_directory(cls) -> str:
@@ -247,7 +280,23 @@ class MicroWakeWordProvider(VoiceTriggerProvider):
         return ["models"]
 
     @classmethod
-    def _get_default_model_urls(cls) -> Dict[str, str]:
-        """No hardcoded URLs — built-ins ship inside pymicro-wakeword; custom models are
-        deployment-supplied (trained per ESP32 unit via microwakeword.com)."""
-        return {}
+    def _get_default_model_urls(cls) -> Dict[str, Any]:
+        """The RELEASED wake-word catalog — v2 two-file packs (manifest + sibling .tflite),
+        one line per validated word (`docs/design/wakeword_models.md` D-2 rung 4).
+
+        The four stock EN words are NOT here: they ship inside the pymicro-wakeword wheel
+        (`from_builtin`, rung 2). RU words come from the in-house training factory
+        (~/development/wakeword-training) published to the user's HF repos; each new validated
+        word («Валера», «Наташа», ...) is a one-line addition here, filed as its consume-task.
+        """
+        def hf_ru(word: str, note: str) -> Dict[str, Any]:
+            base = f"https://huggingface.co/droman42/microwakeword-{word}-ru/resolve/main"
+            return {
+                "files": {f"{word}.json": f"{base}/{word}.json",
+                          f"{word}.tflite": f"{base}/{word}.tflite"},
+                "size": "~150 KB",
+                "description": note,
+            }
+        return {
+            "irina": hf_ru("irina", "Russian wake word «Ирина» (CC BY-NC-SA; validated 2026-07-04)"),
+        }
