@@ -1835,6 +1835,15 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       new WS tests (multi-utterance on one socket; no-end force-finalize with patched timeout) + the legacy fake
       made sherpa-honest (empty stream finalizes to nothing). Live verification: 3 utterances on one connection
       (with end ×2, without end ×1) all answered, single model load. Suite 1158 passed / 7 skipped; pyright clean.
+- [x] **BUG-22** [WEBAPI] (P2) `[release]` — **DONE 2026-07-05 (found + fixed during TEST-18 Slice B).**
+      **`room_alias` validation on `/execute/command` NEVER worked live:** `web_server.py` built its own fresh
+      `IntentAssetLoader` and loaded ONLY web templates, so the router's localization consumers saw empty data
+      — every room-scoped request got 400 «Invalid room alias … Valid aliases: []» (latent since the endpoint
+      gained room support; TEST-18 was the first real caller). Fix: `_setup_web_asset_loader` now PREFERS the
+      intent system's fully-loaded asset loader (donations/templates/localizations/web templates), keeping the
+      fresh web-templates-only loader as the fallback for a core without the intent system. Also extended
+      `assets/localization/rooms/{ru,en}.yaml` with the house's rooms (children_room, cabinet, hall, entrance,
+      shower, wardrobe, global) — the aliases the validation accepts.
 - [x] **BUG-21** [BUILD][TOOLS] (P2) `[release]` — **DONE 2026-07-02 (filed + fixed same day; surfaced by the
       BUILD-9 live CI runs + the user's local `--validate-all-profiles` output).** Double defect in the
       build-analyzer validation gate: **(1) stale rule** — "TTS providers enabled but no audio output providers
@@ -2096,6 +2105,56 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       runner overriding component config is its own smell — relevant to the `--set` work, worth a future look._
 
 ### Tests (TEST)
+- [x] **TEST-18** [EVAL][MQTT] (P3) `[deferred]` — **DONE 2026-07-05. The `device_command` capture provider + Irene
+      producer contract tests (ARCH-26 §14) — the suite EXISTS and RUNS: first scoreboard 16/23** (all tier-1
+      actuation + clarify green; red = 3 reads → ARCH-8 PR-5, F40/F42 scenario routing → QUAL-64 matcher
+      tuning [user decision: leave red, tune later], F41 transliteration + F06 compound numeral → QUAL-35
+      T2 evidence). Two slices (fixtures-first fold, user 2026-07-05):
+      • **Slice A — crossover fixtures — DONE 2026-07-05** (interactive; eval-commons `941e245`; step 0
+        re-pin @ bridge `ee0a71d` / catalog `91909b54` was `e0d6b45`). Deliverable:
+        **`eval-commons/contracts/crossover_fixtures.json` — 23 fixtures** against the pinned catalog, all
+        four expect kinds `actuate | room-group | read | clarify`, tiered 1/2 (green-able with the QUAL-35
+        T1 donation baseline vs needs T2 units/transliteration), **guarded by
+        `tests/test_crossover_fixtures.py`** (8 tests: every binding verified against the golden — device
+        ids/capabilities/actions/param ranges/enums/rooms/groups/fields + fixtures↔pin version agreement;
+        16/16 green together with the pin guards — a re-pin flags stale fixtures loudly). Coverage: aliases
+        («телек»/«эппл»/«радиаторы»/«пол»), typed params with °C/% ranges, scenario enum via ru label
+        («кино с видеокассеты» → `movie_vhs`) + a transliteration case («эппл ти ви» → `movie_appletv`),
+        room-group scope `auto` vs «весь»→`all`, room aliases «зал»/«квартира», the depth-doctrine
+        named-device case («закрой тюль слева» stays device-form), the power-fence cases («печь»/«розетки»
+        reachable by NAME only). **The 3 open decisions resolved (user 2026-07-05):** light-subset pair
+        nouns («ночники»/«тумбочки»/«полки») **DROPPED from v1** — user will add bridge-side compound
+        devices later (those fixtures return with that re-pin); same-room capability ambiguity → **CLARIFY
+        in v1** (F20 playback, F21 climate), priority rules = later release → **QUAL-63**; sensor reads
+        **INCLUDED** (F30–F32, incl. `any_of` for the physically-equivalent bedroom room-temperature
+        sources). Immediately consumable by bridge VWB-16; voice-side this is the acceptance spec ARCH-8
+        PR-3/PR-4 build toward (test-first).
+        _Orig:_ **(UNGATED — startable now, pure data against the TEST-17 pin).** Author the
+        `{utterance → expected canonical command}` set into `eval-commons/contracts/` next to the pinned golden:
+        every parse+resolution path the golden exercises — power on/off via alias («включи свет в детской»),
+        ranged setters with units («поставь 22 градуса в спальне» → `climate.set_setpoint {temp: 22}`), percent
+        («яркость на 30»), cover, aggregates («выключи свет везде» → `all_lights`), scenario enums by ru label
+        («кино с видеокассеты» → `scenario.set {value: movie_vhs}`), room-alias forms («в зале»), sensor read.
+        Immediately consumable by the bridge's VWB-16 consumer half; voice-side they are the **acceptance spec
+        PR-3/PR-4 build toward** (test-first — the resolver meets a pre-existing failing suite, not post-hoc
+        assertions). NO input-switching fixtures (bridge VWB-19 gate, per QUAL-35 note).
+      • **Slice B — DONE 2026-07-05** (eval-commons `1bc7b03` + voice eval wiring): built as a **mock-bridge
+        capture** (refines §14.3's in-process capture — operationally superior: `eval_commons/mock_bridge.py`
+        serves the PINNED golden at `/system/catalog` and records every canonical POST fixture-shaped, so the
+        run also exercises the real `BridgeClient` wire serialization + the real startup catalog pull);
+        `device_command_provider` drives `/execute/command`, `device_command_assert` compares against the
+        fixture `expect`, `fixtures_to_tests` GENERATES the promptfoo cases (fixtures stay the single source
+        of truth). Voice side: `eval/device.promptfooconfig.yaml` + `make device / device-auto` (derives the
+        SUT config — env cannot override nested TOML) + EXECUTE_URL/BRIDGE_CAPTURE_URL in the target profiles.
+        _Orig:_ **(~~gated on ARCH-8 PR-1~~ UNGATED 2026-07-05).** A new eval-commons
+        promptfoo provider drives Irene with an utterance and returns the emitted canonical `DeviceCommand`
+        (captured by the PR-1 capturing bridge `OutputPort`, not POSTed) for assertion against the Slice-A
+        fixtures + the pinned openapi schema — the **producer** half of the bidirectional contract (the bridge's
+        consumer half = VWB-16). **Text-input first** (isolates NLU→resolver→handler, deterministic, no
+        audio/bridge); audio→canonical later (recorded RU fixtures, WS-suite pattern). The full suite turns
+        EXECUTABLE at ARCH-8 PR-4 + the QUAL-35 T1 donation baseline. ~~Gated on TEST-17~~ (pinned 2026-07-05).
+        Design §14.
+
 - [x] **TEST-17** [EVAL][MQTT] (P2) `[release]` — **DONE 2026-07-05. The Irene↔bridge contract pinned into
       `eval-commons/contracts/`** (ARCH-26 §14 one-way inward sync; eval-commons `e571241`). Pinned byte-identical
       from `wb-mqtt-bridge/contracts/` @ bridge `59f4f46` / catalog `7a1149c7` (contract patch **v1.1** + alias

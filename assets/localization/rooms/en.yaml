@@ -21,5 +21,28 @@ room_keywords:
       - "sleeping room"
     bathroom:
       - "bathroom"
+    children_room:
+      - "children room"
+      - "kids room"
+      - "nursery"
+    cabinet:
+      - "cabinet"
+      - "study"
+      - "office"
+    hall:
+      - "hall"
+      - "corridor"
+    entrance:
+      - "entrance"
+      - "hallway"
+    shower:
+      - "shower room"
+    wardrobe:
+      - "wardrobe"
+      - "walk-in closet"
+    global:
+      - "whole house"
+      - "everywhere"
+      - "apartment"
       - "bath"
       - "restroom"

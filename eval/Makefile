@@ -52,7 +52,7 @@ export PROMPTFOO_CACHE_ENABLED := false
 
 # Target profile (endpoint wiring) — always applied and exported to promptfoo's environment.
 include profiles/targets/$(TARGET).env
-export WS_AUDIO_URL HEALTH_URL MQTT_HOST MQTT_PORT
+export WS_AUDIO_URL HEALTH_URL MQTT_HOST MQTT_PORT EXECUTE_URL BRIDGE_CAPTURE_URL
 # Config profile (local bring-up only) — optional; ignored if absent.
 -include profiles/configs/$(CONFIG).env
 export IRENE_CONFIG_FILE
@@ -61,7 +61,7 @@ export IRENE_CONFIG_FILE
 export EVAL_LANG EVAL_ROOM
 
 .DEFAULT_GOAL := help
-.PHONY: help setup setup-record cli ws ux record record-list record-devices replay replay-judge serve compare view clean
+.PHONY: help setup setup-record cli device device-tests device-sut-config device-auto ws ux record record-list record-devices replay replay-judge serve compare view clean
 
 RECORD := $(PROMPTFOO_PYTHON) -m eval_commons.record.cli --from-yaml ws.promptfooconfig.yaml --config profiles/recording.env
 
@@ -78,6 +78,35 @@ setup-record:                 ## add the fixture recorder + mic deps (sounddevic
 
 cli:                          ## CLI contract tests (argparse console scripts) — no service needed
 	$(PROMPTFOO) eval -c cli.promptfooconfig.yaml
+
+# TEST-18 Slice B — producer contract tests: utterance → captured canonical DeviceCommand,
+# asserted against the PINNED crossover fixtures (../../eval-commons/contracts/). The SUT must
+# point [outputs.bridge] at the mock bridge; `device-auto` wires everything for one local run.
+FIXTURES_JSON := ../../eval-commons/contracts/crossover_fixtures.json
+MOCK_BRIDGE_PORT ?= 8010
+
+device-tests:                 ## regenerate device.tests.yaml from the pinned crossover fixtures
+	$(PROMPTFOO_PYTHON) -m eval_commons.fixtures_to_tests $(FIXTURES_JSON) > device.tests.yaml
+
+device: device-tests          ## producer contract suite (needs SUT + mock bridge running; see device-auto)
+	$(PROMPTFOO) eval -c device.promptfooconfig.yaml -o results-device-$(TARGET).json
+
+# The SUT config is DERIVED from config-master at run time (env can't override nested TOML
+# sections — pydantic-settings gives init kwargs priority), flipping [outputs.bridge] at the mock.
+DEVICE_SUT_CONFIG := /tmp/irene-device-sut.toml
+
+device-sut-config:
+	@sed -e '/^\[outputs.bridge\]/,/^\[/{s|^enabled = false|enabled = true|;s|^base_url = .*|base_url = "http://localhost:$(MOCK_BRIDGE_PORT)"|;}' \
+	  ../configs/config-master.toml > $(DEVICE_SUT_CONFIG)
+	@grep -A3 '^\[outputs.bridge\]' $(DEVICE_SUT_CONFIG) | head -4
+
+device-auto: device-tests device-sut-config  ## one-shot local run: mock bridge + SUT up → suite → teardown
+	@$(PROMPTFOO_PYTHON) -m eval_commons.mock_bridge --catalog ../../eval-commons/contracts/catalog.golden.json --port $(MOCK_BRIDGE_PORT) & MOCK=$$!; \
+	( cd .. && .venv/bin/irene-webapi -c $(DEVICE_SUT_CONFIG) --port 6000 >/tmp/irene-device-eval.log 2>&1 ) & SUT=$$!; \
+	echo ">> waiting for $(HEALTH_URL) ..."; \
+	for i in $$(seq 1 60); do curl -sf "$(HEALTH_URL)" >/dev/null 2>&1 && break; sleep 1; done; \
+	$(PROMPTFOO) eval -c device.promptfooconfig.yaml -o results-device-$(TARGET).json; code=$$?; \
+	kill $$SUT $$MOCK 2>/dev/null; wait $$SUT $$MOCK 2>/dev/null; exit $$code
 
 ws:                           ## streaming-ASR system tests over /ws/audio (needs a running SUT; TRACE=1 keeps failing traces)
 ifeq ($(TRACE),1)

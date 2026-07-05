@@ -1,0 +1,209 @@
+# GENERATED from crossover_fixtures.json (catalog 91909b54bfb4b593) — do not edit.
+# Regenerate: python -m eval_commons.fixtures_to_tests ../../eval-commons/contracts/crossover_fixtures.json
+- description: "F01 (t1, actuate): включи телек"
+  vars:
+    utterance: "включи телек"
+    room: "children_room"
+    expect: {"kind": "actuate", "device_id": "children_room_tv", "capability": "power", "action": "on", "params": null}
+  metadata:
+    fixture: F01
+    tier: "1"
+    kind: actuate
+- description: "F02 (t1, actuate): выключи эппл"
+  vars:
+    utterance: "выключи эппл"
+    room: "living_room"
+    expect: {"kind": "actuate", "device_id": "appletv_living", "capability": "power", "action": "off", "params": null}
+  metadata:
+    fixture: F02
+    tier: "1"
+    kind: actuate
+- description: "F03 (t1, actuate): включи печь"
+  vars:
+    utterance: "включи печь"
+    room: "kitchen"
+    expect: {"kind": "actuate", "device_id": "oven_power", "capability": "power", "action": "on", "params": null}
+  metadata:
+    fixture: F03
+    tier: "1"
+    kind: actuate
+- description: "F04 (t1, actuate): выключи розетки"
+  vars:
+    utterance: "выключи розетки"
+    room: ""
+    expect: {"kind": "actuate", "device_id": "all_plugs", "capability": "power", "action": "off", "params": null}
+  metadata:
+    fixture: F04
+    tier: "1"
+    kind: actuate
+- description: "F05 (t2, actuate): поставь на радиаторах двадцать два градуса"
+  vars:
+    utterance: "поставь на радиаторах двадцать два градуса"
+    room: "bedroom"
+    expect: {"kind": "actuate", "device_id": "bedroom_heating", "capability": "climate", "action": "set_setpoint", "params": {"temp": 22}}
+  metadata:
+    fixture: F05
+    tier: "2"
+    kind: actuate
+- description: "F06 (t2, actuate): тёплый пол на двадцать пять градусов"
+  vars:
+    utterance: "тёплый пол на двадцать пять градусов"
+    room: "bathroom"
+    expect: {"kind": "actuate", "device_id": "bathroom_floor", "capability": "climate", "action": "set_setpoint", "params": {"temp": 25}}
+  metadata:
+    fixture: F06
+    tier: "2"
+    kind: actuate
+- description: "F07 (t2, actuate): сделай яркость тридцать процентов"
+  vars:
+    utterance: "сделай яркость тридцать процентов"
+    room: "children_room"
+    expect: {"kind": "actuate", "device_id": "children_room_spots", "capability": "brightness", "action": "set", "params": {"level": 30}}
+  metadata:
+    fixture: F07
+    tier: "2"
+    kind: actuate
+- description: "F08 (t1, actuate): закрой тюль слева"
+  vars:
+    utterance: "закрой тюль слева"
+    room: "living_room"
+    expect: {"kind": "actuate", "device_id": "living_room_tulle_left", "capability": "cover", "action": "close", "params": null}
+  metadata:
+    fixture: F08
+    tier: "1"
+    kind: actuate
+- description: "F10 (t1, room-group): включи свет в детской"
+  vars:
+    utterance: "включи свет в детской"
+    room: ""
+    expect: {"kind": "room-group", "room_id": "children_room", "group": "light", "action": "on", "scope": "auto"}
+  metadata:
+    fixture: F10
+    tier: "1"
+    kind: room-group
+- description: "F11 (t1, room-group): выключи свет"
+  vars:
+    utterance: "выключи свет"
+    room: "bedroom"
+    expect: {"kind": "room-group", "room_id": "bedroom", "group": "light", "action": "off", "scope": "auto"}
+  metadata:
+    fixture: F11
+    tier: "1"
+    kind: room-group
+- description: "F12 (t1, room-group): выключи весь свет в спальне"
+  vars:
+    utterance: "выключи весь свет в спальне"
+    room: ""
+    expect: {"kind": "room-group", "room_id": "bedroom", "group": "light", "action": "off", "scope": "all"}
+  metadata:
+    fixture: F12
+    tier: "1"
+    kind: room-group
+- description: "F13 (t1, room-group): включи свет в зале"
+  vars:
+    utterance: "включи свет в зале"
+    room: ""
+    expect: {"kind": "room-group", "room_id": "living_room", "group": "light", "action": "on", "scope": "auto"}
+  metadata:
+    fixture: F13
+    tier: "1"
+    kind: room-group
+- description: "F14 (t1, room-group): выключи весь свет в квартире"
+  vars:
+    utterance: "выключи весь свет в квартире"
+    room: ""
+    expect: {"kind": "room-group", "room_id": "global", "group": "light", "action": "off", "scope": "all"}
+  metadata:
+    fixture: F14
+    tier: "1"
+    kind: room-group
+- description: "F15 (t1, room-group): закрой шторы"
+  vars:
+    utterance: "закрой шторы"
+    room: "living_room"
+    expect: {"kind": "room-group", "room_id": "living_room", "group": "cover", "action": "close", "scope": "auto"}
+  metadata:
+    fixture: F15
+    tier: "1"
+    kind: room-group
+- description: "F16 (t1, room-group): подними жалюзи"
+  vars:
+    utterance: "подними жалюзи"
+    room: "cabinet"
+    expect: {"kind": "room-group", "room_id": "cabinet", "group": "cover", "action": "open", "scope": "auto"}
+  metadata:
+    fixture: F16
+    tier: "1"
+    kind: room-group
+- description: "F20 (t1, clarify): поставь на паузу"
+  vars:
+    utterance: "поставь на паузу"
+    room: "children_room"
+    expect: {"kind": "clarify", "capability": "playback", "candidates": ["children_room_tv", "appletv_children"]}
+  metadata:
+    fixture: F20
+    tier: "1"
+    kind: clarify
+- description: "F21 (t2, clarify): поставь двадцать два градуса"
+  vars:
+    utterance: "поставь двадцать два градуса"
+    room: "bedroom"
+    expect: {"kind": "clarify", "capability": "climate", "candidates": ["bedroom_heating", "bedroom_hvac"]}
+  metadata:
+    fixture: F21
+    tier: "2"
+    kind: clarify
+- description: "F30 (t1, read): какая температура в душевой"
+  vars:
+    utterance: "какая температура в душевой"
+    room: ""
+    expect: {"kind": "read", "device_id": "shower_sauna_sensors", "capability": "sensor", "field": "temperature"}
+  metadata:
+    fixture: F30
+    tier: "1"
+    kind: read
+- description: "F31 (t1, read): какая влажность в душевой"
+  vars:
+    utterance: "какая влажность в душевой"
+    room: ""
+    expect: {"kind": "read", "device_id": "shower_sauna_sensors", "capability": "sensor", "field": "humidity"}
+  metadata:
+    fixture: F31
+    tier: "1"
+    kind: read
+- description: "F32 (t1, read): какая температура в спальне"
+  vars:
+    utterance: "какая температура в спальне"
+    room: ""
+    expect: {"kind": "read", "any_of": [{"device_id": "bedroom_hvac", "capability": "climate", "field": "room_temperature"}, {"device_id": "bedroom_heating", "capability": "climate", "field": "room_temperature"}]}
+  metadata:
+    fixture: F32
+    tier: "1"
+    kind: read
+- description: "F40 (t1, actuate): включи кино с видеокассеты"
+  vars:
+    utterance: "включи кино с видеокассеты"
+    room: "living_room"
+    expect: {"kind": "actuate", "device_id": "scenario_manager_living_room", "capability": "scenario", "action": "set", "params": {"value": "movie_vhs"}}
+  metadata:
+    fixture: F40
+    tier: "1"
+    kind: actuate
+- description: "F41 (t2, actuate): включи кино с эппл ти ви"
+  vars:
+    utterance: "включи кино с эппл ти ви"
+    room: "living_room"
+    expect: {"kind": "actuate", "device_id": "scenario_manager_living_room", "capability": "scenario", "action": "set", "params": {"value": "movie_appletv"}}
+  metadata:
+    fixture: F41
+    tier: "2"
+    kind: actuate
+- description: "F42 (t2, actuate): выключи кино"
+  vars:
+    utterance: "выключи кино"
+    room: "living_room"
+    expect: {"kind": "actuate", "device_id": "scenario_manager_living_room", "capability": "scenario", "action": "off", "params": null}
+  metadata:
+    fixture: F42
+    tier: "2"
+    kind: actuate

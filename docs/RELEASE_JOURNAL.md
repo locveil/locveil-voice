@@ -15,6 +15,30 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-05 — TEST-18 DONE (Slice B) — the producer contract suite is EXECUTABLE; first scoreboard
+  16/23.** The capture side landed as a **mock bridge** (eval-commons `1bc7b03`), refining §14.3's
+  in-process capture into something strictly more end-to-end: `eval_commons/mock_bridge.py` serves the
+  PINNED golden catalog at `/system/catalog` and records every canonical POST fixture-shaped — so a run
+  exercises the real BridgeClient wire serialization AND the real startup catalog pull, not just the
+  handler. `device_command_provider` drives `/execute/command`; `device_command_assert` compares
+  against the fixture `expect`; `fixtures_to_tests` GENERATES the promptfoo cases so the pinned
+  fixtures stay the single source of truth. Voice side: `eval/device.promptfooconfig.yaml`,
+  `make device / device-auto` (the auto target derives the SUT config from config-master because
+  pydantic-settings init kwargs beat env for nested sections), target-profile URLs, eval README.
+  **Scoreboard: 16/23** — every tier-1 actuation + clarify fixture green end-to-end (device forms,
+  all six VWB-23 room-group forms incl. scope auto/all and room aliases, both clarifications). The
+  7 red, each owned: F30–F32 reads → ARCH-8 PR-5; F41 transliteration + F06 compound numeral
+  («двадцать пять» mis-extracted; «двадцать два» fine) → QUAL-35 T2's first suite-collected evidence;
+  F40/F42 scenario routing → **QUAL-64** (filed): the keyword matcher — never tuned — scores short
+  verb phrases over longer specific ones («выключи кино» → power_off despite scenario_stop carrying
+  that exact phrase at boost 1.3), then dips under the 0.7 threshold live → LLM fallback. User
+  decision: leave them red, tune the matcher deliberately (a drafted handler-level scenario fallback
+  was reverted in favor of that). En route, **BUG-22** found + fixed: `/execute/command`'s room_alias
+  validation NEVER worked — web_server built a web-templates-only asset loader, so localization
+  consumers saw empty data; it now reuses the intent system's fully-loaded loader, and the rooms
+  localization gained the house's rooms. TEST-18 moved active → done; next: ARCH-8 PR-5 (the reads
+  go green).
+
 - **2026-07-05 — ARCH-8 PR-4 DONE (+ QUAL-35 T1 donations & clarify policy) — «включи свет в
   детской» now travels the whole pipeline: NLU → resolver → handler → canonical command → spoken
   outcome.** The reference smart-home handler (`smart_home.py`, 9 donation-routed methods) closes

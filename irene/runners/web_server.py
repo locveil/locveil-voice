@@ -71,8 +71,28 @@ class WebServerMixin:
         self.app = await self._create_fastapi_app(args)
 
     async def _setup_web_asset_loader(self) -> None:
-        """Setup web asset loader for HTML templates."""
+        """Setup the asset loader the web API serves from.
+
+        BUG-22: prefer the intent system's FULLY-LOADED loader (donations, templates,
+        localizations, web templates). The previous fresh instance loaded ONLY web templates,
+        so every localization consumer in the router — notably the `room_alias` validation on
+        /execute/command — saw empty data and rejected every room ("Valid aliases: []").
+        The fresh web-templates-only loader remains as the fallback for a core without the
+        intent system."""
         try:
+            intent_component = (self.core.component_manager.get_component('intent_system')
+                                if self.core and self.core.component_manager else None)
+            loaded = getattr(getattr(intent_component, 'handler_manager', None),
+                             '_asset_loader', None)
+            if loaded is not None:
+                if not getattr(loaded, 'web_templates', None):
+                    await loaded._load_web_templates()
+                self._asset_loader = loaded
+                logger.info("✅ Web asset loader: reusing the intent system's loaded assets "
+                            f"({len(loaded.web_templates)} web templates, "
+                            f"{len(loaded.localizations)} localization sets)")
+                return
+
             from ..core.intent_asset_loader import IntentAssetLoader, AssetLoaderConfig
 
             assets_root = Path("assets")

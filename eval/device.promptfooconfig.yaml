@@ -1,0 +1,35 @@
+# Producer contract tests: utterance → the canonical DeviceCommand Irene emits (TEST-18 Slice B,
+# docs/design/mqtt_integration.md §14.3). PURE YAML — execution logic + the mock bridge live in
+# ../../eval-commons; the test CASES are GENERATED from the pinned crossover fixtures (the single
+# source of truth both repos share):
+#
+#   make device-tests          # regenerate device.tests.yaml from ../../eval-commons/contracts/
+#   make device TARGET=local   # run against a local SUT wired to the mock bridge
+#   make device-auto           # one command: mock bridge + SUT up, suite, teardown
+#
+# The SUT must run with [outputs.bridge] pointed at the mock bridge
+# (IRENE_OUTPUTS__BRIDGE__ENABLED=true, IRENE_OUTPUTS__BRIDGE__BASE_URL=http://localhost:8010) —
+# the mock serves the PINNED golden catalog and records every canonical POST for assertion.
+#
+# Test-first status: read-kind fixtures stay red until ARCH-8 PR-5; some tier-2 fixtures
+# (transliteration, compound phrasing) stay red until QUAL-35 T2. That is the point.
+
+description: wb-mqtt-voice — utterance → canonical DeviceCommand (producer contract, vs the pinned catalog)
+
+prompts:
+  - '{{utterance}}'
+
+providers:
+  - id: file://../../eval-commons/eval_commons/providers/device_command_provider.py
+    label: device-command
+    config:
+      execute_url: "{{ env.EXECUTE_URL | default('http://localhost:6000/execute/command') }}"
+      capture_url: "{{ env.BRIDGE_CAPTURE_URL | default('http://localhost:8010/_captured') }}"
+      timeout_s: 30
+
+defaultTest:
+  assert:
+    - type: python
+      value: file://../../eval-commons/eval_commons/assertions/device_command_assert.py
+
+tests: file://device.tests.yaml

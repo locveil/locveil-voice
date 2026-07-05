@@ -43,6 +43,7 @@ config runs the English set) unless overridden, e.g. `EVAL_LANG=en` for a remote
 | `ws.promptfooconfig.yaml` (system) | ASR + intent | Irene on the target | no | yes (WAV) | ✅ ru live + en live (WER ✓ + intent ✓; `make ws CONFIG=embedded-armv7-en` = 4/4, Moonshine ASR) |
 | `ws.promptfooconfig.yaml` (ux) | DeepSeek judge | Irene on the target | `DEEPSEEK_API_KEY` | yes (WAV) | ✅ ru live; en live (rubrics validated; fixtures recorded) |
 | `trace.promptfooconfig.yaml` | offline golden replay | nothing (models present) | no | traces (JSON) | ✅ ru + en golden green (`make replay CONFIG=embedded-armv7-en`) |
+| `device.promptfooconfig.yaml` | utterance → canonical DeviceCommand (producer contract) | Irene + the mock bridge (`make device-auto` wires both) | no | no (cases GENERATED from the pinned crossover fixtures) | ✅ 16/23 — all tier-1 actuation+clarify green; red = reads (until the sensor-read flow lands), scenario routing (matcher tuning pending), tier-2 phrasings |
 
 ## Setup (uv)
 
@@ -66,6 +67,8 @@ scripts resolve. No `activate` needed when going through `make`.
 
 ```bash
 make cli                                        # CLI contracts — runs today, no prerequisites
+make device-auto                                # producer contract suite: mock bridge + SUT up → 23 fixture cases → teardown
+make device TARGET=local                        # ... against an already-running SUT wired to the mock bridge
 make record                                     # record the ru WS fixtures (mic; see fixtures/README.md)
 make record EVAL_LANG=en                        # record the en fixtures
 make ws  TARGET=local CONFIG=embedded-armv7     # Russian WS suite (start the SUT first: make serve)

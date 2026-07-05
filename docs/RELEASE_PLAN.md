@@ -449,6 +449,17 @@ _Apply to every remediation task below (from the 4 review docs + QUAL-25/26). So
       Builds on the QUAL-35 resolver (note 6); fixture impact = NEW priority-variant fixtures beside
       F20/F21, not edits. Any config surface added → the `config-ui-stays-functional` gate applies.
 
+- [ ] **QUAL-64** `[deferred]` [NLU] (P2) — **Keyword-matcher scoring tune** (filed from the first TEST-18
+      device-suite run, 2026-07-05 — the matcher was NEVER tuned; user decision: leave the affected fixtures
+      red and tune deliberately). **Evidence:** short verb phrases beat longer specific ones — «включи кино с
+      видеокассеты» → `smart_home.power_on` 0.70 (should be `scenario_start`, phrase «включи кино»); «выключи
+      кино» → `power_off` 0.72 despite `scenario_stop` carrying that EXACT phrase with boost 1.3 (boost does
+      not overcome the short-phrase preference); both then dip under the 0.7 confidence threshold in the live
+      cascade → `conversation.general`/LLM. **Scope:** phrase-length/specificity weighting + boost semantics in
+      `hybrid_keyword_matcher` scoring; acceptance = TEST-18 fixtures F40/F42 green (`make device-auto`) with
+      NO regression across the other handlers' routing (the suite + the WS suite are the safety net).
+      Pairs with QUAL-53 (trace-driven improvement process — this is its first concrete, pre-collected case).
+
 ### Bugs (BUG)
 _Discrete functional defects (distinct from QUAL refactors/quality work). Surfaced from any source; filed before fixing._
 
@@ -474,47 +485,6 @@ _Discrete functional defects (distinct from QUAL refactors/quality work). Surfac
 
 _Trace-driven system testing (design `docs/design/trace_system_testing.md`, TEST-11 ✓) — all implementation slices
 (TEST-12/13/14/15) done; see `RELEASE_PLAN_DONE.md`._
-
-- [ ] **TEST-18** [EVAL][MQTT] (P3) `[deferred]` — **The `device_command` capture provider + Irene producer contract
-      tests (ARCH-26 §14).** Two slices (fixtures-first fold, user 2026-07-05):
-      • **Slice A — crossover fixtures — DONE 2026-07-05** (interactive; eval-commons `941e245`; step 0
-        re-pin @ bridge `ee0a71d` / catalog `91909b54` was `e0d6b45`). Deliverable:
-        **`eval-commons/contracts/crossover_fixtures.json` — 23 fixtures** against the pinned catalog, all
-        four expect kinds `actuate | room-group | read | clarify`, tiered 1/2 (green-able with the QUAL-35
-        T1 donation baseline vs needs T2 units/transliteration), **guarded by
-        `tests/test_crossover_fixtures.py`** (8 tests: every binding verified against the golden — device
-        ids/capabilities/actions/param ranges/enums/rooms/groups/fields + fixtures↔pin version agreement;
-        16/16 green together with the pin guards — a re-pin flags stale fixtures loudly). Coverage: aliases
-        («телек»/«эппл»/«радиаторы»/«пол»), typed params with °C/% ranges, scenario enum via ru label
-        («кино с видеокассеты» → `movie_vhs`) + a transliteration case («эппл ти ви» → `movie_appletv`),
-        room-group scope `auto` vs «весь»→`all`, room aliases «зал»/«квартира», the depth-doctrine
-        named-device case («закрой тюль слева» stays device-form), the power-fence cases («печь»/«розетки»
-        reachable by NAME only). **The 3 open decisions resolved (user 2026-07-05):** light-subset pair
-        nouns («ночники»/«тумбочки»/«полки») **DROPPED from v1** — user will add bridge-side compound
-        devices later (those fixtures return with that re-pin); same-room capability ambiguity → **CLARIFY
-        in v1** (F20 playback, F21 climate), priority rules = later release → **QUAL-63**; sensor reads
-        **INCLUDED** (F30–F32, incl. `any_of` for the physically-equivalent bedroom room-temperature
-        sources). Immediately consumable by bridge VWB-16; voice-side this is the acceptance spec ARCH-8
-        PR-3/PR-4 build toward (test-first).
-        _Orig:_ **(UNGATED — startable now, pure data against the TEST-17 pin).** Author the
-        `{utterance → expected canonical command}` set into `eval-commons/contracts/` next to the pinned golden:
-        every parse+resolution path the golden exercises — power on/off via alias («включи свет в детской»),
-        ranged setters with units («поставь 22 градуса в спальне» → `climate.set_setpoint {temp: 22}`), percent
-        («яркость на 30»), cover, aggregates («выключи свет везде» → `all_lights`), scenario enums by ru label
-        («кино с видеокассеты» → `scenario.set {value: movie_vhs}`), room-alias forms («в зале»), sensor read.
-        Immediately consumable by the bridge's VWB-16 consumer half; voice-side they are the **acceptance spec
-        PR-3/PR-4 build toward** (test-first — the resolver meets a pre-existing failing suite, not post-hoc
-        assertions). NO input-switching fixtures (bridge VWB-19 gate, per QUAL-35 note).
-      • **Slice B — the capture provider + executable producer tests (~~gated on ARCH-8 PR-1~~ UNGATED
-        2026-07-05 — PR-1 landed: `DeviceCommand`/`RoomGroupCommand` + `CapturingDeviceCommandOutput`
-        exist; the suite still turns green-able only at PR-4 + T1 donations).** A new eval-commons
-        promptfoo provider drives Irene with an utterance and returns the emitted canonical `DeviceCommand`
-        (captured by the PR-1 capturing bridge `OutputPort`, not POSTed) for assertion against the Slice-A
-        fixtures + the pinned openapi schema — the **producer** half of the bidirectional contract (the bridge's
-        consumer half = VWB-16). **Text-input first** (isolates NLU→resolver→handler, deterministic, no
-        audio/bridge); audio→canonical later (recorded RU fixtures, WS-suite pattern). The full suite turns
-        EXECUTABLE at ARCH-8 PR-4 + the QUAL-35 T1 donation baseline. ~~Gated on TEST-17~~ (pinned 2026-07-05).
-        Design §14.
 
 ### Build & CI (BUILD)
 - [ ] **BUILD-11** [BUILD][DOCKER] (P1) `[release]` — **First real publish dispatch + image boot validation**
