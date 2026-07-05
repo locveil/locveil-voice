@@ -21,13 +21,17 @@ logger = logging.getLogger(__name__)
 
 # The PR-2 BridgeClient supplies this: pull + parse one catalog snapshot.
 CatalogFetcher = Callable[[], Awaitable[DeviceCatalog]]
+# The PR-5 BridgeClient supplies this: live state of one device (None on failure).
+StateReader = Callable[[str], Awaitable[Optional[dict]]]
 
 
 class CatalogService(DeviceCatalogPort):
     """Holds the catalog snapshot; refreshes lazily through the wired fetcher."""
 
-    def __init__(self, fetcher: Optional[CatalogFetcher] = None) -> None:
+    def __init__(self, fetcher: Optional[CatalogFetcher] = None,
+                 state_reader: Optional[StateReader] = None) -> None:
         self._fetcher = fetcher
+        self._state_reader = state_reader
         self._catalog: Optional[DeviceCatalog] = None
         # serialize concurrent lazy refreshes (two misses in flight → one pull)
         self._refresh_lock = asyncio.Lock()
@@ -35,6 +39,10 @@ class CatalogService(DeviceCatalogPort):
     def set_fetcher(self, fetcher: CatalogFetcher) -> None:
         """Wire the catalog source (composition root, once the adapter exists)."""
         self._fetcher = fetcher
+
+    def set_state_reader(self, reader: StateReader) -> None:
+        """Wire the live-state source (composition root, with the fetcher)."""
+        self._state_reader = reader
 
     def set_catalog(self, catalog: DeviceCatalog) -> None:
         """Install a snapshot directly (startup pull result, or tests)."""
@@ -63,3 +71,13 @@ class CatalogService(DeviceCatalogPort):
                     f"{previous.version if previous else '(none)'} -> {fresh.version}, "
                     f"{len(fresh.devices)} devices / {len(fresh.rooms)} rooms")
             return fresh
+
+    async def read_state(self, device_id: str) -> Optional[dict]:
+        if self._state_reader is None:
+            logger.debug("state read requested but no reader is wired (pre-PR-2 / no bridge)")
+            return None
+        try:
+            return await self._state_reader(device_id)
+        except Exception as e:
+            logger.warning(f"state read for '{device_id}' failed: {e}")
+            return None

@@ -38,6 +38,14 @@ from ...core.donations import MissingRequiredParameter
 # «весь свет» / «все шторы» — the plural/total signal → scope: all (VWB-23)
 _ALL_SCOPE_RE = re.compile(r"\b(?:весь|все|всё|everywhere|all)\b", re.IGNORECASE)
 
+# read quantities → the catalog field names that carry them, preference-ordered (PR-5).
+# `room_temperature` is the measured value on climate devices; bare `temperature` is the
+# dedicated sensors' field (on HVAC `temperature` is the SETPOINT — hence the ordering).
+_QUANTITY_FIELDS = {
+    "temperature": ("temperature", "room_temperature"),
+    "humidity": ("humidity",),
+}
+
 # capability each method actuates, in preference order when a device carries several
 _METHOD_CAPABILITY = {
     "power": ("power",),
@@ -517,3 +525,73 @@ class SmartHomeIntentHandler(IntentHandler):
         ok_text = self._get_template("confirm_scenario", language, label=best_label)
         return await self._speak_outcome(delivery, ok_text, language, catalog,
                                    clarify_intent=intent, context=context)
+
+    # --- the read flow (ARCH-8 PR-5, §5c) --------------------------------------------------------
+
+    def _find_readable(self, catalog: DeviceCatalog, room_id: Optional[str],
+                       field_names: Tuple[str, ...]) -> Optional[Tuple[CatalogDevice, str, str]]:
+        """(device, capability, field) carrying one of `field_names`, dedicated `sensor`
+        capabilities first (a sensors box beats a climate unit for «какая температура»);
+        field-name preference order breaks ties within a device."""
+        devices = catalog.devices_in_room(room_id) if room_id else catalog.devices
+        candidates: List[Tuple[int, int, CatalogDevice, str, str]] = []
+        for device in devices:
+            for capability in device.capabilities:
+                if capability.name == "sensor":
+                    effective = field_names
+                else:
+                    # on climate devices the bare `temperature` field is the SETPOINT
+                    # («уставка») — the measured value is `room_temperature`; prefer it
+                    effective = tuple(sorted(field_names,
+                                             key=lambda f: 0 if f.startswith("room_") else 1))
+                for rank, field_name in enumerate(effective):
+                    if capability.field_spec(field_name) is not None:
+                        sensor_rank = 0 if capability.name == "sensor" else 1
+                        candidates.append((sensor_rank, rank, device, capability.name, field_name))
+        if not candidates:
+            return None
+        candidates.sort(key=lambda c: (c[0], c[1]))
+        _, _, device, capability_name, field_name = candidates[0]
+        return device, capability_name, field_name
+
+    async def _handle_read_state(self, intent: Intent,
+                                 context: UnifiedConversationContext) -> IntentResult:
+        """«какая температура в спальне» → resolve room → readable device/field →
+        GET state via the read port → speak the value with the catalog's unit. A read
+        never actuates and never rides the OutputManager (§13.3)."""
+        language = self._lang(context)
+        catalog = self._catalog()
+        if catalog is None:
+            return self._no_catalog_result(language)
+
+        quantity = self.get_param(intent, "quantity", None)
+        if quantity not in _QUANTITY_FIELDS:
+            return await self._ask_slot(intent, context, "quantity")
+        room_id, room_error = self._requested_room(intent, context, catalog)
+        if room_error is not None:
+            return room_error
+
+        found = self._find_readable(catalog, room_id, _QUANTITY_FIELDS[quantity])
+        if found is None and room_id is not None:
+            found = self._find_readable(catalog, None, _QUANTITY_FIELDS[quantity])
+        if found is None:
+            return IntentResult(text=self._get_template("err_no_sensor", language),
+                                should_speak=True, success=False,
+                                error=f"no readable {quantity} field in scope")
+        device, capability_name, field_name = found
+
+        assert self.catalog_port is not None
+        state = await self.catalog_port.read_state(device.id)
+        value = state.get(field_name) if isinstance(state, dict) else None
+        if value is None:
+            return IntentResult(text=self._get_template("err_not_sure", language),
+                                should_speak=True, success=False,
+                                error=f"state read failed for {device.id}.{field_name}")
+        if isinstance(value, float) and value == int(value):
+            value = int(value)
+        return IntentResult(
+            text=self._get_template(f"read_{quantity}", language, value=value,
+                                    name=self._device_name(device, language)),
+            should_speak=True,
+            metadata={"read": {"device_id": device.id, "capability": capability_name,
+                               "field": field_name, "value": value}})

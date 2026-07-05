@@ -15,6 +15,22 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-05 — ARCH-8 PR-5 DONE → ARCH-8 CLOSES — the whole MQTT smart-home arc landed in one day;
+  device suite 19/23.** The sensor-read flow: `read_state(device_id)` joined `DeviceCatalogPort` as a
+  QUERY (reads never ride the OutputManager, §13.3), `CatalogService` carries a wired state-reader,
+  `BridgeClient.get_device_state` GETs `/devices/{id}/state` fail-soft, and the handler's
+  `_handle_read_state` (donation: quantity CHOICE temperature/humidity with RU surfaces, room via
+  D-15) picks the reading source with two deliberate preferences the tests pin: a dedicated `sensor`
+  capability beats a climate unit, and on climate devices the MEASURED `room_temperature` is read —
+  the bare `temperature` field there is the thermostat SETPOINT («уставка» per the catalog's own
+  labels), a silent wrong-value trap. Live: F30–F32 went green (`make device-auto` → **19/23**; the
+  4 red are all owned: F40/F42 → QUAL-64, F41/F06 → QUAL-35 T2). Suite 1255 green, pyright 0, 11/11
+  contracts. **The deferred user-facing promise is delivered with ARCH-8's completion:**
+  `docs/guides/smart-home.md` — how voice control works (catalog-driven vocabulary, depth of
+  phrasing, clarifications, sensor questions), how to enable `[outputs.bridge]`, current limits —
+  linked from the README. Remaining in the MQTT lane: QUAL-35 T2/units + breadth (evidence now
+  flowing from the suite), QUAL-64 matcher tune, then the hardware tiers (ARCH-25).
+
 - **2026-07-05 — TEST-18 DONE (Slice B) — the producer contract suite is EXECUTABLE; first scoreboard
   16/23.** The capture side landed as a **mock bridge** (eval-commons `1bc7b03`), refining §14.3's
   in-process capture into something strictly more end-to-end: `eval_commons/mock_bridge.py` serves the

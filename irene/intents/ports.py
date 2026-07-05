@@ -123,6 +123,16 @@ class DeviceCatalogPort(ABC):
         """
         ...
 
+    @abstractmethod
+    async def read_state(self, device_id: str) -> Optional[Dict[str, Any]]:
+        """Live state of one device (`GET /devices/{id}/state` — the read flow, ARCH-8 PR-5).
+
+        Still a QUERY (§13.3): reads never touch the actuation/OutputManager seam. The
+        catalog gives the field *schema*; this gives the live *values*. None = no source
+        wired or the bridge did not answer (the handler speaks the degradation).
+        """
+        ...
+
 
 class DeviceCommandDeliveryPort(ABC):
     """Awaited delivery of one canonical device command to the designated bridge output

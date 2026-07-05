@@ -215,6 +215,21 @@ class BridgeClient(OutputPort):
             raise RuntimeError(f"catalog pull failed: HTTP {status}")
         return parse_catalog(payload)
 
+    async def get_device_state(self, device_id: str) -> Optional[Dict[str, Any]]:
+        """Live device state (`GET /devices/{id}/state`, §5c) — the PR-5 read flow's source.
+        Returns the state dict, or None when the bridge/device did not answer (the caller
+        speaks the degradation; never raises into the pipeline)."""
+        try:
+            status, payload = await self._request_json("GET", f"/devices/{device_id}/state")
+        except (aiohttp.ClientError, asyncio.TimeoutError, OSError) as e:
+            logger.warning(f"bridge unreachable reading state of '{device_id}': {e}")
+            return None
+        if status != 200:
+            logger.warning(f"state read for '{device_id}' failed: HTTP {status} {payload}")
+            return None
+        state = payload.get("state")
+        return state if isinstance(state, dict) else payload
+
     # --- identity --------------------------------------------------------------------------------
 
     async def is_available(self) -> bool:

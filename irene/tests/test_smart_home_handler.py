@@ -34,6 +34,7 @@ CATALOG_PAYLOAD = {
         {"id": "living_room", "names": {"ru": "Гостиная"}, "aliases": {"ru": ["зал"]},
          "devices": [], "group_defaults": {"light": "living_room_spots"}},
         {"id": "cabinet", "names": {"ru": "Кабинет"}, "devices": []},
+        {"id": "shower", "names": {"ru": "Душевая"}, "devices": []},
         {"id": "global", "names": {"ru": "Весь дом"}, "aliases": {"ru": ["квартира"]},
          "devices": []},
     ],
@@ -74,7 +75,9 @@ CATALOG_PAYLOAD = {
               "actions": [{"name": "on"}, {"name": "off"},
                           {"name": "set_setpoint", "params": [
                               {"name": "temp", "type": "float", "required": True,
-                               "min": 5.0, "max": 30.0, "unit": "°C"}]}]}]},
+                               "min": 5.0, "max": 30.0, "unit": "°C"}]}],
+              "fields": [{"name": "setpoint", "unit": "°C"},
+                         {"name": "room_temperature", "unit": "°C"}]}]},
         {"id": "bedroom_hvac", "room": "bedroom", "names": {"ru": "Кондиционер"},
          "aliases": {"ru": ["кондей"]},
          "capabilities": [
@@ -82,7 +85,10 @@ CATALOG_PAYLOAD = {
               "actions": [{"name": "on"}, {"name": "off"},
                           {"name": "set_setpoint", "params": [
                               {"name": "temp", "type": "float", "required": True,
-                               "min": 16.0, "max": 31.0, "unit": "°C"}]}]}]},
+                               "min": 16.0, "max": 31.0, "unit": "°C"}]}],
+              "fields": [{"name": "temperature", "unit": "°C",
+                          "labels": {"ru": "уставка"}},
+                         {"name": "room_temperature", "unit": "°C"}]}]},
         {"id": "living_room_spots", "room": "living_room", "names": {"ru": "Споты"},
          "capabilities": [
              {"name": "power", "group": "light", "actions": [{"name": "on"}, {"name": "off"}]}]},
@@ -111,6 +117,11 @@ CATALOG_PAYLOAD = {
         {"id": "all_plugs", "room": "global", "names": {"ru": "Розетки"},
          "capabilities": [
              {"name": "power", "group": "power", "actions": [{"name": "on"}, {"name": "off"}]}]},
+        {"id": "shower_sauna_sensors", "room": "shower", "names": {"ru": "Сенсоры сауны"},
+         "capabilities": [
+             {"name": "sensor", "group": "sensor",
+              "fields": [{"name": "temperature", "unit": "°C"},
+                         {"name": "humidity", "unit": "%"}]}]},
         {"id": "scenario_manager", "room": "living_room", "names": {"ru": "Сценарии"},
          "capabilities": [
              {"name": "scenario", "group": "scenario",
@@ -142,6 +153,14 @@ class Harness:
         self.catalog_service = CatalogService()
         self.catalog_service.set_catalog(parse_catalog(CATALOG_PAYLOAD))
         self.capture = CapturingDeviceCommandOutput(responder=responder)
+        self.state_reads: list = []
+
+        async def read_state(device_id: str):
+            self.state_reads.append(device_id)
+            return {"temperature": 23.5, "humidity": 41.0,
+                    "room_temperature": 22.4, "setpoint": 22.0}
+
+        self.catalog_service.set_state_reader(read_state)
         self.output_manager = OutputManager()
         self.resolver = ContextualEntityResolver(loader, catalog_port=self.catalog_service)
         self.handler = SmartHomeIntentHandler()
@@ -363,3 +382,53 @@ async def test_no_catalog_speaks_not_connected(loader):
                     confidence=1.0, raw_text="включи телек", domain="smart_home")
     result = await h.handler.execute(intent, context)
     assert not result.success and "не подключён" in result.text
+
+
+# --- reads (ARCH-8 PR-5, §5c) -----------------------------------------------------------------
+
+async def test_f30_temperature_prefers_dedicated_sensor(harness):
+    result, captured = await harness.run("read_state", "какая температура в душевой",
+                                         {"quantity": "temperature", "room": "душевой"})
+    assert captured == []  # a read never actuates
+    assert harness.state_reads == ["shower_sauna_sensors"]
+    assert result.metadata["read"] == {"device_id": "shower_sauna_sensors",
+                                       "capability": "sensor", "field": "temperature",
+                                       "value": 23.5}
+    assert "23.5" in result.text
+
+
+async def test_f31_humidity(harness):
+    result, _ = await harness.run("read_state", "какая влажность в душевой",
+                                  {"quantity": "humidity", "room": "душевой"})
+    assert result.metadata["read"]["field"] == "humidity"
+    assert "41" in result.text
+
+
+async def test_f32_room_temperature_not_setpoint(harness):
+    # bedroom has NO dedicated sensor; both climate devices carry room_temperature —
+    # and the hvac's bare `temperature` field is the SETPOINT, which must NOT be read
+    result, _ = await harness.run("read_state", "какая температура в спальне",
+                                  {"quantity": "temperature", "room": "спальне"})
+    read = result.metadata["read"]
+    assert read["device_id"] in ("bedroom_heating", "bedroom_hvac")
+    assert read["field"] == "room_temperature"
+    assert "22.4" in result.text
+
+
+async def test_read_no_sensor_speaks_miss(harness):
+    result, _ = await harness.run("read_state", "какая влажность в кабинете",
+                                  {"quantity": "humidity", "room": "кабинете"})
+    # no humidity field in cabinet → house-wide fallback finds the shower sensors
+    assert result.metadata["read"]["device_id"] == "shower_sauna_sensors"
+
+
+async def test_read_state_failure_degrades(loader):
+    h = await Harness(loader).start()
+
+    async def broken(device_id: str):
+        return None
+
+    h.catalog_service.set_state_reader(broken)
+    result, _ = await h.run("read_state", "какая температура в душевой",
+                            {"quantity": "temperature", "room": "душевой"})
+    assert not result.success and "Не уверена" in result.text
