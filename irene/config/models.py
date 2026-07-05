@@ -148,6 +148,19 @@ class InputConfig(BaseModel):
 # OUTPUT CHANNELS CONFIGURATION (ARCH-15 PR-7)
 # ============================================================
 
+class BridgeOutputConfig(BaseModel):
+    """The wb-mqtt-bridge actuation channel (ARCH-8) — the designated DEVICE_COMMAND output.
+
+    When enabled, the composition registers the `BridgeClient` output adapter and designates it
+    for the `device_command` modality; smart-home intents actuate through it and the device
+    catalog is pulled from the same endpoint (`GET /system/catalog`, lazy refresh per ARCH-26)."""
+    enabled: bool = Field(default=False, description="Enable the smart-home bridge output (wb-mqtt-bridge)")
+    base_url: str = Field(default="http://localhost:8000",
+                          description="Base URL of the wb-mqtt-bridge REST API (no trailing slash)")
+    timeout_seconds: float = Field(default=5.0, gt=0,
+                                   description="Per-request HTTP timeout — covers the bridge's ~500 ms actuation echo-wait with margin")
+
+
 class OutputConfig(BaseModel):
     """Output delivery-channel configuration — the symmetric twin of InputConfig.
 
@@ -157,6 +170,8 @@ class OutputConfig(BaseModel):
     console: bool = Field(default=True, description="Enable console (terminal) text output (CLI channel)")
     console_prefix: str = Field(default="📝 ", description="Prefix for console output lines")
     web_push: bool = Field(default=True, description="Enable the browser push channel (/ws/output) for deferred results")
+    bridge: BridgeOutputConfig = Field(default_factory=BridgeOutputConfig,
+                                       description="Smart-home bridge actuation channel (ARCH-8)")
 
 
 # ============================================================

@@ -313,6 +313,11 @@ energy = "irene.providers.vad.energy:EnergyVADProvider"
 silero = "irene.providers.vad.silero:SileroVADProvider"
 microvad = "irene.providers.vad.microvad:MicroVADProvider"
 
+[project.entry-points."irene.providers.outputs"]
+# ARCH-8: request/response output-sink adapters, registered by the composition from [outputs.*]
+# config and capability-routed (designated) — unlike the channel-bound sinks in irene/outputs/.
+bridge = "irene.providers.outputs.bridge:BridgeClient"
+
 [project.entry-points."irene.providers.nlu"]
 hybrid_keyword_matcher = "irene.providers.nlu.hybrid_keyword_matcher:HybridKeywordMatcherProvider"
 spacy_nlu = "irene.providers.nlu.spacy_provider:SpaCyNLUProvider"
@@ -510,6 +515,7 @@ modules = [
     "irene.providers.voice_trigger",
     "irene.providers.vad",
     "irene.providers.text_processor",
+    "irene.providers.outputs",
 ]
 
 [[tool.importlinter.contracts]]

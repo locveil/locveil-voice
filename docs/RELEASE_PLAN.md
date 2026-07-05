@@ -170,7 +170,25 @@ See `docs/review/phase1_architecture_map.md` §5.
       routing); suite 1201 green, pyright 0. **+ a new import-linter contract** ("Domain ports and
       boundary types stay pure") pinning `intents/{ports,models,device_commands,device_catalog}`
       against `irene.core` — ARCH-1 can't catch that inversion (intents-as-a-whole has sanctioned core
-      edges); all 11 contracts kept. **Build notes from the 2026-07-04/05 contract analysis (recorded from
+      edges); all 11 contracts kept.
+      **★ PR-2 DONE 2026-07-05:** `providers/outputs/bridge.py` — `BridgeClient` OutputPort (the ONLY
+      module that knows the bridge exists): POSTs both address forms (`/devices/{id}/canonical` +
+      `/rooms/{room_id}/canonical`), maps §5b structured errors → `error_code`/detail
+      (`param_invalid` field+reason preserved for clarify), transport failure → spoken
+      `bridge_unreachable` (never raises into the pipeline); `parse_catalog` → domain `DeviceCatalog`
+      (typed params, group overlay, `group_defaults`, aliases, enum triplets, `options_from`) —
+      **verified against the real pinned golden** (79 devices/11 rooms @ `91909b54`, all VWB-23
+      semantics). Placement per §13.1: `irene.providers.outputs` entry-point group (adapter to an
+      external system — configured + designated; NOT a channel sink like `irene/outputs/`), category
+      added to the ARCH-4 independence contract. Wiring: `[outputs.bridge]` config
+      (`BridgeOutputConfig`: enabled/base_url/timeout; config-master + config-ui types co-changed,
+      `npm run check`+`build` clean), `CatalogService` built in `build_core` (engine attr),
+      `setup_bridge_output()` in composition called runner-agnostically from the base runner post
+      `core.start()` — registers + designates DEVICE_COMMAND, wires the fetcher, startup pull
+      non-fatal (lazy retry per ARCH-26). ~~`bridge/catalog/version` subscribe~~ (dropped by ARCH-26 —
+      no MQTT client). 13 new tests; suite 1214 green, pyright 0, 11 contracts kept. **User-facing
+      smart-home doc prose deliberately deferred to PR-4/PR-5** (no guide describes device control
+      until the feature exists end-to-end). NEXT: PR-3 (resolver). **Build notes from the 2026-07-04/05 contract analysis (recorded from
       chat):** PR-2's catalog parser codes against typed `CatalogParam` — a param carries EITHER `values`
       (stable enum `{wire,canonical,labels}` triplets) OR `options_from` (a dynamic set enumerated at
       resolution time via `GET /devices/{id}/options/<kind>` — installed apps etc.); PR-3's resolver consumes

@@ -14,6 +14,7 @@ from ..intents.context import ContextManager
 from .components import ComponentManager
 from .workflow_manager import WorkflowManager
 from .metrics import MetricsCollector
+from .catalog_service import CatalogService
 from .durable_actions import get_durable_action_store, reconcile_durable_actions
 from .notifications import get_notification_service
 
@@ -53,6 +54,7 @@ class AsyncVACore:
         context_manager: ContextManager,
         metrics_collector: MetricsCollector,
         workflow_manager: WorkflowManager,
+        catalog_service: Optional[CatalogService] = None,
         config_path: Optional[Path] = None,
     ):
         """ARCH-11 / S3: managers are built by the composition root and injected.
@@ -69,6 +71,9 @@ class AsyncVACore:
         self.context_manager = context_manager
         self.metrics_collector = metrics_collector
         self.workflow_manager = workflow_manager
+        # ARCH-8 PR-2: the application-layer device-catalog holder (implements the domain's
+        # DeviceCatalogPort). The composition wires its fetcher when the bridge output is enabled.
+        self.catalog_service = catalog_service if catalog_service is not None else CatalogService()
         self.audio_negotiator = None  # ARCH-18: shared audio negotiator (built at startup, see start())
         self._running = False
 

@@ -38,8 +38,11 @@ def _drifted(tmp_path: Path, transform) -> Path:
 
 
 def test_detects_missing_top_level_section(tmp_path):
-    # rename [outputs] so the parsed config no longer has an `outputs` table
-    path = _drifted(tmp_path, lambda t: t.replace("\n[outputs]\n", "\n[outputs_renamed]\n"))
+    # rename [outputs] AND its sub-tables so the parsed config no longer has an `outputs`
+    # table — a surviving [outputs.bridge] would implicitly recreate the parent table (TOML
+    # super-table semantics), which the completeness check rightly counts as present.
+    path = _drifted(tmp_path, lambda t: (t.replace("\n[outputs]\n", "\n[outputs_renamed]\n")
+                                          .replace("\n[outputs.", "\n[outputs_renamed.")))
     r = AutoSchemaRegistry.get_master_config_completeness(path)
     assert not r["valid"]
     assert "outputs" in r["missing_top_level_sections"]

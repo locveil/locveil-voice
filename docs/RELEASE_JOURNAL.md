@@ -15,6 +15,32 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-05 — ARCH-8 PR-2 DONE — the real bridge adapter; Irene can now (config-gated) speak REST to
+  wb-mqtt-bridge and pull the device catalog.** `BridgeClient` (`providers/outputs/bridge.py`, the only
+  module that knows the bridge exists) implements the designated DEVICE_COMMAND OutputPort: device-form
+  commands POST to `/devices/{id}/canonical`, room-group commands to `/rooms/{room_id}/canonical`
+  (VWB-23), responses map to the rich DeliveryResult — post-action `state` / per-member `results` as
+  the echo, the §5b error enum as `error_code` with `param_invalid`'s field+reason preserved for the
+  clarify path, and a bridge that is down becomes a spoken `bridge_unreachable`, never an exception in
+  the pipeline. Its `parse_catalog` builds the domain `DeviceCatalog` and was verified against the real
+  pinned golden (79 devices / 11 rooms @ `91909b54`; children_room light default, global→all_lights
+  membership, °C/% typed params, scenario ru labels, `options_from`, «зал»/«радиаторы» aliases all
+  survive the round-trip). Wiring: new `[outputs.bridge]` config section (enabled/base_url/timeout;
+  documented in config-master, config-ui `OutputConfig`/`BridgeOutputConfig` types co-changed — the
+  section editor renders nested objects generically; `npm run check` + `build` clean),
+  `CatalogService` now built by `build_core` and carried on the engine, and a runner-agnostic
+  `setup_bridge_output()` hook in the composition (called by the base runner after `core.start()`)
+  registers + designates the output, wires the catalog fetcher, and attempts one non-fatal startup
+  pull — the ARCH-26 lazy refresh covers a bridge that boots later. Placement decision recorded (user
+  question): BridgeClient sits under the `irene.providers.outputs` entry-point group per §13.1 —
+  an external-system adapter (configured, designated), not a channel sink like `irene/outputs/`;
+  the category joined the ARCH-4 independence contract. One test-harness fix along the way:
+  the master-config completeness test's section-rename mutation now renames `[outputs.*]` sub-tables
+  too (a surviving `[outputs.bridge]` implicitly recreates the parent — TOML super-table semantics).
+  13 new tests; suite 1214 passed, pyright 0 errors, 11/11 import contracts, config-ui clean.
+  Smart-home user-guide prose deliberately waits for PR-4/PR-5. Next: PR-3 — catalog into the
+  resolver.
+
 - **2026-07-05 — ARCH-8 PR-1 DONE — the canonical-command boundary exists in code; the MQTT arc's spine
   starts.** Adapter-free by design, built the same day as the fixtures it must eventually satisfy.
   Domain (`irene/intents/`): `device_commands.py` — `DeviceCommand` (device form; scenarios ride it) and

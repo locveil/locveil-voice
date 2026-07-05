@@ -523,6 +523,14 @@ export interface OutputConfig {
   console: boolean;
   console_prefix: string;
   web_push: boolean;
+  bridge: BridgeOutputConfig;
+}
+
+// Smart-home bridge actuation channel (backend BridgeOutputConfig, ARCH-8).
+export interface BridgeOutputConfig {
+  enabled: boolean;
+  base_url: string;
+  timeout_seconds: number;
 }
 
 // Trace persistence (backend TraceConfig, ARCH-19).
