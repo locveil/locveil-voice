@@ -12,6 +12,10 @@ from typing import Dict, Any, List, Optional, Tuple
 from dataclasses import dataclass
 from ..intents.models import Intent
 from ..intents.context_models import UnifiedConversationContext
+from ..intents.device_catalog import CatalogDevice, CatalogRoom, DeviceCatalog
+from ..intents.ports import DeviceCatalogPort
+from .client_registry import get_client_registry
+from .donations import EntityType
 from ..utils.units import parse_duration, TIME_UNITS  # the one shared time-unit parser + surface table
 
 # Required rapidfuzz import for fuzzy matching
@@ -26,8 +30,94 @@ class EntityResolutionResult:
     resolved_value: Any
     original_value: str
     confidence: float
-    resolution_type: str  # "exact", "fuzzy", "contextual", "inferred"
+    resolution_type: str  # "exact", "fuzzy", "contextual", "inferred", "ambiguous", "uncovered_room"
     metadata: Dict[str, Any]
+
+
+# --- catalog surface matching (ARCH-8 PR-3 / QUAL-35 resolver half) -------------------------------
+#
+# Spoken references arrive inflected («в детской» → «Детская», «на радиаторах» → «радиаторы»), so
+# matching is normalized (case, ё→е) + fuzzy over each entry's full surface set (name + aliases in
+# the request locale). Deterministic exact match always wins; the fuzzy band below it tolerates RU
+# morphology without spaCy — the T2 tier (QUAL-35) deepens this later.
+
+_MORPH_FUZZ_THRESHOLD = 80  # score floor for an inflected-form match
+_STEM_MATCH_SCORE = 90      # what a shared-stem match scores (above threshold, below exact)
+
+
+def _norm(text: str) -> str:
+    return text.lower().replace("ё", "е").strip()
+
+
+def _stem_match(a: str, b: str) -> bool:
+    """RU-inflection heuristic: same word if the shared prefix leaves ≤3 trailing chars on both.
+
+    Russian case/gender endings are at most ~3 characters («детск|ой»/«детск|ая»,
+    «кухн|е»/«кухн|я», «радиатор|ах»/«радиатор|ы»); requiring a ≥4-char shared stem keeps
+    short unrelated words apart («зал» vs «залив», «печь» vs «печенье»). Plain fuzz.ratio
+    punishes short words too hard for this (детской/детская = 71)."""
+    prefix = 0
+    for ca, cb in zip(a, b):
+        if ca != cb:
+            break
+        prefix += 1
+    return prefix >= 4 and prefix >= max(len(a), len(b)) - 3
+
+
+def _surface_score(ref_norm: str, surfaces: Tuple[str, ...]) -> int:
+    """Best match score (0..100) of a normalized reference against an entity's surfaces."""
+    best = 0
+    for surface in surfaces:
+        surface_norm = _norm(surface)
+        if surface_norm == ref_norm:
+            return 100
+        score = int(fuzz.ratio(ref_norm, surface_norm))
+        if score < _STEM_MATCH_SCORE and _stem_match(ref_norm, surface_norm):
+            score = _STEM_MATCH_SCORE
+        if score > best:
+            best = score
+    return best
+
+
+def match_catalog_room(room_reference: str, catalog: DeviceCatalog,
+                       locale: str) -> Optional[CatalogRoom]:
+    """Match a spoken/registered room reference to a catalog room (id, name, or alias)."""
+    ref_norm = _norm(room_reference)
+    best_room, best_score = None, 0
+    for room in catalog.rooms:
+        if room.id == room_reference:  # registrations may carry catalog ids directly
+            return room
+        score = _surface_score(ref_norm, room.surfaces(locale))
+        if score > best_score:
+            best_room, best_score = room, score
+    return best_room if best_score >= _MORPH_FUZZ_THRESHOLD else None
+
+
+def resolve_default_room(context: UnifiedConversationContext,
+                         catalog: DeviceCatalog) -> Optional[str]:
+    """D-15 rule 3: no room mentioned → the client's primary room, as a catalog room id."""
+    room_name = context.get_room_name()
+    if not room_name:
+        return None
+    room = match_catalog_room(room_name, catalog, context.language or "ru")
+    return room.id if room else None
+
+
+def _client_covered_rooms(context: UnifiedConversationContext) -> List[str]:
+    """The requesting client's covered rooms (ARCH-22 D-14), [] when unconstrained.
+
+    A satellite covers specific rooms; a whole-house channel (web, CLI) has no registration
+    or no covered list — an empty result means "no constraint", per D-15."""
+    client_id = getattr(context, "client_id", None)
+    if not client_id:
+        return []
+    registration = get_client_registry().get_client(client_id)
+    if registration is None:
+        return []
+    covered = list(registration.covered_rooms or [])
+    if registration.room_name and registration.room_name not in covered:
+        covered.append(registration.room_name)  # primary is always covered
+    return covered
 
 
 class ContextualEntityResolver:
@@ -39,14 +129,38 @@ class ContextualEntityResolver:
     Intent Keyword Donation Architecture document.
     """
     
-    def __init__(self, asset_loader=None):
+    def __init__(self, asset_loader=None, catalog_port: Optional[DeviceCatalogPort] = None):
         self.logger = logging.getLogger(f"{__name__}.ContextualEntityResolver")
-        
-        # Entity type resolvers
-        self.device_resolver = DeviceEntityResolver(asset_loader)
-        self.location_resolver = LocationEntityResolver(asset_loader)
+        self.asset_loader = asset_loader
+
+        # Entity type resolvers (the device/room pair is catalog-backed when the bridge is wired)
+        self.device_resolver = DeviceEntityResolver(asset_loader, catalog_port=catalog_port)
+        self.location_resolver = LocationEntityResolver(asset_loader, catalog_port=catalog_port)
         self.temporal_resolver = TemporalEntityResolver()
         self.quantity_resolver = QuantityEntityResolver()
+
+        # QUAL-35(b) — the Q7b atomic swap: declared `entity_type` (ParameterSpec, QUAL-29 Q6)
+        # drives resolver dispatch; the `_is_*` name-heuristics survive only as the fallback for
+        # GENERIC/undeclared params. Built lazily from the donations the asset loader carries.
+        self._entity_types_by_intent: Optional[Dict[str, Dict[str, EntityType]]] = None
+
+    def _declared_entity_type(self, intent_name: str, entity_name: str) -> Optional[EntityType]:
+        """The donation-declared EntityType for this intent's parameter, or None if undeclared."""
+        if self._entity_types_by_intent is None:
+            self._entity_types_by_intent = self._build_entity_type_map()
+        return self._entity_types_by_intent.get(intent_name, {}).get(entity_name)
+
+    def _build_entity_type_map(self) -> Dict[str, Dict[str, EntityType]]:
+        donations = getattr(self.asset_loader, "donations", None) or {}
+        mapping: Dict[str, Dict[str, EntityType]] = {}
+        for donation in donations.values():
+            shared = {p.name: p.entity_type for p in donation.global_parameters}
+            for method in donation.method_donations:
+                intent_name = f"{donation.handler_domain}.{method.intent_suffix}"
+                per_param = dict(shared)
+                per_param.update({p.name: p.entity_type for p in method.parameters})
+                mapping[intent_name] = per_param
+        return mapping
     
     async def resolve_entities(self, intent: Intent, context: UnifiedConversationContext) -> Dict[str, Any]:
         """
@@ -102,9 +216,18 @@ class ContextualEntityResolver:
         entity matched no resolvable class) — so the caller can mark an attempted-but-unresolved
         device/location reference (``_resolution_failed``) without flagging every plain parameter.
 
-        NOTE: dispatch is heuristic (`_is_*_entity` name/value patterns). The declarative
-        `entity_type`-driven swap is owned by ARCH-6 (it activates with real room/device registration;
-        every `entity_type` decl is `generic` today, so the swap would be inert before then)."""
+        Dispatch is DECLARATIVE first (ARCH-8 PR-3 / QUAL-35(b), the Q7b swap): a donation-declared
+        non-generic `entity_type` selects the resolver outright. The `_is_*_entity` name/value
+        heuristics remain only as the fallback for GENERIC/undeclared params — existing donations
+        all declare generic, so their behavior is unchanged until the smart-home donations (PR-4)
+        declare device/room."""
+        declared = self._declared_entity_type(intent.name, entity_name)
+        if declared is EntityType.DEVICE:
+            return await self.device_resolver.resolve(entity_value, context), "device"
+        if declared in (EntityType.ROOM, EntityType.LOCATION):
+            return await self.location_resolver.resolve(entity_value, context), "location"
+        # PERSON has no resolver yet; GENERIC/undeclared falls through to the heuristics.
+
         # Device entity resolution
         if self._is_device_entity(entity_name, entity_value, intent):
             return await self.device_resolver.resolve(entity_value, context), "device"
@@ -182,10 +305,17 @@ class ContextualEntityResolver:
 
 
 class DeviceEntityResolver:
-    """Resolver for device-related entities using client context"""
-    
-    def __init__(self, asset_loader=None):
+    """Resolver for device-related entities.
+
+    Catalog-backed when the bridge is wired (ARCH-8 PR-3): spoken references resolve against the
+    real device catalog — `names` + `aliases` per locale, RU-morphology-tolerant, room-context
+    disambiguation, name-level ambiguity surfaced as candidates (the clarify path), and the
+    ARCH-26 lazy re-pull on a miss. Falls back to the legacy client-context path (ESP32-announced
+    devices + localization type-inference) when no catalog is available."""
+
+    def __init__(self, asset_loader=None, catalog_port: Optional[DeviceCatalogPort] = None):
         self.asset_loader = asset_loader
+        self.catalog_port = catalog_port
         self.logger = logging.getLogger(f"{__name__}.DeviceEntityResolver")
         self._assets_warned = False  # warn-once guard for missing/empty localization assets
 
@@ -243,13 +373,98 @@ class DeviceEntityResolver:
     
     async def resolve(self, device_reference: str, context: UnifiedConversationContext) -> Optional[EntityResolutionResult]:
         """
-        Resolve device reference using client context and fuzzy matching.
+        Resolve device reference — against the bridge catalog when wired, else client context.
         """
+        if self.catalog_port is not None:
+            result = await self._resolve_from_catalog(device_reference, context)
+            if result is not None:
+                return result
+            if self.catalog_port.catalog() is not None:
+                # a real catalog had no match — the legacy path can't do better; don't fall through
+                return None
+            # still no catalog (bridge unreachable since boot) → legacy path below applies
+
         available_devices = context.get_device_capabilities()
         if not available_devices:
             return None
-        
+
         device_reference_lower = device_reference.lower().strip()
+        return self._resolve_from_client_context(device_reference, device_reference_lower,
+                                                 available_devices, context)
+
+    async def _resolve_from_catalog(self, device_reference: str,
+                                    context: UnifiedConversationContext,
+                                    _retried: bool = False) -> Optional[EntityResolutionResult]:
+        """Resolve against the bridge catalog; ARCH-26 lazy re-pull once on a miss."""
+        assert self.catalog_port is not None
+        catalog = self.catalog_port.catalog()
+        if catalog is None:
+            if _retried:
+                return None
+            await self.catalog_port.refresh()
+            return await self._resolve_from_catalog(device_reference, context, _retried=True)
+
+        locale = context.language or "ru"
+        ref_norm = _norm(device_reference)
+
+        scored: List[Tuple[int, CatalogDevice]] = []
+        for device in catalog.devices:
+            score = _surface_score(ref_norm, device.surfaces(locale))
+            if score >= _MORPH_FUZZ_THRESHOLD:
+                scored.append((score, device))
+
+        if not scored:
+            if _retried:
+                return None
+            # a resolution miss is the ARCH-26 staleness signal — one re-pull, one retry
+            fresh = await self.catalog_port.refresh()
+            if fresh is None or fresh.version == catalog.version:
+                return None
+            return await self._resolve_from_catalog(device_reference, context, _retried=True)
+
+        best = max(score for score, _ in scored)
+        candidates = [device for score, device in scored if score == best]
+
+        # room-context disambiguation: «эппл» names both Apple TVs; the requesting room picks one
+        if len(candidates) > 1:
+            room_id = resolve_default_room(context, catalog)
+            if room_id is not None:
+                in_room = [d for d in candidates if d.room == room_id]
+                if in_room:
+                    candidates = in_room
+
+        if len(candidates) > 1:
+            # name-level ambiguity («ночники» = two sconces) → candidates for the clarify path
+            return EntityResolutionResult(
+                resolved_value=[self._device_payload(d, locale) for d in candidates],
+                original_value=device_reference,
+                confidence=0.5,
+                resolution_type="ambiguous",
+                metadata={"match_type": "catalog_ambiguous", "score": best,
+                          "candidates": [d.id for d in candidates],
+                          "catalog_version": catalog.version})
+
+        device = candidates[0]
+        return EntityResolutionResult(
+            resolved_value=self._device_payload(device, locale),
+            original_value=device_reference,
+            confidence=best / 100.0,
+            resolution_type="exact" if best == 100 else "fuzzy",
+            metadata={"match_type": "catalog", "score": best,
+                      "device_id": device.id, "catalog_version": catalog.version})
+
+    @staticmethod
+    def _device_payload(device: CatalogDevice, locale: str) -> Dict[str, Any]:
+        """The resolved-device shape handlers consume (enough to build a DeviceCommand)."""
+        return {"device_id": device.id,
+                "room": device.room,
+                "name": device.names.get(locale) or device.names.get("ru") or device.id,
+                "capabilities": [cap.name for cap in device.capabilities]}
+
+    def _resolve_from_client_context(self, device_reference: str, device_reference_lower: str,
+                                     available_devices: List[Dict[str, Any]],
+                                     context: UnifiedConversationContext) -> Optional[EntityResolutionResult]:
+        """Legacy path: ESP32-announced device capabilities + localization type-inference."""
         
         # 1. Exact name match
         for device in available_devices:
@@ -314,10 +529,17 @@ class DeviceEntityResolver:
 
 
 class LocationEntityResolver:
-    """Resolver for location-related entities using client context"""
-    
-    def __init__(self, asset_loader=None):
+    """Resolver for location/room entities.
+
+    Catalog-backed when the bridge is wired (ARCH-8 PR-3): room references resolve against the
+    catalog's rooms (names + aliases per locale — «зал» → living_room, «квартира» → global,
+    RU-morphology-tolerant), then the ARCH-22 **D-15 multi-room policy** applies: a mentioned room
+    the client covers → that room; a real room the client does NOT cover → `uncovered_room` (the
+    handler speaks the error, no actuation); not a room at all → legacy path fall-through."""
+
+    def __init__(self, asset_loader=None, catalog_port: Optional[DeviceCatalogPort] = None):
         self.asset_loader = asset_loader
+        self.catalog_port = catalog_port
         self.logger = logging.getLogger(f"{__name__}.LocationEntityResolver")
         self._assets_warned = False  # warn-once guard for missing/empty localization assets
 
@@ -368,8 +590,19 @@ class LocationEntityResolver:
     
     async def resolve(self, location_reference: str, context: UnifiedConversationContext) -> Optional[EntityResolutionResult]:
         """
-        Resolve location reference using client and room context.
+        Resolve location reference — catalog rooms + D-15 policy when wired, else client context.
         """
+        if self.catalog_port is not None:
+            catalog = self.catalog_port.catalog()
+            if catalog is None:
+                await self.catalog_port.refresh()
+                catalog = self.catalog_port.catalog()
+            if catalog is not None:
+                result = self._resolve_room_d15(location_reference, context, catalog)
+                if result is not None:
+                    return result
+                # not a catalog room → fall through (here-indicators / client-metadata rooms)
+
         location_lower = location_reference.lower().strip()
         
         # 1. Current room inference using localization files
@@ -420,8 +653,49 @@ class LocationEntityResolver:
                     resolution_type="fuzzy",
                     metadata={"match_type": "room_fuzzy", "similarity": best_match[1]}
                 )
-        
+
         return None
+
+    def _resolve_room_d15(self, location_reference: str, context: UnifiedConversationContext,
+                          catalog: DeviceCatalog) -> Optional[EntityResolutionResult]:
+        """Match a catalog room, then apply the D-15 coverage policy (esp32_satellite.md §8).
+
+        Returns None when the reference is not a catalog room (D-15 rule 2c: fall through)."""
+        locale = context.language or "ru"
+        room = match_catalog_room(location_reference, catalog, locale)
+        if room is None:
+            return None
+
+        spoken_name = room.names.get(locale) or room.names.get("ru") or room.id
+        payload = {"room_id": room.id, "name": spoken_name}
+        covered = _client_covered_rooms(context)
+        if covered:
+            covered_ids = set()
+            for entry in covered:
+                covered_room = match_catalog_room(entry, catalog, locale)
+                if covered_room is not None:
+                    covered_ids.add(covered_room.id)
+            # `global` is addressable from anywhere — «выключи весь свет в квартире» is not
+            # a per-room ask, and the whole-house aggregates live there by design (§5a).
+            if room.id not in covered_ids and room.id != "global":
+                # D-15 rule 2b: a real room this client does not manage → spoken error, no actuation
+                return EntityResolutionResult(
+                    resolved_value=payload,
+                    original_value=location_reference,
+                    confidence=1.0,
+                    resolution_type="uncovered_room",
+                    metadata={"match_type": "d15_uncovered", "room_id": room.id,
+                              "catalog_version": catalog.version})
+
+        return EntityResolutionResult(
+            resolved_value=payload,
+            original_value=location_reference,
+            confidence=1.0,
+            resolution_type="exact" if _norm(location_reference) in
+            tuple(_norm(s) for s in room.surfaces(locale)) or location_reference == room.id
+            else "fuzzy",
+            metadata={"match_type": "catalog_room", "room_id": room.id,
+                      "catalog_version": catalog.version})
 
 
 class TemporalEntityResolver:

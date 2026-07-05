@@ -284,7 +284,12 @@ class NLUComponent(Component, NLUPlugin, WebAPIPlugin):
         
         # Context-aware processor
         self.context_processor = ContextAwareNLUProcessor(self)
-    
+
+    def _catalog_port(self):
+        """The engine's CatalogService (the domain DeviceCatalogPort), when the core is wired
+        (ARCH-8 PR-3). None before initialize() or in bare unit-test construction."""
+        return getattr(getattr(self, "core", None), "catalog_service", None)
+
     async def initialize(self, core) -> None:
         """Initialize NLU providers with configuration-driven filtering"""
         await super().initialize(core)
@@ -488,8 +493,9 @@ class NLUComponent(Component, NLUPlugin, WebAPIPlugin):
                 # Get asset loader from IntentComponent if available
                 if hasattr(intent_component, 'handler_manager') and intent_component.handler_manager:
                     self.asset_loader = intent_component.handler_manager._asset_loader
-                    # Update entity resolver with asset loader
-                    self.context_processor.entity_resolver = ContextualEntityResolver(self.asset_loader)
+                    # Update entity resolver with asset loader + the device catalog port (ARCH-8 PR-3)
+                    self.context_processor.entity_resolver = ContextualEntityResolver(
+                        self.asset_loader, catalog_port=self._catalog_port())
                 
                 logger.info(f"Using shared donations from IntentComponent for handlers: {enabled_handlers}")
             
@@ -522,8 +528,9 @@ class NLUComponent(Component, NLUPlugin, WebAPIPlugin):
                 # Get donations from the unified loader
                 donations = self.asset_loader.donations
                 
-                # Update entity resolver with asset loader
-                self.context_processor.entity_resolver = ContextualEntityResolver(self.asset_loader)
+                # Update entity resolver with asset loader + the device catalog port (ARCH-8 PR-3)
+                self.context_processor.entity_resolver = ContextualEntityResolver(
+                    self.asset_loader, catalog_port=self._catalog_port())
             
             if not donations:
                 logger.warning("No JSON donations found - providers will use fallback patterns")

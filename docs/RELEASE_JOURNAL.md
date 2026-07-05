@@ -15,6 +15,29 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-05 — ARCH-8 PR-3 DONE (with the QUAL-35 resolver half) — spoken references now resolve
+  against the real device catalog.** Three moves in `entity_resolver.py`. **The Q7b atomic swap
+  (QUAL-35 b):** dispatch is declarative-first — a donation-declared `entity_type` routes the param
+  straight to the device/room resolver (map built from the loaded donations); the old
+  `_is_device_entity`/`_is_location_entity` name-heuristics remain only as the fallback for
+  generic/undeclared params, so every existing handler behaves identically until PR-4's smart-home
+  donations declare real types. **Catalog-backed device resolution:** name+alias surfaces per locale,
+  exact then RU-morphology-tolerant (a shared-stem heuristic — ≥4-char stem with ≤3-char endings —
+  because plain fuzz.ratio scores «детской»/«детская» at 71, under any sane threshold), room-context
+  disambiguation for shared aliases, name-level ambiguity surfaced as candidates for the clarify path
+  («ночники» → both sconces, per the v1 decision), and the ARCH-26 lazy re-pull exactly once on a
+  miss. **Room resolution + D-15:** catalog rooms by name/alias/id, then the ARCH-22 coverage policy —
+  a mentioned room the client covers is the target, a real room it does not cover returns
+  `uncovered_room` (spoken error, no actuation), and `global` is exempt so whole-house asks
+  («выключи весь свет в квартире») work from any satellite; `resolve_default_room` implements
+  rule 3 (no room → primary). The legacy client-context paths survive untouched for catalog-less
+  deployments. Wiring rides `nlu_component` → `core.catalog_service`. 14 new tests; live
+  spot-checks against the real pinned golden: 12/12, including the resolution leg of every
+  device-form crossover fixture (телек/эппл/радиаторах/пол/розетки/тюль слева + room aliases
+  зал/квартире/сынарник). Suite 1228 passed, pyright 0, 11/11 contracts. QUAL-35 keeps (a) T1
+  donations and the handler-side room_context policy for PR-4, and the heavy tiers for after the
+  suite runs. Next: PR-4 — the reference device handler end-to-end.
+
 - **2026-07-05 — PR-2 placement amendment (user decision): one home for all OutputPorts + explicit
   bridge surface in the 6 deployment configs.** `BridgeClient` moved
   `providers/outputs/bridge.py` → `outputs/bridge.py`; the `irene.providers.outputs` entry-point

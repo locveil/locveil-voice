@@ -192,7 +192,29 @@ See `docs/review/phase1_architecture_map.md` §5.
       non-fatal (lazy retry per ARCH-26). ~~`bridge/catalog/version` subscribe~~ (dropped by ARCH-26 —
       no MQTT client). 13 new tests; suite 1214 green, pyright 0, 11 contracts kept. **User-facing
       smart-home doc prose deliberately deferred to PR-4/PR-5** (no guide describes device control
-      until the feature exists end-to-end). NEXT: PR-3 (resolver). **Build notes from the 2026-07-04/05 contract analysis (recorded from
+      until the feature exists end-to-end).
+      **★ PR-3 DONE 2026-07-05 (+ the QUAL-35 RESOLVER HALF — its (b) and the resolver side of (c)):**
+      `entity_resolver.py` is catalog-backed. **(1) Q7b atomic swap (QUAL-35 b):**
+      `ContextualEntityResolver` dispatches by donation-declared `entity_type` FIRST (map built from
+      `asset_loader.donations`); the `_is_*_entity` name-heuristics survive only as the
+      GENERIC/undeclared fallback — existing donations all declare generic, so nothing changed until
+      PR-4's smart-home donations declare device/room. **(2) Device resolution:**
+      names+aliases per locale against the catalog, exact + RU-morphology-tolerant matching (shared-stem
+      heuristic: ≥4-char stem, ≤3-char endings — plain fuzz.ratio scores «детской»/«детская» only 71),
+      room-context disambiguation («эппл» → the requesting room's Apple TV), name-level ambiguity →
+      `resolution_type="ambiguous"` + candidates (the clarify path's input; «ночники» stays ambiguous
+      by design until the compound device), ARCH-26 lazy re-pull exactly once on a miss.
+      **(3) Room resolution + D-15 (ARCH-22):** catalog rooms by name/alias/id («зал»→living_room,
+      «квартире»→global fuzzy), then the coverage policy — covered room → target; real-but-uncovered →
+      `uncovered_room` (spoken error, no actuation); **`global` exempt** (whole-house asks work from
+      any satellite); no room → `resolve_default_room` (primary). Legacy client-context paths kept as
+      fallback when no catalog (bridge disabled/unreachable). Wired via `nlu_component`
+      (`_catalog_port()` → `core.catalog_service`). 14 new tests + live spot-checks against the real
+      pinned golden (12/12 incl. every device-form fixture's resolution leg). Suite 1228 green,
+      pyright 0, 11 contracts kept. **QUAL-35 remaining after this:** (a) T1 donations (PR-4), (c)
+      handler-side room_context policy (PR-4 w/ QUAL-30), T2/T3 tiers + units + options_from
+      transliteration (post-suite evidence). NEXT: PR-4 (reference handler + T1 donations + noun
+      lexicon + scope mapping). **Build notes from the 2026-07-04/05 contract analysis (recorded from
       chat):** PR-2's catalog parser codes against typed `CatalogParam` — a param carries EITHER `values`
       (stable enum `{wire,canonical,labels}` triplets) OR `options_from` (a dynamic set enumerated at
       resolution time via `GET /devices/{id}/options/<kind>` — installed apps etc.); PR-3's resolver consumes
