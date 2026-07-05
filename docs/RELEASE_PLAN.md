@@ -156,7 +156,18 @@ See `docs/review/phase1_architecture_map.md` §5.
       `unit`/`values`/`options_from`; ru+en enum labels; `aliases` schema; empty capability husks SUPPRESSED —
       the parser will not see actionless/fieldless entries), **`VWB-21`** (household alias vocabulary authored:
       34 devices + 3 rooms, e.g. «зал»→living_room). **Sequencing: TEST-17 pins v1.1 FIRST** (bridge `59f4f46`,
-      catalog `7a1149c7` — DONE, since re-pinned @ `91909b54` post-VWB-23), then PR-1. **Build notes from the 2026-07-04/05 contract analysis (recorded from
+      catalog `7a1149c7` — DONE, since re-pinned @ `91909b54` post-VWB-23), then PR-1.
+      **★ PR-1 DONE 2026-07-05:** the boundary objects landed — `intents/device_commands.py`
+      (`DeviceCommand` + `RoomGroupCommand`/`GroupScope`, both address forms, fixture-shaped `to_dict()` +
+      wire-shaped `request_body()`; commands ride `IntentResult.metadata[DEVICE_COMMAND_METADATA_KEY]`),
+      `intents/device_catalog.py` (typed catalog model incl. `CatalogParamSpec` values-XOR-options_from,
+      capability `group`, room `group_defaults` + `group_members`/`group_default` queries),
+      `DeviceCatalogPort` in `intents/ports.py` (read + async `refresh()` = the ARCH-26 lazy seam),
+      `core/catalog_service.py` (`CatalogService` implements the port; fetcher wired by PR-2; refresh
+      failure keeps the last good snapshot), and `outputs/device_command.py`
+      (`CapturingDeviceCommandOutput` — the TEST-18 capture point; scripted responder for §5b error paths).
+      No `ActuationPort` (§13.6). 15 unit tests (both forms through the OutputManager's designated
+      routing); suite 1201 green, pyright 0, all 10 import contracts kept. **Build notes from the 2026-07-04/05 contract analysis (recorded from
       chat):** PR-2's catalog parser codes against typed `CatalogParam` — a param carries EITHER `values`
       (stable enum `{wire,canonical,labels}` triplets) OR `options_from` (a dynamic set enumerated at
       resolution time via `GET /devices/{id}/options/<kind>` — installed apps etc.); PR-3's resolver consumes
@@ -421,7 +432,9 @@ _Trace-driven system testing (design `docs/design/trace_system_testing.md`, TEST
         Immediately consumable by the bridge's VWB-16 consumer half; voice-side they are the **acceptance spec
         PR-3/PR-4 build toward** (test-first — the resolver meets a pre-existing failing suite, not post-hoc
         assertions). NO input-switching fixtures (bridge VWB-19 gate, per QUAL-35 note).
-      • **Slice B — the capture provider + executable producer tests (gated on ARCH-8 PR-1).** A new eval-commons
+      • **Slice B — the capture provider + executable producer tests (~~gated on ARCH-8 PR-1~~ UNGATED
+        2026-07-05 — PR-1 landed: `DeviceCommand`/`RoomGroupCommand` + `CapturingDeviceCommandOutput`
+        exist; the suite still turns green-able only at PR-4 + T1 donations).** A new eval-commons
         promptfoo provider drives Irene with an utterance and returns the emitted canonical `DeviceCommand`
         (captured by the PR-1 capturing bridge `OutputPort`, not POSTed) for assertion against the Slice-A
         fixtures + the pinned openapi schema — the **producer** half of the bidirectional contract (the bridge's

@@ -15,6 +15,24 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-05 — ARCH-8 PR-1 DONE — the canonical-command boundary exists in code; the MQTT arc's spine
+  starts.** Adapter-free by design, built the same day as the fixtures it must eventually satisfy.
+  Domain (`irene/intents/`): `device_commands.py` — `DeviceCommand` (device form; scenarios ride it) and
+  `RoomGroupCommand` + `GroupScope` (VWB-23 room form), each with the fixture-shaped `to_dict()` (kinds
+  `actuate`/`room-group`, matching `crossover_fixtures.json` vocabulary) and the wire-shaped
+  `request_body()`; commands travel in `IntentResult.metadata["device_command"]` per §13.2.
+  `device_catalog.py` — the typed catalog model mirroring the pinned contract (params
+  values-XOR-`options_from` with units/ranges, capability `group` tags, room `group_defaults`, and the
+  `group_members`/`group_default` queries the resolver will use). `DeviceCatalogPort` joined
+  `intents/ports.py` (QUAL-24 pattern) carrying the ARCH-26 lazy-refresh seam as `async refresh()`.
+  Application: `core/catalog_service.py` holds the snapshot, serializes concurrent refreshes, and never
+  discards the last good catalog on a failed pull; PR-2 wires its fetcher. Delivery:
+  `outputs/device_command.py` — `CapturingDeviceCommandOutput`, the fake bridge that IS the TEST-18
+  capture point (records both address forms, returns the rich echo `DeliveryResult`, scriptable §5b
+  error responder). No `ActuationPort` — the bridge is an OutputPort (§13.6). 15 new unit tests incl.
+  end-to-end designated routing through the OutputManager; suite 1201 passed, pyright 0 errors, all 10
+  import contracts kept. TEST-18 Slice B ungated. Next: PR-2 (BridgeClient adapter + catalog pull).
+
 - **2026-07-05 — TEST-18 Slice A DONE — the crossover fixture set exists; the MQTT arc now builds against
   a failing suite.** Resumed the paused interactive session; the three open decisions closed (user):
   light-subset pair nouns («ночники»/«тумбочки»/«полки») dropped from v1 — bridge-side compound devices

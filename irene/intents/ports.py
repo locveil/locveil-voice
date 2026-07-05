@@ -20,6 +20,8 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
+from .device_catalog import DeviceCatalog
+
 
 class ComponentControlPort(ABC):
     """Provider-management surface shared by capability components.
@@ -93,6 +95,33 @@ class ASRPort(ComponentControlPort):
 
     @abstractmethod
     async def switch_language(self, language: str) -> Tuple[bool, str]: ...
+
+
+class DeviceCatalogPort(ABC):
+    """Read/query access to the bridge's device catalog (ARCH-8, `mqtt_integration.md` §4/§13.3).
+
+    The smart-home handlers and the `DeviceEntityResolver` depend on this port to
+    resolve spoken surfaces against the catalog snapshot; the application-layer
+    `CatalogService` (`core/catalog_service.py`) implements it. Strictly a read
+    port — actuation is NOT here (the bridge is an `OutputPort`; a handler emits
+    a `device_command`-modality result, §13.1/13.2).
+    """
+
+    @abstractmethod
+    def catalog(self) -> Optional[DeviceCatalog]:
+        """The current catalog snapshot, or None before the first successful pull."""
+        ...
+
+    @abstractmethod
+    async def refresh(self) -> Optional[DeviceCatalog]:
+        """Re-pull the catalog from its source and return the fresh snapshot.
+
+        The ARCH-26 lazy-refresh seam: the resolver calls this on a resolution/
+        actuation miss (unresolved name, or a bridge 4xx that smells stale) —
+        self-correcting, at most one stale round-trip. Returns None if no source
+        is wired or the pull fails (the caller keeps the previous snapshot).
+        """
+        ...
 
 
 class ComponentControlRegistryPort(ABC):
