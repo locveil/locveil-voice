@@ -892,3 +892,115 @@ class SmartHomeIntentHandler(IntentHandler):
                                      name=self._device_name(device, language))
         return await self._speak_outcome(delivery, ok_text, language, catalog,
                                          clarify_intent=intent, context=context)
+
+    # --- Slice 2 Part B: tracks / screen / menu / household modes ----------------------------------
+
+    def _single_global_device(self, capability: str, action: str,
+                              language: str) -> Optional[CatalogDevice]:
+        """The house's ONE device carrying `capability` WITH `action` — for the singleton
+        household modes (presence, cleaning, the water alarm). The water_supply-vs-
+        heating_control alarm split is honest here: both carry `alarm`, so the water alarm
+        donation phrases name water and this helper is called with the device already
+        narrowed by capability+action; if several remain we refuse rather than guess."""
+        catalog = self._catalog()
+        if catalog is None:
+            return None
+        capable = [d for d in catalog.devices
+                   if (cap := d.capability(capability)) is not None
+                   and cap.action(action) is not None]
+        return capable[0] if len(capable) == 1 else None
+
+    async def _handle_tracks_audio(self, intent, context):
+        return await self._simple_capability_action(intent, context, capability="tracks",
+                                                    action="audio", ok_key="confirm_tracks_audio")
+
+    async def _handle_tracks_subtitles(self, intent, context):
+        return await self._simple_capability_action(intent, context, capability="tracks",
+                                                    action="subtitles",
+                                                    ok_key="confirm_tracks_subtitles")
+
+    async def _handle_screen_aspect(self, intent: Intent,
+                                    context: UnifiedConversationContext) -> IntentResult:
+        aspect = self.get_param(intent, "aspect", None)
+        if aspect is None:
+            return await self._ask_slot(intent, context, "aspect")
+        return await self._simple_capability_action(intent, context, capability="screen",
+                                                    action=aspect, ok_key="confirm_screen")
+
+    async def _handle_menu_nav(self, intent: Intent,
+                               context: UnifiedConversationContext) -> IntentResult:
+        direction = self.get_param(intent, "direction", None)
+        if direction is None:
+            return await self._ask_slot(intent, context, "direction_menu")
+        return await self._simple_capability_action(intent, context, capability="menu",
+                                                    action=direction, ok_key="confirm_menu")
+
+    async def _handle_presence_set(self, intent: Intent,
+                                   context: UnifiedConversationContext) -> IntentResult:
+        language = self._lang(context)
+        state = self.get_param(intent, "state", None)
+        if state not in ("home", "away"):
+            return await self._ask_slot(intent, context, "presence")
+        device = self._single_global_device("presence", state, language)
+        if device is None:
+            return IntentResult(text=self._get_template("err_nothing_capable", language),
+                                should_speak=True, success=False, error="no presence device")
+        command = DeviceCommand(device_id=device.id, capability="presence", action=state)
+        delivery = await self._deliver(command, context)
+        ok_text = self._get_template(f"confirm_presence_{state}", language)
+        return await self._speak_outcome(delivery, ok_text, language, self._catalog(),
+                                         clarify_intent=intent, context=context)
+
+    async def _handle_cleaning_start(self, intent: Intent,
+                                     context: UnifiedConversationContext) -> IntentResult:
+        language = self._lang(context)
+        device = self._single_global_device("cleaning", "start", language)
+        if device is None:
+            return IntentResult(text=self._get_template("err_nothing_capable", language),
+                                should_speak=True, success=False, error="no cleaning device")
+        command = DeviceCommand(device_id=device.id, capability="cleaning", action="start")
+        delivery = await self._deliver(command, context)
+        return await self._speak_outcome(delivery, self._get_template("confirm_cleaning", language),
+                                         language, self._catalog(),
+                                         clarify_intent=intent, context=context)
+
+    async def _handle_cleaning_delay(self, intent: Intent,
+                                     context: UnifiedConversationContext) -> IntentResult:
+        language = self._lang(context)
+        minutes = self.get_param(intent, "minutes", None)
+        if minutes is None:
+            return await self._ask_slot(intent, context, "minutes")
+        device = self._single_global_device("cleaning", "set_delay", language)
+        if device is None:
+            return IntentResult(text=self._get_template("err_nothing_capable", language),
+                                should_speak=True, success=False, error="no cleaning device")
+        command = DeviceCommand(device_id=device.id, capability="cleaning",
+                                action="set_delay", params={"minutes": minutes})
+        delivery = await self._deliver(command, context)
+        ok_text = self._get_template("confirm_cleaning_delay", language, minutes=minutes)
+        return await self._speak_outcome(delivery, ok_text, language, self._catalog(),
+                                         clarify_intent=intent, context=context)
+
+    async def _handle_water_alarm(self, intent: Intent,
+                                  context: UnifiedConversationContext) -> IntentResult:
+        """User decision (Slice 2): the WATER alarm only — heating_control's alarm stays off
+        the voice surface. The donation phrases name water; the device is narrowed to the one
+        whose LEAKS capability marks it as the water-protection controller."""
+        language = self._lang(context)
+        state = self.get_param(intent, "state", None)
+        if state not in ("on", "off"):
+            return await self._ask_slot(intent, context, "alarm_state")
+        catalog = self._catalog()
+        if catalog is None:
+            return self._no_catalog_result(language)
+        water = [d for d in catalog.devices
+                 if d.capability("alarm") is not None and d.capability("leaks") is not None]
+        if len(water) != 1:
+            return IntentResult(text=self._get_template("err_nothing_capable", language),
+                                should_speak=True, success=False,
+                                error=f"water-alarm device not identifiable ({len(water)} candidates)")
+        command = DeviceCommand(device_id=water[0].id, capability="alarm", action=state)
+        delivery = await self._deliver(command, context)
+        ok_text = self._get_template(f"confirm_water_alarm_{state}", language)
+        return await self._speak_outcome(delivery, ok_text, language, catalog,
+                                         clarify_intent=intent, context=context)

@@ -871,6 +871,324 @@
           "description": "Комната"
         }
       ]
+    },
+    {
+      "method_name": "_handle_tracks_audio",
+      "intent_suffix": "tracks_audio",
+      "description": "Переключить аудиодорожку",
+      "phrases": [
+        "смени дорожку",
+        "аудиодорожку",
+        "другую дорожку",
+        "смени аудиодорожку"
+      ],
+      "lemmas": [
+        "аудиодорожка",
+        "дорожка"
+      ],
+      "examples": [
+        {
+          "text": "переключи аудиодорожку",
+          "parameters": {}
+        }
+      ],
+      "parameters": [
+        {
+          "name": "target",
+          "description": "Устройство"
+        },
+        {
+          "name": "room",
+          "description": "Комната"
+        }
+      ]
+    },
+    {
+      "method_name": "_handle_tracks_subtitles",
+      "intent_suffix": "tracks_subtitles",
+      "description": "Переключить субтитры",
+      "phrases": [
+        "смени субтитры",
+        "субтитры",
+        "включи субтитры"
+      ],
+      "lemmas": [
+        "субтитры"
+      ],
+      "examples": [
+        {
+          "text": "переключи субтитры",
+          "parameters": {}
+        }
+      ],
+      "parameters": [
+        {
+          "name": "target",
+          "description": "Устройство"
+        },
+        {
+          "name": "room",
+          "description": "Комната"
+        }
+      ]
+    },
+    {
+      "method_name": "_handle_screen_aspect",
+      "intent_suffix": "screen_aspect",
+      "description": "Формат экрана",
+      "phrases": [
+        "формат экрана",
+        "широкий экран",
+        "экран шестнадцать на девять",
+        "экран четыре на три",
+        "леттербокс"
+      ],
+      "lemmas": [
+        "экран",
+        "формат"
+      ],
+      "examples": [
+        {
+          "text": "широкий экран",
+          "parameters": {
+            "aspect": "aspect_16_9"
+          }
+        }
+      ],
+      "parameters": [
+        {
+          "name": "aspect",
+          "description": "Формат",
+          "choice_surfaces": {
+            "aspect_16_9": [
+              "широкий",
+              "шестнадцать на девять",
+              "16 на 9"
+            ],
+            "aspect_4_3": [
+              "четыре на три",
+              "4 на 3"
+            ],
+            "letterbox": [
+              "леттербокс"
+            ]
+          }
+        },
+        {
+          "name": "target",
+          "description": "Устройство"
+        },
+        {
+          "name": "room",
+          "description": "Комната"
+        }
+      ]
+    },
+    {
+      "method_name": "_handle_menu_nav",
+      "intent_suffix": "menu_nav",
+      "description": "Навигация по меню",
+      "phrases": [
+        "в меню вверх",
+        "в меню вниз",
+        "в меню влево",
+        "в меню вправо",
+        "в меню выбери",
+        "в меню назад",
+        "в меню домой",
+        "меню вверх",
+        "меню вниз"
+      ],
+      "lemmas": [
+        "меню"
+      ],
+      "examples": [
+        {
+          "text": "в меню вниз",
+          "parameters": {
+            "direction": "down"
+          }
+        },
+        {
+          "text": "в меню выбери",
+          "parameters": {
+            "direction": "ok"
+          }
+        }
+      ],
+      "parameters": [
+        {
+          "name": "direction",
+          "description": "Куда",
+          "choice_surfaces": {
+            "up": [
+              "вверх",
+              "наверх"
+            ],
+            "down": [
+              "вниз"
+            ],
+            "left": [
+              "влево"
+            ],
+            "right": [
+              "вправо"
+            ],
+            "ok": [
+              "выбери",
+              "ок",
+              "окей",
+              "подтверди"
+            ],
+            "back": [
+              "назад"
+            ],
+            "home": [
+              "домой"
+            ]
+          }
+        },
+        {
+          "name": "target",
+          "description": "Устройство"
+        },
+        {
+          "name": "room",
+          "description": "Комната"
+        }
+      ]
+    },
+    {
+      "method_name": "_handle_presence_set",
+      "intent_suffix": "presence_set",
+      "description": "Режим присутствия",
+      "phrases": [
+        "мы дома",
+        "мы уходим",
+        "мы ушли",
+        "режим дома",
+        "режим отсутствия"
+      ],
+      "lemmas": [
+        "дома",
+        "уходить"
+      ],
+      "examples": [
+        {
+          "text": "мы дома",
+          "parameters": {
+            "state": "home"
+          }
+        },
+        {
+          "text": "мы уходим",
+          "parameters": {
+            "state": "away"
+          }
+        }
+      ],
+      "parameters": [
+        {
+          "name": "state",
+          "description": "Дома или нет",
+          "choice_surfaces": {
+            "home": [
+              "дома"
+            ],
+            "away": [
+              "уходим",
+              "ушли",
+              "отсутствия"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "method_name": "_handle_cleaning_start",
+      "intent_suffix": "cleaning_start",
+      "description": "Режим уборки",
+      "phrases": [
+        "режим уборки",
+        "начинаем уборку",
+        "включи уборку"
+      ],
+      "lemmas": [
+        "уборка"
+      ],
+      "examples": [
+        {
+          "text": "режим уборки",
+          "parameters": {}
+        }
+      ],
+      "parameters": []
+    },
+    {
+      "method_name": "_handle_cleaning_delay",
+      "intent_suffix": "cleaning_delay",
+      "description": "Уборка на время",
+      "phrases": [
+        "уборка на",
+        "уборку на"
+      ],
+      "lemmas": [
+        "уборка",
+        "минута"
+      ],
+      "examples": [
+        {
+          "text": "уборка на 30 минут",
+          "parameters": {
+            "minutes": 30
+          }
+        }
+      ],
+      "parameters": [
+        {
+          "name": "minutes",
+          "description": "Минуты"
+        }
+      ]
+    },
+    {
+      "method_name": "_handle_water_alarm",
+      "intent_suffix": "water_alarm",
+      "description": "Сигнализация протечек",
+      "phrases": [
+        "сигнализацию воды",
+        "защиту от протечек",
+        "сигнализация воды"
+      ],
+      "lemmas": [
+        "протечка",
+        "сигнализация",
+        "вода"
+      ],
+      "examples": [
+        {
+          "text": "включи сигнализацию воды",
+          "parameters": {
+            "state": "on"
+          }
+        }
+      ],
+      "parameters": [
+        {
+          "name": "state",
+          "description": "Вкл/выкл",
+          "choice_surfaces": {
+            "on": [
+              "включи",
+              "включить"
+            ],
+            "off": [
+              "выключи",
+              "отключи"
+            ]
+          }
+        }
+      ]
     }
   ]
 }

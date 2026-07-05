@@ -684,6 +684,209 @@
           "description": "Room"
         }
       ]
+    },
+    {
+      "method_name": "_handle_tracks_audio",
+      "intent_suffix": "tracks_audio",
+      "description": "tracks audio",
+      "phrases": [
+        "switch audio track"
+      ],
+      "lemmas": [],
+      "examples": [],
+      "parameters": [
+        {
+          "name": "target",
+          "description": "Device"
+        },
+        {
+          "name": "room",
+          "description": "Room"
+        }
+      ]
+    },
+    {
+      "method_name": "_handle_tracks_subtitles",
+      "intent_suffix": "tracks_subtitles",
+      "description": "tracks subtitles",
+      "phrases": [
+        "switch subtitles",
+        "subtitles"
+      ],
+      "lemmas": [],
+      "examples": [],
+      "parameters": [
+        {
+          "name": "target",
+          "description": "Device"
+        },
+        {
+          "name": "room",
+          "description": "Room"
+        }
+      ]
+    },
+    {
+      "method_name": "_handle_screen_aspect",
+      "intent_suffix": "screen_aspect",
+      "description": "screen aspect",
+      "phrases": [
+        "widescreen",
+        "aspect ratio"
+      ],
+      "lemmas": [],
+      "examples": [],
+      "parameters": [
+        {
+          "name": "aspect",
+          "description": "Aspect",
+          "choice_surfaces": {
+            "aspect_16_9": [
+              "widescreen",
+              "16 by 9"
+            ],
+            "aspect_4_3": [
+              "4 by 3"
+            ],
+            "letterbox": [
+              "letterbox"
+            ]
+          }
+        },
+        {
+          "name": "room",
+          "description": "Room"
+        }
+      ]
+    },
+    {
+      "method_name": "_handle_menu_nav",
+      "intent_suffix": "menu_nav",
+      "description": "menu nav",
+      "phrases": [
+        "menu up",
+        "menu down"
+      ],
+      "lemmas": [],
+      "examples": [],
+      "parameters": [
+        {
+          "name": "direction",
+          "description": "Direction",
+          "choice_surfaces": {
+            "up": [
+              "up"
+            ],
+            "down": [
+              "down"
+            ],
+            "left": [
+              "left"
+            ],
+            "right": [
+              "right"
+            ],
+            "ok": [
+              "select",
+              "ok"
+            ],
+            "back": [
+              "back"
+            ],
+            "home": [
+              "home"
+            ]
+          }
+        },
+        {
+          "name": "target",
+          "description": "Device"
+        },
+        {
+          "name": "room",
+          "description": "Room"
+        }
+      ]
+    },
+    {
+      "method_name": "_handle_presence_set",
+      "intent_suffix": "presence_set",
+      "description": "presence set",
+      "phrases": [
+        "we are home",
+        "we are leaving"
+      ],
+      "lemmas": [],
+      "examples": [],
+      "parameters": [
+        {
+          "name": "state",
+          "description": "State",
+          "choice_surfaces": {
+            "home": [
+              "home"
+            ],
+            "away": [
+              "leaving",
+              "away"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "method_name": "_handle_cleaning_start",
+      "intent_suffix": "cleaning_start",
+      "description": "cleaning start",
+      "phrases": [
+        "cleaning mode"
+      ],
+      "lemmas": [],
+      "examples": [],
+      "parameters": []
+    },
+    {
+      "method_name": "_handle_cleaning_delay",
+      "intent_suffix": "cleaning_delay",
+      "description": "cleaning delay",
+      "phrases": [
+        "cleaning for"
+      ],
+      "lemmas": [],
+      "examples": [],
+      "parameters": [
+        {
+          "name": "minutes",
+          "description": "Minutes"
+        }
+      ]
+    },
+    {
+      "method_name": "_handle_water_alarm",
+      "intent_suffix": "water_alarm",
+      "description": "water alarm",
+      "phrases": [
+        "water alarm",
+        "leak protection"
+      ],
+      "lemmas": [],
+      "examples": [],
+      "parameters": [
+        {
+          "name": "state",
+          "description": "State",
+          "choice_surfaces": {
+            "on": [
+              "on",
+              "enable"
+            ],
+            "off": [
+              "off",
+              "disable"
+            ]
+          }
+        }
+      ]
     }
   ]
 }

@@ -315,3 +315,57 @@
     fixture: F67
     tier: "1"
     kind: actuate
+- description: "F70 (t1, actuate): смени субтитры на медиаплеере"
+  vars:
+    utterance: "смени субтитры на медиаплеере"
+    room: "living_room"
+    expect: {"kind": "actuate", "device_id": "video", "capability": "tracks", "action": "subtitles", "params": null}
+  metadata:
+    fixture: F70
+    tier: "1"
+    kind: actuate
+- description: "F71 (t1, actuate): мы уходим"
+  vars:
+    utterance: "мы уходим"
+    room: ""
+    expect: {"kind": "actuate", "device_id": "home_mode", "capability": "presence", "action": "away", "params": null}
+  metadata:
+    fixture: F71
+    tier: "1"
+    kind: actuate
+- description: "F72 (t1, actuate): режим уборки"
+  vars:
+    utterance: "режим уборки"
+    room: ""
+    expect: {"kind": "actuate", "device_id": "cleaning_mode", "capability": "cleaning", "action": "start", "params": null}
+  metadata:
+    fixture: F72
+    tier: "1"
+    kind: actuate
+- description: "F73 (t1, actuate): уборка на 30 минут"
+  vars:
+    utterance: "уборка на 30 минут"
+    room: ""
+    expect: {"kind": "actuate", "device_id": "cleaning_mode", "capability": "cleaning", "action": "set_delay", "params": {"minutes": 30}}
+  metadata:
+    fixture: F73
+    tier: "1"
+    kind: actuate
+- description: "F74 (t1, actuate): включи сигнализацию воды"
+  vars:
+    utterance: "включи сигнализацию воды"
+    room: ""
+    expect: {"kind": "actuate", "device_id": "water_supply", "capability": "alarm", "action": "on", "params": null}
+  metadata:
+    fixture: F74
+    tier: "1"
+    kind: actuate
+- description: "F75 (t1, actuate): широкий экран на апскейлере"
+  vars:
+    utterance: "широкий экран на апскейлере"
+    room: "living_room"
+    expect: {"kind": "actuate", "device_id": "upscaler", "capability": "screen", "action": "aspect_16_9", "params": null}
+  metadata:
+    fixture: F75
+    tier: "1"
+    kind: actuate
