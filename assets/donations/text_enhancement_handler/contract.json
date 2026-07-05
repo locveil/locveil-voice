@@ -85,16 +85,5 @@
       ]
     }
   ],
-  "global_parameters": [
-    {
-      "name": "language",
-      "type": "choice",
-      "required": false,
-      "choices": [
-        "ru",
-        "en"
-      ],
-      "entity_type": "generic"
-    }
-  ]
+  "global_parameters": []
 }

@@ -38,7 +38,7 @@ def _fallback(h, language, likely_domain, text="бла бла"):
     intent = Intent(name="conversation.general",
                     entities={"_fallback_context": {"likely_domain": likely_domain}},
                     confidence=0.0, raw_text=text)
-    return _run(h._handle_fallback_without_llm(intent, ctx))
+    return _run(h._fallback_without_llm(intent, ctx))
 
 
 def test_targeted_clarification_russian():

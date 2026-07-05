@@ -73,22 +73,7 @@
       "intent_suffix": "switch",
       "boost": 1.1,
       "room_context": "none",
-      "parameters": [
-        {
-          "name": "provider",
-          "type": "choice",
-          "required": true,
-          "choices": [
-            "silero",
-            "silero3",
-            "silero4",
-            "console",
-            "system",
-            "vosk"
-          ],
-          "entity_type": "generic"
-        }
-      ]
+      "parameters": []
     },
     {
       "method_name": "_handle_stop_synthesis",
@@ -105,16 +90,5 @@
       "parameters": []
     }
   ],
-  "global_parameters": [
-    {
-      "name": "language",
-      "type": "choice",
-      "required": false,
-      "choices": [
-        "ru",
-        "en"
-      ],
-      "entity_type": "generic"
-    }
-  ]
+  "global_parameters": []
 }

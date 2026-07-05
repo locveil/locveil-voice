@@ -811,73 +811,7 @@
           }
         }
       ],
-      "parameters": [
-        {
-          "name": "provider",
-          "description": "TTS provider to switch to",
-          "extraction_patterns": [
-            {
-              "pattern": [
-                {
-                  "LEMMA": "переключаться"
-                },
-                {
-                  "TEXT": "на"
-                },
-                {
-                  "LOWER": {
-                    "IN": [
-                      "силеро",
-                      "консоль",
-                      "системный",
-                      "воск"
-                    ]
-                  }
-                }
-              ],
-              "label": "PROVIDER"
-            },
-            {
-              "pattern": [
-                {
-                  "TEXT": {
-                    "IN": []
-                  }
-                },
-                {
-                  "TEXT": "to"
-                }
-              ],
-              "label": "PROVIDER"
-            }
-          ],
-          "aliases": [
-            "синтезатор",
-            "движок",
-            "провайдер"
-          ],
-          "choice_surfaces": {
-            "silero": [
-              "silero"
-            ],
-            "silero3": [
-              "silero3"
-            ],
-            "silero4": [
-              "silero4"
-            ],
-            "console": [
-              "console"
-            ],
-            "system": [
-              "system"
-            ],
-            "vosk": [
-              "vosk"
-            ]
-          }
-        }
-      ]
+      "parameters": []
     },
     {
       "method_name": "_handle_stop_synthesis",
@@ -982,19 +916,5 @@
       ]
     }
   ],
-  "global_parameters": [
-    {
-      "name": "language",
-      "description": "Response language preference",
-      "default_value": "ru",
-      "choice_surfaces": {
-        "ru": [
-          "русский"
-        ],
-        "en": [
-          "английский"
-        ]
-      }
-    }
-  ]
+  "global_parameters": []
 }

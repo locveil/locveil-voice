@@ -621,19 +621,5 @@
       ]
     }
   ],
-  "global_parameters": [
-    {
-      "name": "language",
-      "description": "Предпочтение языка ответа",
-      "default_value": "ru",
-      "choice_surfaces": {
-        "ru": [
-          "русский"
-        ],
-        "en": [
-          "английский"
-        ]
-      }
-    }
-  ]
+  "global_parameters": []
 }

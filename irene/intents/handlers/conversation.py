@@ -131,9 +131,10 @@ class ConversationIntentHandler(IntentHandler):
                     logger.info(f"NLU fallback detected but LLM available - using LLM for: {intent.raw_text}")
                     return await self._handle_continue_conversation(intent, context)
                 else:
-                    # LLM not available - use template-based fallback
+                    # LLM not available - use template-based fallback (internal helper, not
+                    # donation-routed — hence no `_handle_` prefix, QUAL-66)
                     logger.info(f"NLU fallback detected and LLM unavailable - using templates for: {intent.raw_text}")
-                    return await self._handle_fallback_without_llm(intent, context)
+                    return await self._fallback_without_llm(intent, context)
             
             # Handle specific conversation actions using unified context
             if intent.action == "start":
@@ -488,7 +489,7 @@ class ConversationIntentHandler(IntentHandler):
                 success=False,
                 error=str(e)
             )
-    async def _handle_fallback_without_llm(self, intent: Intent, context: UnifiedConversationContext) -> IntentResult:
+    async def _fallback_without_llm(self, intent: Intent, context: UnifiedConversationContext) -> IntentResult:
         """
         Handle fallback scenario when NLU failed to recognize intent.
         

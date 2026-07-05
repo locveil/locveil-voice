@@ -614,49 +614,7 @@
           }
         }
       ],
-      "parameters": [
-        {
-          "name": "provider",
-          "description": "TTS provider to switch to",
-          "extraction_patterns": [
-            {
-              "pattern": [
-                {
-                  "TEXT": "on"
-                }
-              ],
-              "label": "PROVIDER"
-            },
-            {
-              "pattern": [
-                {
-                  "TEXT": {
-                    "IN": [
-                      "switch",
-                      "change"
-                    ]
-                  }
-                },
-                {
-                  "TEXT": "to"
-                },
-                {
-                  "LOWER": {
-                    "IN": [
-                      "silero",
-                      "console",
-                      "system",
-                      "vosk"
-                    ]
-                  }
-                }
-              ],
-              "label": "PROVIDER"
-            }
-          ],
-          "aliases": []
-        }
-      ]
+      "parameters": []
     },
     {
       "method_name": "_handle_stop_synthesis",
@@ -745,11 +703,5 @@
       ]
     }
   ],
-  "global_parameters": [
-    {
-      "name": "language",
-      "description": "Response language preference",
-      "default_value": "ru"
-    }
-  ]
+  "global_parameters": []
 }

@@ -463,11 +463,5 @@
       ]
     }
   ],
-  "global_parameters": [
-    {
-      "name": "language",
-      "description": "Response language preference",
-      "default_value": "ru"
-    }
-  ]
+  "global_parameters": []
 }

@@ -51,10 +51,12 @@ def test_strict_parameters_promotes_unread_to_fatal():
 
 
 def test_reverse_coverage_flags_undeclared_handler_method():
-    # system handler has _handle_language_switch which (per the survey) is not in its contract
+    # QUAL-66 swept the live tree to zero wiring warnings (internal helpers renamed off the
+    # `_handle_` prefix), so exercise the check by DECLARING NOTHING for a real handler —
+    # every genuine `_handle_*` routing method must then be flagged as undeclared.
     v = ContractWiringValidator()
-    report = v.validate_handler("system", {}, [])
-    assert any("_handle_language_switch" in w and "not declared" in w for w in report.warnings)
+    report = v.validate_handler("timer", {}, [])
+    assert any("_handle_set_timer" in w and "not declared" in w for w in report.warnings)
 
 
 def test_param_reference_collector_finds_both_access_paths():

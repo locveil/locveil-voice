@@ -55,12 +55,5 @@
       "parameters": []
     }
   ],
-  "global_parameters": [
-    {
-      "name": "session_id",
-      "type": "string",
-      "required": true,
-      "entity_type": "generic"
-    }
-  ]
+  "global_parameters": []
 }

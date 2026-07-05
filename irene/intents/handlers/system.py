@@ -101,7 +101,9 @@ class SystemIntentHandler(IntentHandler):
             elif intent.action == "info" or intent.name == "system.info":
                 return await self._handle_info_request(intent, context)
             elif intent.action == "language_switch" or intent.name == "system.language_switch":
-                return await self._handle_language_switch(intent, context)
+                # dispatched here by action, not by donation routing — the helper deliberately
+                # does NOT carry the `_handle_` prefix (QUAL-66: that prefix promises a donation entry)
+                return await self._do_language_switch(intent, context)
             else:
                 # Default: provide general system information
                 return await self._handle_general_info(intent, context)
@@ -261,7 +263,7 @@ class SystemIntentHandler(IntentHandler):
             }
         )
     
-    async def _handle_language_switch(self, intent: Intent, context: UnifiedConversationContext) -> IntentResult:
+    async def _do_language_switch(self, intent: Intent, context: UnifiedConversationContext) -> IntentResult:
         """
         Handle language switching requests.
         
