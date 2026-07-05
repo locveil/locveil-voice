@@ -15,6 +15,23 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-05 — TEST-18 Slice A DONE — the crossover fixture set exists; the MQTT arc now builds against
+  a failing suite.** Resumed the paused interactive session; the three open decisions closed (user):
+  light-subset pair nouns («ночники»/«тумбочки»/«полки») dropped from v1 — bridge-side compound devices
+  will come later and re-enter via a re-pin; same-room capability ambiguity clarifies in v1 with priority
+  rules filed as QUAL-63 for a later release; sensor reads included. Authored
+  `eval-commons/contracts/crossover_fixtures.json` (`941e245`): 23 `{utterance → canonical command}`
+  fixtures against pinned catalog `91909b54` spanning all four expect kinds — device-form actuation via
+  aliases and typed °C/% params, VWB-23 room-group commands (scope `auto` vs «весь»→`all`, room aliases
+  «зал»/«квартира»), reads (with `any_of` for the two physically-equivalent bedroom temperature sources),
+  clarifications (F20 playback, F21 climate), plus the scenario enum by RU label and a transliteration
+  case. Each fixture carries a tier (1 = green-able with the QUAL-35 T1 donation baseline at ARCH-8 PR-4;
+  2 = needs T2 units/transliteration). A new 8-test guard suite (`test_crossover_fixtures.py`) binds every
+  fixture to catalog truth — device ids, actions, param ranges, enum wires, groups, sensor fields — and
+  pins the fixtures' `catalog_version` to `PIN.json`, so the next re-pin points at exactly which fixtures
+  go stale; 16/16 green with the pin guards. The bridge's VWB-16 consumer half can consume the file as-is.
+  Next per the recorded sequence: ARCH-8 PR-1.
+
 - **2026-07-05 — VWB-23 analyzed + contract RE-PINNED — «включи свет» became one REST call; the boundary
   is now address-form polymorphic.** The bridge shipped room-scoped group addressing (`canonical_first.md`
   §10, surfaced by this side's TEST-18 Slice A question "what does «включи свет в детской» resolve to?"):

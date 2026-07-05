@@ -326,6 +326,9 @@ _Apply to every remediation task below (from the 4 review docs + QUAL-25/26). So
         `group_defaults` picks the device), «весь»/plural → `scope: all`.
         **(5) No power-group fan-out promises** in donations — the bridge allow-lists fan-out to
         `light`+`cover` only and 409s the rest by design («выключи все розетки» must not work).
+        **(6) Same-room capability ambiguity: v1 CLARIFIES** (user decision 2026-07-05; TEST-18 fixtures
+        F20/F21 are the spec) — don't build priority config into the v1 resolver; priority rules are
+        **QUAL-63** (later release).
 - [ ] **QUAL-44** `[deferred]` [DFLOW] (P2, enhancement; split from QUAL-31) — **Answer-vs-new-command arbitration on a
       clarifying turn.** QUAL-31's resume pre-check (`workflows/voice_assistant.py` `_process_pipeline`, the
       `take_pending_clarification` branch) **unconditionally** treats the turn that follows a clarification as the answer:
@@ -352,6 +355,16 @@ _Apply to every remediation task below (from the 4 review docs + QUAL-25/26). So
       (`nlu_component.py` `record_stage("nlu_cascade")`), not each provider's attempt/confidence — so it can't yet explain
       *why* a fall-through happened. First enrich the cascade trace to record per-provider attempts (which tried, each
       one's confidence, why it abstained), then build the analyzer over recorded traces. Needs real usage data → deferred.
+- [ ] **QUAL-63** `[deferred]` [PEX][MQTT] (P3) — **Priority rules for same-room capability ambiguity**
+      (filed from TEST-18 Slice A; user 2026-07-05: clarify "for v1, but actually it can be done thru
+      priorities — later release"). When one utterance matches several same-room devices on the same
+      capability («поставь на паузу» → TV+AppleTV; «22 градуса» → обогрев+кондиционер), v1 asks a
+      clarification (fixtures F20/F21). This task adds configurable resolver priorities so common cases skip
+      the question — e.g. playback → the transport actually playing / a preferred device; climate → a
+      seasonal heating-vs-cooling default — with clarify remaining the fallback when no rule decides.
+      Builds on the QUAL-35 resolver (note 6); fixture impact = NEW priority-variant fixtures beside
+      F20/F21, not edits. Any config surface added → the `config-ui-stays-functional` gate applies.
+
 ### Bugs (BUG)
 _Discrete functional defects (distinct from QUAL refactors/quality work). Surfaced from any source; filed before fixing._
 
@@ -380,26 +393,25 @@ _Trace-driven system testing (design `docs/design/trace_system_testing.md`, TEST
 
 - [ ] **TEST-18** [EVAL][MQTT] (P3) `[deferred]` — **The `device_command` capture provider + Irene producer contract
       tests (ARCH-26 §14).** Two slices (fixtures-first fold, user 2026-07-05):
-      • **Slice A — crossover fixtures — DOING, PAUSED 2026-07-05 (resume point v2, post-VWB-23).**
-        **Step 0 DONE: contract RE-PINNED** @ bridge `ee0a71d` / catalog `91909b54` (eval-commons `e0d6b45`;
-        all 8 pin guards green) — picks up **VWB-23 room-scoped group addressing** (`canonical_first.md` §10):
-        `POST /rooms/{room_id}/canonical {group, action, params?, scope: auto|all|one, wait?}`,
-        `CatalogCapability.group` (37 illumination `power` caps tagged `light`; oven/plugs split to
-        `power_switch` — unreachable by «свет»), `CatalogRoom.group_defaults` (all 10 rooms: `light` →
-        `<room>_spots`; `global` none — `all_lights` master IS its membership), fan-out allow-list
-        `light`+`cover`, per-member aggregate response. **Q1 (room lights) RESOLVED by VWB-23:** «включи свет
-        в детской» = ONE room-group command `{room, group: light, action: on, scope: auto}` — the fixture
-        schema gains a THIRD expect kind, `room-group {room_id, group, action, scope}`; Irene detects
-        singular vs «весь»/plural → `scope: auto` vs `all`. **Q2 NARROWED:** cover pairs solved («закрой
-        шторы»/«жалюзи» → room-group `cover`, auto → fan-out to both); **light-subset pairs still OPEN**
-        («ночники»/«тумбочки»/«полки» name 2 of bedroom's 7 light members — group over-reaches, one device
-        under-reaches): clarify vs bridge pair-aggregates vs drop-from-v1. **Q3 still OPEN:** same-room
-        capability ambiguity («поставь на паузу» → TV+AppleTV; «22 градуса» → обогрев+кондиционер) — clarify
-        vs priority rules. **Q4 still OPEN:** sensor-read fixtures in Slice A or deferred to PR-5. Draft
-        rework on resume: #7 «шторы» + #9/#10 «весь свет» become room-form; #1/#5 stay device-form (named
-        devices). A 17-fixture draft table exists in the 2026-07-05 chat; fixture file shape:
-        `eval-commons/contracts/` JSON with `catalog_version` + fixtures
-        `{id, tier, utterance.ru, context.room?, expect: actuate|room-group|read|clarify}`.
+      • **Slice A — crossover fixtures — DONE 2026-07-05** (interactive; eval-commons `941e245`; step 0
+        re-pin @ bridge `ee0a71d` / catalog `91909b54` was `e0d6b45`). Deliverable:
+        **`eval-commons/contracts/crossover_fixtures.json` — 23 fixtures** against the pinned catalog, all
+        four expect kinds `actuate | room-group | read | clarify`, tiered 1/2 (green-able with the QUAL-35
+        T1 donation baseline vs needs T2 units/transliteration), **guarded by
+        `tests/test_crossover_fixtures.py`** (8 tests: every binding verified against the golden — device
+        ids/capabilities/actions/param ranges/enums/rooms/groups/fields + fixtures↔pin version agreement;
+        16/16 green together with the pin guards — a re-pin flags stale fixtures loudly). Coverage: aliases
+        («телек»/«эппл»/«радиаторы»/«пол»), typed params with °C/% ranges, scenario enum via ru label
+        («кино с видеокассеты» → `movie_vhs`) + a transliteration case («эппл ти ви» → `movie_appletv`),
+        room-group scope `auto` vs «весь»→`all`, room aliases «зал»/«квартира», the depth-doctrine
+        named-device case («закрой тюль слева» stays device-form), the power-fence cases («печь»/«розетки»
+        reachable by NAME only). **The 3 open decisions resolved (user 2026-07-05):** light-subset pair
+        nouns («ночники»/«тумбочки»/«полки») **DROPPED from v1** — user will add bridge-side compound
+        devices later (those fixtures return with that re-pin); same-room capability ambiguity → **CLARIFY
+        in v1** (F20 playback, F21 climate), priority rules = later release → **QUAL-63**; sensor reads
+        **INCLUDED** (F30–F32, incl. `any_of` for the physically-equivalent bedroom room-temperature
+        sources). Immediately consumable by bridge VWB-16; voice-side this is the acceptance spec ARCH-8
+        PR-3/PR-4 build toward (test-first).
         _Orig:_ **(UNGATED — startable now, pure data against the TEST-17 pin).** Author the
         `{utterance → expected canonical command}` set into `eval-commons/contracts/` next to the pinned golden:
         every parse+resolution path the golden exercises — power on/off via alias («включи свет в детской»),
