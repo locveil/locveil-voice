@@ -108,7 +108,7 @@ PORTS         DeviceCatalogPort (read)        [actuation: bridge OutputPort — 
   │                  │ implemented inward by (application components import nothing outward)
 APPLICATION   CatalogService
   │                  │ holds
-ADAPTERS      providers/outputs/bridge: BridgeClient — an OutputPort (§13), POST canonical action (Flow 2)
+ADAPTERS      outputs/bridge: BridgeClient — an OutputPort (§13), POST canonical action (Flow 2)
                    └─ GET catalog/rooms/capabilities (startup pull → DeviceCatalog; CatalogService)
 ```
 
@@ -119,7 +119,9 @@ ADAPTERS      providers/outputs/bridge: BridgeClient — an OutputPort (§13), P
   device handlers emit a `device_command` result and await the OutputManager delivery — no bespoke actuation port.
 - **`DeviceCatalogPort`** (ABC in `intents/ports.py`): the QUAL-24 read-port pattern — handlers depend on it; the
   application `CatalogService` inherits + injects it inward. _(Unchanged by §13 — it's a read/query port, not output.)_
-- **`BridgeClient`** adapter under the `irene.providers.outputs` entry-point group: owns the HTTP
+- **`BridgeClient`** adapter in `irene/outputs/` *(placement amended 2026-07-05 at PR-2: all
+  OutputPorts live in one home — the `irene.providers.outputs` entry-point group is retired; the
+  composition imports + registers it directly, gated by `[outputs.bridge]`)*: owns the HTTP
   client, base URL/auth, retries, and the REST contract with the bridge. **(§13) implements `OutputPort`**
   and returns the rich `DeliveryResult` (echo/error). The **only** module that knows the bridge exists.
 - **DeviceCatalog** (in-memory, built from the startup pull): the device/room/capability/param model
@@ -263,7 +265,7 @@ canonical→native. (The bridge aligns with HA's namespace where it fits, but it
 
 ## 7. Flow 1 — content-agnostic output (deferred)
 
-A **terminal `OutputPort` carrying `OutputModality.EVENT`** (a raw-MQTT `providers/outputs/mqtt` adapter
+A **terminal `OutputPort` carrying `OutputModality.EVENT`** (a raw-MQTT `outputs/mqtt` adapter
 publishing e.g. `irene/{room}/event`), capability-routed to a designated output by the OutputManager.
 Domain-unaware; gated by config. **Deferred** — no confirmed consumer yet; defined so the output seam is
 complete and Flow 2 isn't mistaken for it. If/when a consumer appears, it lands as its own small slice.
@@ -275,7 +277,9 @@ complete and Flow 2 isn't mistaken for it. If/when a consumer appears, it lands 
 
 ## 8. Config + entry-points
 
-- New entry-point group `irene.providers.outputs` (`bridge` for Flow 2; `mqtt` for Flow 1 later).
+- ~~New entry-point group `irene.providers.outputs`~~ *(2026-07-05: retired — adapters live in
+  `irene/outputs/` and are composition-registered from `[outputs.*]` config; `mqtt` for Flow 1
+  would follow the same pattern.)*
 - **(§13/PR-7 note) `OutputConfig` already exists** — ARCH-15 PR-7 added `[outputs]` (`OutputConfig`:
   `console`/`console_prefix`/`web_push`). ARCH-8 must **not** create a second top-level `OutputConfig`;
   add a **distinct bridge/actuation config** (bridge base URL, auth, request timeout, `enabled`) — e.g. a
@@ -314,8 +318,8 @@ PR-2+ integrate against the live `/system/catalog` + `/devices/{id}/canonical` a
 - **PR-1** — `DeviceCommand` domain type (capability vocab §6) + `DeviceCatalogPort` (read ABC, QUAL-24
   pattern) + `CatalogService`; import-linter clean. Unit-tested against a fake bridge. **Unblocked now.**
   _(§13.6: no `ActuationPort`/`ActuationService` — the bridge is an `OutputPort`.)_
-- **PR-2** — `BridgeClient` **`OutputPort`** adapter (returns rich `DeliveryResult`) + `irene.providers.outputs`
-  group + config/schema + startup pull of `GET /system/catalog` → `DeviceCatalog` + subscribe
+- **PR-2** — `BridgeClient` **`OutputPort`** adapter (returns rich `DeliveryResult`) in `irene/outputs/`
+  *(2026-07-05: unified home, group retired)* + config/schema + startup pull of `GET /system/catalog` → `DeviceCatalog` + subscribe
   `bridge/catalog/version` → re-pull; **registered + designated for `DEVICE_COMMAND` on the OutputManager**.
   Validated against a recorded catalog, then the live bridge slice.
 - **PR-3** — wire `DeviceCatalog` into `DeviceEntityResolver` (real `device`/`room` entities, ru-name
@@ -375,7 +379,9 @@ from this section, this section wins.** The bridge contract (§5) and the catalo
 (`core/interfaces/output.py`, PR-2). The bridge is an OutputPort whose `DeliveryResult` is **rich** —
 `{success, echoed_value, error_code}` carries the ~500 ms synchronous value-echo + the 6-code error enum (§5b).
 So **`ActuationPort` collapses into the bridge `OutputPort`**; there is no second port shape. The `BridgeClient`
-REST adapter *is* that OutputPort, under the already-named `irene.providers.outputs` entry-point group, and it is
+REST adapter *is* that OutputPort — in `irene/outputs/` with every other OutputPort *(2026-07-05:
+the `irene.providers.outputs` entry-point group named here was retired at PR-2; one home for all
+output adapters, composition-registered from `[outputs.bridge]` config)* — and it is
 **registered + `designate(DEVICE_COMMAND, "bridge")`** on the process-wide `OutputManager` (built by composition,
 PR-5a).
 

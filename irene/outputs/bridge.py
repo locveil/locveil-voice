@@ -1,6 +1,10 @@
 """BridgeClient — the wb-mqtt-bridge REST adapter (ARCH-8 PR-2).
 
-The ONLY module that knows the bridge exists (`mqtt_integration.md` §4). Two jobs:
+The ONLY module that knows the bridge exists (`mqtt_integration.md` §4). Lives with the other
+output adapters (all OutputPorts in one home — user decision 2026-07-05, superseding §13.1's
+`irene.providers.outputs` entry-point group); unlike its channel-sink neighbours it is
+config-gated (`[outputs.bridge]`), composition-registered on every profile, and
+capability-routed via `designate()`. Two jobs:
 
 1. **Actuation `OutputPort`** (§13.1): delivers `device_command`-modality results by POSTing the
    canonical command to the address-form endpoint — device form → `POST /devices/{id}/canonical`,
@@ -22,9 +26,9 @@ from typing import Any, Dict, Optional, Set, Tuple
 
 import aiohttp
 
-from ...core.interfaces.output import DeliveryResult, OutputModality, OutputPort
-from ...intents.context_models import RequestContext
-from ...intents.device_catalog import (
+from ..core.interfaces.output import DeliveryResult, OutputModality, OutputPort
+from ..intents.context_models import RequestContext
+from ..intents.device_catalog import (
     CatalogActionSpec,
     CatalogCapability,
     CatalogDevice,
@@ -34,12 +38,12 @@ from ...intents.device_catalog import (
     DeviceCatalog,
     ValueLabel,
 )
-from ...intents.device_commands import (
+from ..intents.device_commands import (
     DEVICE_COMMAND_METADATA_KEY,
     DeviceCommand,
     RoomGroupCommand,
 )
-from ...intents.models import IntentResult
+from ..intents.models import IntentResult
 
 logger = logging.getLogger(__name__)
 

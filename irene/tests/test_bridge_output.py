@@ -22,7 +22,7 @@ from irene.intents.device_commands import (
 )
 from irene.intents.models import IntentResult
 from irene.outputs.manager import OutputManager
-from irene.providers.outputs.bridge import (
+from irene.outputs.bridge import (
     BRIDGE_UNREACHABLE,
     BridgeClient,
     parse_catalog,

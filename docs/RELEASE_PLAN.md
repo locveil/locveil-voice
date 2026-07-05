@@ -178,9 +178,13 @@ See `docs/review/phase1_architecture_map.md` §5.
       `bridge_unreachable` (never raises into the pipeline); `parse_catalog` → domain `DeviceCatalog`
       (typed params, group overlay, `group_defaults`, aliases, enum triplets, `options_from`) —
       **verified against the real pinned golden** (79 devices/11 rooms @ `91909b54`, all VWB-23
-      semantics). Placement per §13.1: `irene.providers.outputs` entry-point group (adapter to an
-      external system — configured + designated; NOT a channel sink like `irene/outputs/`), category
-      added to the ARCH-4 independence contract. Wiring: `[outputs.bridge]` config
+      semantics). ~~Placement per §13.1: `irene.providers.outputs` entry-point group~~ **(superseded
+      same day, user decision: ALL OutputPorts live in `irene/outputs/` — moved to
+      `outputs/bridge.py`, the entry-point group retired, the design doc §4/§8/§10/§13.1 amended
+      with dated notes; the composition imports + registers it directly).** The 6 docker-image
+      configs (`standalone-x86_64`/`embedded-aarch64`/`embedded-armv7` ×ru/en) gained explicit
+      `[outputs]` + `[outputs.bridge]` blocks (disabled; flipped at ARCH-25 bring-up) — all 6
+      validate against `CoreConfig`. Wiring: `[outputs.bridge]` config
       (`BridgeOutputConfig`: enabled/base_url/timeout; config-master + config-ui types co-changed,
       `npm run check`+`build` clean), `CatalogService` built in `build_core` (engine attr),
       `setup_bridge_output()` in composition called runner-agnostically from the base runner post

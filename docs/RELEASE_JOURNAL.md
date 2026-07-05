@@ -15,6 +15,18 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-05 — PR-2 placement amendment (user decision): one home for all OutputPorts + explicit
+  bridge surface in the 6 deployment configs.** `BridgeClient` moved
+  `providers/outputs/bridge.py` → `outputs/bridge.py`; the `irene.providers.outputs` entry-point
+  group is retired (nothing discovered outputs via entry-points — the composition imports and
+  registers directly from `[outputs.bridge]` config) and its ARCH-4 independence entry removed;
+  `mqtt_integration.md` §4/§8/§10/§13.1 amended with dated notes so the design doc matches reality.
+  The 6 docker-image configs (standalone-x86_64, embedded-aarch64, embedded-armv7 × ru/en) — which
+  carried no `[outputs]` section at all (silent defaults) — now declare `[outputs]` +
+  `[outputs.bridge]` explicitly (disabled; the flip-on belongs to the ARCH-25 hardware bring-up
+  once the bridge's ops cutover lands); all 6 validate against `CoreConfig`. Suite 1214 green,
+  11/11 contracts, pyright 0.
+
 - **2026-07-05 — ARCH-8 PR-2 DONE — the real bridge adapter; Irene can now (config-gated) speak REST to
   wb-mqtt-bridge and pull the device catalog.** `BridgeClient` (`providers/outputs/bridge.py`, the only
   module that knows the bridge exists) implements the designated DEVICE_COMMAND OutputPort: device-form

@@ -24,7 +24,7 @@ from ..intents.context import ContextManager
 from ..core.event_bus import EventBus
 from ..inputs.manager import InputManager
 from ..outputs.manager import OutputManager
-from ..providers.outputs.bridge import BridgeClient
+from ..outputs.bridge import BridgeClient
 
 logger = logging.getLogger(__name__)
 
