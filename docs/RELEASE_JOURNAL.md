@@ -15,6 +15,19 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-05 — QUAL-66 DONE (filed + completed same day) — contract-wiring warnings 21 → 0.**
+  The user asked what the boot-time "Contract wiring" warnings were; the answer became a sweep.
+  Dead `language` globals dropped from 9 donations (request language lives on the context since
+  QUAL-36) + conversation's `session_id`; voice_synthesis's unread `provider` param dropped
+  (parsed from raw text); two internal helpers renamed off the `_handle_` routing prefix. The
+  near-misses were the lesson: `system` and `speech_recognition` ALSO declare `language` — but
+  theirs is the TARGET language for switching, genuinely read, and the validator had correctly
+  stayed silent about them (an over-eager first sweep removed them; the warning list itself
+  caught the error). One test had relied on the drift existing as its live example and now
+  exercises the check synthetically. With zero ambient warnings the validator is a tripwire
+  again. Suite 1289 green, device suite 43/43 intact, pyright 0.
+
+
 - **2026-07-05 — QUAL-64 DONE (interactive) — device suite 43/43 (100%) for the first time.**
   Diagnosis: not a weighting preference but a TIE broken by accident — identical per-tier
   constants + stable sort = donation load-order routing, and the per-method `boost` (authored

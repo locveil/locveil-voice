@@ -945,6 +945,19 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       (same "is this turn about the prior context or a fresh request?" question). Done when a new-command answer routes
       to the new command (not the garbled combine) with a regression test, and the legitimate slot-answer path stays
       green. Refs: QUAL-31, QUAL-30, Q7.
+- [x] **QUAL-66** [QUAL][DONATION] (P3) `[release]` — **DONE 2026-07-05 (filed + completed same day,
+      user-requested after asking what the "Contract wiring" warnings were).** **Contract-wiring
+      warnings swept 21 → 0**, turning the loader's validator from ambient noise into a meaningful
+      tripwire. Three families: **(1)** dead `language` globals removed from 9 donations (handlers read
+      `context.language` since QUAL-36; the param was never consumed) + `conversation.session_id`
+      (lives on the context per QUAL-27) — NOT touched: `system`/`speech_recognition`, whose `language`
+      param is the TARGET language for switching, genuinely read (the validator's silence there proved
+      the point; an over-eager first sweep removed them and the warning list itself caught the error);
+      **(2)** `voice_synthesis_handler`'s declared-but-unread `provider` param removed (the handler
+      parses it from raw text); **(3)** two internal helpers renamed off the `_handle_` prefix
+      (`_do_language_switch`, `_fallback_without_llm`) — the prefix promises a donation entry, these
+      are dispatched internally. Two tests updated (one had RELIED on the drift existing as its live
+      example — now exercises the check with declare-nothing). Suite 1289 green; device suite 43/43.
 - [x] **QUAL-64** `[deferred]` [NLU] (P2) — **DONE 2026-07-05 (interactive). Keyword-matcher scoring tune** (filed from the first TEST-18
       device-suite run, 2026-07-05 — the matcher was NEVER tuned; user decision: leave the affected fixtures
       red and tune deliberately). **Evidence:** short verb phrases beat longer specific ones — «включи кино с
