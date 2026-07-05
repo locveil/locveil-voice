@@ -259,7 +259,14 @@ _Apply to every remediation task below (from the 4 review docs + QUAL-25/26). So
         implemented VWB-24 (set_mode/set_fan params typed). Scope: re-pin the contract into
         eval-commons (guards will flag stale fixtures), wire `_handle_hvac_mode` (+fan if triplets
         landed for it) via the CHOICE path against the typed values, fixtures («кондиционер на
-        охлаждение»), vanes stay unwired.
+        охлаждение»), vanes stay unwired. **DONE 2026-07-05:** re-pinned @ `a17a63b0` (VWB-24 v1.3 —
+        full ru/en/de triplets, e.g. cool→«охлаждение»; wire≠canonical now: "COOL"/"cool" — the
+        fixture guard learned to validate CANONICAL, which is what Irene sends per §5a);
+        `_hvac_choice` matches spoken vs the device's OWN triplets (labels+canonicals through
+        `_match_option`), device picked ACTION-aware (only HVACs carry set_mode — heaters must not
+        clarify into it); set_fan's param is named `fan`. Fixtures F80/F81 green live — **41/43**,
+        red = F40/F42 (QUAL-64) only. Gotcha hardened: a STALE mock bridge squatting on the port
+        served an old golden silently (empty mode values) — `device-auto` now clears the port first.
       • **Slice 3 — hard-phrasing tier, evidence-first (absorbs old T2 AND T3).** Author the fixtures for
         the genuinely hard phrasings (multi-param «яркость 30 и температуру 22», role/preposition
         «со спальни на кухню», free-text spans, negation «все кроме торшера», anaphora «сделай его поярче»),

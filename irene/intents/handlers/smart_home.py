@@ -1004,3 +1004,69 @@ class SmartHomeIntentHandler(IntentHandler):
         ok_text = self._get_template(f"confirm_water_alarm_{state}", language)
         return await self._speak_outcome(delivery, ok_text, language, catalog,
                                          clarify_intent=intent, context=context)
+
+    # --- Slice 2a: HVAC mode/fan (VWB-24 typed values) ---------------------------------------------
+
+    async def _hvac_choice(self, intent: Intent, context: UnifiedConversationContext, *,
+                           action: str, ok_key: str) -> IntentResult:
+        """«кондиционер на охлаждение» — match the spoken value against the device's OWN
+        typed triplets (VWB-24: canonical + ru labels), device picked action-aware (only the
+        HVACs carry set_mode/set_fan; plain heaters must not clarify into this)."""
+        language = self._lang(context)
+        catalog = self._catalog()
+        if catalog is None:
+            return self._no_catalog_result(language)
+        spoken = self.get_param(intent, "value", None)
+        if not spoken:
+            return await self._ask_slot(intent, context, "hvac_value")
+        room_id, room_error = self._requested_room(intent, context, catalog)
+        if room_error is not None:
+            return room_error
+        devices = catalog.devices_in_room(room_id) if room_id else catalog.devices
+        capable = [d for d in devices
+                   if (cap := d.capability("climate")) is not None
+                   and cap.action(action) is not None]
+        if not capable:
+            return IntentResult(text=self._get_template("err_nothing_capable", language),
+                                should_speak=True, success=False, error=f"no {action} device")
+        if len(capable) > 1:
+            return self._ambiguous_result(
+                intent, context,
+                [{"device_id": d.id, "name": self._device_name(d, language)} for d in capable],
+                "target")
+        device = capable[0]
+        param_name = "mode" if action == "set_mode" else "fan"
+        cap = device.capability("climate")
+        act = cap.action(action) if cap else None
+        spec = act.param(param_name) if act else None
+        values = spec.values or () if spec else ()
+        surfaces = {}
+        for v in values:
+            surfaces[v.canonical] = v.canonical
+            label = v.labels.get(language) or v.labels.get("ru")
+            if label:
+                surfaces[label] = v.canonical
+        matched_surface = await self._match_option(str(spoken), list(surfaces))
+        if matched_surface is None:
+            context.set_pending_clarification(intent.name, "value", intent.raw_text)
+            return IntentResult(
+                text=self._get_template("clarify_option", language,
+                                        options=", ".join(sorted(set(surfaces)))[:120]),
+                should_speak=True,
+                metadata={"clarification": True, "clarification_reason": "unknown_option"})
+        canonical = surfaces[matched_surface]
+        command = DeviceCommand(device_id=device.id, capability="climate", action=action,
+                                params={param_name: canonical})
+        delivery = await self._deliver(command, context)
+        ok_text = self._get_template(ok_key, language, value=matched_surface,
+                                     name=self._device_name(device, language))
+        return await self._speak_outcome(delivery, ok_text, language, catalog,
+                                         clarify_intent=intent, context=context)
+
+    async def _handle_hvac_mode(self, intent, context):
+        return await self._hvac_choice(intent, context, action="set_mode",
+                                       ok_key="confirm_hvac_mode")
+
+    async def _handle_hvac_fan(self, intent, context):
+        return await self._hvac_choice(intent, context, action="set_fan",
+                                       ok_key="confirm_hvac_fan")

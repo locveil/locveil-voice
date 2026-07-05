@@ -887,6 +887,47 @@
           }
         }
       ]
+    },
+    {
+      "method_name": "_handle_hvac_mode",
+      "intent_suffix": "hvac_mode",
+      "description": "hvac mode",
+      "phrases": [
+        "ac mode",
+        "air conditioner to"
+      ],
+      "lemmas": [],
+      "examples": [],
+      "parameters": [
+        {
+          "name": "value",
+          "description": "Mode"
+        },
+        {
+          "name": "room",
+          "description": "Room"
+        }
+      ]
+    },
+    {
+      "method_name": "_handle_hvac_fan",
+      "intent_suffix": "hvac_fan",
+      "description": "hvac fan",
+      "phrases": [
+        "ac fan"
+      ],
+      "lemmas": [],
+      "examples": [],
+      "parameters": [
+        {
+          "name": "value",
+          "description": "Fan speed"
+        },
+        {
+          "name": "room",
+          "description": "Room"
+        }
+      ]
     }
   ]
 }

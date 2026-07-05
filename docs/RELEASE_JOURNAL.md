@@ -15,6 +15,19 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-05 — QUAL-35 Slice 2a DONE — VWB-24 consumed same-day; device suite 41/43.** The bridge
+  typed the HVAC params (v1.3): full ru/en/de triplets, and for the first time wire ≠ canonical
+  ("COOL"/"cool") — the fixture guard now validates the CANONICAL set, which is what Irene sends
+  (§5a). `_hvac_choice` matches the spoken word against the device's OWN triplets (labels +
+  canonicals through the shared option matcher, transliteration hints included) with an
+  ACTION-aware device pick — only the HVACs carry set_mode, so «кондиционер на охлаждение» never
+  clarifies against a plain heater; set_fan's param is named `fan`, not `speed`. F80
+  («охлаждение»→cool) and F81 («скорость 2»→speed_2) green live. One ops gotcha burned an hour:
+  a STALE mock bridge from earlier debugging still owned the port and served the pre-VWB-24
+  golden — empty mode values, while every in-process repro passed; `device-auto` now kills any
+  squatter first. The only red anywhere remains F40/F42 — the parked QUAL-64 pair.
+
+
 - **2026-07-05 — QUAL-35 Slice 2 COMPLETE (Part B, code pushed with the guide; ledger line landed
   one commit later) — device suite 39/41; the only red anywhere is the parked QUAL-64 pair.**
   Part B: tracks audio/subtitles (subtitles got its own verb «смени» — «переключи» scores as

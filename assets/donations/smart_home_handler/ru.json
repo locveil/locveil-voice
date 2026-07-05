@@ -1189,6 +1189,68 @@
           }
         }
       ]
+    },
+    {
+      "method_name": "_handle_hvac_mode",
+      "intent_suffix": "hvac_mode",
+      "description": "Режим кондиционера",
+      "phrases": [
+        "кондиционер на",
+        "кондиционер в режим",
+        "режим кондиционера"
+      ],
+      "lemmas": [
+        "кондиционер",
+        "режим"
+      ],
+      "examples": [
+        {
+          "text": "кондиционер на охлаждение",
+          "parameters": {
+            "value": "охлаждение"
+          }
+        }
+      ],
+      "parameters": [
+        {
+          "name": "value",
+          "description": "Режим (по каталогу устройства)"
+        },
+        {
+          "name": "room",
+          "description": "Комната"
+        }
+      ]
+    },
+    {
+      "method_name": "_handle_hvac_fan",
+      "intent_suffix": "hvac_fan",
+      "description": "Вентилятор кондиционера",
+      "phrases": [
+        "вентилятор на",
+        "вентилятор кондиционера"
+      ],
+      "lemmas": [
+        "вентилятор"
+      ],
+      "examples": [
+        {
+          "text": "вентилятор на скорость 2",
+          "parameters": {
+            "value": "скорость 2"
+          }
+        }
+      ],
+      "parameters": [
+        {
+          "name": "value",
+          "description": "Скорость (по каталогу)"
+        },
+        {
+          "name": "room",
+          "description": "Комната"
+        }
+      ]
     }
   ]
 }

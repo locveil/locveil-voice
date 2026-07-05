@@ -1,4 +1,4 @@
-# GENERATED from crossover_fixtures.json (catalog dbfd2855dac52026) — do not edit.
+# GENERATED from crossover_fixtures.json (catalog a17a63b0c47fdb53) — do not edit.
 # Regenerate: python -m eval_commons.fixtures_to_tests ../../eval-commons/contracts/crossover_fixtures.json
 - description: "F01 (t1, actuate): включи телек"
   vars:
@@ -367,5 +367,23 @@
     expect: {"kind": "actuate", "device_id": "upscaler", "capability": "screen", "action": "aspect_16_9", "params": null}
   metadata:
     fixture: F75
+    tier: "1"
+    kind: actuate
+- description: "F80 (t1, actuate): кондиционер на охлаждение"
+  vars:
+    utterance: "кондиционер на охлаждение"
+    room: "bedroom"
+    expect: {"kind": "actuate", "device_id": "bedroom_hvac", "capability": "climate", "action": "set_mode", "params": {"mode": "cool"}}
+  metadata:
+    fixture: F80
+    tier: "1"
+    kind: actuate
+- description: "F81 (t1, actuate): вентилятор на скорость 2"
+  vars:
+    utterance: "вентилятор на скорость 2"
+    room: "bedroom"
+    expect: {"kind": "actuate", "device_id": "bedroom_hvac", "capability": "climate", "action": "set_fan", "params": {"fan": "speed_2"}}
+  metadata:
+    fixture: F81
     tier: "1"
     kind: actuate
