@@ -11,7 +11,6 @@ import asyncio
 import logging
 from typing import Any, Dict, List, Optional
 
-from ..intents.models import AudioData
 from ..core.interfaces.input import InputPort, InputData
 from .base import ComponentNotAvailable
 from ..core.metadata import SUPPORTED_PLATFORMS
@@ -39,8 +38,6 @@ class InputManager:
         self.input_config = input_config
         self._sources: dict[str, InputPort] = {}
         self._active_sources: list[str] = []
-        self._listen_tasks: dict[str, asyncio.Task] = {}
-        self._input_queue = asyncio.Queue()
         self._shutdown_event = asyncio.Event()
         
     async def initialize(self) -> None:
@@ -161,16 +158,16 @@ class InputManager:
         try:
             source = self._sources[name]
             await source.start_listening()
-            
+
             if name not in self._active_sources:
                 self._active_sources.append(name)
-                
-            # Start listening task for this source
-            if name not in self._listen_tasks:
-                self._listen_tasks[name] = asyncio.create_task(
-                    self._listen_to_source(name, source)
-                )
-                
+
+            # NOTE (BUG-25): the manager does NOT consume the source's listen() stream. It used
+            # to spawn a per-source consumer feeding an internal queue that nothing drained
+            # (dataflow review P0-8) — a second consumer racing the real one, so every other
+            # interactive CLI command was swallowed. The manager owns source LIFECYCLE only;
+            # whoever needs the data consumes listen() itself (the CLI REPL loop, the workflow).
+
             logger.info(f"Started input source: {name}")
             return True
             
@@ -186,16 +183,7 @@ class InputManager:
         try:
             source = self._sources[name]
             await source.stop_listening()
-            
-            # Cancel listening task
-            if name in self._listen_tasks:
-                self._listen_tasks[name].cancel()
-                try:
-                    await self._listen_tasks[name]
-                except asyncio.CancelledError:
-                    pass
-                del self._listen_tasks[name]
-                
+
             self._active_sources.remove(name)
             logger.info(f"Stopped input source: {name}")
             return True
@@ -204,37 +192,11 @@ class InputManager:
             logger.error(f"Failed to stop input source '{name}': {e}")
             return False
             
-    async def _listen_to_source(self, source_name: str, source: InputPort) -> None:
-        """Listen to a specific source using async iterator"""
-        try:
-            async for data in source.listen():
-                if data:
-                    # Handle different input data types
-                    if isinstance(data, str) and data.strip():
-                        await self._input_queue.put((source_name, data.strip()))
-                    elif isinstance(data, AudioData):
-                        await self._input_queue.put((source_name, data))
-                    # Note: AudioData objects are passed through directly to workflow for processing
-                    
-        except asyncio.CancelledError:
-            logger.debug(f"Listening cancelled for source: {source_name}")
-        except Exception as e:
-            logger.error(f"Error listening to source '{source_name}': {e}")
-            
     async def start_all_sources(self) -> None:
         """Start all available input sources"""
         for name in list(self._sources.keys()):
             await self.start_source(name)
             
-    async def get_next_input(self) -> tuple[str, InputData]:
-        """
-        Get the next input data.
-        
-        Returns:
-            Tuple of (source_name, input_data) where input_data can be str or AudioData
-        """
-        return await self._input_queue.get()
-        
     async def get_available_sources(self) -> List[str]:
         """Get list of available input source names"""
         return [name for name, source in self._sources.items() if await source.is_available()]
@@ -264,10 +226,6 @@ class InputManager:
         # Stop all sources
         for name in list(self._active_sources):
             await self.stop_source(name)
-            
-        # Cancel any remaining tasks
-        for task in self._listen_tasks.values():
-            task.cancel()
             
         logger.info("InputManager closed")
         

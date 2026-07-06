@@ -2553,6 +2553,20 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       evidence for the EN-fixture effort): "cancel the timer"→voice_synthesis.cancel, "switch asr to whisper"→
       smart_home.input_select, "translate hello to german"→greeting.hello, bare "pause"→audio.stop.
       Gates: donation validator 0/0, suite 1299, device gate 48/48 (RU untouched).
+- [x] **BUG-25** `[release]` [CLI][UX] — **DONE 2026-07-06 (filed + completed same day; found live by the
+      user's first interactive multi-turn CLI session). Every other interactive command was SWALLOWED +
+      the prompt looked hung after each reply.** Two defects, one session: **(1)** `CLIInput`'s single
+      command queue had TWO racing consumers — the runner's interactive loop (real) and
+      `InputManager._listen_to_source`, feeding an internal queue that NOTHING drains (dataflow review
+      **P0-8**'s dead pipe — the ARCH-15 PR-5b comment eliminated the double READER but missed the double
+      CONSUMER). asyncio alternates queue waiters: command #1 processed, #2 gone. Fix: the dead pipe
+      deleted outright (`_listen_to_source`/`_input_queue`/callerless `get_next_input`) — the manager owns
+      source lifecycle ONLY. **(2)** the reader re-prompts before the reply arrives, and the reply printed
+      OVER the active prompt (terminal looked hung until the next Enter). Fix: `PromptSession.prompt_async`
+      + `patch_stdout` — output (sync replies AND deferred results, e.g. a timer firing later) inserts
+      ABOVE the prompt and redraws it. 2 regression tests (manager-never-consumes + two-commands-in-order);
+      suite 1302, pyright 0.
+
 
 
 ### Tests (TEST)

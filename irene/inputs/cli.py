@@ -9,7 +9,8 @@ import asyncio
 from typing import AsyncIterator, Optional, List, Dict
 import logging
 
-from prompt_toolkit import prompt
+from prompt_toolkit import PromptSession
+from prompt_toolkit.patch_stdout import patch_stdout
 
 from ..core.interfaces.input import InputPort, InputData
 
@@ -103,36 +104,42 @@ class CLIInput(InputPort):
         return "cli"
         
     async def _input_loop(self) -> None:
-        """Background task to read CLI input with enhanced features"""
-        while self._listening:
-            try:
-                # Use prompt_toolkit for enhanced input with cursor movement and history
-                command = await asyncio.to_thread(
-                    prompt,
-                    self.prompt,
-                    mouse_support=True,
-                    enable_history_search=True
-                )
-                
-                if command and command.strip():
-                    # Add to history (avoid duplicates)
-                    if not self._history or self._history[-1] != command.strip():
-                        self._history.append(command.strip())
-                        # Keep history size manageable
-                        if len(self._history) > 100:
-                            self._history.pop(0)
-                    
-                    # Handle quit command
-                    if command.strip().lower() in ['quit', 'exit', 'q']:
-                        await self._command_queue.put('quit')
-                        break
-                    await self._command_queue.put(command.strip())
-            except (EOFError, KeyboardInterrupt):
-                logger.info("CLI input interrupted by user")
-                break
-            except Exception as e:
-                logger.error(f"CLI input error: {e}")
-                await asyncio.sleep(0.1)
+        """Background task to read CLI input with enhanced features.
+
+        BUG-25: `prompt_async` + `patch_stdout` — the reader re-prompts as soon as a line is
+        submitted, so replies (and deferred results, e.g. a timer firing later) arrive WHILE a
+        prompt is active. `patch_stdout` inserts that output ABOVE the prompt and redraws it;
+        without it the reply printed over the prompt and the terminal looked hung until the
+        next Enter."""
+        session = PromptSession()
+        with patch_stdout():
+            while self._listening:
+                try:
+                    command = await session.prompt_async(
+                        self.prompt,
+                        mouse_support=True,
+                        enable_history_search=True
+                    )
+
+                    if command and command.strip():
+                        # Add to history (avoid duplicates)
+                        if not self._history or self._history[-1] != command.strip():
+                            self._history.append(command.strip())
+                            # Keep history size manageable
+                            if len(self._history) > 100:
+                                self._history.pop(0)
+
+                        # Handle quit command
+                        if command.strip().lower() in ['quit', 'exit', 'q']:
+                            await self._command_queue.put('quit')
+                            break
+                        await self._command_queue.put(command.strip())
+                except (EOFError, KeyboardInterrupt):
+                    logger.info("CLI input interrupted by user")
+                    break
+                except Exception as e:
+                    logger.error(f"CLI input error: {e}")
+                    await asyncio.sleep(0.1)
                 
     async def test_input(self) -> bool:
         """Test CLI input functionality"""

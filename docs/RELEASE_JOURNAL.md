@@ -15,6 +15,20 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-06 — BUG-25 DONE (filed + completed same day) — the CLI was eating every other
+  command, and had been since ARCH-15.** The user's first real multi-turn CLI session exposed
+  it: «привет» answered, «расскажи о себе» vanished — the log shows the second utterance never
+  reached NLU at all. Two consumers were racing `CLIInput`'s single queue: the runner's
+  interactive loop and `InputManager._listen_to_source`, which fed an internal queue nothing
+  drains — the dataflow review's P0-8 dead pipe, still alive and STEALING alternate commands
+  (PR-5b had fixed the double reader but missed the double consumer). The dead pipe is deleted,
+  not repaired: the manager owns source lifecycle only. Second symptom, same session: the reply
+  printed OVER the already-drawn next prompt, so the terminal looked hung until the next Enter —
+  fixed with `prompt_async` + `patch_stdout`, which also means a timer firing minutes later now
+  prints above a live prompt instead of through it. Interactive multi-turn was simply never
+  exercised before — every prior session was single-command. Two regression tests pin both
+  halves; suite 1302.
+
 - **2026-07-06 — QUAL-70 DONE (filed + completed same day, user) — a clean REPL.** The CLI's
   console was a log firehose with an `irene>` prompt drowning in it. Two sources silenced:
   the root console handler (interactive runners now log to file + trace only — `--debug`
