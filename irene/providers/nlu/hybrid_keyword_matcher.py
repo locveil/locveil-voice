@@ -504,17 +504,17 @@ class HybridKeywordMatcherProvider(NLUProvider):
         for intent_name, patterns in self.exact_patterns.items():
             for pattern in patterns:
                 if pattern.search(normalized_text):
-                    raw_score = self._pattern_score(intent_name, self.exact_match_boost,
-                                                    self._pattern_token_count(pattern.pattern))
-                    pattern_matches.append((intent_name, raw_score, "exact_pattern", pattern.pattern))
+                    tokens = self._pattern_token_count(pattern.pattern)
+                    raw_score = self._pattern_score(intent_name, self.exact_match_boost, tokens)
+                    pattern_matches.append((intent_name, raw_score, "exact_pattern", pattern.pattern, tokens))
 
         # Try flexible patterns
         for intent_name, patterns in self.flexible_patterns.items():
             for pattern in patterns:
                 if pattern.search(normalized_text):
-                    raw_score = self._pattern_score(intent_name, self.flexible_match_boost,
-                                                    self._pattern_token_count(pattern.pattern))
-                    pattern_matches.append((intent_name, raw_score, "flexible_pattern", pattern.pattern))
+                    tokens = self._pattern_token_count(pattern.pattern)
+                    raw_score = self._pattern_score(intent_name, self.flexible_match_boost, tokens)
+                    pattern_matches.append((intent_name, raw_score, "flexible_pattern", pattern.pattern, tokens))
 
         # Try partial patterns with token-based matching
         input_tokens = set(normalized_text.split())
@@ -527,23 +527,30 @@ class HybridKeywordMatcherProvider(NLUProvider):
                     if self._check_partial_match(input_tokens, phrase_tokens):
                         raw_score = self._pattern_score(intent_name, self.partial_match_boost,
                                                         len(phrase_tokens))
-                        pattern_matches.append((intent_name, raw_score, "partial_pattern", phrase))
+                        pattern_matches.append((intent_name, raw_score, "partial_pattern", phrase,
+                                                len(phrase_tokens)))
                         break  # Only need one match per intent
 
             # Fallback to regex patterns if no fuzzy keywords available
             if intent_name not in pattern_matches or not self.fuzzy_keywords.get(intent_name):
                 for pattern in patterns:
                     if pattern.search(normalized_text):
-                        raw_score = self._pattern_score(intent_name, self.partial_match_boost,
-                                                        self._pattern_token_count(pattern.pattern))
-                        pattern_matches.append((intent_name, raw_score, "partial_pattern", pattern.pattern))
+                        tokens = self._pattern_token_count(pattern.pattern)
+                        raw_score = self._pattern_score(intent_name, self.partial_match_boost, tokens)
+                        pattern_matches.append((intent_name, raw_score, "partial_pattern", pattern.pattern,
+                                                tokens))
         
         if not pattern_matches:
             return None
         
-        # Find best and second-best for enhanced confidence calculation
-        pattern_matches.sort(key=lambda x: x[1], reverse=True)
-        best_intent, best_raw_score, best_method, best_pattern = pattern_matches[0]
+        # Find best and second-best for enhanced confidence calculation.
+        # BUG-26: a raw-score TIE must never fall through to donation load order (authored
+        # boosts can cancel the specificity edge exactly — «расскажи о себе»: system.about
+        # 1.2spec×1.1boost == conversation.reference 1.1spec×1.2boost). Tie-break by the
+        # matched pattern's own token count (the more specific evidence wins), then by
+        # intent name — deterministic and boot-order-free.
+        pattern_matches.sort(key=lambda x: (-x[1], -x[4], x[0]))
+        best_intent, best_raw_score, best_method, best_pattern, _ = pattern_matches[0]
         second_best_score = pattern_matches[1][1] if len(pattern_matches) > 1 else 0.0
         
         # Calculate enhanced confidence

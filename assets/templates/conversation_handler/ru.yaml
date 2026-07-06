@@ -29,3 +29,11 @@ fallback_help_suggestions:
 
 # QUAL-37: targeted no-intent clarification (deterministic, offline) when the NLU guessed a domain.
 fallback_targeted: "Возможно, вы хотели {action}? Если нет, попробуйте переформулировать запрос."
+
+# QUAL-71: degradation/error speech — externalized (was hardcoded RU in conversation.py,
+# invisible to localization; an EN session got Russian errors)
+err_dialog_error: "Извините, произошла ошибка в обработке диалога."
+err_reference_unavailable: "Извините, справочный режим недоступен."
+err_reference_failed: "Извините, не удалось получить справочную информацию."
+err_chat_unavailable: "Извините, диалоговый режим недоступен."
+err_dialog_retry: "Извините, произошла ошибка в диалоге. Попробуйте ещё раз."

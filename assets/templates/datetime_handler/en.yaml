@@ -1,0 +1,4 @@
+# English templates for datetime_handler
+# QUAL-71: degradation/error speech — externalized (was hardcoded RU in datetime.py)
+
+err_datetime_error: "Sorry, something went wrong while getting the time."

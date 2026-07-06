@@ -69,7 +69,7 @@
     {
       "method_name": "_handle_general_info",
       "intent_suffix": "about",
-      "boost": 1.1,
+      "boost": 1.2,
       "room_context": "none",
       "parameters": []
     }

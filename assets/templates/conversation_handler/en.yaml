@@ -29,3 +29,10 @@ fallback_help_suggestions:
 
 # QUAL-37: targeted no-intent clarification (deterministic, offline) when the NLU guessed a domain.
 fallback_targeted: "Did you want to {action}? If not, try rephrasing your request."
+
+# QUAL-71: degradation/error speech — externalized (was hardcoded RU in conversation.py)
+err_dialog_error: "Sorry, something went wrong while handling the conversation."
+err_reference_unavailable: "Sorry, reference mode is not available."
+err_reference_failed: "Sorry, I couldn't retrieve that information."
+err_chat_unavailable: "Sorry, conversation mode is not available."
+err_dialog_retry: "Sorry, something went wrong in the conversation. Please try again."

@@ -34,3 +34,6 @@ time_based_greetings:
   afternoon: Добрый день!
   evening: Добрый вечер!
   night: Доброй ночи!
+
+# QUAL-71: error-path fallback greeting — externalized (was hardcoded in greetings.py)
+err_greeting_fallback: "Привет! Чем могу помочь?"

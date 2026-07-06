@@ -43,6 +43,14 @@ CASES = [
     ("кондиционер на охлаждение", "smart_home.hvac_mode"),
     ("переведи кондиционер в режим осушения", "smart_home.hvac_mode"),
     ("вентилятор на скорость 2", "smart_home.hvac_fan"),
+    # BUG-26: authored boosts cancelled the specificity edge EXACTLY (1.4256 == 1.4256) and the
+    # tie fell to donation load order — system.about lost its own literal phrase to the
+    # two-token «расскажи о» prefix. Tie-break = matched-pattern token count, never load order.
+    ("расскажи о себе", "system.about"),
+    ("кто ты", "system.about"),
+    ("что такое фотосинтез", "conversation.reference"),
+    ("расскажи о погоде в москве", "conversation.reference"),
+    ("справка", "system.help"),
 ]
 
 

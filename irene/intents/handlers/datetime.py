@@ -53,7 +53,8 @@ class DateTimeIntentHandler(IntentHandler):
         except Exception as e:
             logger.error(f"DateTime intent execution failed: {e}")
             return IntentResult(
-                text="Извините, произошла ошибка при получении времени.",
+                text=self._template_or("err_datetime_error", getattr(context, "language", "ru"),
+                                        "Извините, произошла ошибка при получении времени."),
                 should_speak=True,
                 success=False,
                 error=str(e)
@@ -157,7 +158,25 @@ class DateTimeIntentHandler(IntentHandler):
         # language-neutral numeric renderings; "verbose" (default) falls through to the natural-language template.
         fmt = (intent.entities.get("format") or "").strip().lower()
         if fmt in ("12hour", "24hour"):
-            time_str = now.strftime("%H:%M") if fmt == "24hour" else now.strftime("%I:%M %p").lstrip("0")
+            if fmt == "24hour":
+                time_str = now.strftime("%H:%M")
+            elif language == "en":
+                time_str = now.strftime("%I:%M %p").lstrip("0")
+            else:
+                # BUG-27: "%p" is an English artifact ("12:54 PM" in a Russian reply) — a ru
+                # 12-hour rendering says the day period in words, from the same localization
+                # table the natural-language path uses.
+                periods = self._get_localization_data(language).get("periods", {})
+                hour = now.hour
+                if hour < 6:
+                    period = periods.get("night", "ночи")
+                elif hour < 12:
+                    period = periods.get("morning", "утра")
+                elif hour < 18:
+                    period = periods.get("day", "дня")
+                else:
+                    period = periods.get("evening", "вечера")
+                time_str = f"{now.strftime('%I:%M').lstrip('0')} {period}"
             return IntentResult(text=time_str, should_speak=True, metadata={
                 "time": now.strftime("%H:%M:%S"), "format": fmt, "language": language})
 

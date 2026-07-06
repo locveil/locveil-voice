@@ -183,7 +183,7 @@
               "label": "TIME_FORMAT"
             }
           ],
-          "default_value": "12hour",
+          "default_value": "verbose",
           "choice_surfaces": {
             "12hour": [
               "12 часов",

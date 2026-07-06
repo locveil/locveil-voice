@@ -2229,6 +2229,14 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       depend on it). Verified live: `irene-cli -c configs/config-example.toml` shows banners + replies
       only; `logs/irene.log` carries the full log; `--debug` restores 500+ console lines. Suite 1300,
       pyright 0.
+- [x] **QUAL-71** `[release]` [I18N] — **DONE 2026-07-06 (filed + completed same day). Hardcoded Russian
+      reply strings swept out of handlers → templates.** Seven literals found (5 in conversation.py — incl.
+      the «справочный режим недоступен» the user hit — plus datetime + greetings error fallbacks); all now
+      resolve through the template system (ru + en authored; new `assets/templates/datetime_handler/`).
+      Error-path nuance: a template call inside an `except` must never mask the ORIGINAL failure — new
+      `_template_or(name, lang, fallback)` base helper: localized when assets are healthy, last-resort
+      literal when the template system itself is broken (a unit test caught exactly this).
+
 
 
 
@@ -2566,6 +2574,24 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       + `patch_stdout` — output (sync replies AND deferred results, e.g. a timer firing later) inserts
       ABOVE the prompt and redraws it. 2 regression tests (manager-never-consumes + two-commands-in-order);
       suite 1302, pyright 0.
+- [x] **BUG-26** `[release]` [NLU] — **DONE 2026-07-06 (filed + completed same day). «расскажи о себе» lost
+      to conversation.reference BY LOAD ORDER — an exact raw-score tie.** `system.about` owns the literal
+      phrase, but the authored boosts cancelled the QUAL-64 specificity edge to the last digit
+      (about: spec 1.2 × boost 1.1 == reference: spec 1.1 × boost 1.2 == 1.4256) and the stable sort fell
+      back to donation load order. Fix at both depths: **(1)** the matcher's pattern sort now tie-breaks on
+      the MATCHED pattern's token count, then intent name — deterministic, boot-order-free (QUAL-64 closed
+      constant ties; this closes manufactured ones); **(2)** system.about boost 1.1 → 1.2 (an exact
+      full-utterance phrase deserves to win outright). 5 routing regression cases both directions
+      («что такое …»/«кто такой …»/«расскажи о погоде» stay reference; «справка» stays help). Bonus:
+      «расскажи о себе» now answers OFFLINE («Я Ирина, …») — no LLM needed for the self-introduction.
+- [x] **BUG-27** `[release]` [I18N] — **DONE 2026-07-06 (filed + completed same day). «сколько времени» →
+      "12:54 PM" — a US-format reply in a Russian conversation.** Root cause: the ru donation shipped
+      `default_value: "12hour"` for the time format, preempting the handler's own designed default (the
+      natural-language «Сейчас … дня» path) and rendering `%I:%M %p`. («который час» escaped by accident:
+      its «час» token fuzzy-matched the «24 часа» choice surface → 24hour.) Fix: ru default → verbose (the
+      natural path), and the EXPLICIT ru 12-hour rendering says the day period in words from the existing
+      localization table («1:11 дня»), never "%p".
+
 
 
 

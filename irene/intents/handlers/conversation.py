@@ -158,7 +158,8 @@ class ConversationIntentHandler(IntentHandler):
         except Exception as e:
             logger.error(f"Conversation intent execution failed: {e}")
             return IntentResult(
-                text="Извините, произошла ошибка в обработке диалога.",
+                text=self._template_or("err_dialog_error", getattr(context, "language", "ru"),
+                                       "Извините, произошла ошибка в обработке диалога."),
                 should_speak=True,
                 success=False,
                 error=str(e)
@@ -354,7 +355,7 @@ class ConversationIntentHandler(IntentHandler):
         llm_component = await self._get_llm_component()
         if not llm_component:
             return IntentResult(
-                text="Извините, справочный режим недоступен.",
+                text=self._get_template("err_reference_unavailable", context.language),
                 should_speak=True,
                 success=False
             )
@@ -385,7 +386,8 @@ class ConversationIntentHandler(IntentHandler):
         except Exception as e:
             logger.error(f"Reference query failed: {e}")
             return IntentResult(
-                text="Извините, не удалось получить справочную информацию.",
+                text=self._template_or("err_reference_failed", getattr(context, "language", "ru"),
+                                       "Извините, не удалось получить справочную информацию."),
                 should_speak=True,
                 success=False,
                 error=str(e)
@@ -399,7 +401,7 @@ class ConversationIntentHandler(IntentHandler):
         llm_component = await self._get_llm_component()
         if not llm_component:
             return IntentResult(
-                text="Извините, диалоговый режим недоступен.",
+                text=self._get_template("err_chat_unavailable", context.language),
                 should_speak=True,
                 success=False
             )
@@ -484,7 +486,8 @@ class ConversationIntentHandler(IntentHandler):
         except Exception as e:
             logger.error(f"Conversation continuation failed: {e}")
             return IntentResult(
-                text="Извините, произошла ошибка в диалоге. Попробуйте ещё раз.",
+                text=self._template_or("err_dialog_retry", getattr(context, "language", "ru"),
+                                       "Извините, произошла ошибка в диалоге. Попробуйте ещё раз."),
                 should_speak=True,
                 success=False,
                 error=str(e)

@@ -287,6 +287,15 @@ class IntentHandler(EntryPointMetadata, ABC):
                 f"{type(self).__name__}: template '{template_name}' missing required format argument: {e}."
             )
 
+    def _template_or(self, template_name: str, language: str, fallback: str) -> str:
+        """Error-path variant of `_get_template`: a template problem must never mask the
+        ORIGINAL failure being reported (QUAL-71). Healthy assets → the localized template;
+        broken/absent assets → the given last-resort literal."""
+        try:
+            return self._get_template(template_name, language)
+        except Exception:
+            return fallback
+
     def _error_result(self, context: UnifiedConversationContext, error: str) -> IntentResult:
         """Language-aware error result rendered via this handler's error template (`_error_template`)."""
         language = context.language

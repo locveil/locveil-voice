@@ -69,7 +69,8 @@ class GreetingsIntentHandler(IntentHandler):
         except Exception as e:
             logger.error(f"Greeting intent execution failed: {e}")
             return IntentResult(
-                text="Привет! Как дела?",  # Fallback greeting
+                text=self._template_or("err_greeting_fallback", getattr(context, "language", "ru"),
+                                        "Привет! Чем могу помочь?"),
                 should_speak=True,
                 success=False,
                 error=str(e)

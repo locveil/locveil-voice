@@ -15,6 +15,19 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-06 — BUG-26 + BUG-27 + QUAL-71 DONE (one live-testing session, three fixes).**
+  The user's config-example session kept paying out. **BUG-26:** «расскажи о себе» belonged to
+  system.about all along (the literal phrase is authored there) but lost to conversation.reference
+  on an EXACT raw-score tie — the hand-authored boosts cancelled the QUAL-64 specificity edge to
+  the fourth decimal (1.4256 == 1.4256) and the sort fell to donation load order. The matcher now
+  tie-breaks on matched-pattern token count then intent name (never load order), and about's boost
+  went 1.1 → 1.2; the self-introduction now answers offline. **BUG-27:** "12:54 PM" in a Russian
+  reply — the ru donation's default_value "12hour" preempted the handler's own natural-language
+  default; ru default → verbose, and explicit ru 12-hour speaks the day period in words («1:11
+  дня»). **QUAL-71:** seven hardcoded Russian strings swept from handlers into templates (ru+en),
+  with a new `_template_or` base helper for error paths so a template problem can never mask the
+  original failure being reported. Suite 1307, device gate 48/48, pyright 0.
+
 - **2026-07-06 — BUG-25 DONE (filed + completed same day) — the CLI was eating every other
   command, and had been since ARCH-15.** The user's first real multi-turn CLI session exposed
   it: «привет» answered, «расскажи о себе» vanished — the log shows the second utterance never
