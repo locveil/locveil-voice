@@ -152,6 +152,28 @@ and the structural refactors **move code** — so blind refactoring/fixing is th
 Target pattern: **Hexagonal (Ports & Adapters)** — SIGNED OFF 2026-06-01. Code is already ~80% there
 (interfaces=ports, providers=adapters, components=app services, entry-points=registry).
 See `docs/review/phase1_architecture_map.md` §5.
+- [ ] **ARCH-30** `[release]` [FEEDBACK][DESIGN] — **Problem reporting end-to-end («сообщи о проблеме») —
+      DESIGN task** (filed 2026-07-06, user; first-release scope — grows the release gate deliberately).
+      Deliverable: **`docs/design/problem_reports.md`** (interactive session, like ARCH-27/29); completion files
+      the implementation tasks. Scope of the design: **(1) the intent + two-turn dialog** — `report_problem`
+      arms a pending description slot with a **verbatim-capture mode** (QUAL-44 arbitration MUST NOT hijack a
+      description like «свет не включается» into a command; escape words + TTL, no re-prompt loops);
+      **(2) the support bundle** — day's log, redacted config, rolling last-N request traces (trace persistence
+      is off by default — needs a small always-on ring buffer), conversation window + recent/failed action
+      records (NOT just the previous utterance — retries/F&F/output-side failures), version+commit, profile,
+      arch, pinned catalog version, NLU cascade verdicts, ASR provider, language; raw audio explicitly v2
+      (privacy, opt-in); **(3) the delivery backend — OPEN, first session topic (user):** both code repos are
+      PUBLIC so bundles cannot land there; compare a dedicated private GitHub reports repo vs Google Drive /
+      Yandex Disk / Jira / other stores (criteria: Claude-on-GitHub integration, API+auth from an offline-prone
+      device, durable-spool retry fit (ARCH-27), issue lifecycle, cost); **(4) the GitHub-Claude choreography** —
+      triage process files for BOTH repos, four-outcome flow (fix→PR / delegate→bridge / ask reporter in their
+      language / escalate to owner — v1 has no user registry so unclear ⇒ always owner, reply drafted in the
+      reporter's language), the **distilled voice→bridge handover schema** (symptom, evidence, catalog version,
+      trace slice, back-links — both repos' process files consume it); **(5) local-Claude review loop** — an
+      `/inbox`-style skill (one-by-one interactive PR/issue review) + a CLAUDE.md session-start line, both repos;
+      **(6) cross-repo filings** — VWB task for the bridge's "Report a problem" UI button (same envelope,
+      bridge-side collection specifics theirs). Builds on: QUAL-30/31 (pending slot), ARCH-27/28 (durable spool
+      + retry), ARCH-19 (traces), BUG-4 (language threading).
 - [ ] **ARCH-16** [IO] (P-deferred) — **I/O daemon multiplexer + runners→thin presets (deferred ARCH-15 PR-10).**
       The I/O hexagon (ARCH-15) is complete and every channel runs; this is the internal-cleanliness endgame, deferred
       2026-06-07 as low-incremental-value / higher-risk. Scope: (a) **remote interactive text-attach channel** (e.g.
