@@ -319,6 +319,7 @@ class UnifiedConversationContext:
         cancelled = False
         for rec in registry.get_live_actions_by_domain(pid, domain):
             if rec.task is not None and not rec.task.done():
+                rec.deliberate_cancel = True  # user revoked the promise — the durable record dies too
                 rec.task.cancel()
             else:
                 registry.remove_action(pid, rec.action_name)

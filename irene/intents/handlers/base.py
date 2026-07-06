@@ -800,6 +800,13 @@ class IntentHandler(EntryPointMetadata, ABC):
         except Exception:
             success, error = True, None
 
+        # An unmarked cancellation (no timeout, no deliberate-cancel marker) is process teardown:
+        # every path that revokes the promise marks the record first (BUG-19 pattern). The
+        # in-flight promise is exactly what restart reconciliation needs (ARCH-28 shutdown
+        # discipline), so teardown must not reap it durably or announce it as failed.
+        teardown_cancel = (task.cancelled() and not record.timed_out
+                           and not record.deliberate_cancel)
+
         # Reaper layer 1 — remove from the active store + record in the per-identity history
         # (the single completion chokepoint, so history is recorded exactly once).
         try:
@@ -807,9 +814,13 @@ class IntentHandler(EntryPointMetadata, ABC):
             registry.remove_action(record.physical_id, record.action_name, expected=record)
             registry.record_completed_action(record, success, error)
             if record.durable:
-                # ARCH-28 (D-2): the persisted record dies WITH the in-memory one — a completed
-                # action must never resurrect on restart (the bridge's stale-intent lesson).
-                get_durable_action_store().delete(record.action_name)
+                if teardown_cancel:
+                    self.logger.info(f"Durable action '{record.action_name}' cancelled by "
+                                     f"teardown — keeping its persisted record for reconciliation")
+                else:
+                    # ARCH-28 (D-2): the persisted record dies WITH the in-memory one — a completed
+                    # action must never resurrect on restart (the bridge's stale-intent lesson).
+                    get_durable_action_store().delete(record.action_name)
         except Exception as e:
             self.logger.error(f"Failed to reap/record completed action {record.action_name}: {e}")
 
@@ -827,6 +838,10 @@ class IntentHandler(EntryPointMetadata, ABC):
                 self.logger.error(f"Failed to record action completion metrics: {me}")
 
         # Notifications are async — schedule and hold a strong ref to avoid GC/orphan.
+        # A teardown-cancelled durable action is NOT a failure — it re-arms at the next start —
+        # so announcing "failed: cancelled" for it would be a lie.
+        if record.durable and teardown_cancel:
+            return
         if self._notification_service and record.session_id:
             t = asyncio.create_task(self._notify_action_result(record, success, error))
             self._completion_tasks.add(t)
