@@ -79,6 +79,7 @@ Living findings behind the tasks (`read-at-start-record-at-completion`). `[x]` =
 | `docker_build_review.md` `[x]` | Docker/build verification (entry-point renames, armv7 base, build-analyzer drift) | BUILD-5, BUILD-3 |
 | `docs/design/wakeword_models.md` `[x]` (AGREED 2026-07-04, interactive) | ARCH-29 — server-side wake-word model acquisition: v2 two-file packs (manifest + sibling tflite), 4-rung resolution (local path → wheel built-ins → v2 manifest URL → released catalog starting with `irina`@HF), AssetManager multi-file `files:` support, trigger layer stays semantics-free (word→room deferred to ARCH-22/QUAL-35), roster «Ирина»→«Валера»/«Наташа» («Борис» dropped) | ARCH-29 ✓ → ASSET-5 |
 | `docs/design/problem_reports.md` `[x]` (AGREED 2026-07-06, interactive) | ARCH-30 — problem reporting end-to-end: private triage home `wb-user-reports` (tickets + bundles; both code repos are public), one-Claude-two-lenses with handover-by-label + ping-pong guard, verbatim-capture dialog (pre-QUAL-44, TTL 90s, cancel words), bundle (last-10 turns + action records + 5-trace ring + day log + redacted config + catalog version), ARCH-27 durable spool, D-7 rate limits, leak fence, reply-in-reporter's-language, D-11 model policy (`claude-fable-5` pinned) | ARCH-30 ✓ → ARCH-31/32/33, BUILD-12, VWB-25 |
+| `docs/design/python_satellite.md` `[x]` (AGREED 2026-07-06, interactive) | ARCH-35 — python satellite (`irene-satellite`): first-class room node + the ARCH-25 test client; both /ws/audio modes (default single), wake-on + `--no-wake`, `[satellite]`+`[satellite.tls]` config, §3/§4 = the wire contract's single written truth (ESP32 implements the same doc), device-side CSR-approval dance + mTLS wss through nginx Plane B (S-5), S-6 credentials location, S-7 hermetic TLS e2e, S-8 Pi image deferred, S-9 loopback e2e | ARCH-35 ✓ → ARCH-36, BUILD-13 |
 | `docs/design/mqtt_integration.md` `[x]` (DONE 2026-06-06; bridge contract AGREED) | smart-home integration — bridge is the single device authority, Irene speaks canonical commands | ARCH-7/8, ARCH-26 |
 | `docs/design/ws_esp32_transport.md` `[x]` | WS streaming-input driving adapter + ESP32 satellite transport | ARCH-6 |
 | `docs/design/onnx_inference_layer.md` `[x]` (complete 2026-06-04; ASR/platform/build + VAD/wake-word all resolved) | shared sherpa-onnx inference layer — ASR-centric; WB7 armv7 feasibility proven on hardware | ARCH-9/10 |
@@ -224,18 +225,23 @@ See `docs/review/phase1_architecture_map.md` §5.
       device admin UI + CSR submission (D-16/D-17, against Plane-B `nginx/`); config-preserving OTA (D-18). Likely a separate
       firmware repo eventually (per `esp32_wakeword_review.md` quarantine). Substantial standalone C++ effort; tracked here so
       it's not an orphan finding. Depends on hardware selection finalised (mic/speaker parts) + the Plane-B controller deploy.
-- [ ] **ARCH-35** `[release]` [SATELLITE][DESIGN] — **Python satellite emulator (`irene-satellite`) — DESIGN
-      task** (filed 2026-07-06, user; REQUIRED for the release: ARCH-25 items (3)/(4) — the ESP32 streaming
-      endpoint + the TTS reply channel — are unverifiable without a client, and no ESP32 firmware exists).
-      Deliverable: `docs/design/python_satellite.md` (interactive session). The analysis already done: every
-      satellite-side piece exists — mic/VAD/wake/playback adapters (the voice runner composes them) and the
-      COMPLETE `/ws/audio` client protocol in eval-commons' `ws_audio_provider` (register w/ D-14 identity,
-      paced PCM16 frames, end frame, both `streaming`+`single` modes, canonical response parsing — proven
-      against local AND wb7). Genuinely new: the reply-audio leg (`/ws/audio/reply` + playback), live-mic
-      frame pacing, a listen-loop. The runner lives in wb-mqtt-voice (protocol core ADAPTED from the eval
-      client — no runtime dependency on the test framework); the design doc becomes the protocol's single
-      written truth the future ESP32 firmware implements. Lasting value: permanent hardware-free regression
-      client for the WS path + a potential real deployment mode (Pi + mic).
+- [ ] **ARCH-36** `[release]` [SATELLITE] — **`irene-satellite` implementation** (from ARCH-35, design
+      `docs/design/python_satellite.md` — S-1..S-9 AGREED 2026-07-06; gates ARCH-25 items (3)/(4)). Build
+      order per design §9: **(1)** `SatelliteConfig` (`[satellite]` + `[satellite.tls]`) + config-ui type
+      parity + `configs/satellite.toml` profile; **(2)** `SatelliteLink` uplink client (§3 wire contract,
+      both modes, adapted from eval-commons' proven core — NO runtime dep on the test framework) +
+      reply-channel client (§4) + playback wiring; **(3)** runner + `irene-satellite` console script +
+      persistent-connection lifecycle (reconnect w/ backoff 1→30s, re-register); **(4)** TLS: device-side
+      provisioning dance (EC keypair → PUT CSR → poll; prints the operator's `esp32-provision approve`
+      command) + mTLS wss connect; key material `<assets_root>/credentials/satellite/` (S-6);
+      **(5)** S-7 hermetic TLS e2e (ansible template + throwaway CA in docker nginx, full
+      CSR→approve→mTLS-wss cycle, CI-able) + S-9 loopback e2e + unit tests (framing, register shapes,
+      reconnect, wake gate); **(6)** `docs/guides/satellite.md` + diagram + README/QUICKSTART. Entry-point
+      registration in pyproject (the ARCH-31 lesson). Live-mic behavior stays a manual ARCH-25 item.
+- [ ] **BUILD-13** `[deferred]` [SATELLITE][DOCKER] — **Pi/aarch64 satellite docker image** (ARCH-35 S-8:
+      explicit deferred follow-up — `uv run irene-satellite` covers the release need). A slim aarch64 image
+      on the `satellite.toml` profile (mic device passthrough, credentials volume for the S-6 material),
+      published beside the backend images; compose snippet for a Pi room node.
 - [ ] **ARCH-25** [INFER][HW] (P-TBD) `[release]` — **Satellite hardware bring-up — WB7 (armv7) + WB8.5 (aarch64)
       on-device re-validation.** The single convergence point for the hardware-gated verification the software tasks defer
       here (split out of **ARCH-10** 2026-06-16, now implementation-complete). Deploy the `embedded-armv7` /

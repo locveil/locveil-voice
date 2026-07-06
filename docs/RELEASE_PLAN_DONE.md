@@ -964,6 +964,17 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       Tests: 9 new (ring/redaction/bundle/envelope/service flows) + tightened ARCH-31 durable-launch case.
       Suite 1327, device gate 48/48, donation gate 15/0/0, configs 13/13, pyright 0. E2E against the real
       repo awaits BUILD-12 (provisioning).
+- [x] **ARCH-35** `[release]` [SATELLITE][DESIGN] — **DONE 2026-07-06 (same-day interactive session).
+      Python satellite design AGREED**: `docs/design/python_satellite.md` (S-1..S-9). The analysis found
+      nearly everything already exists — the voice runner composes mic/VAD/wake/playback, and eval-commons'
+      `ws_audio_provider` already speaks the COMPLETE /ws/audio protocol (both modes, proven vs wb7) — so
+      the genuinely new surface is the reply-audio leg, live-mic pacing, lifecycle, and the S-5 TLS scope
+      the user added: the emulator is the FIRST client of the fleet security plane (CSR-approval D-17 +
+      mTLS wss through nginx Plane B), validating it before any ESP32 firmware exists. First-class product
+      mode (a Pi room node), `[satellite]` config section with config-ui parity, hermetic TLS e2e in CI.
+      Unblocks ARCH-25 (3)/(4), which were otherwise unverifiable (no firmware). Implementation filed:
+      **ARCH-36** `[release]`; **BUILD-13** `[deferred]` (Pi image, S-8).
+
 
 
 

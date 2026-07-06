@@ -15,6 +15,18 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-06 — ARCH-35 DONE (same-day design session) — the satellite without firmware.** The
+  question «how do I test ARCH-25?» answered itself once the inventory was honest: the voice
+  runner already composes every satellite-side piece, and eval-commons' WS provider already
+  speaks the complete /ws/audio protocol against the WB7. So `irene-satellite` is thin glue with
+  two real inventions (the reply-audio leg and the lifecycle) — plus the scope the user added
+  that makes it strategic: it becomes the FIRST client of the fleet TLS plane, walking the
+  CSR-approval dance and connecting mTLS-wss through nginx before any ESP32 exists, with a
+  hermetic docker-nginx e2e so the security plane gets CI regression coverage. First-class
+  product mode too: a Pi with a mic is a supported room node. ARCH-36 files the build; ARCH-25
+  items (3)/(4) stop being unverifiable.
+
+
 - **2026-07-06 — REL-3 DONE (bar the tag) — 15.0.0 confirmed, changelog written, config-ui pass
   green.** Version holds at 15.0.0 for the whole release (bump rides the next one, user), so the
   "version bump" was a no-op confirmation. CHANGELOG.md authored for the revival release; README
