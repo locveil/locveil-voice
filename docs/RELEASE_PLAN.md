@@ -224,6 +224,18 @@ See `docs/review/phase1_architecture_map.md` §5.
       device admin UI + CSR submission (D-16/D-17, against Plane-B `nginx/`); config-preserving OTA (D-18). Likely a separate
       firmware repo eventually (per `esp32_wakeword_review.md` quarantine). Substantial standalone C++ effort; tracked here so
       it's not an orphan finding. Depends on hardware selection finalised (mic/speaker parts) + the Plane-B controller deploy.
+- [ ] **ARCH-35** `[release]` [SATELLITE][DESIGN] — **Python satellite emulator (`irene-satellite`) — DESIGN
+      task** (filed 2026-07-06, user; REQUIRED for the release: ARCH-25 items (3)/(4) — the ESP32 streaming
+      endpoint + the TTS reply channel — are unverifiable without a client, and no ESP32 firmware exists).
+      Deliverable: `docs/design/python_satellite.md` (interactive session). The analysis already done: every
+      satellite-side piece exists — mic/VAD/wake/playback adapters (the voice runner composes them) and the
+      COMPLETE `/ws/audio` client protocol in eval-commons' `ws_audio_provider` (register w/ D-14 identity,
+      paced PCM16 frames, end frame, both `streaming`+`single` modes, canonical response parsing — proven
+      against local AND wb7). Genuinely new: the reply-audio leg (`/ws/audio/reply` + playback), live-mic
+      frame pacing, a listen-loop. The runner lives in wb-mqtt-voice (protocol core ADAPTED from the eval
+      client — no runtime dependency on the test framework); the design doc becomes the protocol's single
+      written truth the future ESP32 firmware implements. Lasting value: permanent hardware-free regression
+      client for the WS path + a potential real deployment mode (Pi + mic).
 - [ ] **ARCH-25** [INFER][HW] (P-TBD) `[release]` — **Satellite hardware bring-up — WB7 (armv7) + WB8.5 (aarch64)
       on-device re-validation.** The single convergence point for the hardware-gated verification the software tasks defer
       here (split out of **ARCH-10** 2026-06-16, now implementation-complete). Deploy the `embedded-armv7` /
