@@ -15,6 +15,16 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-06 — QUAL-69 DONE (filed + completed same day) — wardrobe «свет» alias consumed,
+  re-pin @ `acc1e18b`.** The bridge's open-questions resolution gave `wardrobe_spots` the ru
+  alias «свет» — a device now carries the group noun as a NAME. Analysis before consuming:
+  the depth doctrine is ordering-protected (group-noun check precedes device resolution on
+  every path, including the fresh Slice-3 legs), so voice behavior is unchanged — bare «свет»
+  stays a room-group command and the bridge's `group_default` picks the spots. Re-pinned all
+  three artifacts from bridge commit `aa031d2` (the openapi also carried a committed schema
+  rename we hadn't synced since the VWB-19 era). Fixture F17 pins the alias-vs-doctrine
+  interaction; device tier-1 gate **48/48**.
+
 - **2026-07-06 — BUILD-11 DONE — the first real GHCR publish, and the images are honest.**
   Dispatch `28774806674` (all targets × all languages + config-ui): every job green on the
   first attempt — six backend images + the UI image are the repo's first artifacts ever on

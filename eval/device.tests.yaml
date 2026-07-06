@@ -1,4 +1,4 @@
-# GENERATED from crossover_fixtures.json (catalog a17a63b0c47fdb53) — do not edit.
+# GENERATED from crossover_fixtures.json (catalog acc1e18beb3f204a) — do not edit.
 # Regenerate: python -m eval_commons.fixtures_to_tests ../../eval-commons/contracts/crossover_fixtures.json
 - description: "F01 (t1, actuate): включи телек"
   vars:
@@ -133,6 +133,15 @@
     expect: {"kind": "room-group", "room_id": "cabinet", "group": "cover", "action": "open", "scope": "auto"}
   metadata:
     fixture: F16
+    tier: "1"
+    kind: room-group
+- description: "F17 (t1, room-group): включи свет в гардеробе"
+  vars:
+    utterance: "включи свет в гардеробе"
+    room: ""
+    expect: {"kind": "room-group", "room_id": "wardrobe", "group": "light", "action": "on", "scope": "auto"}
+  metadata:
+    fixture: F17
     tier: "1"
     kind: room-group
 - description: "F20 (t1, clarify): поставь на паузу"

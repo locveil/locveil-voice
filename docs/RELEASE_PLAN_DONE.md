@@ -2210,6 +2210,16 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
         **(6) Same-room capability ambiguity: v1 CLARIFIES** (user decision 2026-07-05; TEST-18 fixtures
         F20/F21 are the spec) — don't build priority config into the v1 resolver; priority rules are
         **QUAL-63** (later release).
+- [x] **QUAL-69** `[release]` [MQTT] — **DONE 2026-07-06 (filed + completed same day). Consume the bridge's
+      open-questions catalog patch: wardrobe_spots ru alias «свет» (catalog `a17a63b0` → `acc1e18b`,
+      bridge commit `aa031d2`).** Inward re-pin of all three artifacts (catalog + STAMP + openapi — the
+      openapi also picked up the committed canonicalAction/Capability/Param schema rename we hadn't synced);
+      PIN.json stamped. Voice-side analysis: NO code change — the depth doctrine is ordering-protected (the
+      group-noun check precedes device resolution on every path, incl. the Slice-3 `_group_for_surface` and
+      `scan_utterance` legs), so a device carrying the group noun as an ALIAS cannot demote «свет» to
+      device-form. **New fixture F17** («включи свет в гардеробе» → room-group wardrobe/light/auto) pins
+      that interaction; guard 8/8, device tier-1 gate **48/48**.
+
 
 
 ### Bugs (BUG)
