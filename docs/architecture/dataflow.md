@@ -2,7 +2,8 @@
 
 Trace a request and you watch the same intent take a few shapes: a string, then an `Intent` (a name and
 some entities), then an `IntentResult`, then bytes on a channel. This page walks the cases that aren't
-obvious from the pipeline alone.
+obvious from the pipeline alone; the shapes themselves — and how long each one lives — are catalogued
+in [Data models](data-models.md).
 
 ## A synchronous command
 

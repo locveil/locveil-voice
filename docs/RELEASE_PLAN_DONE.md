@@ -3259,6 +3259,19 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       the ParameterType and entity_type enums), `architecture/intents.md` (extraction patterns, `get_param`,
       handler consumption of `intent.entities`), and `architecture/nlu.md` (token/slot pattern format). Closed as
       covered; the standalone `PARAMETER_EXTRACTION_GUIDE.md` was not needed.
+- [x] **DOC-8** (P1) `[release]` — **DONE 2026-07-06. Data & context-models map — shipped as
+      `docs/architecture/data-models.md`** (placement + naming adjusted with the user: the architecture
+      family — created after this task was filed — is the natural home; lowercase user-facing name, family
+      prose voice, house-style diagram `docs/images/data-models.dot/png`). The page answers the task's key
+      confusion (request- vs session-scoped) with the **three-lifetimes frame**: dies-with-the-request
+      (`RequestContext` = routing+identity never memory; `Intent` deliberately session-blind, `raw_text`
+      literal; `IntentResult` failure-must-carry-reason; `AudioData`/`WakeWordResult`), lives-with-the-session
+      (`UnifiedConversationContext` — a session is a ROOM, not a person; windowed history single-writer,
+      pending clarification, ~30 min expiry; narrow hydration bridge, single minting path), survives-restarts
+      (client registry, physical identity — the timer-knows-its-room story). Content verified against
+      TODAY'S code (post QUAL-27/28/36, BUG-4, ARCH-27/28), NOT transcribed from the defect-era QUAL-25
+      snapshot. Linked from README's architecture list + cross-linked from `dataflow.md`.
+
 
 ### UI / config-ui (UI)
 - [x] **UI-14** [UI] (P3) `[deferred]` — **DONE 2026-06-28.** config-ui efficiency + hardcoded-list/altitude (review

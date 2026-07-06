@@ -1,0 +1,39 @@
+// Irene — the data models and their three lifetimes: request, session, durable. Render:
+//   dot -Tpng docs/images/data-models.dot -o docs/images/data-models.png
+digraph dm {
+  rankdir=LR; bgcolor="white"; splines=spline; nodesep=0.45; ranksep=0.85;
+  fontname="Helvetica"; labelloc=t; fontsize=14;
+  label="One request, three lifetimes: what dies with the request, what the session remembers, what survives a restart";
+  node [fontname="Helvetica", fontsize=10, shape=box, style="filled,rounded", penwidth=1.4];
+  edge [fontname="Helvetica", fontsize=9, color="#616161", arrowsize=0.7];
+
+  entry [label="entry adapter\nmic · satellite · web · CLI", fillcolor="#f3e5f5", color="#7b1fa2"];
+
+  subgraph cluster_req {
+    label="dies with the request"; fontsize=12; color="#ce93d8"; style=rounded; margin=12;
+    audio  [label="AudioData / WakeWordResult\nbytes + format · detection verdict", fillcolor="#f3e5f5", color="#7b1fa2"];
+    reqctx [label="RequestContext\nsource · entry format · wants_audio\nsession_id · room · devices · language", fillcolor="#f3e5f5", color="#7b1fa2"];
+    intent [label="Intent\nname · entities · confidence\nraw_text · language", fillcolor="#fff8e1", color="#f9a825"];
+    result [label="IntentResult\ntext · should_speak\nsuccess + error · metadata", fillcolor="#e8f5e8", color="#388e3c"];
+  }
+
+  subgraph cluster_sess {
+    label="lives with the session (a room, ~30 min idle)"; labelloc=b; fontsize=12; color="#90caf9"; style=rounded; margin=14;
+    convctx [label="UnifiedConversationContext\nhistory (windowed) · language\nconversation state · pending clarification\nknown devices · handler scratch", fillcolor="#e3f2fd", color="#1976d2"];
+  }
+
+  subgraph cluster_dur {
+    label="survives sessions (and restarts)"; fontsize=12; color="#a5d6a7"; style=rounded; margin=12;
+    registry [label="ClientRegistry\nwho is in which room ·\nrunning + durable actions", fillcolor="#e8f5e8", color="#388e3c"];
+  }
+
+  entry -> audio  [label="voice entries"];
+  entry -> reqctx [label="every entry"];
+  audio -> intent [label="ASR → NLU", style=dashed];
+  reqctx -> convctx [label="session_id finds it;\nroom/devices/language\nhydrate it"];
+  reqctx -> intent  [label="text → NLU"];
+  intent -> result  [label="handler runs\n(reads the session)"];
+  intent -> convctx [dir=back, style=dashed, label="feeds the next turn"];
+  result -> convctx [label="one turn recorded"];
+  result -> registry [label="long-running work\nhands off, keyed by room", style=dashed];
+}

@@ -15,6 +15,17 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-06 — DOC-8 DONE — the data-models map, shipped where it belongs.** The task predates
+  the `docs/architecture/` family, so the deliverable moved there (user: user-facing naming, family
+  prose, diagrams): `docs/architecture/data-models.md` + `docs/images/data-models.dot/png`. The
+  page reframes the request-vs-session confusion as **three lifetimes** — dies with the request
+  (RequestContext as routing+identity-never-memory, Intent deliberately session-blind, IntentResult
+  with the failure-carries-reason contract, the audio primitives), lives with the session (a session
+  is a ROOM; windowed single-writer history; pending clarification; ~30 min expiry; one minting
+  path), survives restarts (the registry, physical identity — why a timer still knows its room).
+  Facts verified against today's code rather than transcribed from the defect-era QUAL-25 snapshot
+  it distills. Linked from README's architecture list; cross-linked from dataflow.md.
+
 - **2026-07-06 — BUG-5 DONE (pulled forward from deferred — an EN tester is waiting) — donation
   EN enrichment, smart_home included.** The BUG-4-era gap held almost exactly (27 alias params,
   10 choice params). EN aliases added everywhere; EN choice surfaces ONLY for concept choices

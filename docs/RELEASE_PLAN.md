@@ -282,21 +282,6 @@ size-matched to the Russian stack; language is a per-config/deployment choice (a
 ### Models & Assets (ASSET)
 
 ### Documentation (DOC)
-- [ ] **DOC-8** (P1) `[release]` — **Data & context-models map** → `docs/guides/DATA_MODELS.md`. **Downstream of QUAL-25
-      [DFLOW]** (re-categorized 2026-06-02): this is the *write-up* that distills the dataflow **review** into a
-      concise developer reference; the investigation/findings now live in QUAL-25 → `docs/review/dataflow_review.md`.
-      Do this **after** QUAL-25 lands, consuming its map + confirmed model lifecycle. A concise reference for how
-      the pipeline's models play together — **when each is needed and why** (the request-scoped vs session-scoped
-      distinction is the key confusion to resolve). Cover the cast + responsibilities: **`RequestContext`**
-      (per-*request* input metadata — source, session_id, wants_audio, skip flags, client/room/device, language;
-      created at the entry by the runner/web/cli) · **`UnifiedConversationContext`** (persistent per-*session* state
-      — history, active/recent/failed actions, devices, `ConversationState`, `ContextLayer`; keyed by `session_id`,
-      fetched via `ContextManager`) · **`Intent`** (NLU output) · **`IntentResult`** (handler output) ·
-      **`AudioData`/`WakeWordResult`** (IO primitives). Document the **lifecycle**: `RequestContext` →
-      `ContextManager.get_context(session_id)` → `UnifiedConversationContext` → `NLU → Intent` →
-      `orchestrator.execute → IntentResult` → `context.add_to_history(...)`. State where each now lives post-ARCH-1/5
-      (`intents/context_models.py`, `intents/models.py`, `utils/audio_data.py`). DOC-4 links to it. Refs:
-      `phase1_architecture_map.md` §4.
 
 ### UI / config-ui (UI)
 React/Vite donation+config editor. Front-end feature/UX work (the BUILD-4 build gate stays under Build & CI).

@@ -26,6 +26,8 @@ Russian-first, English supported. Version 15.0.0 · Python 3.11+ · MIT.
 
 - **[Architecture](docs/architecture/overview.md)** — the hexagon, its ports and seams, and how
   everything fits (workflow, data-flow, components and providers).
+  - **[Data models](docs/architecture/data-models.md)** — the objects a request travels as, and the
+    three lifetimes: request, session (a room), durable.
   - **[Intents](docs/architecture/intents.md)** — orchestration, donations, parameter extraction,
     fire-and-forget vs synchronous handlers.
   - **[NLU](docs/architecture/nlu.md)** — donation-driven recognition; the cheap keyword matcher
