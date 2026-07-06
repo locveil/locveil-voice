@@ -9,6 +9,128 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
 ---
 
 ### Architecture & Refactor (ARCH)
+- [x] **ARCH-0** (P1) — Architecture MAP & document (Goal 1 doc-sync findings + Goal 2 pattern). → `docs/review/phase1_architecture_map.md`
+- [x] **ARCH-1** (P0) — Split the `intents/models.py` god-module (in-degree 67). **DONE 2026-06-01** (`cdf8a81`
+      audio, `a996dba` context). (1) `AudioData`/`WakeWordResult` → **`irene/utils/audio_data.py`** (zero-dep
+      leaf), dropping the `audio_helpers.py` `TYPE_CHECKING` band-aid (real sideways import now). (2)
+      `UnifiedConversationContext`/`ConversationState`/`ContextLayer` → **`irene/intents/context_models.py`**, with
+      45 importers re-pointed; `Intent`/`IntentResult` stay in `intents/models.py` (thin audio shim retained).
+      **Placement deviates from the review sketch (core/) on purpose — NO TYPE_CHECKING:** audio went to `utils`
+      (not `core`) to avoid a `utils→core` upward edge; context stayed in the `intents` **domain** package (not
+      `core`) because it references `Intent`/`IntentResult` (domain peers) — a real one-directional sideways import
+      (`context_models→models`), no cycle, no band-aid. The remaining `core.{entity_resolver,trace_context,
+      workflow_manager}→intents.context_models` edges are legitimate **application→domain** (inward) under the
+      hexagon, not violations. Verified: no cycle, full suite unchanged (176/55, zero regression), TEST-0 green.
+- [x] **ARCH-2** (P0) — Break config↔core / config↔components (SCC-1). **DONE 2026-06-01** (`59f4ae8` + `044ff62`).
+      (A) `config/validator.py` discovers providers via `utils.loader.dynamic_loader` (config→utils, downward) —
+      no more `from ..core.components import discover_providers` (which `core.components` didn't even export). (B)
+      moved the 5 pure schema-extraction methods from `ConfigurationComponent` into `AutoSchemaRegistry` (their
+      natural home) — `auto_registry` no longer imports the component; the component delegates downward. (C)
+      removed the import-time `validate_schema_integrity()`/`validate_master_config_completeness()` calls from
+      `config/__init__.py` (the side effect that amplified SCC-1 and spammed "Schema warning" on every `import
+      config`) — now runs once, explicitly, from `ConfigManager.load_config`. (D) **dropped the `core/assets.py`
+      `AssetConfig` TYPE_CHECKING band-aid** — `from ..config.models import AssetConfig` is a clean downward
+      import now. Verified: no cycle, bare `import config` silent, validation still runs once on load, full suite
+      unchanged (176/55, zero regression). **Gate 1: ARCH-3/4/5 next.**
+- [x] **ARCH-3** (P1) — Stop components importing delivery/tooling. **DONE 2026-06-01** (`03fc44b`).
+      **Edge 1 (code fix):** `asr`/`tts` components imported `web_api.asyncapi` (the `@websocket_api` decorator +
+      `extract_websocket_specs_from_router`) — application→delivery. Moved `web_api/asyncapi.py` →
+      **`irene/api/asyncapi.py`** (rank-0; its only irene deps were `__version__` + `api.schemas`, and its fastapi
+      import was docstring-only), re-pointed all importers. **Components now import no `web_api` module** — the
+      AsyncAPI mechanism is a neutral rank-0 port both sides depend on downward. **Edge 2 (classification, no code):**
+      `components.nlu_analysis→analysis.*` — verified `analysis` is a **clean, self-contained driven adapter** (no
+      inward imports into components/workflows/web_api), and `NLUAnalysisComponent` is its dedicated wrapper (the
+      adapter boundary). Per the review's "treat analysis as a driven adapter", this is a legitimate
+      application→driven-adapter relationship; a port for one-consumer tooling would be over-engineering. **ARCH-5
+      import-linter rule:** forbid `components → web_api`/`analysis` generally, but **allow `nlu_analysis → analysis`**
+      as the adapter boundary. Verified: full suite unchanged (176/55, zero regression), TEST-0 green.
+- [x] **ARCH-4** (P2) — Formalize ports. **DONE 2026-06-02** (`df93a15`). Found a healthy **two-layer** port
+      structure: component-capability ports (`core/interfaces/*Plugin`, implemented by components) + adapter ports
+      (`providers/*/base.py *Provider`, inherited by adapters). **Audit:** adapter ports exist for all 7 categories
+      and **no adapter imports a sibling concrete adapter** (adapters depend only on their abstraction ✓).
+      **Gap-filled** (the 3 categories with no capability port): added `core/interfaces/{nlu,text_processing,
+      voice_trigger}.py` (`NLUPlugin`/`TextProcessorPlugin`/`VoiceTriggerPlugin`, one `@abstractmethod` each typed
+      with real domain types — **no TYPE_CHECKING**, cycle-verified) and made the 3 components inherit their port.
+      (Chosen scope: capability-port gap-fill; the `*Provider` adapter ports stay in `providers/` — already clean.
+      The bigger "unify the two hierarchies" move was considered and deferred as over-engineering for P2.) Verified:
+      all 3 components instantiate + `isinstance` their port, no cycle, functional suite unchanged. **Gate 1: ARCH-5
+      (import-linter) is the capstone next.**
+- [x] **ARCH-5** (P1) — Add an **import-linter** contract so the hexagon is enforced and can't regress.
+      **DONE 2026-06-02** (`27a85c3`). Added `import-linter` (dev dep) + `[tool.importlinter]` contracts in
+      pyproject + `irene/tests/test_import_contracts.py` (runs them in the suite — enforced now; ready for CI when
+      BUILD-2 lands). **6 contracts, 0 broken:** domain depends on nothing outward (ARCH-1); config no upward
+      (ARCH-2); components no delivery + only `nlu_analysis→analysis` (ARCH-3); adapters no application + provider
+      categories independent (ARCH-4). Residual fix (no TYPE_CHECKING): moved `RequestContext` (last
+      domain→workflows edge) into `intents/context_models.py`. The linter **caught a real anti-pattern → QUAL-24**
+      (8 handlers use `get_core()` service-locator; ignored in the domain contract with a comment, tracked
+      separately). _The deliverable that makes "follows the architecture" verifiable._ **Gate 1 COMPLETE
+      (ARCH-1..5 ✓).** _Note (2026-06-02): the `core→inputs/workflows/components.base` edges were left unenforced here
+      as "composition-root behavior" — that reclassification is **REVOKED → ARCH-11** (fix via DI + add the contract)._
+- [x] **ARCH-6** [WS] (P1) — **DONE 2026-06-03 (transport + identity activation + SCC-2); device-half relocated to QUAL-35.**
+      **★ ARCH-22 (2026-06-14):** the WS transport is consolidated into **`docs/design/esp32_satellite.md`** (which supersedes
+      `ws_esp32_transport.md`). The intertwined "return channel" (WS audio response to the device) landed as the ARCH-22
+      reply channel `/ws/audio/reply` (esp32_satellite.md §4.2), and the `register` handshake was extended on
+      `ClientRegistration` with `audio_out`/`name`/`primary_room`/`covered_rooms`/`firmware_version`/`model_version` (D-14).
+      Built the **WS streaming-input DRIVING adapter** `/ws/audio` (`webapi_router.py`): registration handshake →
+      `ClientRegistry` → stream raw PCM → **full** pipeline (`process_audio_input`, `skip_wake_word=True` since wake is
+      on-device) → response frame. The handshake threads `client_id`/`room_name`/`device_context` into `client_context`,
+      so **`resolve_physical_id` now returns the physical origin** (room/device) — the "room/device story switches on"
+      with no seam rewrite (it already returned `client_id or room_name or session_id`). Made `ClientRegistration.from_dict`
+      tolerant of the handshake's control keys. Removed the dead P0-8 base64 `AUDIO_DATA:` branch (`inputs/web.py`).
+      Design: `docs/design/ws_esp32_transport.md` (server-first; the in-repo ESP32 firmware is stale → inspiration only).
+      Tests: `test_ws_driving_input.py` (3 — activation seam, from_dict, end-to-end handshake→pipeline via TestClient).
+      **Deferred (device-half → relocated to ARCH-7 [MQTT] + QUAL-35):** authoring non-generic `entity_type`/`room_context`
+      + the `_is_device_entity`/`_is_location_entity` resolver swap + room_context resolve-or-clarify — at design time NO
+      device/room handlers exist (all 13 `entity_type` decls `generic`; no MQTT handler), so doing it now = the ledger's
+      own "inert branch". **SCC-2 cycle FIXED (not via service-locator — cf. QUAL-24):** the cycle was `inputs.base` (the
+      `InputSource` PORT) co-located with the `InputManager` ORCHESTRATOR that imports the concrete adapters. Split them —
+      `InputManager` → new `irene/inputs/manager.py` (the input-layer composition point, imports adapters explicitly); the
+      port module now imports NO adapters. Clean DAG `base ← {cli,web,microphone} ← manager`; **locked by a new
+      import-linter contract** ("Input port does not import its adapters"). _Original
+      reframing below._ The dead `InputManager._input_queue` + base64 `AUDIO_DATA:` path (P0-8) is a broken
+      placeholder to be **replaced by a proper WS streaming adapter**, not patched. Design (needs a **design session**):
+      wake word runs **on-device (ESP32)** → device streams audio over WS (`skip_wake_word=True` server-side) → server
+      ASR → pipeline; the WS connection also runs the **`ClientRegistry` registration handshake** (room +
+      `available_devices`) — the linchpin that populates the Q6/QUAL-28 physical-identity store (resolves P1-j at its
+      root). Also fix the contained `inputs.base ⇄ subclasses` cycle (SCC-2). Server-side voice-trigger (+ the
+      `WakeWordResult` bug) is only for non-ESP32 local-mic. Intertwined with **ARCH-7** (the return channel: WS audio
+      response to the ESP32 + MQTT smart-home actuation). → `docs/design/ws_esp32_transport.md`.
+      **★ ROOM/DEVICE ACTIVATION POINT (Q1 timing decision, 2026-06-02):** this is *when the room/device story switches
+      on.* QUAL-28/29/11 leave everything "room-ready" (action store + context split with device fields; declarative
+      `entity_type`/`room_context`; device resolvers that degrade gracefully) — all keyed off a single
+      **`resolve_physical_id(request)`** seam that today returns the session-derived id. **ARCH-6 changes only that one
+      function** to return the registered `client_id`/room from the WS handshake, activating real room/device keying +
+      device resolution with **no re-refactor**. Sequence: do ARCH-6's design session **after the Gate-2 foundation
+      (QUAL-28/29/11) stabilizes**; it's one of the 3 design-gated threads (ARCH-6 [WS] · ARCH-7 [MQTT] · ARCH-9 [INFER]).
+      **★ OWNS `entity_type`/`room_context` CONSUMPTION (moved from QUAL-11, user 2026-06-03):** QUAL-29 declared
+      `entity_type` (device/location/room/person/generic) + `room_context` (required/none/conditional) but all 66 decls
+      are `generic` and nothing reads them, so the declarative resolver swap would be an **inert branch** until there are
+      real rooms/devices. ARCH-6 is where that becomes real, so it owns: **(a)** authoring the non-generic `entity_type`/
+      `room_context` on the handlers that take device/room params; **(b)** replacing the brittle `_is_device_entity`/
+      `_is_location_entity` name-heuristics (`entity_resolver.py`) with `entity_type`-driven resolver selection (the Q7b
+      "typed accessor IS the replacement" swap — atomic, no broken window); **(c)** the `room_context` resolve-or-clarify
+      policy (with QUAL-30). QUAL-11 left the seam clean (resolvers degrade gracefully; duplicate device path unified;
+      `_resolution_failed` markers). Pairs with **QUAL-35** (T2/T3 NLU for the complex device commands MQTT needs).
+- [x] **ARCH-7** [MQTT] — **✓ DONE 2026-06-06** (design session; deliverable `docs/design/mqtt_integration.md`, and the
+      cross-project bridge contract AGREED with the user in the bridge session — `wb-mqtt-bridge/docs/
+      voice_integration_contract_draft.md`, status AGREED 2026-06-06). **Approach REDEFINED (Invariant #8(d), approved):**
+      replaced the original "Irene owns an MQTT output adapter + topic schema + device-topic resolution" with
+      **bridge-as-single-authority** — `wb-mqtt-bridge` owns all device knowledge + MQTT/home-automation conventions
+      (native WB gear *and* AV); **Irene is a pure voice front-end** that pulls a capability-shaped **catalog** and sends
+      **canonical `DeviceCommand`s** (capability.action+params); the bridge translates to native + transport. Irene is
+      blind to wb-rules vs Home Assistant. Rejected: Irene→raw-broker, and the archived `intent_mqtt.md` fat-handler/
+      runtime-method-gen design. **Agreed contract:** (A) `POST /devices/{id}/canonical {capability,action,params}`, 6-code
+      structured error enum, 500 ms synchronous value-topic echo; (B) `GET /system/catalog` (dedicated, flat, all-locales
+      rooms+devices, read-only `sensor` capability, one-device-one-room [`global` = room of whole-house AGGREGATE
+      devices, e.g. `all_lights`; "выключи свет везде" = Irene fires ONE command at that aggregate device, never iterates
+      rooms / synthesizes a group]) + retained
+      `bridge/catalog/version` refresh nudge; (C) bridge-side native onboarding (generic `WbPassthroughDevice` driver +
+      capability-adapter composition + caps `brightness`/`color`/`cover`/`climate`/`sensor`; wb-rules stays, bridge mirrors
+      state). **Hexagon (Irene):** `DeviceCommand` + `ActuationPort`/`DeviceCatalogPort` (QUAL-24 ABC pattern) +
+      `BridgeClient` REST adapter under a new `irene.providers.outputs` group + in-memory `DeviceCatalog` (distinct from
+      `ClientRegistry`). Substrate for **QUAL-35** (T2/T3 device NLU + the relocated `entity_type`/`_is_device_entity`→
+      declarative resolver swap). Implementation = ARCH-8. **Design extended 2026-06-07 (ARCH-15 PR-9.1):**
+      `mqtt_integration.md` §13 reconciles the seam shapes with the I/O architecture (bridge = `OutputPort`, see ARCH-8).
 - [x] **ARCH-8** [MQTT] (P-TBD) `[release]` — **DONE 2026-07-05 — all five PRs landed in one arc; the
       device suite proves the slice: 19/23 crossover fixtures green live (`make device-auto`), every red
       owned elsewhere (F40/F42 → QUAL-64 matcher tune, F41/F06 → QUAL-35 T2).**
@@ -155,189 +277,6 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       device coverage + T2/T3 NLU = QUAL-35. **★ ARCH-26 (2026-07-01):** catalog refresh is **lazy** (no MQTT client on
       Irene — §5a/§14); PR-1's fake bridge **is** the capturing `OutputPort` the producer contract test (TEST-18) uses;
       PR-2/PR-3 catalog parsing builds against the committed contract artifact (**TEST-17**, gated on bridge **VWB-15**).
-- [x] **ARCH-29** [WAKE][ASSET] (P2) `[release]` — **DONE 2026-07-04 (interactive design session).** Server-side
-      wake-word model acquisition design → `docs/design/wakeword_models.md`. Decisions: a wake-word model is a
-      **v2 two-file pack** (manifest + sibling `.tflite`, `from_config` resolves relative); **4-rung resolution**
-      (local path → wheel built-ins [the 4 stock EN packs ship inside pymicro-wakeword, zero download — «Alexa»
-      is the EN counterpart of «Ирина» for free] → v2 manifest URL [the escape hatch for microwakeword.com +
-      not-yet-released HF models] → released catalog on the provider class, piper-voices pattern, starting with
-      `irina` @ HF `droman42/microwakeword-irina-ru`); downloads only via AssetManager (multi-file `files:`
-      support, ASSET-4 rule: no provider self-downloads); trigger layer stays **semantics-free** (word→room
-      deferred to ARCH-22/QUAL-35 where a consumer exists); roster: «Ирина» → next «Валера»/«Наташа», «Борис»
-      dropped (2 syllables). Implementation follow-up filed + completed same-day: **ASSET-5**.
-- [x] **ARCH-28** [FAF] (P2) `[release]` — **DONE 2026-07-02.** Durable-action substrate implemented per
-      `docs/design/durable_actions.md`, all 7 slices: **(1)** `AssetConfig.state_root` (`<assets_root>/state/`,
-      auto-created) + `DurableActionStorePort` + `JsonFileDurableActionStore` (atomic temp+rename, corrupt-file-safe)
-      + schema-v1 records + `client_registry.json` default relocated to `state/` with legacy `cache/` read-fallback
-      migration; **(2)** launch choke point takes `durable=`/`redeliver_on_reconnect=` (keyword-only), persists at
-      launch (JSON-validates re-arm kwargs BEFORE task creation — fail loud), deletes at completion inside the
-      done-callback (same operation as the in-memory removal); timer launches `durable=True, redeliver=True`;
-      **(3)** `engine.start()` runs `reconcile_durable_actions` after components / before inputs: future deadline →
-      handler `rearm_durable_action` (timer override relaunches with remaining time, reuses the persisted name,
-      bumps `timer_counter` past it), missed ≤1h → fire-with-apology (ru/en), older / unknown handler / re-arm
-      failure → expiry announcement; old record always deleted; **(4)** redeliver-flagged completions that drop on
-      an offline output are queued as `UndeliveredNotice` (TTL = 1h grace, `created_at` preserved so re-drops don't
-      extend it) and drained on `/ws/audio/reply` re-attach; **(5)** failure notifications announced by default
-      (`critical_only` → False; sub-30s success suppression kept); **(6)** read-only `/monitoring/actions` +
-      `/monitoring/actions/history` (new `LiveActionsResponse`/`ActionHistoryResponse`; contract regenerated —
-      108 paths, config-ui `gen:api-types` + `check` + `build` green); **(7)** docs — `howto-new-intent.md`
-      "Long-running actions" section (the §3 contract in prose), `durable-actions` **CLAUDE.md invariant**,
-      `client-registry.md` durable-actions paragraph (+ corrected its stale auto-expiry claim from QUAL-58).
-      **The restart test ships with it** (`test_durable_actions.py`, 12 tests: store roundtrip/corruption, persist-
-      at-launch + delete-at-completion, ephemeral-never-touches-disk, fail-loud unserializable launch, restart →
-      re-arm with fresh store instance, fire-late apology, expiry, unknown-handler safety, timer remaining-time +
-      counter bump, undelivered TTL/matching). The reconciler's future-deadline-with-missing-handler branch was
-      caught wrong by these tests and fixed (announce-expired, not fire-early). Gates: 1156 passed / 7 skipped;
-      pyright clean (11 files); import-linter 9/9. QUAL-61 now fully unblocked.
-- [x] **ARCH-27** [FAF][DESIGN] (P2) `[release]` — **DONE 2026-07-02 (design agreed, interactive session).**
-      Durable-action substrate + handler-authoring rules designed and recorded at `docs/design/durable_actions.md`
-      (D-1…D-10, all user-confirmed): explicit opt-in durability (`durable=True`; timer = only consumer today,
-      future smart-home handlers required it — user scope statement), atomic-JSON store behind
-      `DurableActionStorePort` (SQLite = later swap behind the same port), re-arm-by-relaunch startup reconciler
-      with fire-with-apology (≤1h grace) / expiry-announcement for missed deadlines, failure notifications
-      announced by default (success sub-30s stays quiet), handler-declared `redeliver_on_reconnect` (at-least-once
-      for flagged durable actions, drained on client re-registration), retry machinery CUT (unblocks QUAL-61 —
-      all three cuts confirmed), BUG-19 naming = the identity contract (re-arm reuses the persisted name),
-      minimal read-only `/monitoring/actions[/history]`, rules bind via a new `howto-new-intent.md` section +
-      `CLAUDE.md` `durable-actions` invariant (both land with the implementation). Bridge comparative lessons
-      baked in: delete-at-completion atomically (anti stale-intent resurrection), persist+restore+restart-test
-      ship together (anti persist-without-restore rot). Implementation follow-up filed: **ARCH-28** (7 slices).
-- [x] **ARCH-0** (P1) — Architecture MAP & document (Goal 1 doc-sync findings + Goal 2 pattern). → `docs/review/phase1_architecture_map.md`
-- [x] **ARCH-1** (P0) — Split the `intents/models.py` god-module (in-degree 67). **DONE 2026-06-01** (`cdf8a81`
-      audio, `a996dba` context). (1) `AudioData`/`WakeWordResult` → **`irene/utils/audio_data.py`** (zero-dep
-      leaf), dropping the `audio_helpers.py` `TYPE_CHECKING` band-aid (real sideways import now). (2)
-      `UnifiedConversationContext`/`ConversationState`/`ContextLayer` → **`irene/intents/context_models.py`**, with
-      45 importers re-pointed; `Intent`/`IntentResult` stay in `intents/models.py` (thin audio shim retained).
-      **Placement deviates from the review sketch (core/) on purpose — NO TYPE_CHECKING:** audio went to `utils`
-      (not `core`) to avoid a `utils→core` upward edge; context stayed in the `intents` **domain** package (not
-      `core`) because it references `Intent`/`IntentResult` (domain peers) — a real one-directional sideways import
-      (`context_models→models`), no cycle, no band-aid. The remaining `core.{entity_resolver,trace_context,
-      workflow_manager}→intents.context_models` edges are legitimate **application→domain** (inward) under the
-      hexagon, not violations. Verified: no cycle, full suite unchanged (176/55, zero regression), TEST-0 green.
-- [x] **ARCH-2** (P0) — Break config↔core / config↔components (SCC-1). **DONE 2026-06-01** (`59f4ae8` + `044ff62`).
-      (A) `config/validator.py` discovers providers via `utils.loader.dynamic_loader` (config→utils, downward) —
-      no more `from ..core.components import discover_providers` (which `core.components` didn't even export). (B)
-      moved the 5 pure schema-extraction methods from `ConfigurationComponent` into `AutoSchemaRegistry` (their
-      natural home) — `auto_registry` no longer imports the component; the component delegates downward. (C)
-      removed the import-time `validate_schema_integrity()`/`validate_master_config_completeness()` calls from
-      `config/__init__.py` (the side effect that amplified SCC-1 and spammed "Schema warning" on every `import
-      config`) — now runs once, explicitly, from `ConfigManager.load_config`. (D) **dropped the `core/assets.py`
-      `AssetConfig` TYPE_CHECKING band-aid** — `from ..config.models import AssetConfig` is a clean downward
-      import now. Verified: no cycle, bare `import config` silent, validation still runs once on load, full suite
-      unchanged (176/55, zero regression). **Gate 1: ARCH-3/4/5 next.**
-- [x] **ARCH-3** (P1) — Stop components importing delivery/tooling. **DONE 2026-06-01** (`03fc44b`).
-      **Edge 1 (code fix):** `asr`/`tts` components imported `web_api.asyncapi` (the `@websocket_api` decorator +
-      `extract_websocket_specs_from_router`) — application→delivery. Moved `web_api/asyncapi.py` →
-      **`irene/api/asyncapi.py`** (rank-0; its only irene deps were `__version__` + `api.schemas`, and its fastapi
-      import was docstring-only), re-pointed all importers. **Components now import no `web_api` module** — the
-      AsyncAPI mechanism is a neutral rank-0 port both sides depend on downward. **Edge 2 (classification, no code):**
-      `components.nlu_analysis→analysis.*` — verified `analysis` is a **clean, self-contained driven adapter** (no
-      inward imports into components/workflows/web_api), and `NLUAnalysisComponent` is its dedicated wrapper (the
-      adapter boundary). Per the review's "treat analysis as a driven adapter", this is a legitimate
-      application→driven-adapter relationship; a port for one-consumer tooling would be over-engineering. **ARCH-5
-      import-linter rule:** forbid `components → web_api`/`analysis` generally, but **allow `nlu_analysis → analysis`**
-      as the adapter boundary. Verified: full suite unchanged (176/55, zero regression), TEST-0 green.
-- [x] **ARCH-4** (P2) — Formalize ports. **DONE 2026-06-02** (`df93a15`). Found a healthy **two-layer** port
-      structure: component-capability ports (`core/interfaces/*Plugin`, implemented by components) + adapter ports
-      (`providers/*/base.py *Provider`, inherited by adapters). **Audit:** adapter ports exist for all 7 categories
-      and **no adapter imports a sibling concrete adapter** (adapters depend only on their abstraction ✓).
-      **Gap-filled** (the 3 categories with no capability port): added `core/interfaces/{nlu,text_processing,
-      voice_trigger}.py` (`NLUPlugin`/`TextProcessorPlugin`/`VoiceTriggerPlugin`, one `@abstractmethod` each typed
-      with real domain types — **no TYPE_CHECKING**, cycle-verified) and made the 3 components inherit their port.
-      (Chosen scope: capability-port gap-fill; the `*Provider` adapter ports stay in `providers/` — already clean.
-      The bigger "unify the two hierarchies" move was considered and deferred as over-engineering for P2.) Verified:
-      all 3 components instantiate + `isinstance` their port, no cycle, functional suite unchanged. **Gate 1: ARCH-5
-      (import-linter) is the capstone next.**
-- [x] **ARCH-5** (P1) — Add an **import-linter** contract so the hexagon is enforced and can't regress.
-      **DONE 2026-06-02** (`27a85c3`). Added `import-linter` (dev dep) + `[tool.importlinter]` contracts in
-      pyproject + `irene/tests/test_import_contracts.py` (runs them in the suite — enforced now; ready for CI when
-      BUILD-2 lands). **6 contracts, 0 broken:** domain depends on nothing outward (ARCH-1); config no upward
-      (ARCH-2); components no delivery + only `nlu_analysis→analysis` (ARCH-3); adapters no application + provider
-      categories independent (ARCH-4). Residual fix (no TYPE_CHECKING): moved `RequestContext` (last
-      domain→workflows edge) into `intents/context_models.py`. The linter **caught a real anti-pattern → QUAL-24**
-      (8 handlers use `get_core()` service-locator; ignored in the domain contract with a comment, tracked
-      separately). _The deliverable that makes "follows the architecture" verifiable._ **Gate 1 COMPLETE
-      (ARCH-1..5 ✓).** _Note (2026-06-02): the `core→inputs/workflows/components.base` edges were left unenforced here
-      as "composition-root behavior" — that reclassification is **REVOKED → ARCH-11** (fix via DI + add the contract)._
-- [x] **ARCH-6** [WS] (P1) — **DONE 2026-06-03 (transport + identity activation + SCC-2); device-half relocated to QUAL-35.**
-      **★ ARCH-22 (2026-06-14):** the WS transport is consolidated into **`docs/design/esp32_satellite.md`** (which supersedes
-      `ws_esp32_transport.md`). The intertwined "return channel" (WS audio response to the device) landed as the ARCH-22
-      reply channel `/ws/audio/reply` (esp32_satellite.md §4.2), and the `register` handshake was extended on
-      `ClientRegistration` with `audio_out`/`name`/`primary_room`/`covered_rooms`/`firmware_version`/`model_version` (D-14).
-      Built the **WS streaming-input DRIVING adapter** `/ws/audio` (`webapi_router.py`): registration handshake →
-      `ClientRegistry` → stream raw PCM → **full** pipeline (`process_audio_input`, `skip_wake_word=True` since wake is
-      on-device) → response frame. The handshake threads `client_id`/`room_name`/`device_context` into `client_context`,
-      so **`resolve_physical_id` now returns the physical origin** (room/device) — the "room/device story switches on"
-      with no seam rewrite (it already returned `client_id or room_name or session_id`). Made `ClientRegistration.from_dict`
-      tolerant of the handshake's control keys. Removed the dead P0-8 base64 `AUDIO_DATA:` branch (`inputs/web.py`).
-      Design: `docs/design/ws_esp32_transport.md` (server-first; the in-repo ESP32 firmware is stale → inspiration only).
-      Tests: `test_ws_driving_input.py` (3 — activation seam, from_dict, end-to-end handshake→pipeline via TestClient).
-      **Deferred (device-half → relocated to ARCH-7 [MQTT] + QUAL-35):** authoring non-generic `entity_type`/`room_context`
-      + the `_is_device_entity`/`_is_location_entity` resolver swap + room_context resolve-or-clarify — at design time NO
-      device/room handlers exist (all 13 `entity_type` decls `generic`; no MQTT handler), so doing it now = the ledger's
-      own "inert branch". **SCC-2 cycle FIXED (not via service-locator — cf. QUAL-24):** the cycle was `inputs.base` (the
-      `InputSource` PORT) co-located with the `InputManager` ORCHESTRATOR that imports the concrete adapters. Split them —
-      `InputManager` → new `irene/inputs/manager.py` (the input-layer composition point, imports adapters explicitly); the
-      port module now imports NO adapters. Clean DAG `base ← {cli,web,microphone} ← manager`; **locked by a new
-      import-linter contract** ("Input port does not import its adapters"). _Original
-      reframing below._ The dead `InputManager._input_queue` + base64 `AUDIO_DATA:` path (P0-8) is a broken
-      placeholder to be **replaced by a proper WS streaming adapter**, not patched. Design (needs a **design session**):
-      wake word runs **on-device (ESP32)** → device streams audio over WS (`skip_wake_word=True` server-side) → server
-      ASR → pipeline; the WS connection also runs the **`ClientRegistry` registration handshake** (room +
-      `available_devices`) — the linchpin that populates the Q6/QUAL-28 physical-identity store (resolves P1-j at its
-      root). Also fix the contained `inputs.base ⇄ subclasses` cycle (SCC-2). Server-side voice-trigger (+ the
-      `WakeWordResult` bug) is only for non-ESP32 local-mic. Intertwined with **ARCH-7** (the return channel: WS audio
-      response to the ESP32 + MQTT smart-home actuation). → `docs/design/ws_esp32_transport.md`.
-      **★ ROOM/DEVICE ACTIVATION POINT (Q1 timing decision, 2026-06-02):** this is *when the room/device story switches
-      on.* QUAL-28/29/11 leave everything "room-ready" (action store + context split with device fields; declarative
-      `entity_type`/`room_context`; device resolvers that degrade gracefully) — all keyed off a single
-      **`resolve_physical_id(request)`** seam that today returns the session-derived id. **ARCH-6 changes only that one
-      function** to return the registered `client_id`/room from the WS handshake, activating real room/device keying +
-      device resolution with **no re-refactor**. Sequence: do ARCH-6's design session **after the Gate-2 foundation
-      (QUAL-28/29/11) stabilizes**; it's one of the 3 design-gated threads (ARCH-6 [WS] · ARCH-7 [MQTT] · ARCH-9 [INFER]).
-      **★ OWNS `entity_type`/`room_context` CONSUMPTION (moved from QUAL-11, user 2026-06-03):** QUAL-29 declared
-      `entity_type` (device/location/room/person/generic) + `room_context` (required/none/conditional) but all 66 decls
-      are `generic` and nothing reads them, so the declarative resolver swap would be an **inert branch** until there are
-      real rooms/devices. ARCH-6 is where that becomes real, so it owns: **(a)** authoring the non-generic `entity_type`/
-      `room_context` on the handlers that take device/room params; **(b)** replacing the brittle `_is_device_entity`/
-      `_is_location_entity` name-heuristics (`entity_resolver.py`) with `entity_type`-driven resolver selection (the Q7b
-      "typed accessor IS the replacement" swap — atomic, no broken window); **(c)** the `room_context` resolve-or-clarify
-      policy (with QUAL-30). QUAL-11 left the seam clean (resolvers degrade gracefully; duplicate device path unified;
-      `_resolution_failed` markers). Pairs with **QUAL-35** (T2/T3 NLU for the complex device commands MQTT needs).
-- [x] **ARCH-7** [MQTT] — **✓ DONE 2026-06-06** (design session; deliverable `docs/design/mqtt_integration.md`, and the
-      cross-project bridge contract AGREED with the user in the bridge session — `wb-mqtt-bridge/docs/
-      voice_integration_contract_draft.md`, status AGREED 2026-06-06). **Approach REDEFINED (Invariant #8(d), approved):**
-      replaced the original "Irene owns an MQTT output adapter + topic schema + device-topic resolution" with
-      **bridge-as-single-authority** — `wb-mqtt-bridge` owns all device knowledge + MQTT/home-automation conventions
-      (native WB gear *and* AV); **Irene is a pure voice front-end** that pulls a capability-shaped **catalog** and sends
-      **canonical `DeviceCommand`s** (capability.action+params); the bridge translates to native + transport. Irene is
-      blind to wb-rules vs Home Assistant. Rejected: Irene→raw-broker, and the archived `intent_mqtt.md` fat-handler/
-      runtime-method-gen design. **Agreed contract:** (A) `POST /devices/{id}/canonical {capability,action,params}`, 6-code
-      structured error enum, 500 ms synchronous value-topic echo; (B) `GET /system/catalog` (dedicated, flat, all-locales
-      rooms+devices, read-only `sensor` capability, one-device-one-room [`global` = room of whole-house AGGREGATE
-      devices, e.g. `all_lights`; "выключи свет везде" = Irene fires ONE command at that aggregate device, never iterates
-      rooms / synthesizes a group]) + retained
-      `bridge/catalog/version` refresh nudge; (C) bridge-side native onboarding (generic `WbPassthroughDevice` driver +
-      capability-adapter composition + caps `brightness`/`color`/`cover`/`climate`/`sensor`; wb-rules stays, bridge mirrors
-      state). **Hexagon (Irene):** `DeviceCommand` + `ActuationPort`/`DeviceCatalogPort` (QUAL-24 ABC pattern) +
-      `BridgeClient` REST adapter under a new `irene.providers.outputs` group + in-memory `DeviceCatalog` (distinct from
-      `ClientRegistry`). Substrate for **QUAL-35** (T2/T3 device NLU + the relocated `entity_type`/`_is_device_entity`→
-      declarative resolver swap). Implementation = ARCH-8. **Design extended 2026-06-07 (ARCH-15 PR-9.1):**
-      `mqtt_integration.md` §13 reconciles the seam shapes with the I/O architecture (bridge = `OutputPort`, see ARCH-8).
-- [x] **ARCH-26** [MQTT][DESIGN] (P3) `[deferred]` — **DONE 2026-07-01 (design; interactive session with the user).**
-      Two Irene↔bridge catalog-contract questions settled and recorded in `docs/design/mqtt_integration.md` (banner +
-      §5a + §8 + §12 + §13.3 + new **§14**). **(1) Catalog refresh = lazy** — startup pull + re-pull on a
-      resolution/actuation miss (self-correcting, ≤1 stale round-trip); Irene runs **no MQTT client** and does **not**
-      subscribe to `bridge/catalog/version`, resolving the §5a-vs-§8 contradiction in favour of no-MQTT (the retained
-      topic stays a bridge concern; proactive freshness via bridge SSE is a future optional). **(2) A committed
-      development contract artifact + bidirectional contract-testing seam** — the bridge's openapi `/openapi.json`
-      (already carries `CatalogResponse` **and** the canonical action-request body) + a curated golden catalog ("the
-      works") + a real WB7 dump, canonical home **eval-commons**; the canonical `DeviceCommand` is the boundary object,
-      with `{utterance → expected canonical command}` crossover fixtures both sides test against (Irene = producer via
-      PR-1's capturing fake bridge; bridge = consumer of crafted commands). **Follow-ups filed:** **TEST-17** (the
-      eval-commons contract bundle), **TEST-18** (the `device_command` capture provider + producer tests) — both this
-      ledger; **VWB-15** (emit the artifact) + **VWB-16** (consumer test) — the `wb-mqtt-bridge` ledger. Gates ARCH-8
-      PR-1/PR-2/PR-3. Deliverable per `design-then-implement`.
 - [x] **ARCH-9** [INFER] — **✓ DONE 2026-06-04.** **★ ARCH-22 (2026-06-14):** the §10/§11 WB7-satellite-vs-standalone
       VAD+wake split is folded into **`docs/design/esp32_satellite.md`** (D-11 inference split; D-9/D-10 micro stack). _Orig:_
       (design deliverable `docs/design/onnx_inference_layer.md` complete; all
@@ -915,6 +854,67 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       glibc 2.31/Cortex-A7 and exposes both `OfflineRecognizer` and `OfflineTts`/`OfflineTtsVitsModelConfig` (Piper) — the
       one-engine premise holds. Completing T1+T2 is the clean resolution for the deferred **torch ×4 / transformers ×1**
       Dependabot alerts (commits 05aa763/4e05a38) — no risky major bumps. **No code until scheduled + green-lit.**
+- [x] **ARCH-26** [MQTT][DESIGN] (P3) `[deferred]` — **DONE 2026-07-01 (design; interactive session with the user).**
+      Two Irene↔bridge catalog-contract questions settled and recorded in `docs/design/mqtt_integration.md` (banner +
+      §5a + §8 + §12 + §13.3 + new **§14**). **(1) Catalog refresh = lazy** — startup pull + re-pull on a
+      resolution/actuation miss (self-correcting, ≤1 stale round-trip); Irene runs **no MQTT client** and does **not**
+      subscribe to `bridge/catalog/version`, resolving the §5a-vs-§8 contradiction in favour of no-MQTT (the retained
+      topic stays a bridge concern; proactive freshness via bridge SSE is a future optional). **(2) A committed
+      development contract artifact + bidirectional contract-testing seam** — the bridge's openapi `/openapi.json`
+      (already carries `CatalogResponse` **and** the canonical action-request body) + a curated golden catalog ("the
+      works") + a real WB7 dump, canonical home **eval-commons**; the canonical `DeviceCommand` is the boundary object,
+      with `{utterance → expected canonical command}` crossover fixtures both sides test against (Irene = producer via
+      PR-1's capturing fake bridge; bridge = consumer of crafted commands). **Follow-ups filed:** **TEST-17** (the
+      eval-commons contract bundle), **TEST-18** (the `device_command` capture provider + producer tests) — both this
+      ledger; **VWB-15** (emit the artifact) + **VWB-16** (consumer test) — the `wb-mqtt-bridge` ledger. Gates ARCH-8
+      PR-1/PR-2/PR-3. Deliverable per `design-then-implement`.
+- [x] **ARCH-27** [FAF][DESIGN] (P2) `[release]` — **DONE 2026-07-02 (design agreed, interactive session).**
+      Durable-action substrate + handler-authoring rules designed and recorded at `docs/design/durable_actions.md`
+      (D-1…D-10, all user-confirmed): explicit opt-in durability (`durable=True`; timer = only consumer today,
+      future smart-home handlers required it — user scope statement), atomic-JSON store behind
+      `DurableActionStorePort` (SQLite = later swap behind the same port), re-arm-by-relaunch startup reconciler
+      with fire-with-apology (≤1h grace) / expiry-announcement for missed deadlines, failure notifications
+      announced by default (success sub-30s stays quiet), handler-declared `redeliver_on_reconnect` (at-least-once
+      for flagged durable actions, drained on client re-registration), retry machinery CUT (unblocks QUAL-61 —
+      all three cuts confirmed), BUG-19 naming = the identity contract (re-arm reuses the persisted name),
+      minimal read-only `/monitoring/actions[/history]`, rules bind via a new `howto-new-intent.md` section +
+      `CLAUDE.md` `durable-actions` invariant (both land with the implementation). Bridge comparative lessons
+      baked in: delete-at-completion atomically (anti stale-intent resurrection), persist+restore+restart-test
+      ship together (anti persist-without-restore rot). Implementation follow-up filed: **ARCH-28** (7 slices).
+- [x] **ARCH-28** [FAF] (P2) `[release]` — **DONE 2026-07-02.** Durable-action substrate implemented per
+      `docs/design/durable_actions.md`, all 7 slices: **(1)** `AssetConfig.state_root` (`<assets_root>/state/`,
+      auto-created) + `DurableActionStorePort` + `JsonFileDurableActionStore` (atomic temp+rename, corrupt-file-safe)
+      + schema-v1 records + `client_registry.json` default relocated to `state/` with legacy `cache/` read-fallback
+      migration; **(2)** launch choke point takes `durable=`/`redeliver_on_reconnect=` (keyword-only), persists at
+      launch (JSON-validates re-arm kwargs BEFORE task creation — fail loud), deletes at completion inside the
+      done-callback (same operation as the in-memory removal); timer launches `durable=True, redeliver=True`;
+      **(3)** `engine.start()` runs `reconcile_durable_actions` after components / before inputs: future deadline →
+      handler `rearm_durable_action` (timer override relaunches with remaining time, reuses the persisted name,
+      bumps `timer_counter` past it), missed ≤1h → fire-with-apology (ru/en), older / unknown handler / re-arm
+      failure → expiry announcement; old record always deleted; **(4)** redeliver-flagged completions that drop on
+      an offline output are queued as `UndeliveredNotice` (TTL = 1h grace, `created_at` preserved so re-drops don't
+      extend it) and drained on `/ws/audio/reply` re-attach; **(5)** failure notifications announced by default
+      (`critical_only` → False; sub-30s success suppression kept); **(6)** read-only `/monitoring/actions` +
+      `/monitoring/actions/history` (new `LiveActionsResponse`/`ActionHistoryResponse`; contract regenerated —
+      108 paths, config-ui `gen:api-types` + `check` + `build` green); **(7)** docs — `howto-new-intent.md`
+      "Long-running actions" section (the §3 contract in prose), `durable-actions` **CLAUDE.md invariant**,
+      `client-registry.md` durable-actions paragraph (+ corrected its stale auto-expiry claim from QUAL-58).
+      **The restart test ships with it** (`test_durable_actions.py`, 12 tests: store roundtrip/corruption, persist-
+      at-launch + delete-at-completion, ephemeral-never-touches-disk, fail-loud unserializable launch, restart →
+      re-arm with fresh store instance, fire-late apology, expiry, unknown-handler safety, timer remaining-time +
+      counter bump, undelivered TTL/matching). The reconciler's future-deadline-with-missing-handler branch was
+      caught wrong by these tests and fixed (announce-expired, not fire-early). Gates: 1156 passed / 7 skipped;
+      pyright clean (11 files); import-linter 9/9. QUAL-61 now fully unblocked.
+- [x] **ARCH-29** [WAKE][ASSET] (P2) `[release]` — **DONE 2026-07-04 (interactive design session).** Server-side
+      wake-word model acquisition design → `docs/design/wakeword_models.md`. Decisions: a wake-word model is a
+      **v2 two-file pack** (manifest + sibling `.tflite`, `from_config` resolves relative); **4-rung resolution**
+      (local path → wheel built-ins [the 4 stock EN packs ship inside pymicro-wakeword, zero download — «Alexa»
+      is the EN counterpart of «Ирина» for free] → v2 manifest URL [the escape hatch for microwakeword.com +
+      not-yet-released HF models] → released catalog on the provider class, piper-voices pattern, starting with
+      `irina` @ HF `droman42/microwakeword-irina-ru`); downloads only via AssetManager (multi-file `files:`
+      support, ASSET-4 rule: no provider self-downloads); trigger layer stays **semantics-free** (word→room
+      deferred to ARCH-22/QUAL-35 where a consumer exists); roster: «Ирина» → next «Валера»/«Наташа», «Борис»
+      dropped (2 syllables). Implementation follow-up filed + completed same-day: **ASSET-5**.
 - [x] **ARCH-30** `[release]` [FEEDBACK][DESIGN] — **DONE 2026-07-06 (same-day interactive design session).
       Problem reporting end-to-end — design AGREED**: `docs/design/problem_reports.md` (D-1..D-11). Key
       decisions: private triage home **`wb-user-reports`** (both code repos are PUBLIC — bundles narrate the
@@ -964,16 +964,6 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       Tests: 9 new (ring/redaction/bundle/envelope/service flows) + tightened ARCH-31 durable-launch case.
       Suite 1327, device gate 48/48, donation gate 15/0/0, configs 13/13, pyright 0. E2E against the real
       repo awaits BUILD-12 (provisioning).
-- [x] **ARCH-35** `[release]` [SATELLITE][DESIGN] — **DONE 2026-07-06 (same-day interactive session).
-      Python satellite design AGREED**: `docs/design/python_satellite.md` (S-1..S-9). The analysis found
-      nearly everything already exists — the voice runner composes mic/VAD/wake/playback, and eval-commons'
-      `ws_audio_provider` already speaks the COMPLETE /ws/audio protocol (both modes, proven vs wb7) — so
-      the genuinely new surface is the reply-audio leg, live-mic pacing, lifecycle, and the S-5 TLS scope
-      the user added: the emulator is the FIRST client of the fleet security plane (CSR-approval D-17 +
-      mTLS wss through nginx Plane B), validating it before any ESP32 firmware exists. First-class product
-      mode (a Pi room node), `[satellite]` config section with config-ui parity, hermetic TLS e2e in CI.
-      Unblocks ARCH-25 (3)/(4), which were otherwise unverifiable (no firmware). Implementation filed:
-      **ARCH-36** `[release]`; **BUILD-13** `[deferred]` (Pi image, S-8).
 - [x] **ARCH-33** `[release]` [FEEDBACK] — **DONE 2026-07-06. Owner review loop (`/inbox`), voice side.**
       `.claude/skills/inbox/SKILL.md`: gathers the queue from the SOURCE OF TRUTH (the reports repo, not this
       repo's PR list) — `fix-pr-open` + `needs-owner` tickets, lens:voice — then walks them ONE AT A TIME,
@@ -987,230 +977,18 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       auto-enters, silently skips on gh failure. Verified live: the queue queries correctly surface ticket #2
       (fix-pr-open → PR #1), zero needs-owner. **The problem-reporting workstream (ARCH-30→34, BUILD-12) is
       complete bar ARCH-34 (deferred v1.1).** PR #1 is `/inbox`'s first real customer.
-
-
-
-
-
+- [x] **ARCH-35** `[release]` [SATELLITE][DESIGN] — **DONE 2026-07-06 (same-day interactive session).
+      Python satellite design AGREED**: `docs/design/python_satellite.md` (S-1..S-9). The analysis found
+      nearly everything already exists — the voice runner composes mic/VAD/wake/playback, and eval-commons'
+      `ws_audio_provider` already speaks the COMPLETE /ws/audio protocol (both modes, proven vs wb7) — so
+      the genuinely new surface is the reply-audio leg, live-mic pacing, lifecycle, and the S-5 TLS scope
+      the user added: the emulator is the FIRST client of the fleet security plane (CSR-approval D-17 +
+      mTLS wss through nginx Plane B), validating it before any ESP32 firmware exists. First-class product
+      mode (a Pi room node), `[satellite]` config section with config-ui parity, hermetic TLS e2e in CI.
+      Unblocks ARCH-25 (3)/(4), which were otherwise unverifiable (no firmware). Implementation filed:
+      **ARCH-36** `[release]`; **BUILD-13** `[deferred]` (Pi image, S-8).
 
 ### Code Quality & Review (QUAL)
-- [x] **QUAL-44** `[release]` — **DONE 2026-07-05** _(un-deferred same day, user — the TEST-18 device suite
-      made the defect reproducible: an armed clarification consumed the next same-room command as its
-      answer, poisoning F51–F53 in cascade)_. **Implemented exactly as scoped:** the resume pre-check
-      (`voice_assistant.py`) now runs NLU on the BARE new utterance first; a confident (≥ the NLU
-      component's threshold), non-fallback recognition is a fresh command — the pending clarification is
-      dropped (logged) and the utterance processes clean; anything else (bare fragment / low-confidence /
-      fallback) combines as before. Trade-off settled per the entry's own lean: one extra NLU pass on
-      clarifying turns only; abandonment is silent (no spoken acknowledgment — the fresh command's own
-      reply is the acknowledgment). Regression tests: new-command abandons, low-confidence still combines,
-      bare-answer path stays green (the fakes became text-aware — an everything-recognizes-at-0.9 fake
-      would have defeated the arbitration silently). Live proof: F52 flipped green; F42 stopped producing
-      combine-garbage. [DFLOW] (P2, enhancement; split from QUAL-31) — _Orig:_ **Answer-vs-new-command arbitration on a
-      clarifying turn.** QUAL-31's resume pre-check (`workflows/voice_assistant.py` `_process_pipeline`, the
-      `take_pending_clarification` branch) **unconditionally** treats the turn that follows a clarification as the answer:
-      it prepends the original utterance and re-runs NLU on the combined text. That is the intended flow ("answer with
-      just the missing value"), but if the user instead **abandons the clarification and barks a new command** ("какая
-      погода?" after being asked a timer duration), the combine yields a garbled utterance ("поставь таймер какая
-      погода?") that can misroute or no-op. Today this is bounded only by one-shot consumption (the bad turn clears the
-      marker) + idle-window expiry — acceptable for the P2 feature, but not robust. **Scope:** add deterministic
-      arbitration before combining — e.g. run NLU on the **bare answer first**; if it independently recognizes as a
-      **confident, non-fallback** intent (a real, different command), drop the pending clarification and process the
-      answer **fresh**; otherwise (bare fragment / low-confidence / fallback) treat it as the slot answer and combine as
-      today. **Trade-off to settle:** an extra NLU pass on clarifying turns only (cheap, rare) vs. a lighter
-      confidence/phrase heuristic; also decide whether a brand-new command should *cancel* the pending intent silently or
-      acknowledge the abandonment. Pairs with QUAL-31 (this is its known limitation) and the F&F `contextual` resolution
-      (same "is this turn about the prior context or a fresh request?" question). Done when a new-command answer routes
-      to the new command (not the garbled combine) with a regression test, and the legitimate slot-answer path stays
-      green. Refs: QUAL-31, QUAL-30, Q7.
-- [x] **QUAL-67** [QUAL][CI][DONATION] (P3) `[release]` — **DONE 2026-07-05 (filed + completed same
-      day, user-requested — the payoff of QUAL-66's zero baseline).** **Donation validation is now a
-      build + CI gate:** new `irene-donation-validate` (`irene/tools/donation_validator_cli.py`) runs
-      the exact runtime validation (schema strict + `validate_contracts`) over EVERY donation
-      directory under `assets/donations/` (module-aware discovery — handler modules are inconsistent
-      about the `_handler` suffix) with **warnings-as-errors**: a declared-but-unread param or an
-      undeclared `_handle_*` method now FAILS the build instead of scrolling past in a boot log.
-      Wired into `ci.yml` backend-health beside the config/dependency/build-analyzer gates (gates
-      every image publish = the build gate). Verified both ways: green on the clean tree
-      (14 handlers, 86 methods, 0/0), red on an injected canary param. Suite 1289 green.
-- [x] **QUAL-66** [QUAL][DONATION] (P3) `[release]` — **DONE 2026-07-05 (filed + completed same day,
-      user-requested after asking what the "Contract wiring" warnings were).** **Contract-wiring
-      warnings swept 21 → 0**, turning the loader's validator from ambient noise into a meaningful
-      tripwire. Three families: **(1)** dead `language` globals removed from 9 donations (handlers read
-      `context.language` since QUAL-36; the param was never consumed) + `conversation.session_id`
-      (lives on the context per QUAL-27) — NOT touched: `system`/`speech_recognition`, whose `language`
-      param is the TARGET language for switching, genuinely read (the validator's silence there proved
-      the point; an over-eager first sweep removed them and the warning list itself caught the error);
-      **(2)** `voice_synthesis_handler`'s declared-but-unread `provider` param removed (the handler
-      parses it from raw text); **(3)** two internal helpers renamed off the `_handle_` prefix
-      (`_do_language_switch`, `_fallback_without_llm`) — the prefix promises a donation entry, these
-      are dispatched internally. Two tests updated (one had RELIED on the drift existing as its live
-      example — now exercises the check with declare-nothing). Suite 1289 green; device suite 43/43.
-- [x] **QUAL-64** `[deferred]` [NLU] (P2) — **DONE 2026-07-05 (interactive). Keyword-matcher scoring tune** (filed from the first TEST-18
-      device-suite run, 2026-07-05 — the matcher was NEVER tuned; user decision: leave the affected fixtures
-      red and tune deliberately). **Evidence:** short verb phrases beat longer specific ones — «включи кино с
-      видеокассеты» → `smart_home.power_on` 0.70 (should be `scenario_start`, phrase «включи кино»); «выключи
-      кино» → `power_off` 0.72 despite `scenario_stop` carrying that EXACT phrase with boost 1.3 (boost does
-      not overcome the short-phrase preference); both then dip under the 0.7 confidence threshold in the live
-      cascade → `conversation.general`/LLM. **Scope:** phrase-length/specificity weighting + boost semantics in
-      `hybrid_keyword_matcher` scoring; acceptance = TEST-18 fixtures F40/F42 green (`make device-auto`) with
-      NO regression across the other handlers' routing (the suite + the WS suite are the safety net).
-      Pairs with QUAL-53 (trace-driven improvement process — this is its first concrete, pre-collected case).
-      **RESOLUTION (user chose specificity+boost):** the disease was a TIE, not weighting — every
-      pattern hit in a method tier scored an identical constant, the stable sort broke ties by
-      donation LOAD ORDER («выключи кино»: bare «выключи» beat the exact «выключи кино» by loading
-      first), and the donation `boost` was never consulted in the pattern stage. New score:
-      `pattern_conf × method_boost × (1+0.1×(tokens−1), cap 1.3) × donation_boost`; `intent_boosts`
-      stored at load. F70's phrase workaround retired (fixture restored to «переключи субтитры» as a
-      permanent regression). 15-case routing test over the full 14-donation set. **Acceptance
-      exceeded: `make device-auto` 43/43 (100%)**; suite 1329, pyright 0. Bonus fence: the
-      device-auto pkill needed the `[e]` bracket trick (it was killing its own recipe shell).
-- [x] **QUAL-65** [PEX][MQTT] (P2) `[release]` — **DONE 2026-07-05 (filed + completed same day; user-requested
-      intake: bridge VWB-19 landed input/app canonical routing — consume it before QUAL-35).**
-      **Input switching + app launch by voice**, against the re-pinned contract @ bridge `3bed556` /
-      catalog `dbfd2855` (`canonical_first.md` §11: `set` is the reserved canonical action for select-form
-      capabilities). **eval-commons (`cc1cba9`):** re-pin (ru-labels guard refined — `labels: null` legal on
-      by_value technical identifiers, non-null still requires ru); fixtures re-authored + **F50–F53**
-      (by_value input / parametric input / app launch / «ютуб» transliteration-t2); the input-switching
-      exclusion lifted; mock bridge serves `GET /devices/{id}/options/{kind}` (by_value → catalog keys,
-      parametric → deterministic stand-ins). **Voice:** `read_options(device_id, kind)` joined
-      `DeviceCatalogPort` — the QUAL-35 resolver-note-(1) `options_from` dance PULLED FORWARD
-      (`CatalogService` 30s-TTL cache; `BridgeClient.get_device_options` fail-soft; composition-wired);
-      handler `_handle_input_select` + `_handle_app_launch` share one option matcher built on the
-      resolver's OWN normalization (`_norm`/`_stem_match` — one surface-matching truth); miss → clarify
-      naming what IS available; donation methods + templates ru/en. 10 new tests (suite 1262, pyright 0,
-      11 contracts; eval-commons 40). **Live: F50 green end-to-end** (by_value, zero round-trips); suite
-      20/27 — F51–F53 red are NOT routing: the run exposed **QUAL-44 session-bleed** (an armed
-      clarification consumes the next same-room case as its answer; matcher probe routes all three
-      correctly at 0.75–0.79) → QUAL-44 un-deferred (user) + `make device` runs `-j 1` (shared per-room
-      sessions make parallel cases inherent cross-talk). Guide updated (inputs/apps section + limits).
-- [x] **QUAL-18** [STREAMAPI] (P-TBD) `[release]` — **DONE 2026-07-04, RE-SCOPED at task start (user, interactive)
-      from "swap renderer, keep generator" to "retire the AsyncAPI subsystem, replace with a user-facing protocol
-      guide".** Reconciliation killed the original plan's premise: the live `/asyncapi.json` emitted
-      **`channels: {}`** (verified against a running server) — every documented channel (`/asr/stream|binary`,
-      `/tts/stream|binary`) had been deleted by later work (ARCH-21 PR-4, ARCH-10) while the four REAL WS
-      endpoints (`/ws/audio`, `/ws/audio/reply`, `/ws/observe`, `/ws/output`) were never in the spec; the
-      "code-first can't drift" premise self-refuted (decorators document claims, not `send_json` reality).
-      2026 ecosystem re-check: renderer solved (`@asyncapi/react-component` v3.1.3, offline-vendorable) but NO
-      maintained FastAPI-WS→AsyncAPI introspector exists (fastws dead since 2023); user chose retirement over
-      spec-as-artifact/rebuild. **Deleted (~2,000 LOC):** `irene/api/asyncapi.py` (474), `irene/web_api/`,
-      bespoke renderer (`asyncapi.html`/`.js`/`.css`, 923), 7 dead WS message models in `api/schemas.py` (343),
-      `get_websocket_spec` interface + ASR override, `_generate_asyncapi_spec` + 4 routes
-      (`/asyncapi{,.json,.yaml}`, `/debug/asyncapi`), `irene.web_api` refs in import-linter contracts.
-      **Replaced by:** `docs/guides/websocket-api.md` — all four live WS protocols frame-by-frame (register
-      handshake, streaming/batch utterance loops + BUG-13/17 bounds, canonical QUAL-55 response frame,
-      `speak_begin/PCM/speak_end`, missed-announcement redelivery, `/ws/output` client_id pairing,
-      `/ws/observe` token gate + filters, a runnable Python example) + `docs/images/ws-protocols.{dot,png}`
-      (house style) + links from `dataflow.md`/`esp32.md`/`howto-new-test.md`; web index page repointed
-      (it also listed the deleted `/asr/stream|binary`). Verified live: `/asyncapi*` → 404, index renders the
-      guide pointer. Suite 1180 green; 10 import contracts kept; smoke green.
-- [x] **QUAL-61** [QUAL][FAF] (P3) `[deferred]` — **DONE 2026-07-02.** Dead-capability removal, all three cuts per
-      ARCH-27 D-7 (user preference: dead code removed). **(1)** Retry machinery: `_execute_with_retry` +
-      `_is_transient_failure` deleted (−98 LOC), `max_retries`/`retry_delay` launch params removed from both F&F
-      launch methods, retry metadata keys dropped from the action record; **(2)** `AsyncTimerManager`: `core/timers.py`
-      deleted + all wiring (engine ctor/attr/start/stop, composition root, `core/__init__` export, the
-      `service_mapping['timer_manager']` entry) — the durable store + reconciler IS the scheduler (ARCH-28);
-      **(3)** dead inspection path: `inspect_active_action` + `InspectionLevel`/`ActionInspectionResult`/
-      `TestActionConfig` + vestigial history/test-action state removed from `debug_tools.py` (67 lines remain:
-      `get_debugging_status` for the live `/debug` endpoint), `monitoring_component.get_action_debugger()` accessor
-      removed; `NotificationMessage.retry_count`/`max_retries` fields removed (written, never read). Gates: 1156
-      passed / 7 skipped; pyright clean (8 files); lint-imports 10/10.
-- [x] **QUAL-62** [ARCH][QUAL] (P2) `[release]` — **DONE 2026-07-02 (filed + completed same day, user-requested
-      ARCH-28 follow-up).** The new `DurableActionStorePort` seam is now reflected in the hexagon gate: 10th
-      import-linter contract **"Durable-action store is reached only through its seam (ARCH-28)"** — no
-      application/delivery/adapter layer (`components/workflows/providers/web_api/runners/inputs/outputs`) may
-      import `irene.core.durable_actions`; the three sanctioned gateways (`intents.handlers.base` choke point,
-      `core.engine` reconciler, `core.notifications` redelivery) are `ignore_imports` edges so chains THROUGH the
-      seam pass while new direct imports fail. The contract proved itself during introduction: it flagged the
-      transitive `webapi_router → notifications → durable_actions` chain until the gateway edges were sanctioned.
-      Design doc D-2 annotated. Gates: lint-imports 10/10 kept; `test_import_contracts.py` green.
-- [x] **QUAL-56** [QUAL][REVIEW][ARCH] (P3) `[deferred]` — **DONE 2026-07-02.** F&F design critiqued through the
-      durable-execution lens + (user-requested) comparative analysis of `wb-mqtt-bridge` device-state persistence.
-      Deliverable: `docs/review/faf_durable_execution_review.md`. Verdict: **zero on every durability axis by
-      explicit design** — in-memory store ("NEVER persisted"), restart = silent total loss (a 24h timer vanishes;
-      "list timers" denies it existed), no scheduler durability (`AsyncTimerManager` = dead capability), no
-      idempotency (+ live-record overwrite on name collision), delivery at-most-once with 5 silent-drop points
-      (failure notifications suppressed by default), retry machinery dead config, no recovery, aggregate-only
-      amnesiac observability. Bridge comparison: right persistence shape to borrow (generic key→JSON SQLite behind a
-      port, chokepoint dirty-write, ephemeral filter, reconcile-by-diff restore, shutdown-artifact protection) + two
-      cautionary failure modes (persist-without-restore rot; stale `active_scenario` resurrecting on restart — filed
-      to the bridge as **VWB-18**, uncommitted). User scope statements recorded: future handlers will require
-      durability → platform substrate; "a fix + rules for new handlers would be required". Follow-ups filed:
-      **ARCH-27** (substrate design + handler rules), **BUG-19** (store/status correctness), **QUAL-61** (dead
-      capability removal, gated on ARCH-27's keep-or-cut).
-- [x] **QUAL-59** [API][QUAL] (P3) `[deferred]` — **DONE 2026-07-02.** Capability drift + dead code (QUAL-57 A6/A7);
-      user directive: dead code **removed**, not repaired. **(A6)** `/system/capabilities` now derives
-      `nlu/voice_trigger/text_processing` provider lists from the loaded components' `providers` dicts and
-      `workflows` from `workflow_manager.workflows` (the hardcoded lists advertised the long-gone
-      `continuous_listening` workflow and missed the `llm` NLU provider); regression
-      `test_capabilities_endpoint.py`. **(A7) deleted outright:** the domain-keyed dead Phase-3.5 action-management
-      interface in `handlers/base.py` (`cancel_action`, `get_active_actions`, `get_action_status`,
-      `list_all_actions`, `cancel_all_actions`, `inspect_action`, `get_action_management_capabilities` — would
-      mis-cancel/double-record if ever wired; −300 LOC) plus the handler-side action-debugger wiring
-      (`set_action_debugger`, attr, import; monitoring keeps its own debugger endpoints); the two `/intents/actions/*`
-      REST stubs ("Full implementation requires session context") + their 3 orphaned schema classes; the zero-caller
-      ContextManager introspection machinery (`get_context_for_intent_processing`, `get_recent_intent_patterns`,
-      `get_dominant_domain`, `get_session_statistics`, `cleanup_session` — which also bypassed the BUG-16 metrics
-      seam — `get_active_session_count`); the 2 tests that only exercised deleted methods. **Fixed (live code):**
-      cwd-dependent paths in `nlu_component` now package-relative (handler dir from `handlers_pkg.__file__`, assets
-      root from module parents). Stale `metrics.py` key comment was already fixed in BUG-16. **Contract artifacts
-      regenerated** (endpoints removed → `scripts/dump_openapi.py` + config-ui `npm run gen:api-types`; apiClient
-      never used the stubs). Gates: 1138 passed / 7 skipped; pyright clean on all 7 touched files; import-linter
-      9/9 kept; config-ui `check` + `build` pass. Evidence: `docs/review/arch_memory_review_2026-07-02.md` §A6/A7.
-- [x] **QUAL-58** [MEM][QUAL] (P3) `[deferred]` — **DONE 2026-07-02.** Memory-hygiene sweep (QUAL-57 M4–M8), all five
-      items: **(M4)** `AudioTranscoder._resampling_cache` now bounded by BYTES too — 4 MB total budget + 1 MB
-      per-entry bypass (full TTS replies / long utterances are never cached; they were the tens-of-MB retention),
-      FIFO eviction on either bound, `cache_bytes` in stats; **(M5)** `ClientRegistry.prune_stale_history(3600s)` —
-      per-identity completed-action history keys (`_recent_actions`/`_failed_actions`/`_action_error_count`) are
-      dropped once their newest entry is an hour stale (keysets grew monotonically with session-derived ids);
-      **(M6)** the ContextManager cleanup loop (every `cleanup_interval`) now drives `reap_dead_actions()` (the
-      advertised layer-3 sweep finally has a runtime caller — docstring corrected) + the M5 prune;
-      `cleanup_expired_clients` deliberately stays manual — nothing refreshes `last_seen` on a live WS connection,
-      so auto-expiry would unregister a live-but-quiet satellite (documented in its docstring); **(M7)**
-      `NotificationService` queue bounded (maxsize 1000, `put_nowait` + drop-with-warning on overflow — never blocks
-      the F&F completion path) and `send_notification` lazily starts the processing loop, killing the consumer-less
-      getter-minted-instance path; the six provider `warm_up` preloads hold their task refs
-      (`self._warmup_task` — were GC-cancellable mid-model-load); **(M8)** trace dir rotated to the newest
-      `MAX_TRACE_FILES = 500` on every save (each file embeds full base64 audio; constant not config — same
-      safety-net reasoning as BUG-17). Regression: `test_memory_hygiene.py` (7 tests across M4/M5/M7/M8);
-      cache-stats shape test extended. Full suite 1139 passed / 7 skipped; pyright clean on all 11 touched files.
-      Evidence: `docs/review/arch_memory_review_2026-07-02.md` §M4–M8.
-- [x] **QUAL-57** [QUAL][REVIEW][ARCH] (P2) `[release]` — **DONE 2026-07-02.** **General architecture review +
-      memory-overconsumption analysis** (user-requested). Deliverable: `docs/review/arch_memory_review_2026-07-02.md`.
-      Method: 3 parallel deep-reads (architecture map / multi-turn memory audit / F&F QUAL-8 re-verification +
-      `create_task` census); the 3 headline memory findings spot-verified directly. **Verdicts:** architecture =
-      top-quartile for its class (enforced hexagonal layering — zero live violations, entry-point provider model,
-      donation-driven NLU cascade, true streaming-ASR seam) but not SOTA at the interaction layer (no barge-in,
-      whole-utterance TTS, no per-client concurrency isolation, weak session continuity — A1–A4 recorded for user
-      decision, not filed). **F&F path now clean:** all 10 QUAL-8 findings resolved by the QUAL-28 store redesign
-      (re-verified). **Live memory risk moved to the request path:** metrics session leak growing on every REST
-      call/WS connection (→ BUG-16), uncapped `/ws/audio` batch PCM accumulator ≈115 MB/h per bad client (→ BUG-17),
-      untrimmed LLM conversation store with dead `max_context_length` config (→ BUG-18); small-item sweep → QUAL-58;
-      capability drift + dead code → QUAL-59. A5 (no action durability) confirms QUAL-56's premise — that task stands.
-- [x] **QUAL-55** [APICONTRACT] (P2) `[release]` — **DONE 2026-07-04. One canonical `IntentResult → API`
-      serializer across the five execution surfaces** (retires F1/F3/F4 + the rest of F2,
-      `docs/review/api_result_contract_review.md`). New `irene/api/serializers.py` →
-      `serialize_intent_result(result, extra_metadata=None)`: canonical keys `text` (F1 — `/execute/*` renamed
-      from `response`), `success`/`error`, `confidence` top-level (F4), `intent_name` lifted from the
-      orchestrator's `original_intent` (F2), `timestamp`, raw `metadata` with endpoint extras merged IN, never
-      replacing (F3). All five surfaces route through it: REST `/execute/command|audio` (`CommandResponse`
-      reshaped: `text`/`confidence`/`intent_name` fields; the invented "executed successfully" fallback prose
-      dropped — fail-loud ①), `/trace/command|audio` `final_result`, both WS `/ws/audio` response frames
-      (supersedes QUAL-54's metadata-injection). Co-changes: **config-ui** `openapi.json` re-dumped +
-      `openapi.gen.ts` regenerated, `npm run check` + `build` green (no runtime component consumed the old
-      field); **eval-commons** `ws_audio_provider` reads top-level `intent_name` with metadata fallback (spans
-      SUT versions). WS test fakes replaced with the real `IntentResult` (a wrong-shaped fake is how F5 hid a
-      live None — same lesson). Tests: `test_api_result_serializer.py` (7); smoke e2e asserts the canonical
-      keys against a live server. Suite 1180 green; 10 import contracts kept.
-- [x] **QUAL-54** [APICONTRACT] (P2) `[release]` — **DONE 2026-06-27.** Targeted fix of the live-bug subset from
-      `docs/review/api_result_contract_review.md` (F2 WS half + F5): the `/ws/audio` response now surfaces intent under
-      `intent_name` (remapped from the orchestrator's `original_intent`, keeping the raw metadata) at both send sites
-      (`webapi_router.py` streaming + batch), and the two `workflow_manager.py` pipeline-event emitters (`:482`,`:637`)
-      now read `original_intent` instead of the never-populated `intent_name` (the field was always `None` in prod).
-      Root masking cause fixed too: `test_pipeline_events.py`'s fake returned `metadata={"intent_name":…}` (wrong key) —
-      now mirrors the real `original_intent` contract, so it's a faithful regression test. Unblocks the `eval/` WS
-      intent case (provider reads `metadata.intent_name`). Gates: full suite 1066 passed / 9 skipped, pyright 0,
-      import-linter 9/9. `config-ui-stays-functional` N/A (additive WS metadata + internal logging; config-ui doesn't
-      consume `/ws/audio`). Full 5-way unification → QUAL-55.
 - [x] **QUAL-1** — Phase-0 static baseline (ruff/pyright/vulture/validators/import-graph). → `docs/review/phase0_static_baseline.md` (6e39886)
 - [x] **QUAL-2** — Review round 1: phantom-reference `NameError`s + method shadowing. → b6cd282
 - [x] **QUAL-3** (P1) — **DONE 2026-06-06.** Category D wiring. **Reconciled (Invariant #8): the entry-point total is now
@@ -1534,6 +1312,26 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       claiming a dep it doesn't use) **+ KEEP-and-improve the generator** (no maintained drop-in introspects raw
       FastAPI WS routes; FastStream = broker framework, wrong shape; fix lossy `_clean_property_for_asyncapi`;
       decide 2.6.0-vs-3.0 deliberately). Done: `docs/review/streaming_api_review.md` with keep/upgrade/replace rec.
+- [x] **QUAL-18** [STREAMAPI] (P-TBD) `[release]` — **DONE 2026-07-04, RE-SCOPED at task start (user, interactive)
+      from "swap renderer, keep generator" to "retire the AsyncAPI subsystem, replace with a user-facing protocol
+      guide".** Reconciliation killed the original plan's premise: the live `/asyncapi.json` emitted
+      **`channels: {}`** (verified against a running server) — every documented channel (`/asr/stream|binary`,
+      `/tts/stream|binary`) had been deleted by later work (ARCH-21 PR-4, ARCH-10) while the four REAL WS
+      endpoints (`/ws/audio`, `/ws/audio/reply`, `/ws/observe`, `/ws/output`) were never in the spec; the
+      "code-first can't drift" premise self-refuted (decorators document claims, not `send_json` reality).
+      2026 ecosystem re-check: renderer solved (`@asyncapi/react-component` v3.1.3, offline-vendorable) but NO
+      maintained FastAPI-WS→AsyncAPI introspector exists (fastws dead since 2023); user chose retirement over
+      spec-as-artifact/rebuild. **Deleted (~2,000 LOC):** `irene/api/asyncapi.py` (474), `irene/web_api/`,
+      bespoke renderer (`asyncapi.html`/`.js`/`.css`, 923), 7 dead WS message models in `api/schemas.py` (343),
+      `get_websocket_spec` interface + ASR override, `_generate_asyncapi_spec` + 4 routes
+      (`/asyncapi{,.json,.yaml}`, `/debug/asyncapi`), `irene.web_api` refs in import-linter contracts.
+      **Replaced by:** `docs/guides/websocket-api.md` — all four live WS protocols frame-by-frame (register
+      handshake, streaming/batch utterance loops + BUG-13/17 bounds, canonical QUAL-55 response frame,
+      `speak_begin/PCM/speak_end`, missed-announcement redelivery, `/ws/output` client_id pairing,
+      `/ws/observe` token gate + filters, a runnable Python example) + `docs/images/ws-protocols.{dot,png}`
+      (house style) + links from `dataflow.md`/`esp32.md`/`howto-new-test.md`; web index page repointed
+      (it also listed the deleted `/asr/stream|binary`). Verified live: `/asyncapi*` → 404, index renders the
+      guide pointer. Suite 1180 green; 10 import contracts kept; smoke green.
 - [x] **QUAL-19** [ESP32] (P2, last pre-release) — **DONE 2026-06-09** (interactive review session + upstream study).
       **★ ARCH-22 (2026-06-14):** the **device-side** of the micro stack is now designed in `docs/design/esp32_satellite.md`
       (D-9 ported microWakeWord on ESP-IDF with the TFLite-Micro micro-features frontend + µVAD; D-10 the same `.tflite`
@@ -1851,282 +1649,6 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       missing-required) → flows through the existing `_clarify` boundary; vs clamp to the declared `default_value`.
       Today `get_param` either clamps-to-default (silent) or raises `MissingRequiredParameter` (mislabeling an invalid
       required value as "missing") — fix the distinction here. Refs: `declared_param_audit.md`, QUAL-11, QUAL-30, QUAL-33, Q6/Q7.
-- [x] **QUAL-36** `[release]` [DFLOW][I18N] (P1) — **Single language source-of-truth; purge hardcoded language codes
-      (theme ④; user observation 2026-06-03). DONE 2026-06-03.** **Consolidation decision (user, mid-task):** found FOUR
-      competing declarations (`CoreConfig.language="en-US"` locale-form, `nlu.default_language`/`supported_languages`,
-      `nlu_analysis.languages.*`, `IntentAssetLoader`'s own); user chose **promote to top-level `CoreConfig.default_language`
-      + `supported_languages` (2-letter)** as the one canonical source — read at the composition root, injected inward.
-      **Delivered:** (1) canonical top-level config fields; removed the `nlu.*` duplicates; deprecated the `en-US` field;
-      config-master.toml updated. (2) `ContextManager` injected `default_language`+`supported_languages` (mirrors
-      `max_history_turns`); `engine.py` wires them; seed fixed. (3) NLU detection reads canonical + clamps; `_analyze_text_
-      language` returns `None` (no signal) → caller applies default; providers receive canonical via config injection. (4)
-      invariant established. (5) **deleted all 67 `or "ru"` fallbacks** → bare `context.language`; ripped out the timer/audio/
-      voice-synthesis `_get_language` re-detection heuristics; **fixed the `hybrid_keyword_matcher` `'en'`-vs-`'ru'` divergence
-      bug**; made handler `language="ru"` default params required (T4). (6) language-switch validation (`system.py`) now reads
-      the new **`context.supported_languages`** (seeded from canonical) — no baked `["ru","en"]`. (7) **localized the LLM
-      context-injection labels** → `assets/localization/conversation/{ru,en}.yaml` (`_context_label`, by user language).
-      **Verified:** new `test_language_source_of_truth.py` (6) proves en-primary + arbitrary-language seeding/clamp/labels/
-      no-stomp; suite at baseline parity (0 regressions). **Carve-out → QUAL-38:** processing-language defaults (number-spelling
-      utils / silero TTS / ASR / text-processor) + inline bilingual handler messages (`== 'ru'` branches) are a distinct
-      concern, filed separately. Refs: `RELEASE_JOURNAL.md` 2026-06-03, QUAL-16.
-- [x] **QUAL-37** `[deferred]` [DFLOW] (P2) — **Targeted no-intent clarification (enhancement; split from QUAL-30).
-      DONE 2026-06-03.** The online (LLM) path already consumed `_fallback_context.likely_domain` (via
-      `_build_fallback_context_prompt`, QUAL-16); the gap was the **offline** path. **Delivered:** `_handle_fallback_
-      without_llm` now reads `likely_domain` and, when it matches a known domain, emits a **deterministic, localized,
-      offline** targeted clarification ("Возможно, вы хотели поставить таймер?" / "Did you want to set a timer?") via a
-      new `fallback_targeted` template + a `fallback_domain_labels` map (domain→friendly action phrase) in
-      `assets/localization/conversation/{ru,en}.yaml`; falls through to the generic responder when there's no guess /
-      unknown domain. Metadata now carries `targeted`/`likely_domain`. **Verified:** new `test_no_intent_clarification.py`
-      (5) covers targeted ru/en, generic fall-through, unknown-domain fall-through, determinism + offline; 0 net suite
-      regressions. **Ledger fix:** removed a corrupted duplicate QUAL-37 header that had orphaned QUAL-36's old body
-      (collateral from the QUAL-36 done-edit). Refs: QUAL-30, QUAL-16, Q7.
-- [x] **QUAL-38** `[deferred]` [DFLOW][I18N] (P2) — **Processing-language threading + inline-bilingual purge (carved from
-      QUAL-36). DONE 2026-06-03.** **Key correction:** the processing language is the **audio-MODEL/deployment** language
-      (which number-spelling/transcription rules to apply), NOT the session language — spelling numbers in the session
-      language but synthesizing with a different-language voice would mismatch. So the fix is **config/model-derive**, not
-      request-threading (which would introduce that bug; the QUAL-13 "request-scoped" comment was the gap). **(a) delivered:**
-      `convert_numbers_to_words` made language-required (caller threads `request.language`); `PrepareNormalizer` gets a config
-      `language` (was falling back to inline `"ru"`); `unified.py` threads the per-normalizer deployment language to both
-      number normalizers; `silero_v3|v4` derive `self.language` from model config (default model is `*_ru.pt` → `"ru"`);
-      `asr_component` transcribe endpoint resolves to `self.default_language` not a literal. (Library `utils/text_processing.py`
-      defaults + the Pydantic request-schema `"ru"` defaults left as documented API/library defaults.) **(b) delivered:**
-      externalized the genuine inline RU/EN strings — **voice_synthesis (6)** → `voice_synthesis_handler` templates,
-      **system (3)** → `system_handler` templates, **provider_control (5)** → NEW `provider_control_handler` templates + a
-      `_get_template` method; unified **random_handler (3)** error templates (added `{error}` to the ru side, dropped the
-      `== 'ru'` branch). **Kept (legitimate, per done-criteria):** `system_service_handler` Russian pluralization grammar
-      (strings already templated), and Russian command-keyword *parsing*. **Verified:** templates load + resolve ru/en; 0 net
-      suite regressions. Done: processing language derives from model/config; handler user-facing strings externalized.
-- [x] **QUAL-39** [API] (P2) — **DONE 2026-06-04 (Option 2, user-approved).** Audited the **19** routes lacking a
-      `response_model` (104/123 already typed). **Key finding (the reason this task existed):** the **donations contract
-      pair** `GET/PUT /donations/{handler}/contract` — UI-5's primary target — were the only **UI-5-consumed** untyped
-      endpoints; reconciliation showed config-ui's other status/config/NLU reads already hit typed endpoints
-      (`/intents/status`, `/configuration/config/status`, …), **not** the untyped system ones. **Done:** typed the contract
-      pair's **envelopes** — `DonationContractResponse` / `DonationContractUpdateResponse` (`api/schemas.py`) — and `/health`
-      (`HealthResponse`). **Contract/phrasing BODY stays `Dict[str, Any]` passthrough on purpose:** both have a **canonical
-      JSON Schema** (`assets/donation_contract_v1.1.json` + `assets/donation_language_v1.1.json`, both
-      `additionalProperties: true`); a strict Pydantic body would **drift from the schema AND drop fields on the editor's
-      GET→PUT round-trip**. **Symmetry analysis (the donation_language question):** the language/phrasing side already does
-      exactly this — `LanguageDonationContentResponse` with `donation_data: Dict[str, Any]` passthrough — so typing the
-      contract envelope brings it to **parity** with the phrasing endpoints; the strong **body types** for config-ui are
-      generated from the two JSON Schemas, the **envelopes** from OpenAPI (see UI-5). **Classified (b) legitimately
-      dynamic / non-JSON — documented, not typed:** `/dashboard/html`, `/`, `/asyncapi`(+`.yaml`) (HTML/YAML),
-      `/prometheus` (text exposition), `/asyncapi.json` + `/debug/asyncapi` (generated spec/debug docs), `/components`
-      (conditional keys). **Deferred general hygiene (non-UI-5, type later if wanted):** asr `/providers`/`/reset`/
-      `/transcribe`, monitoring `/contextual-commands`(+`/performance`), nlu_analysis `/capabilities`/`/statistics`,
-      `/system/status` (config-ui doesn't consume it — Overview uses `/intents/status`). Verified: models accept the real
-      GET/PUT shapes incl. passthrough extras, suite 85=85 (0 net regression). (Found 2026-06-04.)
-- [x] **QUAL-40** `[release]` (P2) — **DONE 2026-06-07.** Generated-TOML section headers no longer dropped. **Was:**
-      `ConfigManager._generate_provider_sections` / `_generate_normalizer_sections` (`config/manager.py`) built a
-      per-iteration `section = "[base_path.<name>]"` header but **never appended it to `sections`**; the closing
-      `"\n".join([section] + sections)` kept only the **last** header (and mis-placed it at the very top), so every
-      provider/normalizer header except the last was dropped → the generated TOML collapsed all entries' keys under one
-      section. **Fix:** `sections.append(...)` the header at the start of each iteration and join plainly (dropped the
-      `[section] +` prepend + the dead `section = ""` init). **Verified round-trip:** new
-      `test_config_section_generation.py` (3) asserts every header survives and the output re-parses via `tomllib` back to
-      the original `{provider/normalizer: {...}}` nesting (the round-trip assertion fails on the old code — keys would
-      collapse under the single surviving header). Backend-only (generated-TOML *content* fix; no contract/shape change),
-      so config-ui's TOML-editor surface just receives correct TOML — no config-ui code change. Gates: pyright 0,
-      import-contracts 9/9, dep-validator 55/55, check_scope clean, suite 84=baseline (+3).
-- [x] **QUAL-41** `[release]` (P2) — **DONE 2026-06-07.** `IntentAssetLoader` validator output now matches
-      `api.schemas.ValidationError`. **Was:** `validate_template_data` / `validate_prompt_data` /
-      `validate_localization_data` (`core/intent_asset_loader.py`) emitted error/warning dicts keyed `{field, message,
-      severity}`, but `api.schemas.ValidationError` requires `{type, message}` (+ optional `path`/`line`), so
-      `ValidationError(**err)` in `intent_component.py`'s template/prompt/localization editing endpoints raised a pydantic
-      error (missing required `type`) → **HTTP 500 whenever those endpoints hit a real validation error**. **Fix (chose
-      "align validator output to schema" over a boundary mapper):** rewrote all three validators (incl.
-      `_validate_domain_specific_localization`) to emit canonical `{type, message, path}` — the **same shape the sibling
-      `validate_phrasing_data`/`validate_contract_data` already produce** (`field`→`path`; `severity` dropped, already
-      encoded by the errors-vs-warnings list; `type` carries a category: `structure`/`missing_field`/`value`/`validation`).
-      No consumer read `field`/`severity` (all 9 endpoint sites only `ValidationError(**err)`). **Invariant #4:** config-ui's
-      template/prompt editors already read `.message` (via `any` casts: TemplatesPage/PromptsPage) → render correctly now;
-      `npm run check` + `build` stay clean (no config-ui change needed). **Regression test:** `test_asset_validation_schema.py`
-      (3) constructs the schema models from each validator's failing-input output — the exact path that used to 500. Gates:
-      pyright 0, import-contracts 9/9, dep-validator 55/55, check_scope clean, suite 84=baseline (+3). **Also fixed
-      (user-directed, same change):** `DonationsPage.tsx:859` read `err.msg` on the **phrasing** validation response while
-      `validate_phrasing_data` emits `message` (canonical) — a pre-existing latent display bug on the UI-5/QUAL-29 surface
-      (the adjacent warnings map already read `.message`); `err.msg`→`err.message`, config-ui check + build green.
-- [x] **QUAL-42** `[release]` [DVALIDATE] (P1) — **Donation contract↔code validator + LLM translation services.
-      DONE 2026-06-06 (user-directed: "do this validator right away").** Closed the real gap the donation-validation
-      investigation found: nothing reconciled a **contract** against the **handler code** it drives (only contract→method
-      existence; never params, never reverse coverage). **Delivered (backend):**
-      **(1)** `core/contract_validator.py` — `ContractWiringValidator` introspects each handler class + AST-scans the
-      module for parameter reads (`get_param`/`get_typed_param`/`intent.entities`). **Severity split (deliberate, to
-      avoid false-positive boot failures):** an **unwired contract method (no callable on the class) is FATAL** — raises
-      `DonationDiscoveryError`; **soft warnings** = a declared parameter never read (legitimately context-sourced, e.g.
-      `language`), or a `_handle_*` method no contract declares (reverse coverage). A `strict_parameters` flag promotes
-      param warnings to fatal (ratchet). **(2) Startup integration** — `IntentAssetLoader.load_all_assets` runs the
-      validator over all loaded donations, **fail-fast on unwired methods**, and caches the report. Verified: the 14
-      shipped handlers validate **0 fatal / 13 useful warnings** (boot stays green). **(3) Endpoints (intent_component,
-      via injected `LLMPort`):** `GET /donations/validation` (the startup wiring report → UI); `POST
-      /donations/{h}/validate-translation` (**LLM** meaning/consistency QA — deepseek default, else any supported
-      provider with a key; **no LLM → `llm_available:false` + "validate manually" message**); `POST /donations/{h}/translate`
-      (**LLM** translation *service*, content-aware replacement for the dead phrase-count `suggest-translations`; same
-      graceful no-LLM path). **(4)** 8 schemas in `api/schemas.py`; design doc `donation_editor_ux.md` §9 updated for the
-      UI. **Tests:** `test_contract_validator.py` (7, incl. an all-real-handlers 0-fatal guard). Gates: pyright 0,
-      import-contracts 9/9, dep-validator 55/55, suite 84=baseline (+7 passing). _Decision logged:_ LLM translation
-      validation is **on-demand (endpoint), not per-boot** — avoids per-startup token cost/fragility; structural wiring
-      validation is the always-on startup part. Refs: `parameter_extraction_review.md`, donation-validation investigation.
-- [x] **QUAL-43** [DVALIDATE] (P2) — **DONE 2026-06-06.** Removed the donation v1.0 dead validation code and
-      **repointed the build analyzer at the v1.1 schemas** (user-directed mid-task). **Removed:** the dead v1.0
-      schema-validation chain in `IntentAssetLoader` (`load_donation_on_demand` / `_load_and_validate_donation` /
-      `_validate_json_schema` / `validate_donation_data` — 0 callers; the *v1.1* `_validate_donation_schema` stays);
-      `irene/tools/intent_validator.py` + its `irene-intent-validate` script + `assets/v1.0.json`; the orphaned
-      `CrossLanguageValidator.sync_parameters_across_languages` (+ its dead confidence/lang-detect helpers and the
-      `TranslationSuggestions` dataclass); the rule-based `suggest_translations` method + the
-      `POST /donations/{h}/suggest-translations` endpoint; the dead schemas `SyncParameters{Request,Response}`,
-      `SuggestTranslations{Request,Response}`, `TranslationSuggestionsSchema`, `MissingPhraseInfo`. **Build analyzer
-      rewritten:** `_validate_intent_json_files` now validates each enabled handler's `assets/donations/<h>/contract.json`
-      (against `donation_contract_v1.1.json`) + its `<lang>.json` phrasing (against `donation_language_v1.1.json`) via
-      `jsonschema` — the old path pointed at the non-existent v1.0 monolithic `<h>.json`, so it would have emitted false
-      "file not found" build errors. Verified the real handlers validate clean + a missing contract is flagged.
-      **Regenerated** the committed `openapi.json` (109→108 paths; suggest-translations gone) + the frontend types.
-      Gates: pyright 0, import-contracts 9/9, dep-validator 55/55, backend suite 84=baseline, `cd config-ui && npm run
-      check && npm run build` pass. _Original scope:_
-      **Remove donation v1.0 dead validation code (split from UI-5 scope decision, 2026-06-06).**
-      The v1.1 split (QUAL-29) + the new wiring validator (QUAL-42) left v1.0-era validation as dead weight: **(1)**
-      `IntentAssetLoader._validate_json_schema()` validating against `assets/v1.0.json` (reachable only via the legacy
-      `_load_and_validate_donation` / unused `validate_donation_data` paths); **(2)** `irene/tools/intent_validator.py`
-      (standalone CLI validating v1.0.json, not wired into the loader/API); **(3)** `assets/v1.0.json` itself; **(4)** the
-      orphaned `CrossLanguageValidator.sync_parameters_across_languages()` no-op + its now-unused
-      `POST /donations/{h}/sync-parameters`-era plumbing; **(5)** the rule-based `suggest_translations()` + its
-      `POST /donations/{h}/suggest-translations` endpoint, **once UI-5 stops calling it** (superseded by QUAL-42's LLM
-      `translate`). **Sequencing:** do AFTER UI-5 lands (so removing the suggest-translations endpoint doesn't break the
-      old UI mid-flight). Verify no remaining importers; gates: pyright 0, import-contracts 9/9, dep-validator 55/55,
-      suite ≤baseline. Found during the donation-validation investigation + UI-5 scoping.
-- [x] **QUAL-45** [WS][ESP32] (P2) `[deferred]` — **DONE (design) 2026-06-14 — SUBSUMED BY ARCH-22.** The ESP32
-      audio-streaming protocol (end-of-utterance + on-device VAD/wake contract) is now fully specified in
-      **`docs/design/esp32_satellite.md`** — wire protocol §4 (`{"type":"end"}` device hint + server-authoritative ASR
-      endpointing, D-5/D-6), the on-device microWakeWord+microVAD contract (D-9/D-10), and the single-mic/no-server-VAD
-      split (D-11). The *firmware* implementation of the end-of-utterance signaling rides the **tracked firmware rewrite**
-      (esp32_satellite.md §14), not this task. _Original below._ **ESP32 audio-streaming protocol: end-of-utterance signal
-      + on-device VAD/wake contract.** Filed from the ARCH-18 endpoint reconciliation (2026-06-10). The **server already** consumes a
-      `{"type":"end"}` control frame on `/ws/audio` to bound an utterance (one session = one utterance = one ASR;
-      `webapi_router.py:824-835`) and ARCH-18 makes that path skip server VAD+wake (they run on-device). **Device-side TODO
-      (ESP32 review):** define + implement the firmware's end-of-utterance signaling (emit `{"type":"end"}` at on-device
-      VAD silence; **default = end of WS session** if a firmware doesn't send it), plus the on-device VAD/wake contract the
-      server now assumes. Doc: `docs/review/esp32_wakeword_review.md` + `docs/design/ws_esp32_transport.md`.
-- [x] **QUAL-46** [IO] (P2) `[deferred]` — **DONE 2026-06-15.** Generalize the vosk runner into a config-driven
-      **voice runner** (follows ARCH-15's "runners-as-presets — config, not code"). The old `VoskRunner` was a full
-      end-to-end mic pipeline (mic → VAD → [wake] → ASR → NLU → intent → TTS) but **artificially gated to vosk** by
-      two checks — an `import vosk` dependency probe and a validation rule forcing `asr.default_provider == "vosk"` —
-      while the actual processing path was already provider-agnostic (delegates to the ASR component). **Removed both
-      gates:** the runner now requires only `sounddevice` (its real dep — mic capture) and validates *any* configured
-      + enabled ASR provider (vosk/whisper/sherpa_onnx/google_cloud); ASR-provider deps are the component system's
-      concern (`irene-dependency-validate`). **Renamed** `vosk_runner.py`→`voice_runner.py`, `VoskRunner`→`VoiceRunner`,
-      `run_vosk`→`run_voice`, entry points `irene-vosk`→`irene-voice` + the `irene.runners` discovery entry + the
-      `runners/__init__` exports (clean rename, no alias — pre-release). **Fixed the latent VAD inconsistency:** the mic
-      pipeline structurally requires VAD (the workflow raises if it's off) yet the runner forced asr/audio/nlu/etc but
-      not vad — now it forces `vad.enabled=True` too, so a VAD-off config fails clearly in the runner, not deep in
-      workflow init. (`voice_trigger` stays config-driven — the runner auto-skips the wake word when it's absent.)
-      Docs: new "Voice (microphone)" section in `QUICKSTART.md` (config-driven ASR, both invocation forms, `--trace`).
-      New `test_voice_runner.py` (8 tests: provider-agnostic validation + the force-rules incl. VAD). 9/9 import
-      contracts; runner/vad suites net-zero (4 pre-existing TEST-2 failures). Invariant #4 N/A (no config schema/endpoint
-      change — purely a runner gate + rename). _Note: the v13-era `tools/migrate_runners.py` still maps the old name as
-      a v13→v14 migration target; left untouched (obsolete, like `config_migrator` — flagged separately → QUAL-47)._
-- [x] **QUAL-47** [WS] (P2) `[deferred]` — **DONE 2026-06-15.** Retire the obsolete one-time migration tools (the
-      QUAL-46 follow-up). On v15.0.0, both target long-past versions and neither is imported by runtime code:
-      **`irene/tools/config_migrator.py`** (v13→v14 config migration; entry point `irene-config-migrate`) and
-      **`tools/migrate_runners.py`** (legacy `runva_*.py`→v13 runners — already broken by the QUAL-46 rename, since it
-      referenced `vosk_runner`/`VoskRunner`/`run_vosk`). Deleted both + removed the `irene-config-migrate`
-      `[project.scripts]` entry. No tests/code referenced them (only two `docs/archive/*` historical mentions, left as
-      record). Package re-syncs clean; 9/9 import contracts. **Sweep extended 2026-06-15** — retired two more
-      standalone (un-imported, non-entry-point) migrators verified spent/obsolete: **`tools/migrate_to_universal_plugins.py`**
-      (old plugin→provider config migration; only refs were two `docs/archive/*` guides) and
-      **`scripts/migrate_donations_v11.py`** (QUAL-29 donation v1.0→v1.1 — **QUAL-29 is `[x]` and the assets are already
-      v1.1**: 13 `contract.json` + per-lang files, so the one-time migration is applied/spent). Surfaced a related
-      finding kept OUT of scope → **QUAL-48**: `irene/config/migration.py` is *live* v13→v14 runtime auto-migration.
-      **Also retired 2026-06-15** the dead one-off VAD debug script **`tools/test_vad_sibilant_fix.py`** (already broken —
-      it imported `UniversalAudioProcessor`, renamed to `VoiceSegmenter` in ARCH-18, so it `ImportError`ed; not an entry
-      point, not imported) + its orphaned companion **`configs/vad-sibilant-fix.toml`** (referenced only by that script).
-      The sibilant fix itself is long shipped (`docs/archive/VAD_SIBILANT_FIX.md`, left as record).
-- [x] **QUAL-48** [DFLOW] (P2) `[deferred]` — **DONE 2026-06-15 (decision: remove).** Removed the v13→v14 runtime
-      config-migration path — the last v13/v14 relic after QUAL-47 retired the standalone migrators. `irene/config/migration.py`
-      (637 lines: `V13ToV14Migrator`/`migrate_config`/`ConfigurationCompatibilityChecker`/`create_migration_backup`) was
-      wired into `config/manager.py:_dict_to_config`, guarded by `requires_migration(data)` so it only fired for a
-      **v13-format** config — which never occurs on v15.0.0. Deleted the module; dropped the import + the guard block in
-      `manager.py` (the normal env-resolve → `model_validate` path is unchanged); removed the import + 5 `__all__` entries
-      from `config/__init__.py`. A v13 config now fails plainly at pydantic validation instead of silently morphing —
-      correct for v15 (v13 is unsupported). No test depended on auto-migration (verified net-zero vs baseline); all shipped
-      configs (config-master/minimal/api-only) load clean; re-exports intact; 9/9 import contracts. Invariant #4 N/A.
-- [x] **QUAL-49** [INFER] (P2) `[deferred]` — **DONE 2026-06-15.** Silero TTS model-id routing fix (surfaced from the
-      ARCH-24 asset-routing analysis; relates to **ARCH-24 T5** — done early). `silero_v3`/`silero_v4` were the **only**
-      providers that bypassed the AssetManager model-id router: they placed the model at `<dir>/<config:model_file>` with a
-      **shared default** (`v3_ru.pt`/`v4_ru.pt`), so two v3 languages — v3_ru/en/de/es all share the `silero/` dir — that
-      both left `model_file` at the default resolved to the **same file** (latent collision), inconsistent with the
-      sherpa/whisper/vosk `get_model_path(provider, model_id)` convention. **Fix:** route the path via
-      `get_model_path("silero_v{3,4}", model_id)` (→ `silero/<id>.pt` / `silero_v4/<id>.pt`, distinct per model_id); derive
-      `model_url` from the selected model_id's descriptor (legacy torch.hub-fallback safety); route the download through the
-      real provider name (`download_model("silero_v4", model_id)`, not the non-existent `"silero"` fallback that silently
-      failed into the legacy path + a copy hack). Explicit `model_file` still honored as an override (back-compat). New
-      `test_silero_routing.py` (4 tests incl. the anti-collision property). **Invariant #4 N/A** (TTS provider config is
-      free-form `Dict[str,Any]`, `models.py:191` — not schema/config-ui-typed). Gates: suite 935 green, pyright 0, contracts 9/9.
-- [x] **QUAL-50** [NLU][LLM] (P2) — **LLM NLU classifier as a cascade fallback provider** (decided 2026-06-15 in the
-      ARCH-24 T4 armv7 config session). New `LLMNLUProvider(NLUProvider)`: when the deterministic providers (keyword +
-      spaCy-on-64-bit) don't recognize an utterance, ask the **LLM to classify** it into a known intent **and extract its
-      parameters** (intent taxonomy sourced from the donation/bridge catalog) — recovering fuzzy *commands* the keyword
-      matcher misses. Slots into `provider_cascade_order` **after** keyword/spaCy (last NLU resort, before the
-      `conversation.general` fallback). **Deliberately revises the QUAL-15/16 "NLU is LLM-free" stance — but only as a
-      last-resort fallback**: the deterministic path stays primary and offline still works (keyword → conversation
-      templates). Needs `[llm]` enabled with a provider (cloud = HTTP, so armv7-viable, but adds online dependency + latency
-      for fuzzy commands). Full provider integration (the PR2 lesson): `LLMNLUProviderSchema` registered +
-      `[nlu.providers.llm]` config-master block + `get_supported_architectures()`. **Gates the ARCH-24 T4 armv7 config**
-      (which wants keyword→llm NLU — providers-before-configs). When low-confidence/missing-param: hand to the conversation
-      handler's CLARIFYING multi-turn (already in place — `conversation.py` `ConversationState.CLARIFYING` + QUAL-37
-      targeted clarification; verify it elicits a **missing required parameter**, not just domain-level specificity).
-      **Design (confirmed 2026-06-15; corrected 2026-06-16):** the provider returns a **plain `Intent`**
-      {name, entities, confidence, raw_text} via `recognize_with_parameters` — **identical to keyword/spaCy, no special
-      output** (the earlier "rich structured JSON object" plan was wrong; see QUAL-52 below). It does what every NLU provider
-      does: **classify** (LLM picks one intent name from the donation taxonomy, or abstain → `None`) + **extract params**
-      (`extract_parameters`), then returns the Intent. **Catalog grounding is NOT the LLM's job** — the shared
-      `ContextualEntityResolver` (run by `ContextAwareNLUProcessor` downstream, for *every* provider) canonicalizes entities
-      against the live catalog/context. So the LLM emits **raw entity spans** ("kitchen", "lamp"), not canonical IDs — the
-      shared resolver grounds them. The classification call is a **plain text** `chat_completion` (no
-      `LLMPort.generate_structured`, no structured-output capability). **Confidence is DERIVED, written to the standard
-      `Intent.confidence`:** (i) intent ∈ donation set [hard gate], (ii) fraction of **required params that resolve** against
-      catalog/context [the real signal], (iii) an **evidence span** the LLM must quote [anti-hallucination]; LLM
-      self-report/logprobs are a weak prior only. **Commands** accept only if intent-valid + evidence + ALL required params
-      resolved (missing → CLARIFYING; unresolvable / no-evidence → abstain); **queries** accept on intent-valid + evidence.
-      **DEPENDS ON QUAL-52** (the reworked, budget-aware LLM component — *not* its structured output, which was reverted).
-      **Built 2026-06-16:** `irene/providers/nlu/llm.py` `LLMNLUProvider` — `_initialize_from_donations` builds the
-      taxonomy + `parameter_specs` from the same donations; `recognize_with_parameters` makes one deterministic
-      `LLMPort.generate_response` call, parses locally, and returns a plain `Intent` or `None`. Abstains on
-      no-LLM / offline / unparseable / intent∉donations / evidence-not-in-text; else confidence = `0.7 + 0.25 × required-coverage`
-      (a missing required param still clears the threshold → the handler's QUAL-30 `_clarify` asks — verified at
-      `handlers/base.py:285,302`). Injection mirrors the conversation handler: `set_llm_component(LLMPort)`, soft-injected by
-      `NLUComponent.post_initialize_coordination` via `core.component_manager.get_component('llm')` (no hard dep → no-LLM
-      builds still start). `LLMNLUProviderSchema` registered + `[nlu.providers.llm]` (enabled=false, opt-in) + pyproject
-      entry-point; default cascade unchanged. Arch = all (cloud HTTP is armv7-safe). Tests `test_llm_nlu.py` (13). Gates:
-      suite 995 green, pyright 0, contracts 9/9 (provider→`intents.ports` is ARCH-4-legal), config-ui type-checks (Inv #4).
-      **Unblocks ARCH-24 T4** (armv7 config can now use `keyword→llm`). Prompt wording is a first cut → **QUAL-51**.
-- [x] **QUAL-51** [NLU][LLM] (P2) — **Prompt-tightening session for QUAL-50** (DONE 2026-06-16; interactive scope agreed
-      with the user). Tightened the inline classifier system prompt: conservative "abstain when unsure" framing, an explicit
-      JSON output contract + anti-hallucination (verbatim evidence), and the taxonomy + few-shot **filtered to the utterance
-      language** (by script). Few-shot = hand-written **abstain** exemplars per language (the key last-resort lesson) +
-      **auto-sourced positives** from each intent's donation `examples`. Kept the prompt **inline** (per the user's call) —
-      it's *dynamically assembled* from donations (taxonomy + examples), so it isn't a static authored asset like the
-      `assets/prompts/*` task prompts; `docs/guides/prompting.md` updated to document this one generated exception (Inv #10).
-      Decisions: instructions **English-only** (LLMs follow them cross-lingually; taxonomy/utterance carry the language),
-      classifier keys off the **input** language (`context.language`), not the system default. Tuned the
-      `missing_parameter` clarification template (en+ru) — warmer, invites the answer. **Validation:** new live harness
-      `scripts/eval_llm_nlu.py` + bilingual fixture `scripts/eval_llm_nlu_cases.yaml` (24 cases, real 54-intent taxonomy,
-      DeepSeek via `.env`) — **24/24** after two fixture corrections (clear/fuzzy/missing-param/abstain/ambiguous all clean).
-      Offline prompt-logic tests in `test_llm_nlu.py` (now 18). Gates: suite green, pyright 0, contracts 9/9. The
-      keyword-matcher-feedback half is **not** automatable here → split out as **QUAL-53**.
-- [x] **QUAL-52** [LLM] (P2) — **LLM component rework: real token budgets + budget-aware prompting** (surfaced 2026-06-15;
-      **prerequisite for QUAL-50**; DONE 2026-06-16). Today's LLM handling used arbitrary/meaningless config knobs and was
-      **token-budget-blind**. Reworked `llm_component` + providers (deepseek/openai/anthropic) + the LLM config schema:
-      **(1) PR1 ✓** real **per-model token budgets** (`llm_capabilities` registry: context window + max output from actual
-      model capabilities, dropping the arbitrary 150). **(2) PR2 ✓** **budget-aware prompting** — `estimate_tokens`
-      (utf-8 bytes/4, dependency-free), `fit_messages` trims oldest/keeps system+final to fit the input budget;
-      `context_window` exposed in config. **(3) PR3 ✗ REVERTED (2026-06-16):** first-class structured/JSON output
-      (`generate_structured` + `response_format`) was built on a **wrong premise** — that the QUAL-50 NLU classifier returns
-      a bespoke structured object. It does not: an NLU provider returns a **plain `Intent`**, param extraction is the
-      provider's `extract_parameters` step, and catalog grounding is the **shared** `ContextualEntityResolver` downstream. So
-      the classifier needs only a plain text call — no generic JSON-dict capability on the component (commit `beb08e3`).
-      **(4) PR4 ✓** **dropped the unneeded fine-tuning** — `temperature` removed from schemas/config/providers (+ dead
-      `top_p`/`frequency_penalty`/`presence_penalty`); providers now use a fixed deterministic `0.0`. **Invariant #4:**
-      config-ui has no typed temperature field (free-form params dict) → nothing to sync, openapi unchanged. (QUAL-15/16
-      console-LLM fallback / `fallback_providers` — left as-is; not in scope here.)
 - [x] **QUAL-35** `[release]` [PEX][MQTT] — **DONE 2026-07-06 (Slice 3 closed it — evidence-first, interactive).**
       **Slice 3 record:** authored the tier-2 hard-phrasing fixtures (F90–F98 measurable + F100–F102 relative
       adjustments) and ran the two-leg measurement (baseline vs the QUAL-50 LLM tier). The scoreboard said the wins
@@ -2287,6 +1809,479 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
         **(6) Same-room capability ambiguity: v1 CLARIFIES** (user decision 2026-07-05; TEST-18 fixtures
         F20/F21 are the spec) — don't build priority config into the v1 resolver; priority rules are
         **QUAL-63** (later release).
+- [x] **QUAL-36** `[release]` [DFLOW][I18N] (P1) — **Single language source-of-truth; purge hardcoded language codes
+      (theme ④; user observation 2026-06-03). DONE 2026-06-03.** **Consolidation decision (user, mid-task):** found FOUR
+      competing declarations (`CoreConfig.language="en-US"` locale-form, `nlu.default_language`/`supported_languages`,
+      `nlu_analysis.languages.*`, `IntentAssetLoader`'s own); user chose **promote to top-level `CoreConfig.default_language`
+      + `supported_languages` (2-letter)** as the one canonical source — read at the composition root, injected inward.
+      **Delivered:** (1) canonical top-level config fields; removed the `nlu.*` duplicates; deprecated the `en-US` field;
+      config-master.toml updated. (2) `ContextManager` injected `default_language`+`supported_languages` (mirrors
+      `max_history_turns`); `engine.py` wires them; seed fixed. (3) NLU detection reads canonical + clamps; `_analyze_text_
+      language` returns `None` (no signal) → caller applies default; providers receive canonical via config injection. (4)
+      invariant established. (5) **deleted all 67 `or "ru"` fallbacks** → bare `context.language`; ripped out the timer/audio/
+      voice-synthesis `_get_language` re-detection heuristics; **fixed the `hybrid_keyword_matcher` `'en'`-vs-`'ru'` divergence
+      bug**; made handler `language="ru"` default params required (T4). (6) language-switch validation (`system.py`) now reads
+      the new **`context.supported_languages`** (seeded from canonical) — no baked `["ru","en"]`. (7) **localized the LLM
+      context-injection labels** → `assets/localization/conversation/{ru,en}.yaml` (`_context_label`, by user language).
+      **Verified:** new `test_language_source_of_truth.py` (6) proves en-primary + arbitrary-language seeding/clamp/labels/
+      no-stomp; suite at baseline parity (0 regressions). **Carve-out → QUAL-38:** processing-language defaults (number-spelling
+      utils / silero TTS / ASR / text-processor) + inline bilingual handler messages (`== 'ru'` branches) are a distinct
+      concern, filed separately. Refs: `RELEASE_JOURNAL.md` 2026-06-03, QUAL-16.
+- [x] **QUAL-37** `[deferred]` [DFLOW] (P2) — **Targeted no-intent clarification (enhancement; split from QUAL-30).
+      DONE 2026-06-03.** The online (LLM) path already consumed `_fallback_context.likely_domain` (via
+      `_build_fallback_context_prompt`, QUAL-16); the gap was the **offline** path. **Delivered:** `_handle_fallback_
+      without_llm` now reads `likely_domain` and, when it matches a known domain, emits a **deterministic, localized,
+      offline** targeted clarification ("Возможно, вы хотели поставить таймер?" / "Did you want to set a timer?") via a
+      new `fallback_targeted` template + a `fallback_domain_labels` map (domain→friendly action phrase) in
+      `assets/localization/conversation/{ru,en}.yaml`; falls through to the generic responder when there's no guess /
+      unknown domain. Metadata now carries `targeted`/`likely_domain`. **Verified:** new `test_no_intent_clarification.py`
+      (5) covers targeted ru/en, generic fall-through, unknown-domain fall-through, determinism + offline; 0 net suite
+      regressions. **Ledger fix:** removed a corrupted duplicate QUAL-37 header that had orphaned QUAL-36's old body
+      (collateral from the QUAL-36 done-edit). Refs: QUAL-30, QUAL-16, Q7.
+- [x] **QUAL-38** `[deferred]` [DFLOW][I18N] (P2) — **Processing-language threading + inline-bilingual purge (carved from
+      QUAL-36). DONE 2026-06-03.** **Key correction:** the processing language is the **audio-MODEL/deployment** language
+      (which number-spelling/transcription rules to apply), NOT the session language — spelling numbers in the session
+      language but synthesizing with a different-language voice would mismatch. So the fix is **config/model-derive**, not
+      request-threading (which would introduce that bug; the QUAL-13 "request-scoped" comment was the gap). **(a) delivered:**
+      `convert_numbers_to_words` made language-required (caller threads `request.language`); `PrepareNormalizer` gets a config
+      `language` (was falling back to inline `"ru"`); `unified.py` threads the per-normalizer deployment language to both
+      number normalizers; `silero_v3|v4` derive `self.language` from model config (default model is `*_ru.pt` → `"ru"`);
+      `asr_component` transcribe endpoint resolves to `self.default_language` not a literal. (Library `utils/text_processing.py`
+      defaults + the Pydantic request-schema `"ru"` defaults left as documented API/library defaults.) **(b) delivered:**
+      externalized the genuine inline RU/EN strings — **voice_synthesis (6)** → `voice_synthesis_handler` templates,
+      **system (3)** → `system_handler` templates, **provider_control (5)** → NEW `provider_control_handler` templates + a
+      `_get_template` method; unified **random_handler (3)** error templates (added `{error}` to the ru side, dropped the
+      `== 'ru'` branch). **Kept (legitimate, per done-criteria):** `system_service_handler` Russian pluralization grammar
+      (strings already templated), and Russian command-keyword *parsing*. **Verified:** templates load + resolve ru/en; 0 net
+      suite regressions. Done: processing language derives from model/config; handler user-facing strings externalized.
+- [x] **QUAL-39** [API] (P2) — **DONE 2026-06-04 (Option 2, user-approved).** Audited the **19** routes lacking a
+      `response_model` (104/123 already typed). **Key finding (the reason this task existed):** the **donations contract
+      pair** `GET/PUT /donations/{handler}/contract` — UI-5's primary target — were the only **UI-5-consumed** untyped
+      endpoints; reconciliation showed config-ui's other status/config/NLU reads already hit typed endpoints
+      (`/intents/status`, `/configuration/config/status`, …), **not** the untyped system ones. **Done:** typed the contract
+      pair's **envelopes** — `DonationContractResponse` / `DonationContractUpdateResponse` (`api/schemas.py`) — and `/health`
+      (`HealthResponse`). **Contract/phrasing BODY stays `Dict[str, Any]` passthrough on purpose:** both have a **canonical
+      JSON Schema** (`assets/donation_contract_v1.1.json` + `assets/donation_language_v1.1.json`, both
+      `additionalProperties: true`); a strict Pydantic body would **drift from the schema AND drop fields on the editor's
+      GET→PUT round-trip**. **Symmetry analysis (the donation_language question):** the language/phrasing side already does
+      exactly this — `LanguageDonationContentResponse` with `donation_data: Dict[str, Any]` passthrough — so typing the
+      contract envelope brings it to **parity** with the phrasing endpoints; the strong **body types** for config-ui are
+      generated from the two JSON Schemas, the **envelopes** from OpenAPI (see UI-5). **Classified (b) legitimately
+      dynamic / non-JSON — documented, not typed:** `/dashboard/html`, `/`, `/asyncapi`(+`.yaml`) (HTML/YAML),
+      `/prometheus` (text exposition), `/asyncapi.json` + `/debug/asyncapi` (generated spec/debug docs), `/components`
+      (conditional keys). **Deferred general hygiene (non-UI-5, type later if wanted):** asr `/providers`/`/reset`/
+      `/transcribe`, monitoring `/contextual-commands`(+`/performance`), nlu_analysis `/capabilities`/`/statistics`,
+      `/system/status` (config-ui doesn't consume it — Overview uses `/intents/status`). Verified: models accept the real
+      GET/PUT shapes incl. passthrough extras, suite 85=85 (0 net regression). (Found 2026-06-04.)
+- [x] **QUAL-40** `[release]` (P2) — **DONE 2026-06-07.** Generated-TOML section headers no longer dropped. **Was:**
+      `ConfigManager._generate_provider_sections` / `_generate_normalizer_sections` (`config/manager.py`) built a
+      per-iteration `section = "[base_path.<name>]"` header but **never appended it to `sections`**; the closing
+      `"\n".join([section] + sections)` kept only the **last** header (and mis-placed it at the very top), so every
+      provider/normalizer header except the last was dropped → the generated TOML collapsed all entries' keys under one
+      section. **Fix:** `sections.append(...)` the header at the start of each iteration and join plainly (dropped the
+      `[section] +` prepend + the dead `section = ""` init). **Verified round-trip:** new
+      `test_config_section_generation.py` (3) asserts every header survives and the output re-parses via `tomllib` back to
+      the original `{provider/normalizer: {...}}` nesting (the round-trip assertion fails on the old code — keys would
+      collapse under the single surviving header). Backend-only (generated-TOML *content* fix; no contract/shape change),
+      so config-ui's TOML-editor surface just receives correct TOML — no config-ui code change. Gates: pyright 0,
+      import-contracts 9/9, dep-validator 55/55, check_scope clean, suite 84=baseline (+3).
+- [x] **QUAL-41** `[release]` (P2) — **DONE 2026-06-07.** `IntentAssetLoader` validator output now matches
+      `api.schemas.ValidationError`. **Was:** `validate_template_data` / `validate_prompt_data` /
+      `validate_localization_data` (`core/intent_asset_loader.py`) emitted error/warning dicts keyed `{field, message,
+      severity}`, but `api.schemas.ValidationError` requires `{type, message}` (+ optional `path`/`line`), so
+      `ValidationError(**err)` in `intent_component.py`'s template/prompt/localization editing endpoints raised a pydantic
+      error (missing required `type`) → **HTTP 500 whenever those endpoints hit a real validation error**. **Fix (chose
+      "align validator output to schema" over a boundary mapper):** rewrote all three validators (incl.
+      `_validate_domain_specific_localization`) to emit canonical `{type, message, path}` — the **same shape the sibling
+      `validate_phrasing_data`/`validate_contract_data` already produce** (`field`→`path`; `severity` dropped, already
+      encoded by the errors-vs-warnings list; `type` carries a category: `structure`/`missing_field`/`value`/`validation`).
+      No consumer read `field`/`severity` (all 9 endpoint sites only `ValidationError(**err)`). **Invariant #4:** config-ui's
+      template/prompt editors already read `.message` (via `any` casts: TemplatesPage/PromptsPage) → render correctly now;
+      `npm run check` + `build` stay clean (no config-ui change needed). **Regression test:** `test_asset_validation_schema.py`
+      (3) constructs the schema models from each validator's failing-input output — the exact path that used to 500. Gates:
+      pyright 0, import-contracts 9/9, dep-validator 55/55, check_scope clean, suite 84=baseline (+3). **Also fixed
+      (user-directed, same change):** `DonationsPage.tsx:859` read `err.msg` on the **phrasing** validation response while
+      `validate_phrasing_data` emits `message` (canonical) — a pre-existing latent display bug on the UI-5/QUAL-29 surface
+      (the adjacent warnings map already read `.message`); `err.msg`→`err.message`, config-ui check + build green.
+- [x] **QUAL-42** `[release]` [DVALIDATE] (P1) — **Donation contract↔code validator + LLM translation services.
+      DONE 2026-06-06 (user-directed: "do this validator right away").** Closed the real gap the donation-validation
+      investigation found: nothing reconciled a **contract** against the **handler code** it drives (only contract→method
+      existence; never params, never reverse coverage). **Delivered (backend):**
+      **(1)** `core/contract_validator.py` — `ContractWiringValidator` introspects each handler class + AST-scans the
+      module for parameter reads (`get_param`/`get_typed_param`/`intent.entities`). **Severity split (deliberate, to
+      avoid false-positive boot failures):** an **unwired contract method (no callable on the class) is FATAL** — raises
+      `DonationDiscoveryError`; **soft warnings** = a declared parameter never read (legitimately context-sourced, e.g.
+      `language`), or a `_handle_*` method no contract declares (reverse coverage). A `strict_parameters` flag promotes
+      param warnings to fatal (ratchet). **(2) Startup integration** — `IntentAssetLoader.load_all_assets` runs the
+      validator over all loaded donations, **fail-fast on unwired methods**, and caches the report. Verified: the 14
+      shipped handlers validate **0 fatal / 13 useful warnings** (boot stays green). **(3) Endpoints (intent_component,
+      via injected `LLMPort`):** `GET /donations/validation` (the startup wiring report → UI); `POST
+      /donations/{h}/validate-translation` (**LLM** meaning/consistency QA — deepseek default, else any supported
+      provider with a key; **no LLM → `llm_available:false` + "validate manually" message**); `POST /donations/{h}/translate`
+      (**LLM** translation *service*, content-aware replacement for the dead phrase-count `suggest-translations`; same
+      graceful no-LLM path). **(4)** 8 schemas in `api/schemas.py`; design doc `donation_editor_ux.md` §9 updated for the
+      UI. **Tests:** `test_contract_validator.py` (7, incl. an all-real-handlers 0-fatal guard). Gates: pyright 0,
+      import-contracts 9/9, dep-validator 55/55, suite 84=baseline (+7 passing). _Decision logged:_ LLM translation
+      validation is **on-demand (endpoint), not per-boot** — avoids per-startup token cost/fragility; structural wiring
+      validation is the always-on startup part. Refs: `parameter_extraction_review.md`, donation-validation investigation.
+- [x] **QUAL-43** [DVALIDATE] (P2) — **DONE 2026-06-06.** Removed the donation v1.0 dead validation code and
+      **repointed the build analyzer at the v1.1 schemas** (user-directed mid-task). **Removed:** the dead v1.0
+      schema-validation chain in `IntentAssetLoader` (`load_donation_on_demand` / `_load_and_validate_donation` /
+      `_validate_json_schema` / `validate_donation_data` — 0 callers; the *v1.1* `_validate_donation_schema` stays);
+      `irene/tools/intent_validator.py` + its `irene-intent-validate` script + `assets/v1.0.json`; the orphaned
+      `CrossLanguageValidator.sync_parameters_across_languages` (+ its dead confidence/lang-detect helpers and the
+      `TranslationSuggestions` dataclass); the rule-based `suggest_translations` method + the
+      `POST /donations/{h}/suggest-translations` endpoint; the dead schemas `SyncParameters{Request,Response}`,
+      `SuggestTranslations{Request,Response}`, `TranslationSuggestionsSchema`, `MissingPhraseInfo`. **Build analyzer
+      rewritten:** `_validate_intent_json_files` now validates each enabled handler's `assets/donations/<h>/contract.json`
+      (against `donation_contract_v1.1.json`) + its `<lang>.json` phrasing (against `donation_language_v1.1.json`) via
+      `jsonschema` — the old path pointed at the non-existent v1.0 monolithic `<h>.json`, so it would have emitted false
+      "file not found" build errors. Verified the real handlers validate clean + a missing contract is flagged.
+      **Regenerated** the committed `openapi.json` (109→108 paths; suggest-translations gone) + the frontend types.
+      Gates: pyright 0, import-contracts 9/9, dep-validator 55/55, backend suite 84=baseline, `cd config-ui && npm run
+      check && npm run build` pass. _Original scope:_
+      **Remove donation v1.0 dead validation code (split from UI-5 scope decision, 2026-06-06).**
+      The v1.1 split (QUAL-29) + the new wiring validator (QUAL-42) left v1.0-era validation as dead weight: **(1)**
+      `IntentAssetLoader._validate_json_schema()` validating against `assets/v1.0.json` (reachable only via the legacy
+      `_load_and_validate_donation` / unused `validate_donation_data` paths); **(2)** `irene/tools/intent_validator.py`
+      (standalone CLI validating v1.0.json, not wired into the loader/API); **(3)** `assets/v1.0.json` itself; **(4)** the
+      orphaned `CrossLanguageValidator.sync_parameters_across_languages()` no-op + its now-unused
+      `POST /donations/{h}/sync-parameters`-era plumbing; **(5)** the rule-based `suggest_translations()` + its
+      `POST /donations/{h}/suggest-translations` endpoint, **once UI-5 stops calling it** (superseded by QUAL-42's LLM
+      `translate`). **Sequencing:** do AFTER UI-5 lands (so removing the suggest-translations endpoint doesn't break the
+      old UI mid-flight). Verify no remaining importers; gates: pyright 0, import-contracts 9/9, dep-validator 55/55,
+      suite ≤baseline. Found during the donation-validation investigation + UI-5 scoping.
+- [x] **QUAL-44** `[release]` — **DONE 2026-07-05** _(un-deferred same day, user — the TEST-18 device suite
+      made the defect reproducible: an armed clarification consumed the next same-room command as its
+      answer, poisoning F51–F53 in cascade)_. **Implemented exactly as scoped:** the resume pre-check
+      (`voice_assistant.py`) now runs NLU on the BARE new utterance first; a confident (≥ the NLU
+      component's threshold), non-fallback recognition is a fresh command — the pending clarification is
+      dropped (logged) and the utterance processes clean; anything else (bare fragment / low-confidence /
+      fallback) combines as before. Trade-off settled per the entry's own lean: one extra NLU pass on
+      clarifying turns only; abandonment is silent (no spoken acknowledgment — the fresh command's own
+      reply is the acknowledgment). Regression tests: new-command abandons, low-confidence still combines,
+      bare-answer path stays green (the fakes became text-aware — an everything-recognizes-at-0.9 fake
+      would have defeated the arbitration silently). Live proof: F52 flipped green; F42 stopped producing
+      combine-garbage. [DFLOW] (P2, enhancement; split from QUAL-31) — _Orig:_ **Answer-vs-new-command arbitration on a
+      clarifying turn.** QUAL-31's resume pre-check (`workflows/voice_assistant.py` `_process_pipeline`, the
+      `take_pending_clarification` branch) **unconditionally** treats the turn that follows a clarification as the answer:
+      it prepends the original utterance and re-runs NLU on the combined text. That is the intended flow ("answer with
+      just the missing value"), but if the user instead **abandons the clarification and barks a new command** ("какая
+      погода?" after being asked a timer duration), the combine yields a garbled utterance ("поставь таймер какая
+      погода?") that can misroute or no-op. Today this is bounded only by one-shot consumption (the bad turn clears the
+      marker) + idle-window expiry — acceptable for the P2 feature, but not robust. **Scope:** add deterministic
+      arbitration before combining — e.g. run NLU on the **bare answer first**; if it independently recognizes as a
+      **confident, non-fallback** intent (a real, different command), drop the pending clarification and process the
+      answer **fresh**; otherwise (bare fragment / low-confidence / fallback) treat it as the slot answer and combine as
+      today. **Trade-off to settle:** an extra NLU pass on clarifying turns only (cheap, rare) vs. a lighter
+      confidence/phrase heuristic; also decide whether a brand-new command should *cancel* the pending intent silently or
+      acknowledge the abandonment. Pairs with QUAL-31 (this is its known limitation) and the F&F `contextual` resolution
+      (same "is this turn about the prior context or a fresh request?" question). Done when a new-command answer routes
+      to the new command (not the garbled combine) with a regression test, and the legitimate slot-answer path stays
+      green. Refs: QUAL-31, QUAL-30, Q7.
+- [x] **QUAL-45** [WS][ESP32] (P2) `[deferred]` — **DONE (design) 2026-06-14 — SUBSUMED BY ARCH-22.** The ESP32
+      audio-streaming protocol (end-of-utterance + on-device VAD/wake contract) is now fully specified in
+      **`docs/design/esp32_satellite.md`** — wire protocol §4 (`{"type":"end"}` device hint + server-authoritative ASR
+      endpointing, D-5/D-6), the on-device microWakeWord+microVAD contract (D-9/D-10), and the single-mic/no-server-VAD
+      split (D-11). The *firmware* implementation of the end-of-utterance signaling rides the **tracked firmware rewrite**
+      (esp32_satellite.md §14), not this task. _Original below._ **ESP32 audio-streaming protocol: end-of-utterance signal
+      + on-device VAD/wake contract.** Filed from the ARCH-18 endpoint reconciliation (2026-06-10). The **server already** consumes a
+      `{"type":"end"}` control frame on `/ws/audio` to bound an utterance (one session = one utterance = one ASR;
+      `webapi_router.py:824-835`) and ARCH-18 makes that path skip server VAD+wake (they run on-device). **Device-side TODO
+      (ESP32 review):** define + implement the firmware's end-of-utterance signaling (emit `{"type":"end"}` at on-device
+      VAD silence; **default = end of WS session** if a firmware doesn't send it), plus the on-device VAD/wake contract the
+      server now assumes. Doc: `docs/review/esp32_wakeword_review.md` + `docs/design/ws_esp32_transport.md`.
+- [x] **QUAL-46** [IO] (P2) `[deferred]` — **DONE 2026-06-15.** Generalize the vosk runner into a config-driven
+      **voice runner** (follows ARCH-15's "runners-as-presets — config, not code"). The old `VoskRunner` was a full
+      end-to-end mic pipeline (mic → VAD → [wake] → ASR → NLU → intent → TTS) but **artificially gated to vosk** by
+      two checks — an `import vosk` dependency probe and a validation rule forcing `asr.default_provider == "vosk"` —
+      while the actual processing path was already provider-agnostic (delegates to the ASR component). **Removed both
+      gates:** the runner now requires only `sounddevice` (its real dep — mic capture) and validates *any* configured
+      + enabled ASR provider (vosk/whisper/sherpa_onnx/google_cloud); ASR-provider deps are the component system's
+      concern (`irene-dependency-validate`). **Renamed** `vosk_runner.py`→`voice_runner.py`, `VoskRunner`→`VoiceRunner`,
+      `run_vosk`→`run_voice`, entry points `irene-vosk`→`irene-voice` + the `irene.runners` discovery entry + the
+      `runners/__init__` exports (clean rename, no alias — pre-release). **Fixed the latent VAD inconsistency:** the mic
+      pipeline structurally requires VAD (the workflow raises if it's off) yet the runner forced asr/audio/nlu/etc but
+      not vad — now it forces `vad.enabled=True` too, so a VAD-off config fails clearly in the runner, not deep in
+      workflow init. (`voice_trigger` stays config-driven — the runner auto-skips the wake word when it's absent.)
+      Docs: new "Voice (microphone)" section in `QUICKSTART.md` (config-driven ASR, both invocation forms, `--trace`).
+      New `test_voice_runner.py` (8 tests: provider-agnostic validation + the force-rules incl. VAD). 9/9 import
+      contracts; runner/vad suites net-zero (4 pre-existing TEST-2 failures). Invariant #4 N/A (no config schema/endpoint
+      change — purely a runner gate + rename). _Note: the v13-era `tools/migrate_runners.py` still maps the old name as
+      a v13→v14 migration target; left untouched (obsolete, like `config_migrator` — flagged separately → QUAL-47)._
+- [x] **QUAL-47** [WS] (P2) `[deferred]` — **DONE 2026-06-15.** Retire the obsolete one-time migration tools (the
+      QUAL-46 follow-up). On v15.0.0, both target long-past versions and neither is imported by runtime code:
+      **`irene/tools/config_migrator.py`** (v13→v14 config migration; entry point `irene-config-migrate`) and
+      **`tools/migrate_runners.py`** (legacy `runva_*.py`→v13 runners — already broken by the QUAL-46 rename, since it
+      referenced `vosk_runner`/`VoskRunner`/`run_vosk`). Deleted both + removed the `irene-config-migrate`
+      `[project.scripts]` entry. No tests/code referenced them (only two `docs/archive/*` historical mentions, left as
+      record). Package re-syncs clean; 9/9 import contracts. **Sweep extended 2026-06-15** — retired two more
+      standalone (un-imported, non-entry-point) migrators verified spent/obsolete: **`tools/migrate_to_universal_plugins.py`**
+      (old plugin→provider config migration; only refs were two `docs/archive/*` guides) and
+      **`scripts/migrate_donations_v11.py`** (QUAL-29 donation v1.0→v1.1 — **QUAL-29 is `[x]` and the assets are already
+      v1.1**: 13 `contract.json` + per-lang files, so the one-time migration is applied/spent). Surfaced a related
+      finding kept OUT of scope → **QUAL-48**: `irene/config/migration.py` is *live* v13→v14 runtime auto-migration.
+      **Also retired 2026-06-15** the dead one-off VAD debug script **`tools/test_vad_sibilant_fix.py`** (already broken —
+      it imported `UniversalAudioProcessor`, renamed to `VoiceSegmenter` in ARCH-18, so it `ImportError`ed; not an entry
+      point, not imported) + its orphaned companion **`configs/vad-sibilant-fix.toml`** (referenced only by that script).
+      The sibilant fix itself is long shipped (`docs/archive/VAD_SIBILANT_FIX.md`, left as record).
+- [x] **QUAL-48** [DFLOW] (P2) `[deferred]` — **DONE 2026-06-15 (decision: remove).** Removed the v13→v14 runtime
+      config-migration path — the last v13/v14 relic after QUAL-47 retired the standalone migrators. `irene/config/migration.py`
+      (637 lines: `V13ToV14Migrator`/`migrate_config`/`ConfigurationCompatibilityChecker`/`create_migration_backup`) was
+      wired into `config/manager.py:_dict_to_config`, guarded by `requires_migration(data)` so it only fired for a
+      **v13-format** config — which never occurs on v15.0.0. Deleted the module; dropped the import + the guard block in
+      `manager.py` (the normal env-resolve → `model_validate` path is unchanged); removed the import + 5 `__all__` entries
+      from `config/__init__.py`. A v13 config now fails plainly at pydantic validation instead of silently morphing —
+      correct for v15 (v13 is unsupported). No test depended on auto-migration (verified net-zero vs baseline); all shipped
+      configs (config-master/minimal/api-only) load clean; re-exports intact; 9/9 import contracts. Invariant #4 N/A.
+- [x] **QUAL-49** [INFER] (P2) `[deferred]` — **DONE 2026-06-15.** Silero TTS model-id routing fix (surfaced from the
+      ARCH-24 asset-routing analysis; relates to **ARCH-24 T5** — done early). `silero_v3`/`silero_v4` were the **only**
+      providers that bypassed the AssetManager model-id router: they placed the model at `<dir>/<config:model_file>` with a
+      **shared default** (`v3_ru.pt`/`v4_ru.pt`), so two v3 languages — v3_ru/en/de/es all share the `silero/` dir — that
+      both left `model_file` at the default resolved to the **same file** (latent collision), inconsistent with the
+      sherpa/whisper/vosk `get_model_path(provider, model_id)` convention. **Fix:** route the path via
+      `get_model_path("silero_v{3,4}", model_id)` (→ `silero/<id>.pt` / `silero_v4/<id>.pt`, distinct per model_id); derive
+      `model_url` from the selected model_id's descriptor (legacy torch.hub-fallback safety); route the download through the
+      real provider name (`download_model("silero_v4", model_id)`, not the non-existent `"silero"` fallback that silently
+      failed into the legacy path + a copy hack). Explicit `model_file` still honored as an override (back-compat). New
+      `test_silero_routing.py` (4 tests incl. the anti-collision property). **Invariant #4 N/A** (TTS provider config is
+      free-form `Dict[str,Any]`, `models.py:191` — not schema/config-ui-typed). Gates: suite 935 green, pyright 0, contracts 9/9.
+- [x] **QUAL-50** [NLU][LLM] (P2) — **LLM NLU classifier as a cascade fallback provider** (decided 2026-06-15 in the
+      ARCH-24 T4 armv7 config session). New `LLMNLUProvider(NLUProvider)`: when the deterministic providers (keyword +
+      spaCy-on-64-bit) don't recognize an utterance, ask the **LLM to classify** it into a known intent **and extract its
+      parameters** (intent taxonomy sourced from the donation/bridge catalog) — recovering fuzzy *commands* the keyword
+      matcher misses. Slots into `provider_cascade_order` **after** keyword/spaCy (last NLU resort, before the
+      `conversation.general` fallback). **Deliberately revises the QUAL-15/16 "NLU is LLM-free" stance — but only as a
+      last-resort fallback**: the deterministic path stays primary and offline still works (keyword → conversation
+      templates). Needs `[llm]` enabled with a provider (cloud = HTTP, so armv7-viable, but adds online dependency + latency
+      for fuzzy commands). Full provider integration (the PR2 lesson): `LLMNLUProviderSchema` registered +
+      `[nlu.providers.llm]` config-master block + `get_supported_architectures()`. **Gates the ARCH-24 T4 armv7 config**
+      (which wants keyword→llm NLU — providers-before-configs). When low-confidence/missing-param: hand to the conversation
+      handler's CLARIFYING multi-turn (already in place — `conversation.py` `ConversationState.CLARIFYING` + QUAL-37
+      targeted clarification; verify it elicits a **missing required parameter**, not just domain-level specificity).
+      **Design (confirmed 2026-06-15; corrected 2026-06-16):** the provider returns a **plain `Intent`**
+      {name, entities, confidence, raw_text} via `recognize_with_parameters` — **identical to keyword/spaCy, no special
+      output** (the earlier "rich structured JSON object" plan was wrong; see QUAL-52 below). It does what every NLU provider
+      does: **classify** (LLM picks one intent name from the donation taxonomy, or abstain → `None`) + **extract params**
+      (`extract_parameters`), then returns the Intent. **Catalog grounding is NOT the LLM's job** — the shared
+      `ContextualEntityResolver` (run by `ContextAwareNLUProcessor` downstream, for *every* provider) canonicalizes entities
+      against the live catalog/context. So the LLM emits **raw entity spans** ("kitchen", "lamp"), not canonical IDs — the
+      shared resolver grounds them. The classification call is a **plain text** `chat_completion` (no
+      `LLMPort.generate_structured`, no structured-output capability). **Confidence is DERIVED, written to the standard
+      `Intent.confidence`:** (i) intent ∈ donation set [hard gate], (ii) fraction of **required params that resolve** against
+      catalog/context [the real signal], (iii) an **evidence span** the LLM must quote [anti-hallucination]; LLM
+      self-report/logprobs are a weak prior only. **Commands** accept only if intent-valid + evidence + ALL required params
+      resolved (missing → CLARIFYING; unresolvable / no-evidence → abstain); **queries** accept on intent-valid + evidence.
+      **DEPENDS ON QUAL-52** (the reworked, budget-aware LLM component — *not* its structured output, which was reverted).
+      **Built 2026-06-16:** `irene/providers/nlu/llm.py` `LLMNLUProvider` — `_initialize_from_donations` builds the
+      taxonomy + `parameter_specs` from the same donations; `recognize_with_parameters` makes one deterministic
+      `LLMPort.generate_response` call, parses locally, and returns a plain `Intent` or `None`. Abstains on
+      no-LLM / offline / unparseable / intent∉donations / evidence-not-in-text; else confidence = `0.7 + 0.25 × required-coverage`
+      (a missing required param still clears the threshold → the handler's QUAL-30 `_clarify` asks — verified at
+      `handlers/base.py:285,302`). Injection mirrors the conversation handler: `set_llm_component(LLMPort)`, soft-injected by
+      `NLUComponent.post_initialize_coordination` via `core.component_manager.get_component('llm')` (no hard dep → no-LLM
+      builds still start). `LLMNLUProviderSchema` registered + `[nlu.providers.llm]` (enabled=false, opt-in) + pyproject
+      entry-point; default cascade unchanged. Arch = all (cloud HTTP is armv7-safe). Tests `test_llm_nlu.py` (13). Gates:
+      suite 995 green, pyright 0, contracts 9/9 (provider→`intents.ports` is ARCH-4-legal), config-ui type-checks (Inv #4).
+      **Unblocks ARCH-24 T4** (armv7 config can now use `keyword→llm`). Prompt wording is a first cut → **QUAL-51**.
+- [x] **QUAL-51** [NLU][LLM] (P2) — **Prompt-tightening session for QUAL-50** (DONE 2026-06-16; interactive scope agreed
+      with the user). Tightened the inline classifier system prompt: conservative "abstain when unsure" framing, an explicit
+      JSON output contract + anti-hallucination (verbatim evidence), and the taxonomy + few-shot **filtered to the utterance
+      language** (by script). Few-shot = hand-written **abstain** exemplars per language (the key last-resort lesson) +
+      **auto-sourced positives** from each intent's donation `examples`. Kept the prompt **inline** (per the user's call) —
+      it's *dynamically assembled* from donations (taxonomy + examples), so it isn't a static authored asset like the
+      `assets/prompts/*` task prompts; `docs/guides/prompting.md` updated to document this one generated exception (Inv #10).
+      Decisions: instructions **English-only** (LLMs follow them cross-lingually; taxonomy/utterance carry the language),
+      classifier keys off the **input** language (`context.language`), not the system default. Tuned the
+      `missing_parameter` clarification template (en+ru) — warmer, invites the answer. **Validation:** new live harness
+      `scripts/eval_llm_nlu.py` + bilingual fixture `scripts/eval_llm_nlu_cases.yaml` (24 cases, real 54-intent taxonomy,
+      DeepSeek via `.env`) — **24/24** after two fixture corrections (clear/fuzzy/missing-param/abstain/ambiguous all clean).
+      Offline prompt-logic tests in `test_llm_nlu.py` (now 18). Gates: suite green, pyright 0, contracts 9/9. The
+      keyword-matcher-feedback half is **not** automatable here → split out as **QUAL-53**.
+- [x] **QUAL-52** [LLM] (P2) — **LLM component rework: real token budgets + budget-aware prompting** (surfaced 2026-06-15;
+      **prerequisite for QUAL-50**; DONE 2026-06-16). Today's LLM handling used arbitrary/meaningless config knobs and was
+      **token-budget-blind**. Reworked `llm_component` + providers (deepseek/openai/anthropic) + the LLM config schema:
+      **(1) PR1 ✓** real **per-model token budgets** (`llm_capabilities` registry: context window + max output from actual
+      model capabilities, dropping the arbitrary 150). **(2) PR2 ✓** **budget-aware prompting** — `estimate_tokens`
+      (utf-8 bytes/4, dependency-free), `fit_messages` trims oldest/keeps system+final to fit the input budget;
+      `context_window` exposed in config. **(3) PR3 ✗ REVERTED (2026-06-16):** first-class structured/JSON output
+      (`generate_structured` + `response_format`) was built on a **wrong premise** — that the QUAL-50 NLU classifier returns
+      a bespoke structured object. It does not: an NLU provider returns a **plain `Intent`**, param extraction is the
+      provider's `extract_parameters` step, and catalog grounding is the **shared** `ContextualEntityResolver` downstream. So
+      the classifier needs only a plain text call — no generic JSON-dict capability on the component (commit `beb08e3`).
+      **(4) PR4 ✓** **dropped the unneeded fine-tuning** — `temperature` removed from schemas/config/providers (+ dead
+      `top_p`/`frequency_penalty`/`presence_penalty`); providers now use a fixed deterministic `0.0`. **Invariant #4:**
+      config-ui has no typed temperature field (free-form params dict) → nothing to sync, openapi unchanged. (QUAL-15/16
+      console-LLM fallback / `fallback_providers` — left as-is; not in scope here.)
+- [x] **QUAL-54** [APICONTRACT] (P2) `[release]` — **DONE 2026-06-27.** Targeted fix of the live-bug subset from
+      `docs/review/api_result_contract_review.md` (F2 WS half + F5): the `/ws/audio` response now surfaces intent under
+      `intent_name` (remapped from the orchestrator's `original_intent`, keeping the raw metadata) at both send sites
+      (`webapi_router.py` streaming + batch), and the two `workflow_manager.py` pipeline-event emitters (`:482`,`:637`)
+      now read `original_intent` instead of the never-populated `intent_name` (the field was always `None` in prod).
+      Root masking cause fixed too: `test_pipeline_events.py`'s fake returned `metadata={"intent_name":…}` (wrong key) —
+      now mirrors the real `original_intent` contract, so it's a faithful regression test. Unblocks the `eval/` WS
+      intent case (provider reads `metadata.intent_name`). Gates: full suite 1066 passed / 9 skipped, pyright 0,
+      import-linter 9/9. `config-ui-stays-functional` N/A (additive WS metadata + internal logging; config-ui doesn't
+      consume `/ws/audio`). Full 5-way unification → QUAL-55.
+- [x] **QUAL-55** [APICONTRACT] (P2) `[release]` — **DONE 2026-07-04. One canonical `IntentResult → API`
+      serializer across the five execution surfaces** (retires F1/F3/F4 + the rest of F2,
+      `docs/review/api_result_contract_review.md`). New `irene/api/serializers.py` →
+      `serialize_intent_result(result, extra_metadata=None)`: canonical keys `text` (F1 — `/execute/*` renamed
+      from `response`), `success`/`error`, `confidence` top-level (F4), `intent_name` lifted from the
+      orchestrator's `original_intent` (F2), `timestamp`, raw `metadata` with endpoint extras merged IN, never
+      replacing (F3). All five surfaces route through it: REST `/execute/command|audio` (`CommandResponse`
+      reshaped: `text`/`confidence`/`intent_name` fields; the invented "executed successfully" fallback prose
+      dropped — fail-loud ①), `/trace/command|audio` `final_result`, both WS `/ws/audio` response frames
+      (supersedes QUAL-54's metadata-injection). Co-changes: **config-ui** `openapi.json` re-dumped +
+      `openapi.gen.ts` regenerated, `npm run check` + `build` green (no runtime component consumed the old
+      field); **eval-commons** `ws_audio_provider` reads top-level `intent_name` with metadata fallback (spans
+      SUT versions). WS test fakes replaced with the real `IntentResult` (a wrong-shaped fake is how F5 hid a
+      live None — same lesson). Tests: `test_api_result_serializer.py` (7); smoke e2e asserts the canonical
+      keys against a live server. Suite 1180 green; 10 import contracts kept.
+- [x] **QUAL-56** [QUAL][REVIEW][ARCH] (P3) `[deferred]` — **DONE 2026-07-02.** F&F design critiqued through the
+      durable-execution lens + (user-requested) comparative analysis of `wb-mqtt-bridge` device-state persistence.
+      Deliverable: `docs/review/faf_durable_execution_review.md`. Verdict: **zero on every durability axis by
+      explicit design** — in-memory store ("NEVER persisted"), restart = silent total loss (a 24h timer vanishes;
+      "list timers" denies it existed), no scheduler durability (`AsyncTimerManager` = dead capability), no
+      idempotency (+ live-record overwrite on name collision), delivery at-most-once with 5 silent-drop points
+      (failure notifications suppressed by default), retry machinery dead config, no recovery, aggregate-only
+      amnesiac observability. Bridge comparison: right persistence shape to borrow (generic key→JSON SQLite behind a
+      port, chokepoint dirty-write, ephemeral filter, reconcile-by-diff restore, shutdown-artifact protection) + two
+      cautionary failure modes (persist-without-restore rot; stale `active_scenario` resurrecting on restart — filed
+      to the bridge as **VWB-18**, uncommitted). User scope statements recorded: future handlers will require
+      durability → platform substrate; "a fix + rules for new handlers would be required". Follow-ups filed:
+      **ARCH-27** (substrate design + handler rules), **BUG-19** (store/status correctness), **QUAL-61** (dead
+      capability removal, gated on ARCH-27's keep-or-cut).
+- [x] **QUAL-57** [QUAL][REVIEW][ARCH] (P2) `[release]` — **DONE 2026-07-02.** **General architecture review +
+      memory-overconsumption analysis** (user-requested). Deliverable: `docs/review/arch_memory_review_2026-07-02.md`.
+      Method: 3 parallel deep-reads (architecture map / multi-turn memory audit / F&F QUAL-8 re-verification +
+      `create_task` census); the 3 headline memory findings spot-verified directly. **Verdicts:** architecture =
+      top-quartile for its class (enforced hexagonal layering — zero live violations, entry-point provider model,
+      donation-driven NLU cascade, true streaming-ASR seam) but not SOTA at the interaction layer (no barge-in,
+      whole-utterance TTS, no per-client concurrency isolation, weak session continuity — A1–A4 recorded for user
+      decision, not filed). **F&F path now clean:** all 10 QUAL-8 findings resolved by the QUAL-28 store redesign
+      (re-verified). **Live memory risk moved to the request path:** metrics session leak growing on every REST
+      call/WS connection (→ BUG-16), uncapped `/ws/audio` batch PCM accumulator ≈115 MB/h per bad client (→ BUG-17),
+      untrimmed LLM conversation store with dead `max_context_length` config (→ BUG-18); small-item sweep → QUAL-58;
+      capability drift + dead code → QUAL-59. A5 (no action durability) confirms QUAL-56's premise — that task stands.
+- [x] **QUAL-58** [MEM][QUAL] (P3) `[deferred]` — **DONE 2026-07-02.** Memory-hygiene sweep (QUAL-57 M4–M8), all five
+      items: **(M4)** `AudioTranscoder._resampling_cache` now bounded by BYTES too — 4 MB total budget + 1 MB
+      per-entry bypass (full TTS replies / long utterances are never cached; they were the tens-of-MB retention),
+      FIFO eviction on either bound, `cache_bytes` in stats; **(M5)** `ClientRegistry.prune_stale_history(3600s)` —
+      per-identity completed-action history keys (`_recent_actions`/`_failed_actions`/`_action_error_count`) are
+      dropped once their newest entry is an hour stale (keysets grew monotonically with session-derived ids);
+      **(M6)** the ContextManager cleanup loop (every `cleanup_interval`) now drives `reap_dead_actions()` (the
+      advertised layer-3 sweep finally has a runtime caller — docstring corrected) + the M5 prune;
+      `cleanup_expired_clients` deliberately stays manual — nothing refreshes `last_seen` on a live WS connection,
+      so auto-expiry would unregister a live-but-quiet satellite (documented in its docstring); **(M7)**
+      `NotificationService` queue bounded (maxsize 1000, `put_nowait` + drop-with-warning on overflow — never blocks
+      the F&F completion path) and `send_notification` lazily starts the processing loop, killing the consumer-less
+      getter-minted-instance path; the six provider `warm_up` preloads hold their task refs
+      (`self._warmup_task` — were GC-cancellable mid-model-load); **(M8)** trace dir rotated to the newest
+      `MAX_TRACE_FILES = 500` on every save (each file embeds full base64 audio; constant not config — same
+      safety-net reasoning as BUG-17). Regression: `test_memory_hygiene.py` (7 tests across M4/M5/M7/M8);
+      cache-stats shape test extended. Full suite 1139 passed / 7 skipped; pyright clean on all 11 touched files.
+      Evidence: `docs/review/arch_memory_review_2026-07-02.md` §M4–M8.
+- [x] **QUAL-59** [API][QUAL] (P3) `[deferred]` — **DONE 2026-07-02.** Capability drift + dead code (QUAL-57 A6/A7);
+      user directive: dead code **removed**, not repaired. **(A6)** `/system/capabilities` now derives
+      `nlu/voice_trigger/text_processing` provider lists from the loaded components' `providers` dicts and
+      `workflows` from `workflow_manager.workflows` (the hardcoded lists advertised the long-gone
+      `continuous_listening` workflow and missed the `llm` NLU provider); regression
+      `test_capabilities_endpoint.py`. **(A7) deleted outright:** the domain-keyed dead Phase-3.5 action-management
+      interface in `handlers/base.py` (`cancel_action`, `get_active_actions`, `get_action_status`,
+      `list_all_actions`, `cancel_all_actions`, `inspect_action`, `get_action_management_capabilities` — would
+      mis-cancel/double-record if ever wired; −300 LOC) plus the handler-side action-debugger wiring
+      (`set_action_debugger`, attr, import; monitoring keeps its own debugger endpoints); the two `/intents/actions/*`
+      REST stubs ("Full implementation requires session context") + their 3 orphaned schema classes; the zero-caller
+      ContextManager introspection machinery (`get_context_for_intent_processing`, `get_recent_intent_patterns`,
+      `get_dominant_domain`, `get_session_statistics`, `cleanup_session` — which also bypassed the BUG-16 metrics
+      seam — `get_active_session_count`); the 2 tests that only exercised deleted methods. **Fixed (live code):**
+      cwd-dependent paths in `nlu_component` now package-relative (handler dir from `handlers_pkg.__file__`, assets
+      root from module parents). Stale `metrics.py` key comment was already fixed in BUG-16. **Contract artifacts
+      regenerated** (endpoints removed → `scripts/dump_openapi.py` + config-ui `npm run gen:api-types`; apiClient
+      never used the stubs). Gates: 1138 passed / 7 skipped; pyright clean on all 7 touched files; import-linter
+      9/9 kept; config-ui `check` + `build` pass. Evidence: `docs/review/arch_memory_review_2026-07-02.md` §A6/A7.
+- [x] **QUAL-61** [QUAL][FAF] (P3) `[deferred]` — **DONE 2026-07-02.** Dead-capability removal, all three cuts per
+      ARCH-27 D-7 (user preference: dead code removed). **(1)** Retry machinery: `_execute_with_retry` +
+      `_is_transient_failure` deleted (−98 LOC), `max_retries`/`retry_delay` launch params removed from both F&F
+      launch methods, retry metadata keys dropped from the action record; **(2)** `AsyncTimerManager`: `core/timers.py`
+      deleted + all wiring (engine ctor/attr/start/stop, composition root, `core/__init__` export, the
+      `service_mapping['timer_manager']` entry) — the durable store + reconciler IS the scheduler (ARCH-28);
+      **(3)** dead inspection path: `inspect_active_action` + `InspectionLevel`/`ActionInspectionResult`/
+      `TestActionConfig` + vestigial history/test-action state removed from `debug_tools.py` (67 lines remain:
+      `get_debugging_status` for the live `/debug` endpoint), `monitoring_component.get_action_debugger()` accessor
+      removed; `NotificationMessage.retry_count`/`max_retries` fields removed (written, never read). Gates: 1156
+      passed / 7 skipped; pyright clean (8 files); lint-imports 10/10.
+- [x] **QUAL-62** [ARCH][QUAL] (P2) `[release]` — **DONE 2026-07-02 (filed + completed same day, user-requested
+      ARCH-28 follow-up).** The new `DurableActionStorePort` seam is now reflected in the hexagon gate: 10th
+      import-linter contract **"Durable-action store is reached only through its seam (ARCH-28)"** — no
+      application/delivery/adapter layer (`components/workflows/providers/web_api/runners/inputs/outputs`) may
+      import `irene.core.durable_actions`; the three sanctioned gateways (`intents.handlers.base` choke point,
+      `core.engine` reconciler, `core.notifications` redelivery) are `ignore_imports` edges so chains THROUGH the
+      seam pass while new direct imports fail. The contract proved itself during introduction: it flagged the
+      transitive `webapi_router → notifications → durable_actions` chain until the gateway edges were sanctioned.
+      Design doc D-2 annotated. Gates: lint-imports 10/10 kept; `test_import_contracts.py` green.
+- [x] **QUAL-64** `[deferred]` [NLU] (P2) — **DONE 2026-07-05 (interactive). Keyword-matcher scoring tune** (filed from the first TEST-18
+      device-suite run, 2026-07-05 — the matcher was NEVER tuned; user decision: leave the affected fixtures
+      red and tune deliberately). **Evidence:** short verb phrases beat longer specific ones — «включи кино с
+      видеокассеты» → `smart_home.power_on` 0.70 (should be `scenario_start`, phrase «включи кино»); «выключи
+      кино» → `power_off` 0.72 despite `scenario_stop` carrying that EXACT phrase with boost 1.3 (boost does
+      not overcome the short-phrase preference); both then dip under the 0.7 confidence threshold in the live
+      cascade → `conversation.general`/LLM. **Scope:** phrase-length/specificity weighting + boost semantics in
+      `hybrid_keyword_matcher` scoring; acceptance = TEST-18 fixtures F40/F42 green (`make device-auto`) with
+      NO regression across the other handlers' routing (the suite + the WS suite are the safety net).
+      Pairs with QUAL-53 (trace-driven improvement process — this is its first concrete, pre-collected case).
+      **RESOLUTION (user chose specificity+boost):** the disease was a TIE, not weighting — every
+      pattern hit in a method tier scored an identical constant, the stable sort broke ties by
+      donation LOAD ORDER («выключи кино»: bare «выключи» beat the exact «выключи кино» by loading
+      first), and the donation `boost` was never consulted in the pattern stage. New score:
+      `pattern_conf × method_boost × (1+0.1×(tokens−1), cap 1.3) × donation_boost`; `intent_boosts`
+      stored at load. F70's phrase workaround retired (fixture restored to «переключи субтитры» as a
+      permanent regression). 15-case routing test over the full 14-donation set. **Acceptance
+      exceeded: `make device-auto` 43/43 (100%)**; suite 1329, pyright 0. Bonus fence: the
+      device-auto pkill needed the `[e]` bracket trick (it was killing its own recipe shell).
+- [x] **QUAL-65** [PEX][MQTT] (P2) `[release]` — **DONE 2026-07-05 (filed + completed same day; user-requested
+      intake: bridge VWB-19 landed input/app canonical routing — consume it before QUAL-35).**
+      **Input switching + app launch by voice**, against the re-pinned contract @ bridge `3bed556` /
+      catalog `dbfd2855` (`canonical_first.md` §11: `set` is the reserved canonical action for select-form
+      capabilities). **eval-commons (`cc1cba9`):** re-pin (ru-labels guard refined — `labels: null` legal on
+      by_value technical identifiers, non-null still requires ru); fixtures re-authored + **F50–F53**
+      (by_value input / parametric input / app launch / «ютуб» transliteration-t2); the input-switching
+      exclusion lifted; mock bridge serves `GET /devices/{id}/options/{kind}` (by_value → catalog keys,
+      parametric → deterministic stand-ins). **Voice:** `read_options(device_id, kind)` joined
+      `DeviceCatalogPort` — the QUAL-35 resolver-note-(1) `options_from` dance PULLED FORWARD
+      (`CatalogService` 30s-TTL cache; `BridgeClient.get_device_options` fail-soft; composition-wired);
+      handler `_handle_input_select` + `_handle_app_launch` share one option matcher built on the
+      resolver's OWN normalization (`_norm`/`_stem_match` — one surface-matching truth); miss → clarify
+      naming what IS available; donation methods + templates ru/en. 10 new tests (suite 1262, pyright 0,
+      11 contracts; eval-commons 40). **Live: F50 green end-to-end** (by_value, zero round-trips); suite
+      20/27 — F51–F53 red are NOT routing: the run exposed **QUAL-44 session-bleed** (an armed
+      clarification consumes the next same-room case as its answer; matcher probe routes all three
+      correctly at 0.75–0.79) → QUAL-44 un-deferred (user) + `make device` runs `-j 1` (shared per-room
+      sessions make parallel cases inherent cross-talk). Guide updated (inputs/apps section + limits).
+- [x] **QUAL-66** [QUAL][DONATION] (P3) `[release]` — **DONE 2026-07-05 (filed + completed same day,
+      user-requested after asking what the "Contract wiring" warnings were).** **Contract-wiring
+      warnings swept 21 → 0**, turning the loader's validator from ambient noise into a meaningful
+      tripwire. Three families: **(1)** dead `language` globals removed from 9 donations (handlers read
+      `context.language` since QUAL-36; the param was never consumed) + `conversation.session_id`
+      (lives on the context per QUAL-27) — NOT touched: `system`/`speech_recognition`, whose `language`
+      param is the TARGET language for switching, genuinely read (the validator's silence there proved
+      the point; an over-eager first sweep removed them and the warning list itself caught the error);
+      **(2)** `voice_synthesis_handler`'s declared-but-unread `provider` param removed (the handler
+      parses it from raw text); **(3)** two internal helpers renamed off the `_handle_` prefix
+      (`_do_language_switch`, `_fallback_without_llm`) — the prefix promises a donation entry, these
+      are dispatched internally. Two tests updated (one had RELIED on the drift existing as its live
+      example — now exercises the check with declare-nothing). Suite 1289 green; device suite 43/43.
+- [x] **QUAL-67** [QUAL][CI][DONATION] (P3) `[release]` — **DONE 2026-07-05 (filed + completed same
+      day, user-requested — the payoff of QUAL-66's zero baseline).** **Donation validation is now a
+      build + CI gate:** new `irene-donation-validate` (`irene/tools/donation_validator_cli.py`) runs
+      the exact runtime validation (schema strict + `validate_contracts`) over EVERY donation
+      directory under `assets/donations/` (module-aware discovery — handler modules are inconsistent
+      about the `_handler` suffix) with **warnings-as-errors**: a declared-but-unread param or an
+      undeclared `_handle_*` method now FAILS the build instead of scrolling past in a boot log.
+      Wired into `ci.yml` backend-health beside the config/dependency/build-analyzer gates (gates
+      every image publish = the build gate). Verified both ways: green on the clean tree
+      (14 handlers, 86 methods, 0/0), red on an injected canary param. Suite 1289 green.
 - [x] **QUAL-69** `[release]` [MQTT] — **DONE 2026-07-06 (filed + completed same day). Consume the bridge's
       open-questions catalog patch: wardrobe_spots ru alias «свет» (catalog `a17a63b0` → `acc1e18b`,
       bridge commit `aa031d2`).** Inward re-pin of all three artifacts (catalog + STAMP + openapi — the
@@ -2327,292 +2322,16 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       `check_scope.py` now fails on any ID-prefix / enclosing-section mismatch in EITHER ledger file
       (canary-verified), and CLAUDE.md's `single-task-ledger` states the section rule explicitly. Same
       lesson as QUAL-72: conventions the maintainer can violate under tempo must be machine-checked.
-
-
-
-
-
-
-
+- [x] **QUAL-74** `[release]` [PROCESS] — **DONE 2026-07-06 (filed + completed same day; the user's THIRD
+      ledger-discipline catch of the evening). Sections now sort ascending by ID, gate-enforced.** The
+      done-archive had grown in completion order (56 ordering violations, most historical) and the day's
+      in-place filings added more in the active file. Convention SET (user): entries ascend by ID within
+      each workstream section, both files; a completion is INSERTED at its sorted position, not appended.
+      Both files mechanically resorted (205 entries, zero loss — asserted), `check_scope.py` fails on
+      out-of-order IDs (canary-verified), CLAUDE.md `single-task-ledger` states it. Completes the evening's
+      guard triad with QUAL-72 (stranded [x]) + QUAL-73 (misfiled sections).
 
 ### Bugs (BUG)
-- [x] **BUG-13** [ASR][WS] (P3) `[deferred]` — **DONE 2026-07-02 (re-scoped with the user after
-      reconciliation).** **The filed 30s hang does not reproduce**: live repro (RU streaming pack
-      `vosk-model-small-streaming-ru`, `mode="streaming"`, bounded utterance + `{"type":"end"}`) gets a response —
-      the provider's EOF-finalize (in the tree since 2026-06-04) works, and the eval provider does send `end`. The
-      original 4/4-timeout existed only in the few-hours zipformer-en-20M window on 2026-07-01; that model was
-      rejected (endpoint chops bounded commands — confirmed live: the online model loses the duration in "таймер
-      на 10 минут") and removed from the catalog the same day, so the exact conditions left the tree. **The repro
-      surfaced 3 real defects in the streaming branch, fixed now (user: "re-scope + fix"):** **(1)** the branch
-      served ONE utterance then closed the connection — now a `while` loop with batch-floor parity (each
-      end/idle/finalize re-arms; fresh recognizer stream per utterance); **(2)** a bounded client that stops
-      sending WITHOUT `end` hung forever (bounded audio never trips the model endpoint; `receive()` blocked) — new
-      `WS_STREAMING_IDLE_TIMEOUT_SECONDS = 10` force-finalizes the utterance; **(3)** boot warm-up and the first
-      request RACED `_load_recognizer` → two recognizer instances, 2× model RAM — double-checked `asyncio.Lock`
-      in the base loader (`_do_load_recognizer` split; Moonshine subclass inherits), live-verified: 1 load (was 2).
-      Also: stale `embedded-armv7-en.toml` header (claimed zipformer; body is Moonshine) corrected. Regression: 2
-      new WS tests (multi-utterance on one socket; no-end force-finalize with patched timeout) + the legacy fake
-      made sherpa-honest (empty stream finalizes to nothing). Live verification: 3 utterances on one connection
-      (with end ×2, without end ×1) all answered, single model load. Suite 1158 passed / 7 skipped; pyright clean.
-- [x] **BUG-24** [NLU][TXTPROC] (P2) `[release]` — **DONE 2026-07-05 (found live by the TEST-18 device
-      suite, fixture F06).** **BUG-1's words→digits normalizer destroyed «тёплый пол»:**
-      `ovos_number_parser.numbers_to_digits(ru)` maps a STANDALONE «пол» to 0.5 («тёплый пол» → «тёплый
-      0.5») — the floor-heating device reference became unresolvable. Fix in
-      `utils/text_processing.normalize_numbers_to_digits`: standalone «пол» is guarded through the
-      conversion via a sentinel unless followed by a measure word («пол часа» still → «0.5 часа»);
-      inflections were never converted anyway. Regression-tested (incl. alphanumeric pass-through).
-- [x] **BUG-23** [TXTPROC] (P2) `[release]` — **DONE 2026-07-05 (found live by the TEST-18 device suite,
-      fixture F51: `spoken: "hdmiодин"`).** **The `numbers` normalizer (digits→WORDS — the SYNTHESIS
-      direction) ran on `asr_output`,** fighting the BUG-1 words→digits pre-NLU normalization and
-      corrupting alphanumeric values before extraction («hdmi1»→«hdmiодин»; «25»→«двадцать пять»→
-      mis-reparsed — the real cause of F06's range error, previously misattributed to T2 compound
-      numerals). Same disease `prepare` had (BUG-3). Fix: `tts_input`-only in the pydantic defaults +
-      config-master + explicit `[text_processor.normalizers.*]` blocks in all 6 docker configs.
-      **En-route (user question): the 3 `-en` configs inherited `latin_to_cyrillic: true` by default —
-      an ENGLISH deployment would transliterate its entire TTS input to Cyrillic** (unheard only because
-      on-device EN TTS validation rides ARCH-25); the `-en` blocks now set `latin_to_cyrillic = false` +
-      `language = "en"` (QUAL-38 per-normalizer deployment language). Default-stage regression test added.
-- [x] **BUG-22** [WEBAPI] (P2) `[release]` — **DONE 2026-07-05 (found + fixed during TEST-18 Slice B).**
-      **`room_alias` validation on `/execute/command` NEVER worked live:** `web_server.py` built its own fresh
-      `IntentAssetLoader` and loaded ONLY web templates, so the router's localization consumers saw empty data
-      — every room-scoped request got 400 «Invalid room alias … Valid aliases: []» (latent since the endpoint
-      gained room support; TEST-18 was the first real caller). Fix: `_setup_web_asset_loader` now PREFERS the
-      intent system's fully-loaded asset loader (donations/templates/localizations/web templates), keeping the
-      fresh web-templates-only loader as the fallback for a core without the intent system. Also extended
-      `assets/localization/rooms/{ru,en}.yaml` with the house's rooms (children_room, cabinet, hall, entrance,
-      shower, wardrobe, global) — the aliases the validation accepts.
-- [x] **BUG-21** [BUILD][TOOLS] (P2) `[release]` — **DONE 2026-07-02 (filed + fixed same day; surfaced by the
-      BUILD-9 live CI runs + the user's local `--validate-all-profiles` output).** Double defect in the
-      build-analyzer validation gate: **(1) stale rule** — "TTS providers enabled but no audio output providers
-      configured" flagged all four satellite profiles as INVALID, but that combination is the ARCH-22 design:
-      satellites synthesize TTS and stream the reply over the WS reply channel with deliberately no local audio
-      provider. Fixed: the analyzer records `system.web_api_enabled` on `BuildRequirements` and errors only when TTS
-      has NEITHER a local audio provider NOR the web-API reply channel (a truly dead TTS). **(2) swallowed exit
-      code** — `--validate-all-profiles` printed ❌ INVALID and `return 0` unconditionally, so the CI gate (old
-      backend-health AND the new ci.yml) had been decorative all along; it now exits 1 when any profile is invalid.
-      Also in this change: `test_smoke_e2e.VENV_BIN` resolves console scripts next to `sys.executable` instead of
-      the hardcoded `.venv/bin` (absent in the pip-based CI env — run-4 failure). Verified: all 12 profiles VALID,
-      tool exit honest, full suite 1156 passed / 7 skipped.
-- [x] **BUG-20** [TEST] (P2) `[release]` — **DONE 2026-07-02 (filed + fixed same day; surfaced by the QUAL-61 gate
-      runs).** The smoke suite's "offline degrades gracefully" test was **not offline**: the SUT subprocess inherited
-      real LLM keys from the developer shell (the eval judge's `DEEPSEEK_API_KEY`) AND from the repo-root `.env`
-      that every runner `load_dotenv()`s — so the test made a **live DeepSeek call** and flaked whenever the API
-      answered slower than the 25s client timeout (the mysterious 59s full-suite runs WERE the slow-API runs;
-      causality was backwards from the "load flake" hypothesis journaled under ARCH-28). Fix: the smoke fixtures
-      launch the SUT with every `*_API_KEY` **blanked, not stripped** — dotenv never overrides an existing var, so
-      an empty value beats both leak paths (`_offline_env()` collects key names from the shell env AND `.env`).
-      Result: the offline degrade path is proven genuinely fast (smoke 6/6 in 12.5s), and the full suite dropped
-      from 24–59s to ~20s — it had been quietly calling DeepSeek on every run. Regression-proof by construction
-      (the test now fails if the degrade path ever regresses, instead of being rescued by a live LLM).
-- [x] **BUG-19** [FAF] (P2) `[release]` — **DONE 2026-07-02.** Action-store correctness fixes independent of the
-      ARCH-27 design (QUAL-56 F2/F3). **(1) Collision-proofing + identity safety:** audio/TTS action names get a
-      uuid suffix (same-ms launches used to collide); `remove_action` gained an `expected=` identity guard (the
-      done-callback passes its own record, so a displaced action's completion can no longer evict a live successor
-      under the same key); `add_action` screams on live-record displacement (caller bug). **(2)** the 32/identity
-      cap eviction now **cancels** the evicted task (was: untracked zombie). **(3) Failure unmasking at the choke
-      point:** `execute_fire_and_forget_action` wraps the coroutine with a falsy-return check — the handler
-      `return True/False` convention was IGNORED, so coroutines that swallowed their own exceptions were recorded
-      as SUCCESS; now `False` → RuntimeError → failure path. The two exception-swallow blocks
-      (`voice_synthesis_handler`, `audio_playback_handler`) re-raise to preserve the real error text. All 14
-      bool-convention sites are covered centrally — future handlers inherit it. **(4) timeout ≠ cancel:**
-      `ActionRecord.timed_out` set by the monitor before cancelling; history records `"timeout"` (was
-      indistinguishable `"cancelled"`) and metrics finally get `timeout_occurred=True`. Regression: 4 new tests in
-      `test_fire_and_forget_coverage.py` (falsy-return failure, timeout vs user-cancel ×2, displaced-callback
-      guard) + 2 in `test_action_store.py` (cap-evict cancels, identity guard); 1 outdated test updated to the new
-      contract (speak failure now raises). Full suite 1144 passed / 7 skipped; pyright clean.
-- [x] **BUG-18** [INTENTS][LLM][MEM] (P2) `[release]` — **DONE 2026-07-02.** LLM conversation store was unbounded —
-      `max_context_length` was config-read and never applied, so `handler_contexts["conversation"]["messages"]` and
-      domain-thread lists grew per turn for the session's life (days, for stable room-scoped sessions), and each turn
-      shipped the full history to the LLM (QUAL-57 §M3). Fix (user chose **window now + file summarization**, →
-      QUAL-60): **(1)** `UnifiedConversationContext.trim_handler_messages(handler, max)` — rolling window over the
-      message list, seed system prompt at index 0 pinned (the existing `clear_handler_context(keep_system=True)`
-      convention) and not counted; **(2)** `add_to_thread(..., max_messages=)` windows domain threads at append;
-      **(3)** `ConversationIntentHandler` enforces via `_trim_llm_context` at both append seams (after the user
-      append — BEFORE the LLM call, capping prompt size — and after the assistant append) and passes the bound to
-      both thread sites. Semantics: `max_context_length` = TURNS kept (×2 messages); config descriptions clarified in
-      `config/models.py` + `config-master.toml` (shape unchanged; config-ui `npm run check` + `build` pass).
-      Regression: `test_conversation_window.py` (4 tests: pin+window, no-op under limit, thread windowing,
-      8-turn e2e with LLM stub proving messages ≤ window and per-turn prompt size stops growing). Full suite 1132
-      passed / 7 skipped; pyright clean. Evidence: `docs/review/arch_memory_review_2026-07-02.md` §M3.
-- [x] **BUG-17** [WS][MEM] (P2) `[release]` — **DONE 2026-07-02.** `/ws/audio` batch floor accumulated per-utterance
-      PCM without any bound — a client that never sends `{"type":"end"}` (buggy satellite firmware) grew ~115 MB/h per
-      connection (QUAL-57 §M2). Fix: `WS_MAX_UTTERANCE_SECONDS = 60` module constant; the utterance loop computes
-      `max_utterance_bytes` from the registered sample rate and **force-finalizes** on overflow (the VAD path's
-      `max_segment_duration_s` semantics — the accumulated audio is processed as an utterance, `metadata.overflow=true`,
-      warning logged, loop continues; deliberately a constant, not config — a new config key would drag CoreConfig +
-      config-ui along for a safety net no user should tune). Regression: `test_ws_audio_batch_overflow_force_finalizes`
-      (overflow finalizes without an end frame + the connection stays usable). `dataflow.md` sentence updated
-      (`user-facing-docs-are-done`). Evidence: `docs/review/arch_memory_review_2026-07-02.md` §M2.
-- [x] **BUG-16** [METRICS][MEM] (P2) `[release]` — **DONE 2026-07-02.** Metrics session leak: `record_session_end`
-      checked `domain in _active_actions` while entries are keyed `"{domain}:{action_name}"` (QUAL-9 shape) — never a
-      match, so every session ever seen left a permanent `ActionMetric` + `DomainMetrics` entry in the singleton
-      collector, growing on every REST call/WS connection (QUAL-57 §M1). Fix (metrics.py): complete the session action
-      under the real `"{domain}:session"` key, **pop** the per-session `DomainMetrics` entry, keep a compact summary in
-      a bounded `_recent_sessions` deque(100) + lifetime `_total_sessions_started` scalar; `get_session_analytics`
-      active-check fixed to the real key, aggregates now = live sessions + recent ring, `total_sessions` = lifetime
-      scalar (response gains additive `recent_sessions`; the `/monitoring/sessions` REST model is built from system
-      metrics — unchanged, config-ui unaffected). Fix (context.py): eviction closes metrics via ONE seam —
-      `remove_context` now calls `record_session_end`, and both the lazy sweep and `get_context` expiry route through
-      it (previously the sweep skipped metrics entirely). Idempotent double-end safe. Regression:
-      `test_metrics_sessions.py` (5 tests: drop-on-end, idempotency, bounded footprint across 150 sessions, real-key
-      active check, reset) + 2 eviction-seam tests in `test_context_coverage.py`. Evidence:
-      `docs/review/arch_memory_review_2026-07-02.md` §M1.
-- [x] **BUG-15** [ASSET] (P2) `[release]` — **DONE 2026-07-01.** `AssetManager.download_model` treated a model path's
-      mere existence as a completed download (`if model_path.exists()`), so an **interrupted or failed extraction** left a
-      **broken-but-present** pack that was never re-downloaded — a permanently-wedged model recoverable only by a manual
-      `rm`. Surfaced in I18N-8: a pre-`_bz2` failed extraction left empty `piper/amy` + `piper/irina` dirs, and the next
-      boot skipped them → Piper warm-up failed ("missing model.onnx / tokens.txt / espeak-ng-data"). Two failure modes,
-      both fixed in `irene/core/assets.py`: (1) **non-atomic extraction** — `_extract_archive` unpacked straight into the
-      final path (and the `except` only cleaned the archive, not the half-written dir); now it stages into
-      `.<name>.incomplete` and **renames into place only on success** (atomic on one filesystem), removing the staging dir
-      on any error. (2) **existence ≠ complete** — the cache check now skips only a **populated** path (a non-empty file,
-      or a directory holding ≥1 file, via `_is_populated_download`); an empty/partial path is cleared and re-downloaded.
-      `download_model_pack` already validated members (non-empty), so it was unaffected. Deployment-relevant (any
-      interrupted first-boot download on the WB7/satellites would wedge a model). Tests: 4 new in `test_asset_extract.py`
-      (helper truth-table + failed-extract-leaves-nothing + empty-partial-re-downloads + populated-is-a-hit). Gates:
-      pyright 0, suite **1120**, import-linter 9/9. Filed + fixed in one change (chat-requested).
-- [x] **BUG-14** [ASR][BUILD] (P3) `[deferred]` — **DONE 2026-07-01 (fix implemented + proven on the WB7; full image
-      buildx validation is the remaining deploy checkpoint).** sherpa-onnx ≥1.12 (needed for Moonshine's merged `.ort`
-      decoder, EN ASR) failed to load on the WB7 two ways — the bundled onnxruntime `.so` has **64 KB-aligned LOAD
-      segments** the WB7's 4 KB-page loader rejects (`ELF load command … not properly aligned`), and sherpa's C++ module
-      needs **GLIBCXX_3.4.30** (GCC 12) which bullseye lacks. Diagnosed via SSH to root@192.168.110.250 (both fail on host
-      py3.9 + a py3.11 container, PyPI & PiWheels; onnxruntime has no armv7 wheel — sherpa bundles it). Reconciled the
-      "proven on hardware" claim: `onnx_inference_layer.md` §4 documented the ELF issue and pinned 1.10.46 (which has no
-      Moonshine support) — the pincer. **Fix (user-approved: build the libs in Docker):** (1) armv7 Docker base
-      bullseye→**bookworm** (GLIBCXX_3.4.30; +4.4 MB); (2) **`docker/patch_onnx_align.py`** rewrites the onnxruntime `.so`
-      `PT_LOAD` `p_align` 64K→4K in the built venv (idempotent; safe no-op on 64-bit / non-ONNX configs); (3) bump the
-      armv7 sherpa pin `1.10.46`→**`1.12.36`** (`pyproject.toml` + `uv.lock`; serves BOTH RU vosk `from_transducer` and
-      EN Moonshine — the ru/en split needs no per-config machinery, `CONFIG_PROFILE` already drives it). **Proven on the
-      WB7:** patched sherpa 1.12.36 on bookworm imports and runs Moonshine — RTF ~0.7, 134 MB RSS, both fixtures perfect.
-      Unblocks I18N-2 (Moonshine) + streaming + newer sherpa on armv7. aarch64/x86_64 unaffected. WB7 left clean. (Full
-      `docker buildx build` of the armv7 image is untested — as it was before this, per §4.7 — a deploy-time checkpoint.)
-- [x] **BUG-12** [EVAL][WS] (P2) `[release]` — **DONE 2026-06-30.** `make ws` reported the SUT failing ("ASR provider
-      'whisper' not available") while a direct WS client succeeded — **not a hang, not the provider, not a stale SUT.**
-      Root cause: **promptfoo's response cache.** An early `make ws` against a mis-launched SUT cached the "whisper"
-      failure for each fixture in `~/.promptfoo/cache/cache.json`, and every later run **replayed the cached failure
-      without contacting `:6000`** — proven by the SUT log showing **zero `/ws/audio` requests** during a `make ws` run,
-      while `PROMPTFOO_CACHE_ENABLED=false` made the same run hit the live SUT (4 `provider=sherpa_onnx` requests) and
-      return the correct «Таймер установлен на 10 мин». The eval-commons `ws_audio_provider` was correct all along
-      (`call_api` succeeded directly). **Fix:** `eval/Makefile` exports `PROMPTFOO_CACHE_ENABLED := false` — every surface
-      in this harness is a *live* test (CLI argparse, WS-to-SUT, DeepSeek judge), so caching can only mask reality;
-      cleared the poisoned cache. **Verified:** plain `make ws` now runs live — the ASR case **passes** (sherpa
-      transcript) and the intent case confirms `timer.set` live; `make cli` still 5/5. Remaining 1 fail (WER vs
-      reply-text) → **TEST-15**; 2 UX errors need `DEEPSEEK_API_KEY`. _Credit: the user's "isn't the ws port different?"
-      nudge reframed it from "SUT bug" to "the request never reaches the SUT" → the cache._
-- [x] **BUG-11** [ASR][CONFIG] (P2) `[release]` — **DONE 2026-06-30.** Misconfigured-ASR configs failed every audio
-      request at runtime instead of failing fast. **Origin disproven:** the first `make ws TARGET=local` reported "ASR
-      provider 'whisper' not available", which I first hypothesised as `/ws/audio` ignoring the configured provider —
-      **wrong.** Deep research (a static map agent + a live instrumented repro) proved a cleanly-launched `embedded-armv7`
-      SUT transcribes the recording correctly via `sherpa_onnx` (one ASR instance, `process_audio` uses the configured
-      provider, no `whisper` override; verified «Таймер установлен на 10 мин» `success:true`). The "whisper" error came
-      from running the broken **`voice.toml`** (`[asr] default_provider="whisper"` with **no `[asr.providers.whisper]`** →
-      zero providers loaded → the CR-A2 reconcile guard at `asr_component.py:169` only fires when `providers` is
-      non-empty, so the dangling default failed every request) + a self-inflicted stale-process artifact (my
-      `pkill -f irene-webapi` self-killed the management shell). **Fixes (user-approved):** **(B)** deleted the 4 stale
-      broken configs (`voice`/`minimal`/`development`/`api-only`) and repointed **every** reference —
-      `test_audio_negotiator` (→ `full.toml`), `build_analyzer` + `config_validator` docstrings, the live
-      `cli.promptfooconfig` config-validate case (→ `embedded-armv7`), eval `Makefile CONFIG`/`voice.env`, `QUICKSTART`
-      (rewritten to copy `config-master` + toggle `[components]`), 3 guides, the issue template, `env-example`, and the
-      `build-system` diagram (`.dot` + regenerated PNG). **(A)** `asr_component` now **raises at init** when an enabled
-      ASR loaded zero providers (was a silent warning → per-request 404s). **(C)** eval WS-suite default config
-      `voice` → `embedded-armv7` (ASR-capable). **(D)** reconciled the dual default — `schemas.py` ASR `default_provider`
-      `"whisper"`/`["whisper"]` → `""`/`[]` (matches the runtime `ASRConfig`). Configs 13→9. Gates: pyright 0,
-      config-validator 9/9, suite 1105 passed, import-linter 9/9; armv7 SUT re-verified transcribing post-fix. _Open
-      follow-up (not BUG-11): the promptfoo `make ws` harness run hung where a direct WS client succeeds — a harness-level
-      issue to chase before the WS suite is green end-to-end._
-- [x] **BUG-10** [UI] (P3) `[deferred]` — **DONE 2026-06-28.** config-ui enhanced-mode blocking-conflicts dialog
-      unreachable (review `config_ui_review.md` §A3). Blocking conflicts disable the Apply button (`canSaveNLU` requires
-      `!hasBlockingConflicts`), so the dialog's only opener — an `if (hasBlockingConflicts)` branch inside the disabled
-      handler — could never run. Fix: added a dedicated **"Review blocking conflicts (N)"** trigger in `ApplyChangesBar`
-      (shown when `useEnhancedValidation && hasBlockingConflicts`) that opens the dialog **read-only** (no `onResolve` →
-      no dead Resolve buttons; the previous `onResolve` was a `console.log` TODO), removed the unreachable handler
-      branch, and added the `applyBar.reviewBlockingConflicts` i18n key (en + ru). User triage (2026-06-28) chose to
-      **build real resolution** → filed as **UI-15** (design-then-implement); this is the read-only foundation it builds
-      on. Gate (`config-ui-stays-functional`): `npm run check` + `npm run build` green (orphan check confirms the dialog
-      is no longer dead). Closes the config-ui-review correctness cluster (BUG-8/9/10); cleanup UI-11..14 + feature UI-15
-      remain.
-- [x] **BUG-9** [UI] (P3) `[deferred]` — **DONE 2026-06-28.** config-ui real-time analysis stale-request overwrite
-      (review `config_ui_review.md` §A2). `useRealtimeAnalysis.performAnalysis` read the abort signal off
-      `abortControllerRef.current` *after* the await — by then the ref points at the newest controller, so a slow earlier
-      response passed the guard and clobbered newer conflicts. Fix: hold THIS invocation's `AbortController` in a local
-      and guard both the success and catch paths on `controller.signal` (the ref still tracks the latest for
-      abort-previous + unmount cleanup). Also threaded the signal through `apiClient.analyzeDonation` → `post(…, {signal})`
-      → `request`/`fetch`, so a superseded analysis actually **cancels its network request** instead of only flipping a
-      flag (`post` gained an optional `RequestOptions` arg, backward-compatible). (A6) hardened the unguarded `.conflicts`
-      derefs — `result.conflicts || []` (success + cached) and `validationResult?.conflicts?.filter` — against a
-      malformed payload missing the array. Gate (`config-ui-stays-functional`): `npm run check` + `npm run build` green.
-      BUG-10 (unreachable blocking dialog) remains open.
-- [x] **BUG-8** [UI] (P3) `[deferred]` — **DONE 2026-06-28.** config-ui DonationsPage composite-key + stale-state
-      defects (review `config_ui_review.md` §A). All keyed by `` `${handler}:${language}` `` now: **(A1)** the
-      404-fallback stored the empty donation under the bare handler name while the load effect read the composite key →
-      **infinite reload loop** + stuck spinner for any handler lacking a donation file in the active language; hoisted
-      `donationKey` above the try so both branches agree. **(A4)** the validation *catch* stored the error under the
-      bare handler, so the language tab's indicator (reads the composite key) never showed it; hoisted the key and use
-      it in the catch. **(A5)** `globalParamNames` memo read `selectedLanguage` but omitted it from deps (under a
-      copy-pasted `eslint-disable`) → wrong-language autocomplete on a cached-language switch; added the dep and dropped
-      the now-unneeded disable. **(A7)** `handlersList.find(...)!` then `handlerInfo.languages.length` crashed if the
-      selected handler left the list mid-reload; resolve a guarded `selectedHandlerInfo` and gate the
-      CrossLanguageValidation render on it. Gate (`config-ui-stays-functional`): `npm run check` (type-check + strict
-      ESLint incl. `--report-unused-disable-directives` + orphans) and `npm run build` both green. BUG-9/10 (the other
-      review correctness findings) remain open.
-- [x] **BUG-7** [NLU/I18N] (P3) `[deferred]` — **DONE 2026-06-28.** ru oblique-case numerals didn't normalize to
-      digits. `ovos-number-parser` (ru) reads only **nominative** numerals, so the oblique-case forms common in speech
-      stayed as words — «одну секунду» (one), «двух минут», «без пяти», «тридцати пяти» — and it even broke compounds
-      («тридцать одну» → "30 одну"). Fix at the normalizer altitude (`irene/utils/text_processing.py`): remap the oblique
-      cardinals ovos misses → nominative **before** ovos, so digit conversion incl. compounds fires. Only the forms ovos
-      actually misses are mapped (одна/одной/одним→1 and сорока→40 already work, so absent); words colliding with
-      non-numeric meanings are excluded so plain text is never mangled (verified «о семью детях»/«семья» untouched).
-      Surfaced as the bonus finding while fixing BUG-6 (it was noted onto QUAL-35; resolved here instead). Verified:
-      «одну секунду» → "1 сек", «тридцать одну секунду» → "31 сек". Gates: suite 1104 passed (+ oblique-case test),
-      pyright 0, import-linter 9/9. Normalizer-only — no schema/config-ui surface.
-- [x] **BUG-6** [PEX/UNITS] (P3) `[deferred]` — **DONE 2026-06-28.** Timer-unit fix + consolidation + dead-stub removal
-      (the "unit story", scoped time-only per user). **Bug:** "set a timer for one second" → "1 min" — the en timer
-      `unit` param has no `choice_surfaces` (ru does), so the weak per-param CHOICE extraction couldn't match "second"
-      and fell back to the `default_value: "minutes"`, and since `duration` *was* extracted the bilingual text fallback
-      that parses it correctly was bypassed. **Fix at altitude:** the utterance's own value+unit is now authoritative —
-      one shared bilingual parser `irene/utils/units.py` (`TIME_UNITS` table + `parse_duration`/`duration_to_seconds`,
-      spelled→digits first), and the timer trusts it over the per-param CHOICE. **Consolidation:** the 3 unconnected
-      time-unit parsers normalized to that one place — `timer._parse_timer_from_text` (deleted), `entity_resolver`
-      `TemporalEntityResolver` (now calls `parse_duration`) and `QuantityEntityResolver` (time entries reuse `TIME_UNITS`;
-      percent/degrees kept as the future-layer nucleus). **Dead-stub removal:** `ParameterType.DURATION` deleted (declared
-      but never coerced, unused by the timer) — enum + `hybrid_keyword_matcher` branch + `donation_contract_v1.1.json`
-      schema enum + config-ui (`ContractEditor` + regenerated `donation-contract.gen.ts`). Verified: "one second" → "1
-      sec", ru/en 10-min + "2 hours" correct. Gates: suite 1103 passed (+ `test_units`; 2 tests redirected/removed),
-      pyright 0, import-linter 9/9, 12/12 profiles, config-ui check+build green. General units-of-measurement layer
-      (percent/°C) **filed onto QUAL-35** to design *with* smart-home (user: done together); ru «одну/одна» normalize gap
-      noted there too.
-- [x] **BUG-4** [NLU/I18N/DONATION] (P3) `[deferred]` — **DONE 2026-06-28.** Three related per-language defects, all
-      "state not threaded to where messages render" (deeper research + the right altitude, per request):
-      **(1) Donation `default_value` not language-resolved** — assembly (`_assemble_v11_donation`) flattened it to the
-      ru primary; now it captures per-language defaults (`ParameterSpec.default_value_by_language`), the request
-      language is threaded onto the `Intent` (set in the orchestrator from `context.language`, no get_param call-site
-      churn), and `get_param` resolves strictly by request language (a param that declares per-language defaults but not
-      for this language falls through to the caller default, not the ru leak). **(2) Fire-and-forget completion
-      language** (the user's catch — set-timer is F&F): the request language + the request-language-rendered completion
-      message are captured into the `ActionRecord` at registration and replayed at completion, and the notification
-      service stopped hardcoding English (renders in the captured language / speaks the carried message). Verified
-      end-to-end: en «set a timer for ten minutes» → "Timer set for 10 min. Message: Timer completed!" and the deferred
-      completion fires "Timer completed!"; ru unchanged. **(3) Translation gap** — datetime en localization was missing
-      `days_ordinal`/`hours`/`periods`/`special_hours` (ru/en keys now match). Gates: suite 1086 passed (+ new
-      `test_param_language`, F&F test fixed for the new metadata), pyright 0, import-linter 9/9, 12/12 profiles valid,
-      config-ui check+build green (the new ParameterSpec field is runtime-only, not authored in donation files). The
-      donation en alias/choice **enrichment** sweep (non-functional) split out as **BUG-5**.
-- [x] **BUG-3** [NLU/I18N] (P3) `[deferred]` — **DONE 2026-06-28.** "Reply language doesn't follow request language"
-      turned out to be **input corruption, not response localization** (deeper analysis, per the request). Root cause:
-      the **`prepare` text normalizer transliterates Latin→Cyrillic** ("set a timer"→«сэт е таймё») and it ran at the
-      **`asr_output` (pre-NLU) stage** — so English never reached NLU as English; `detect_language_by_script` then
-      saw Cyrillic → `ru`, and every handler replied Russian. `prepare` is a **TTS** normalizer (it also spells symbols
-      out, "$"→"доллар"); it has no business before comprehension. **Fix at the right altitude:** `prepare` runs at
-      `tts_input` only — both the schema default (`config/models.py`) and `config-master.toml` (the only config that
-      pinned it; all others inherit the default — verified across all 12, validator green). Plus two robustness/polish
-      fixes: `_analyze_text_language`'s no-signal case now falls back to **script** (non-Cyrillic ⇒ English) instead of
-      `None`→default('ru'); and the timer's own literals are localized (`_format_duration` units ru/en, the message
-      fallback uses the request language). Verified: English now reaches NLU intact, detection → `en`, replies follow
-      the request language across handlers; «set a timer for ten minutes» → "Timer set for 10 min…", ru unchanged.
-      Suite 1086 passed (2 tests that encoded the old None→ru behavior updated), pyright 0, import-linter 9/9, 12/12
-      profiles valid. _Residual (separate mechanism, not chased): the timer donation's `message` param `default_value`
-      is Russian and `get_param` returns it regardless of language, so an uncustomized en reply still ends "Message:
-      Таймер завершён!" — a donation-default localization concern, candidate follow-up._
 - [x] **BUG-1** [NLU/TIMER] (P2) `[release]` — **DONE 2026-06-28.** Spelled-out numbers didn't reach parameter
       extraction — «поставь таймер на десять минут» recognized `timer.set` but extracted no duration; «на 10 минут»
       worked. **General research (ru + en)** found it was **never Russian-specific**: every extractor matched `\d+`
@@ -2640,6 +2359,38 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       source of truth. Verified: full suite 1074 passed (no test relied on it), and the WB7-config golden now replays
       green with no workaround. Surfaced while recording a golden trace (TEST-12). _Noted but not changed: the webapi
       runner overriding component config is its own smell — relevant to the `--set` work, worth a future look._
+- [x] **BUG-3** [NLU/I18N] (P3) `[deferred]` — **DONE 2026-06-28.** "Reply language doesn't follow request language"
+      turned out to be **input corruption, not response localization** (deeper analysis, per the request). Root cause:
+      the **`prepare` text normalizer transliterates Latin→Cyrillic** ("set a timer"→«сэт е таймё») and it ran at the
+      **`asr_output` (pre-NLU) stage** — so English never reached NLU as English; `detect_language_by_script` then
+      saw Cyrillic → `ru`, and every handler replied Russian. `prepare` is a **TTS** normalizer (it also spells symbols
+      out, "$"→"доллар"); it has no business before comprehension. **Fix at the right altitude:** `prepare` runs at
+      `tts_input` only — both the schema default (`config/models.py`) and `config-master.toml` (the only config that
+      pinned it; all others inherit the default — verified across all 12, validator green). Plus two robustness/polish
+      fixes: `_analyze_text_language`'s no-signal case now falls back to **script** (non-Cyrillic ⇒ English) instead of
+      `None`→default('ru'); and the timer's own literals are localized (`_format_duration` units ru/en, the message
+      fallback uses the request language). Verified: English now reaches NLU intact, detection → `en`, replies follow
+      the request language across handlers; «set a timer for ten minutes» → "Timer set for 10 min…", ru unchanged.
+      Suite 1086 passed (2 tests that encoded the old None→ru behavior updated), pyright 0, import-linter 9/9, 12/12
+      profiles valid. _Residual (separate mechanism, not chased): the timer donation's `message` param `default_value`
+      is Russian and `get_param` returns it regardless of language, so an uncustomized en reply still ends "Message:
+      Таймер завершён!" — a donation-default localization concern, candidate follow-up._
+- [x] **BUG-4** [NLU/I18N/DONATION] (P3) `[deferred]` — **DONE 2026-06-28.** Three related per-language defects, all
+      "state not threaded to where messages render" (deeper research + the right altitude, per request):
+      **(1) Donation `default_value` not language-resolved** — assembly (`_assemble_v11_donation`) flattened it to the
+      ru primary; now it captures per-language defaults (`ParameterSpec.default_value_by_language`), the request
+      language is threaded onto the `Intent` (set in the orchestrator from `context.language`, no get_param call-site
+      churn), and `get_param` resolves strictly by request language (a param that declares per-language defaults but not
+      for this language falls through to the caller default, not the ru leak). **(2) Fire-and-forget completion
+      language** (the user's catch — set-timer is F&F): the request language + the request-language-rendered completion
+      message are captured into the `ActionRecord` at registration and replayed at completion, and the notification
+      service stopped hardcoding English (renders in the captured language / speaks the carried message). Verified
+      end-to-end: en «set a timer for ten minutes» → "Timer set for 10 min. Message: Timer completed!" and the deferred
+      completion fires "Timer completed!"; ru unchanged. **(3) Translation gap** — datetime en localization was missing
+      `days_ordinal`/`hours`/`periods`/`special_hours` (ru/en keys now match). Gates: suite 1086 passed (+ new
+      `test_param_language`, F&F test fixed for the new metadata), pyright 0, import-linter 9/9, 12/12 profiles valid,
+      config-ui check+build green (the new ParameterSpec field is runtime-only, not authored in donation files). The
+      donation en alias/choice **enrichment** sweep (non-functional) split out as **BUG-5**.
 - [x] **BUG-5** [NLU/I18N/DONATION] (P3) `[deferred]` — **DONE 2026-07-06 (user pulled it forward — an EN tester is
       waiting). Donation EN recognition enrichment**, gap re-measured fresh (the BUG-4-era numbers held: 27 alias
       params + 10 choice params). Added EN `aliases` to all 27 (concept synonyms — "faces", "reminder", "engine",
@@ -2655,6 +2406,251 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       evidence for the EN-fixture effort): "cancel the timer"→voice_synthesis.cancel, "switch asr to whisper"→
       smart_home.input_select, "translate hello to german"→greeting.hello, bare "pause"→audio.stop.
       Gates: donation validator 0/0, suite 1299, device gate 48/48 (RU untouched).
+- [x] **BUG-6** [PEX/UNITS] (P3) `[deferred]` — **DONE 2026-06-28.** Timer-unit fix + consolidation + dead-stub removal
+      (the "unit story", scoped time-only per user). **Bug:** "set a timer for one second" → "1 min" — the en timer
+      `unit` param has no `choice_surfaces` (ru does), so the weak per-param CHOICE extraction couldn't match "second"
+      and fell back to the `default_value: "minutes"`, and since `duration` *was* extracted the bilingual text fallback
+      that parses it correctly was bypassed. **Fix at altitude:** the utterance's own value+unit is now authoritative —
+      one shared bilingual parser `irene/utils/units.py` (`TIME_UNITS` table + `parse_duration`/`duration_to_seconds`,
+      spelled→digits first), and the timer trusts it over the per-param CHOICE. **Consolidation:** the 3 unconnected
+      time-unit parsers normalized to that one place — `timer._parse_timer_from_text` (deleted), `entity_resolver`
+      `TemporalEntityResolver` (now calls `parse_duration`) and `QuantityEntityResolver` (time entries reuse `TIME_UNITS`;
+      percent/degrees kept as the future-layer nucleus). **Dead-stub removal:** `ParameterType.DURATION` deleted (declared
+      but never coerced, unused by the timer) — enum + `hybrid_keyword_matcher` branch + `donation_contract_v1.1.json`
+      schema enum + config-ui (`ContractEditor` + regenerated `donation-contract.gen.ts`). Verified: "one second" → "1
+      sec", ru/en 10-min + "2 hours" correct. Gates: suite 1103 passed (+ `test_units`; 2 tests redirected/removed),
+      pyright 0, import-linter 9/9, 12/12 profiles, config-ui check+build green. General units-of-measurement layer
+      (percent/°C) **filed onto QUAL-35** to design *with* smart-home (user: done together); ru «одну/одна» normalize gap
+      noted there too.
+- [x] **BUG-7** [NLU/I18N] (P3) `[deferred]` — **DONE 2026-06-28.** ru oblique-case numerals didn't normalize to
+      digits. `ovos-number-parser` (ru) reads only **nominative** numerals, so the oblique-case forms common in speech
+      stayed as words — «одну секунду» (one), «двух минут», «без пяти», «тридцати пяти» — and it even broke compounds
+      («тридцать одну» → "30 одну"). Fix at the normalizer altitude (`irene/utils/text_processing.py`): remap the oblique
+      cardinals ovos misses → nominative **before** ovos, so digit conversion incl. compounds fires. Only the forms ovos
+      actually misses are mapped (одна/одной/одним→1 and сорока→40 already work, so absent); words colliding with
+      non-numeric meanings are excluded so plain text is never mangled (verified «о семью детях»/«семья» untouched).
+      Surfaced as the bonus finding while fixing BUG-6 (it was noted onto QUAL-35; resolved here instead). Verified:
+      «одну секунду» → "1 сек", «тридцать одну секунду» → "31 сек". Gates: suite 1104 passed (+ oblique-case test),
+      pyright 0, import-linter 9/9. Normalizer-only — no schema/config-ui surface.
+- [x] **BUG-8** [UI] (P3) `[deferred]` — **DONE 2026-06-28.** config-ui DonationsPage composite-key + stale-state
+      defects (review `config_ui_review.md` §A). All keyed by `` `${handler}:${language}` `` now: **(A1)** the
+      404-fallback stored the empty donation under the bare handler name while the load effect read the composite key →
+      **infinite reload loop** + stuck spinner for any handler lacking a donation file in the active language; hoisted
+      `donationKey` above the try so both branches agree. **(A4)** the validation *catch* stored the error under the
+      bare handler, so the language tab's indicator (reads the composite key) never showed it; hoisted the key and use
+      it in the catch. **(A5)** `globalParamNames` memo read `selectedLanguage` but omitted it from deps (under a
+      copy-pasted `eslint-disable`) → wrong-language autocomplete on a cached-language switch; added the dep and dropped
+      the now-unneeded disable. **(A7)** `handlersList.find(...)!` then `handlerInfo.languages.length` crashed if the
+      selected handler left the list mid-reload; resolve a guarded `selectedHandlerInfo` and gate the
+      CrossLanguageValidation render on it. Gate (`config-ui-stays-functional`): `npm run check` (type-check + strict
+      ESLint incl. `--report-unused-disable-directives` + orphans) and `npm run build` both green. BUG-9/10 (the other
+      review correctness findings) remain open.
+- [x] **BUG-9** [UI] (P3) `[deferred]` — **DONE 2026-06-28.** config-ui real-time analysis stale-request overwrite
+      (review `config_ui_review.md` §A2). `useRealtimeAnalysis.performAnalysis` read the abort signal off
+      `abortControllerRef.current` *after* the await — by then the ref points at the newest controller, so a slow earlier
+      response passed the guard and clobbered newer conflicts. Fix: hold THIS invocation's `AbortController` in a local
+      and guard both the success and catch paths on `controller.signal` (the ref still tracks the latest for
+      abort-previous + unmount cleanup). Also threaded the signal through `apiClient.analyzeDonation` → `post(…, {signal})`
+      → `request`/`fetch`, so a superseded analysis actually **cancels its network request** instead of only flipping a
+      flag (`post` gained an optional `RequestOptions` arg, backward-compatible). (A6) hardened the unguarded `.conflicts`
+      derefs — `result.conflicts || []` (success + cached) and `validationResult?.conflicts?.filter` — against a
+      malformed payload missing the array. Gate (`config-ui-stays-functional`): `npm run check` + `npm run build` green.
+      BUG-10 (unreachable blocking dialog) remains open.
+- [x] **BUG-10** [UI] (P3) `[deferred]` — **DONE 2026-06-28.** config-ui enhanced-mode blocking-conflicts dialog
+      unreachable (review `config_ui_review.md` §A3). Blocking conflicts disable the Apply button (`canSaveNLU` requires
+      `!hasBlockingConflicts`), so the dialog's only opener — an `if (hasBlockingConflicts)` branch inside the disabled
+      handler — could never run. Fix: added a dedicated **"Review blocking conflicts (N)"** trigger in `ApplyChangesBar`
+      (shown when `useEnhancedValidation && hasBlockingConflicts`) that opens the dialog **read-only** (no `onResolve` →
+      no dead Resolve buttons; the previous `onResolve` was a `console.log` TODO), removed the unreachable handler
+      branch, and added the `applyBar.reviewBlockingConflicts` i18n key (en + ru). User triage (2026-06-28) chose to
+      **build real resolution** → filed as **UI-15** (design-then-implement); this is the read-only foundation it builds
+      on. Gate (`config-ui-stays-functional`): `npm run check` + `npm run build` green (orphan check confirms the dialog
+      is no longer dead). Closes the config-ui-review correctness cluster (BUG-8/9/10); cleanup UI-11..14 + feature UI-15
+      remain.
+- [x] **BUG-11** [ASR][CONFIG] (P2) `[release]` — **DONE 2026-06-30.** Misconfigured-ASR configs failed every audio
+      request at runtime instead of failing fast. **Origin disproven:** the first `make ws TARGET=local` reported "ASR
+      provider 'whisper' not available", which I first hypothesised as `/ws/audio` ignoring the configured provider —
+      **wrong.** Deep research (a static map agent + a live instrumented repro) proved a cleanly-launched `embedded-armv7`
+      SUT transcribes the recording correctly via `sherpa_onnx` (one ASR instance, `process_audio` uses the configured
+      provider, no `whisper` override; verified «Таймер установлен на 10 мин» `success:true`). The "whisper" error came
+      from running the broken **`voice.toml`** (`[asr] default_provider="whisper"` with **no `[asr.providers.whisper]`** →
+      zero providers loaded → the CR-A2 reconcile guard at `asr_component.py:169` only fires when `providers` is
+      non-empty, so the dangling default failed every request) + a self-inflicted stale-process artifact (my
+      `pkill -f irene-webapi` self-killed the management shell). **Fixes (user-approved):** **(B)** deleted the 4 stale
+      broken configs (`voice`/`minimal`/`development`/`api-only`) and repointed **every** reference —
+      `test_audio_negotiator` (→ `full.toml`), `build_analyzer` + `config_validator` docstrings, the live
+      `cli.promptfooconfig` config-validate case (→ `embedded-armv7`), eval `Makefile CONFIG`/`voice.env`, `QUICKSTART`
+      (rewritten to copy `config-master` + toggle `[components]`), 3 guides, the issue template, `env-example`, and the
+      `build-system` diagram (`.dot` + regenerated PNG). **(A)** `asr_component` now **raises at init** when an enabled
+      ASR loaded zero providers (was a silent warning → per-request 404s). **(C)** eval WS-suite default config
+      `voice` → `embedded-armv7` (ASR-capable). **(D)** reconciled the dual default — `schemas.py` ASR `default_provider`
+      `"whisper"`/`["whisper"]` → `""`/`[]` (matches the runtime `ASRConfig`). Configs 13→9. Gates: pyright 0,
+      config-validator 9/9, suite 1105 passed, import-linter 9/9; armv7 SUT re-verified transcribing post-fix. _Open
+      follow-up (not BUG-11): the promptfoo `make ws` harness run hung where a direct WS client succeeds — a harness-level
+      issue to chase before the WS suite is green end-to-end._
+- [x] **BUG-12** [EVAL][WS] (P2) `[release]` — **DONE 2026-06-30.** `make ws` reported the SUT failing ("ASR provider
+      'whisper' not available") while a direct WS client succeeded — **not a hang, not the provider, not a stale SUT.**
+      Root cause: **promptfoo's response cache.** An early `make ws` against a mis-launched SUT cached the "whisper"
+      failure for each fixture in `~/.promptfoo/cache/cache.json`, and every later run **replayed the cached failure
+      without contacting `:6000`** — proven by the SUT log showing **zero `/ws/audio` requests** during a `make ws` run,
+      while `PROMPTFOO_CACHE_ENABLED=false` made the same run hit the live SUT (4 `provider=sherpa_onnx` requests) and
+      return the correct «Таймер установлен на 10 мин». The eval-commons `ws_audio_provider` was correct all along
+      (`call_api` succeeded directly). **Fix:** `eval/Makefile` exports `PROMPTFOO_CACHE_ENABLED := false` — every surface
+      in this harness is a *live* test (CLI argparse, WS-to-SUT, DeepSeek judge), so caching can only mask reality;
+      cleared the poisoned cache. **Verified:** plain `make ws` now runs live — the ASR case **passes** (sherpa
+      transcript) and the intent case confirms `timer.set` live; `make cli` still 5/5. Remaining 1 fail (WER vs
+      reply-text) → **TEST-15**; 2 UX errors need `DEEPSEEK_API_KEY`. _Credit: the user's "isn't the ws port different?"
+      nudge reframed it from "SUT bug" to "the request never reaches the SUT" → the cache._
+- [x] **BUG-13** [ASR][WS] (P3) `[deferred]` — **DONE 2026-07-02 (re-scoped with the user after
+      reconciliation).** **The filed 30s hang does not reproduce**: live repro (RU streaming pack
+      `vosk-model-small-streaming-ru`, `mode="streaming"`, bounded utterance + `{"type":"end"}`) gets a response —
+      the provider's EOF-finalize (in the tree since 2026-06-04) works, and the eval provider does send `end`. The
+      original 4/4-timeout existed only in the few-hours zipformer-en-20M window on 2026-07-01; that model was
+      rejected (endpoint chops bounded commands — confirmed live: the online model loses the duration in "таймер
+      на 10 минут") and removed from the catalog the same day, so the exact conditions left the tree. **The repro
+      surfaced 3 real defects in the streaming branch, fixed now (user: "re-scope + fix"):** **(1)** the branch
+      served ONE utterance then closed the connection — now a `while` loop with batch-floor parity (each
+      end/idle/finalize re-arms; fresh recognizer stream per utterance); **(2)** a bounded client that stops
+      sending WITHOUT `end` hung forever (bounded audio never trips the model endpoint; `receive()` blocked) — new
+      `WS_STREAMING_IDLE_TIMEOUT_SECONDS = 10` force-finalizes the utterance; **(3)** boot warm-up and the first
+      request RACED `_load_recognizer` → two recognizer instances, 2× model RAM — double-checked `asyncio.Lock`
+      in the base loader (`_do_load_recognizer` split; Moonshine subclass inherits), live-verified: 1 load (was 2).
+      Also: stale `embedded-armv7-en.toml` header (claimed zipformer; body is Moonshine) corrected. Regression: 2
+      new WS tests (multi-utterance on one socket; no-end force-finalize with patched timeout) + the legacy fake
+      made sherpa-honest (empty stream finalizes to nothing). Live verification: 3 utterances on one connection
+      (with end ×2, without end ×1) all answered, single model load. Suite 1158 passed / 7 skipped; pyright clean.
+- [x] **BUG-14** [ASR][BUILD] (P3) `[deferred]` — **DONE 2026-07-01 (fix implemented + proven on the WB7; full image
+      buildx validation is the remaining deploy checkpoint).** sherpa-onnx ≥1.12 (needed for Moonshine's merged `.ort`
+      decoder, EN ASR) failed to load on the WB7 two ways — the bundled onnxruntime `.so` has **64 KB-aligned LOAD
+      segments** the WB7's 4 KB-page loader rejects (`ELF load command … not properly aligned`), and sherpa's C++ module
+      needs **GLIBCXX_3.4.30** (GCC 12) which bullseye lacks. Diagnosed via SSH to root@192.168.110.250 (both fail on host
+      py3.9 + a py3.11 container, PyPI & PiWheels; onnxruntime has no armv7 wheel — sherpa bundles it). Reconciled the
+      "proven on hardware" claim: `onnx_inference_layer.md` §4 documented the ELF issue and pinned 1.10.46 (which has no
+      Moonshine support) — the pincer. **Fix (user-approved: build the libs in Docker):** (1) armv7 Docker base
+      bullseye→**bookworm** (GLIBCXX_3.4.30; +4.4 MB); (2) **`docker/patch_onnx_align.py`** rewrites the onnxruntime `.so`
+      `PT_LOAD` `p_align` 64K→4K in the built venv (idempotent; safe no-op on 64-bit / non-ONNX configs); (3) bump the
+      armv7 sherpa pin `1.10.46`→**`1.12.36`** (`pyproject.toml` + `uv.lock`; serves BOTH RU vosk `from_transducer` and
+      EN Moonshine — the ru/en split needs no per-config machinery, `CONFIG_PROFILE` already drives it). **Proven on the
+      WB7:** patched sherpa 1.12.36 on bookworm imports and runs Moonshine — RTF ~0.7, 134 MB RSS, both fixtures perfect.
+      Unblocks I18N-2 (Moonshine) + streaming + newer sherpa on armv7. aarch64/x86_64 unaffected. WB7 left clean. (Full
+      `docker buildx build` of the armv7 image is untested — as it was before this, per §4.7 — a deploy-time checkpoint.)
+- [x] **BUG-15** [ASSET] (P2) `[release]` — **DONE 2026-07-01.** `AssetManager.download_model` treated a model path's
+      mere existence as a completed download (`if model_path.exists()`), so an **interrupted or failed extraction** left a
+      **broken-but-present** pack that was never re-downloaded — a permanently-wedged model recoverable only by a manual
+      `rm`. Surfaced in I18N-8: a pre-`_bz2` failed extraction left empty `piper/amy` + `piper/irina` dirs, and the next
+      boot skipped them → Piper warm-up failed ("missing model.onnx / tokens.txt / espeak-ng-data"). Two failure modes,
+      both fixed in `irene/core/assets.py`: (1) **non-atomic extraction** — `_extract_archive` unpacked straight into the
+      final path (and the `except` only cleaned the archive, not the half-written dir); now it stages into
+      `.<name>.incomplete` and **renames into place only on success** (atomic on one filesystem), removing the staging dir
+      on any error. (2) **existence ≠ complete** — the cache check now skips only a **populated** path (a non-empty file,
+      or a directory holding ≥1 file, via `_is_populated_download`); an empty/partial path is cleared and re-downloaded.
+      `download_model_pack` already validated members (non-empty), so it was unaffected. Deployment-relevant (any
+      interrupted first-boot download on the WB7/satellites would wedge a model). Tests: 4 new in `test_asset_extract.py`
+      (helper truth-table + failed-extract-leaves-nothing + empty-partial-re-downloads + populated-is-a-hit). Gates:
+      pyright 0, suite **1120**, import-linter 9/9. Filed + fixed in one change (chat-requested).
+- [x] **BUG-16** [METRICS][MEM] (P2) `[release]` — **DONE 2026-07-02.** Metrics session leak: `record_session_end`
+      checked `domain in _active_actions` while entries are keyed `"{domain}:{action_name}"` (QUAL-9 shape) — never a
+      match, so every session ever seen left a permanent `ActionMetric` + `DomainMetrics` entry in the singleton
+      collector, growing on every REST call/WS connection (QUAL-57 §M1). Fix (metrics.py): complete the session action
+      under the real `"{domain}:session"` key, **pop** the per-session `DomainMetrics` entry, keep a compact summary in
+      a bounded `_recent_sessions` deque(100) + lifetime `_total_sessions_started` scalar; `get_session_analytics`
+      active-check fixed to the real key, aggregates now = live sessions + recent ring, `total_sessions` = lifetime
+      scalar (response gains additive `recent_sessions`; the `/monitoring/sessions` REST model is built from system
+      metrics — unchanged, config-ui unaffected). Fix (context.py): eviction closes metrics via ONE seam —
+      `remove_context` now calls `record_session_end`, and both the lazy sweep and `get_context` expiry route through
+      it (previously the sweep skipped metrics entirely). Idempotent double-end safe. Regression:
+      `test_metrics_sessions.py` (5 tests: drop-on-end, idempotency, bounded footprint across 150 sessions, real-key
+      active check, reset) + 2 eviction-seam tests in `test_context_coverage.py`. Evidence:
+      `docs/review/arch_memory_review_2026-07-02.md` §M1.
+- [x] **BUG-17** [WS][MEM] (P2) `[release]` — **DONE 2026-07-02.** `/ws/audio` batch floor accumulated per-utterance
+      PCM without any bound — a client that never sends `{"type":"end"}` (buggy satellite firmware) grew ~115 MB/h per
+      connection (QUAL-57 §M2). Fix: `WS_MAX_UTTERANCE_SECONDS = 60` module constant; the utterance loop computes
+      `max_utterance_bytes` from the registered sample rate and **force-finalizes** on overflow (the VAD path's
+      `max_segment_duration_s` semantics — the accumulated audio is processed as an utterance, `metadata.overflow=true`,
+      warning logged, loop continues; deliberately a constant, not config — a new config key would drag CoreConfig +
+      config-ui along for a safety net no user should tune). Regression: `test_ws_audio_batch_overflow_force_finalizes`
+      (overflow finalizes without an end frame + the connection stays usable). `dataflow.md` sentence updated
+      (`user-facing-docs-are-done`). Evidence: `docs/review/arch_memory_review_2026-07-02.md` §M2.
+- [x] **BUG-18** [INTENTS][LLM][MEM] (P2) `[release]` — **DONE 2026-07-02.** LLM conversation store was unbounded —
+      `max_context_length` was config-read and never applied, so `handler_contexts["conversation"]["messages"]` and
+      domain-thread lists grew per turn for the session's life (days, for stable room-scoped sessions), and each turn
+      shipped the full history to the LLM (QUAL-57 §M3). Fix (user chose **window now + file summarization**, →
+      QUAL-60): **(1)** `UnifiedConversationContext.trim_handler_messages(handler, max)` — rolling window over the
+      message list, seed system prompt at index 0 pinned (the existing `clear_handler_context(keep_system=True)`
+      convention) and not counted; **(2)** `add_to_thread(..., max_messages=)` windows domain threads at append;
+      **(3)** `ConversationIntentHandler` enforces via `_trim_llm_context` at both append seams (after the user
+      append — BEFORE the LLM call, capping prompt size — and after the assistant append) and passes the bound to
+      both thread sites. Semantics: `max_context_length` = TURNS kept (×2 messages); config descriptions clarified in
+      `config/models.py` + `config-master.toml` (shape unchanged; config-ui `npm run check` + `build` pass).
+      Regression: `test_conversation_window.py` (4 tests: pin+window, no-op under limit, thread windowing,
+      8-turn e2e with LLM stub proving messages ≤ window and per-turn prompt size stops growing). Full suite 1132
+      passed / 7 skipped; pyright clean. Evidence: `docs/review/arch_memory_review_2026-07-02.md` §M3.
+- [x] **BUG-19** [FAF] (P2) `[release]` — **DONE 2026-07-02.** Action-store correctness fixes independent of the
+      ARCH-27 design (QUAL-56 F2/F3). **(1) Collision-proofing + identity safety:** audio/TTS action names get a
+      uuid suffix (same-ms launches used to collide); `remove_action` gained an `expected=` identity guard (the
+      done-callback passes its own record, so a displaced action's completion can no longer evict a live successor
+      under the same key); `add_action` screams on live-record displacement (caller bug). **(2)** the 32/identity
+      cap eviction now **cancels** the evicted task (was: untracked zombie). **(3) Failure unmasking at the choke
+      point:** `execute_fire_and_forget_action` wraps the coroutine with a falsy-return check — the handler
+      `return True/False` convention was IGNORED, so coroutines that swallowed their own exceptions were recorded
+      as SUCCESS; now `False` → RuntimeError → failure path. The two exception-swallow blocks
+      (`voice_synthesis_handler`, `audio_playback_handler`) re-raise to preserve the real error text. All 14
+      bool-convention sites are covered centrally — future handlers inherit it. **(4) timeout ≠ cancel:**
+      `ActionRecord.timed_out` set by the monitor before cancelling; history records `"timeout"` (was
+      indistinguishable `"cancelled"`) and metrics finally get `timeout_occurred=True`. Regression: 4 new tests in
+      `test_fire_and_forget_coverage.py` (falsy-return failure, timeout vs user-cancel ×2, displaced-callback
+      guard) + 2 in `test_action_store.py` (cap-evict cancels, identity guard); 1 outdated test updated to the new
+      contract (speak failure now raises). Full suite 1144 passed / 7 skipped; pyright clean.
+- [x] **BUG-20** [TEST] (P2) `[release]` — **DONE 2026-07-02 (filed + fixed same day; surfaced by the QUAL-61 gate
+      runs).** The smoke suite's "offline degrades gracefully" test was **not offline**: the SUT subprocess inherited
+      real LLM keys from the developer shell (the eval judge's `DEEPSEEK_API_KEY`) AND from the repo-root `.env`
+      that every runner `load_dotenv()`s — so the test made a **live DeepSeek call** and flaked whenever the API
+      answered slower than the 25s client timeout (the mysterious 59s full-suite runs WERE the slow-API runs;
+      causality was backwards from the "load flake" hypothesis journaled under ARCH-28). Fix: the smoke fixtures
+      launch the SUT with every `*_API_KEY` **blanked, not stripped** — dotenv never overrides an existing var, so
+      an empty value beats both leak paths (`_offline_env()` collects key names from the shell env AND `.env`).
+      Result: the offline degrade path is proven genuinely fast (smoke 6/6 in 12.5s), and the full suite dropped
+      from 24–59s to ~20s — it had been quietly calling DeepSeek on every run. Regression-proof by construction
+      (the test now fails if the degrade path ever regresses, instead of being rescued by a live LLM).
+- [x] **BUG-21** [BUILD][TOOLS] (P2) `[release]` — **DONE 2026-07-02 (filed + fixed same day; surfaced by the
+      BUILD-9 live CI runs + the user's local `--validate-all-profiles` output).** Double defect in the
+      build-analyzer validation gate: **(1) stale rule** — "TTS providers enabled but no audio output providers
+      configured" flagged all four satellite profiles as INVALID, but that combination is the ARCH-22 design:
+      satellites synthesize TTS and stream the reply over the WS reply channel with deliberately no local audio
+      provider. Fixed: the analyzer records `system.web_api_enabled` on `BuildRequirements` and errors only when TTS
+      has NEITHER a local audio provider NOR the web-API reply channel (a truly dead TTS). **(2) swallowed exit
+      code** — `--validate-all-profiles` printed ❌ INVALID and `return 0` unconditionally, so the CI gate (old
+      backend-health AND the new ci.yml) had been decorative all along; it now exits 1 when any profile is invalid.
+      Also in this change: `test_smoke_e2e.VENV_BIN` resolves console scripts next to `sys.executable` instead of
+      the hardcoded `.venv/bin` (absent in the pip-based CI env — run-4 failure). Verified: all 12 profiles VALID,
+      tool exit honest, full suite 1156 passed / 7 skipped.
+- [x] **BUG-22** [WEBAPI] (P2) `[release]` — **DONE 2026-07-05 (found + fixed during TEST-18 Slice B).**
+      **`room_alias` validation on `/execute/command` NEVER worked live:** `web_server.py` built its own fresh
+      `IntentAssetLoader` and loaded ONLY web templates, so the router's localization consumers saw empty data
+      — every room-scoped request got 400 «Invalid room alias … Valid aliases: []» (latent since the endpoint
+      gained room support; TEST-18 was the first real caller). Fix: `_setup_web_asset_loader` now PREFERS the
+      intent system's fully-loaded asset loader (donations/templates/localizations/web templates), keeping the
+      fresh web-templates-only loader as the fallback for a core without the intent system. Also extended
+      `assets/localization/rooms/{ru,en}.yaml` with the house's rooms (children_room, cabinet, hall, entrance,
+      shower, wardrobe, global) — the aliases the validation accepts.
+- [x] **BUG-23** [TXTPROC] (P2) `[release]` — **DONE 2026-07-05 (found live by the TEST-18 device suite,
+      fixture F51: `spoken: "hdmiодин"`).** **The `numbers` normalizer (digits→WORDS — the SYNTHESIS
+      direction) ran on `asr_output`,** fighting the BUG-1 words→digits pre-NLU normalization and
+      corrupting alphanumeric values before extraction («hdmi1»→«hdmiодин»; «25»→«двадцать пять»→
+      mis-reparsed — the real cause of F06's range error, previously misattributed to T2 compound
+      numerals). Same disease `prepare` had (BUG-3). Fix: `tts_input`-only in the pydantic defaults +
+      config-master + explicit `[text_processor.normalizers.*]` blocks in all 6 docker configs.
+      **En-route (user question): the 3 `-en` configs inherited `latin_to_cyrillic: true` by default —
+      an ENGLISH deployment would transliterate its entire TTS input to Cyrillic** (unheard only because
+      on-device EN TTS validation rides ARCH-25); the `-en` blocks now set `latin_to_cyrillic = false` +
+      `language = "en"` (QUAL-38 per-normalizer deployment language). Default-stage regression test added.
+- [x] **BUG-24** [NLU][TXTPROC] (P2) `[release]` — **DONE 2026-07-05 (found live by the TEST-18 device
+      suite, fixture F06).** **BUG-1's words→digits normalizer destroyed «тёплый пол»:**
+      `ovos_number_parser.numbers_to_digits(ru)` maps a STANDALONE «пол» to 0.5 («тёплый пол» → «тёплый
+      0.5») — the floor-heating device reference became unresolvable. Fix in
+      `utils/text_processing.normalize_numbers_to_digits`: standalone «пол» is guarded through the
+      conversion via a sentinel unless followed by a measure word («пол часа» still → «0.5 часа»);
+      inflections were never converted anyway. Regression-tested (incl. alphanumeric pass-through).
 - [x] **BUG-25** `[release]` [CLI][UX] — **DONE 2026-07-06 (filed + completed same day; found live by the
       user's first interactive multi-turn CLI session). Every other interactive command was SWALLOWED +
       the prompt looked hung after each reply.** Two defects, one session: **(1)** `CLIInput`'s single
@@ -2710,169 +2706,7 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       browser-safe, no collision with the bridge (8000) or config-ui (3000). Verified: default boot binds
       8080; config gate 13/13; config-ui check+build green.
 
-
-
-
-
 ### Tests (TEST)
-- [x] **TEST-18** [EVAL][MQTT] (P3) `[deferred]` — **DONE 2026-07-05. The `device_command` capture provider + Irene
-      producer contract tests (ARCH-26 §14) — the suite EXISTS and RUNS: first scoreboard 16/23** (all tier-1
-      actuation + clarify green; red = 3 reads → ARCH-8 PR-5, F40/F42 scenario routing → QUAL-64 matcher
-      tuning [user decision: leave red, tune later], F41 transliteration + F06 compound numeral → QUAL-35
-      T2 evidence). Two slices (fixtures-first fold, user 2026-07-05):
-      • **Slice A — crossover fixtures — DONE 2026-07-05** (interactive; eval-commons `941e245`; step 0
-        re-pin @ bridge `ee0a71d` / catalog `91909b54` was `e0d6b45`). Deliverable:
-        **`eval-commons/contracts/crossover_fixtures.json` — 23 fixtures** against the pinned catalog, all
-        four expect kinds `actuate | room-group | read | clarify`, tiered 1/2 (green-able with the QUAL-35
-        T1 donation baseline vs needs T2 units/transliteration), **guarded by
-        `tests/test_crossover_fixtures.py`** (8 tests: every binding verified against the golden — device
-        ids/capabilities/actions/param ranges/enums/rooms/groups/fields + fixtures↔pin version agreement;
-        16/16 green together with the pin guards — a re-pin flags stale fixtures loudly). Coverage: aliases
-        («телек»/«эппл»/«радиаторы»/«пол»), typed params with °C/% ranges, scenario enum via ru label
-        («кино с видеокассеты» → `movie_vhs`) + a transliteration case («эппл ти ви» → `movie_appletv`),
-        room-group scope `auto` vs «весь»→`all`, room aliases «зал»/«квартира», the depth-doctrine
-        named-device case («закрой тюль слева» stays device-form), the power-fence cases («печь»/«розетки»
-        reachable by NAME only). **The 3 open decisions resolved (user 2026-07-05):** light-subset pair
-        nouns («ночники»/«тумбочки»/«полки») **DROPPED from v1** — user will add bridge-side compound
-        devices later (those fixtures return with that re-pin); same-room capability ambiguity → **CLARIFY
-        in v1** (F20 playback, F21 climate), priority rules = later release → **QUAL-63**; sensor reads
-        **INCLUDED** (F30–F32, incl. `any_of` for the physically-equivalent bedroom room-temperature
-        sources). Immediately consumable by bridge VWB-16; voice-side this is the acceptance spec ARCH-8
-        PR-3/PR-4 build toward (test-first).
-        _Orig:_ **(UNGATED — startable now, pure data against the TEST-17 pin).** Author the
-        `{utterance → expected canonical command}` set into `eval-commons/contracts/` next to the pinned golden:
-        every parse+resolution path the golden exercises — power on/off via alias («включи свет в детской»),
-        ranged setters with units («поставь 22 градуса в спальне» → `climate.set_setpoint {temp: 22}`), percent
-        («яркость на 30»), cover, aggregates («выключи свет везде» → `all_lights`), scenario enums by ru label
-        («кино с видеокассеты» → `scenario.set {value: movie_vhs}`), room-alias forms («в зале»), sensor read.
-        Immediately consumable by the bridge's VWB-16 consumer half; voice-side they are the **acceptance spec
-        PR-3/PR-4 build toward** (test-first — the resolver meets a pre-existing failing suite, not post-hoc
-        assertions). NO input-switching fixtures (bridge VWB-19 gate, per QUAL-35 note).
-      • **Slice B — DONE 2026-07-05** (eval-commons `1bc7b03` + voice eval wiring): built as a **mock-bridge
-        capture** (refines §14.3's in-process capture — operationally superior: `eval_commons/mock_bridge.py`
-        serves the PINNED golden at `/system/catalog` and records every canonical POST fixture-shaped, so the
-        run also exercises the real `BridgeClient` wire serialization + the real startup catalog pull);
-        `device_command_provider` drives `/execute/command`, `device_command_assert` compares against the
-        fixture `expect`, `fixtures_to_tests` GENERATES the promptfoo cases (fixtures stay the single source
-        of truth). Voice side: `eval/device.promptfooconfig.yaml` + `make device / device-auto` (derives the
-        SUT config — env cannot override nested TOML) + EXECUTE_URL/BRIDGE_CAPTURE_URL in the target profiles.
-        _Orig:_ **(~~gated on ARCH-8 PR-1~~ UNGATED 2026-07-05).** A new eval-commons
-        promptfoo provider drives Irene with an utterance and returns the emitted canonical `DeviceCommand`
-        (captured by the PR-1 capturing bridge `OutputPort`, not POSTed) for assertion against the Slice-A
-        fixtures + the pinned openapi schema — the **producer** half of the bidirectional contract (the bridge's
-        consumer half = VWB-16). **Text-input first** (isolates NLU→resolver→handler, deterministic, no
-        audio/bridge); audio→canonical later (recorded RU fixtures, WS-suite pattern). The full suite turns
-        EXECUTABLE at ARCH-8 PR-4 + the QUAL-35 T1 donation baseline. ~~Gated on TEST-17~~ (pinned 2026-07-05).
-        Design §14.
-
-- [x] **TEST-17** [EVAL][MQTT] (P2) `[release]` — **DONE 2026-07-05. The Irene↔bridge contract pinned into
-      `eval-commons/contracts/`** (ARCH-26 §14 one-way inward sync; eval-commons `e571241`). Pinned byte-identical
-      from `wb-mqtt-bridge/contracts/` @ bridge `59f4f46` / catalog `7a1149c7` (contract patch **v1.1** + alias
-      vocabulary — pinning deliberately waited for VWB-20 so the first pin is the only pin): (a)
-      `openapi.json` (CatalogResponse + typed `CatalogParam` + canonical action shapes); (b) `catalog.golden.json`
-      (11 rooms + `global` aggregates + scenario managers, aliases, ru/en enum labels, units); plus the bridge
-      `STAMP.json`, a voice-side `PIN.json` (commit/version/date of the pin), and a consumer-story
-      `contracts/README.md` (re-pin procedure). (e) **The pin is load-bearing**: `tests/test_contracts_pin.py`
-      (8) validates the golden against the pinned `CatalogResponse` JSON Schema (the two halves can't disagree),
-      checks STAMP↔PIN↔golden version agreement, and asserts the v1.1 shape guarantees (aliases authored, ru
-      enum labels, °C/% units, `values`-XOR-`options_from`, no empty husks) — re-pinning a pre-patch artifact
-      fails loudly. **Carve-outs:** (c) the real WB7 dump joins when the bridge's `ops/` cutover happens (its
-      own README tracks it); (d) the `{utterance → canonical command}` crossover fixtures co-develop with
-      ARCH-8 PR-1 / TEST-18 (recorded there). `jsonschema` added to eval-commons dev extra.
-- [x] **TEST-16** [EVAL][UX] (P3) `[deferred]` — **DONE 2026-07-02 (user suspected obsolete; reconciliation
-      showed it was blocked on the user's own gold labels — completed interactively in-session).** The DeepSeek
-      Russian UX judge is now **calibrated against native-Russian-speaker gold labels**: a regenerated 20-case set
-      (the 2026-07-01 probe lived in a session scratchpad and was gone), user-labeled live (16 confident + 4
-      borderline, excluded from κ), graded through the same llm-rubric→DeepSeek path against the SHIPPED rubrics.
-      Iterations with re-measure-all discipline: shipped rubric 81%/κ0.625 (judge too strict on terse replies,
-      lenient on bureaucratese — the OPPOSITE bias profile of the Claude-labeled probe, vindicating the human
-      gate) → terse-passes/bureaucratese-fails/next-step-optional 94%/κ0.875 → in-condition mixed-language example
-      **16/16, κ=1.0 in-sample, verdicts stable across repeat runs**. All four borderlines got defensible verdicts.
-      **Housed** in eval-commons `examples/ru-ux-calibration/` (set + gold + scorer + README, commit `4dd73d7`).
-      **Rubric infrastructure fixed en route:** the documented `file://…yaml#anchor` pattern NEVER worked in
-      promptfoo (fragment treated as filename — why the live suite had inline copies); shared rubrics split into
-      per-rubric `{ru,en}/*.txt` files, the yaml files retired, ARCHITECTURE §7.1 flipped to CALIBRATED, and the
-      live `ws.promptfooconfig.yaml` UX cases (RU+EN ×4) now reference the shared files directly (path proven live
-      from `eval/`). EN rubrics carry the same structural improvements, marked uncalibrated. **Gate met: Russian
-      UX pass/fail is CI-trustworthy** — standing caveats: κ is in-sample (add fresh negatives as suites grow) and
-      the calibration set must be re-run after ANY rubric edit.
-- [x] **TEST-15** [EVAL][WS] (P3) `[deferred]` — **DONE 2026-07-01.** The WS system suite now asserts ASR/WER for
-      offline ASR. **task-start-reconciliation flipped the premise:** the ledger assumed the SUT had to be changed to
-      surface the recognized transcript, but a live probe showed the SUT **already** exposes it at
-      `metadata.audio_processing.transcribed_text` on the batch path (`_process_single_audio_pipeline` writes it; the
-      `/ws/audio` handler forwards it in `_meta`). So the fix is **eval-side only** (user-confirmed approach): the shared
-      `ws_audio_provider` (in `../eval-commons`) now resolves the transcript in priority order —
-      `metadata.audio_processing.transcribed_text` → last streaming `partial` → reply text — so WER scores the
-      *recognized speech*, not the assistant's reply. **No SUT change.** Verified live against `configs/embedded-armv7`:
-      `make ws TARGET=local` = **4/4 pass** (WER 0 on `«поставь таймер на десять минут»`; intent `timer.set`; both
-      DeepSeek-judged UX cases pass with `DEEPSEEK_API_KEY` set), `make cli` still 5/5. Cleared the now-confirmed
-      intent-name + unreachable-device TODOs in `ws.promptfooconfig.yaml`; refreshed `eval/README` (WER tier works, UX
-      runs live). **This closes the trace-driven system-testing implementation slices** (TEST-12/13/14/15); the WS
-      suite is fully green where a local SUT can assert it. (DeepSeek Russian judge *calibration* remains advisory, not
-      a blocker — a standing UX-tier note, not a TEST- task.)
-- [x] **TEST-14** [EVAL] (P3) `[deferred]` — **DONE 2026-06-28.** Trace↔WAV unification (S3 / D-9): a golden audio
-      trace already carries its captured audio (base64 PCM16, the same bytes `--listen` plays), so a new
-      `irene-replay-trace --extract-wav <file.wav>` decodes it to a standard WAV — **record once, test twice** (one
-      golden trace serves both the offline replay tier *and* the live WS suite, no re-recording with a mic). It's a pure
-      trace→WAV transform: a standalone CLI mode that builds no core and runs no replay; writes at the captured
-      rate/channels (Irene's 16 kHz mono PCM16 → directly usable as a WS fixture; eval-commons `conform` aligns target
-      format if ever needed). Module fn `write_trace_audio_to_wav` (rejects text traces / non-PCM16). Documented in
-      `eval/README` (record-once-test-twice). Gates: suite 1109 passed (+3 extract-wav tests), pyright 0, import-linter
-      9/9. **This closes the trace-driven system-testing series** (TEST-11 design → TEST-12 offline replay → TEST-13
-      live-WS failure capture → TEST-14 trace↔WAV); no TEST- trace-playback tasks remain open.
-- [x] **TEST-13** [EVAL] (P2) `[deferred]` — **DONE 2026-06-28.** Failure-trace capture for the live WS suite (S2,
-      design `trace_system_testing.md`). **D-6 SUT enabler:** when tracing is on, `WorkflowManager.process_text_input`/
-      `process_audio_input` stamp the trace `request_id` onto `result.metadata` (the `/ws/audio` response already
-      spreads `result.metadata`, so it surfaces with no handler change); additive, gated on tracing; config-ui N/A.
-      **D-13 keep-on-failure helper:** new project-agnostic `eval_commons.failures` (eval-commons `e740c80`) — reads the
-      promptfoo results JSON and copies each FAILING case's `<traces_dir>/<request_id>.json` into `traces/failures/`
-      (prunes the rest); robust to promptfoo nesting/version drift; reusable by wb-mqtt-bridge unchanged. Wired into the
-      thin `eval/Makefile` `ws` target behind `TRACE=1` (preserves promptfoo's exit code) + documented in `eval/README`.
-      **D-7 offline tier:** already satisfied — `irene-replay-trace --record-out` keeps the replayed trace on a mismatch
-      (the replay diffs `{text,success,actions}`); documented in the README. Reconciliation: `--record-out` pre-existed
-      (TEST-12); `/ws/audio` already had `intent_name` (QUAL-54) but not `request_id`. Gates: suite 1106 passed (+ 2
-      workflow_manager tests for the stamp; eval-commons +6), pyright 0, import-linter 9/9. Remaining: **TEST-14**
-      (trace↔WAV).
-- [x] **TEST-12** [EVAL] (P2) `[deferred]` — **DONE 2026-06-28.** Offline golden-trace replay surface (S1 of
-      `trace_system_testing.md`) **+ the config-override enabler the user asked for.** (1) **`--set DOTTED.KEY=VALUE`**
-      config overrides — `apply_dotted_overrides` in `config/manager.py` (JSON-typed coercion, applied pre-validation so
-      Pydantic coerces+validates, strict: an explicit `--set` never silently falls back to defaults), wired into the
-      base runner (all `irene-*` runners); 8 unit tests. No more hand-editing temp config files to tweak a setting.
-      (2) **Replay surface:** `eval/trace.promptfooconfig.yaml` drives `irene-replay-trace -t … --config … --local`
-      through the existing `cli_provider` (assert `exit_code === 0`) — no new `eval-commons` code; `make replay` /
-      `replay-judge`; committed seed golden `eval/traces/timer_set_10min.json` (text trace, ~12 KB, portable) that
-      replays **green** under the pure WB7 config; `eval/traces/README.md` + the 4th surface in `howto-new-test.md`.
-      (3) **`diff_output` now normalizes volatile timestamps** (`_strip_volatile`) so a fire-and-forget action's
-      `started_at` doesn't break an otherwise-deterministic golden (+ tests). Recording surfaced **BUG-1** (spelled-ru
-      numerals; golden uses the digit form) and **BUG-2** (stale TTS↔Audio check — fixed here). The natural-speech timer
-      golden + the `trace-ux` LLM tier await BUG-1.
-- [x] **TEST-11** [EVAL] (P2) `[deferred]` — **DONE 2026-06-27 (design).** Design for trace-driven system testing →
-      `docs/design/trace_system_testing.md`. Uses the shipped ARCH-19 trace record/replay as (1) an **offline,
-      deterministic, CI-able regression surface** — committed golden traces under `eval/traces/`, replayed via
-      `irene-replay-trace --local` through the existing `cli_provider` (assert `exit_code === 0`), tiered
-      `trace-system` (exit-code) vs `trace-ux` (DeepSeek judge) — and (2) **failure-trace capture**: always-trace +
-      keep-on-failure for the live WS suite (with a small SUT enabler — `request_id` in `/ws/audio` metadata) and
-      `--record-out`-on-mismatch offline, so a failed case ships a replayable trace (`--listen`/`--step`). Folds in
-      the fixture-versioning fix (TEST-10) and a trace↔WAV unification idea. **Completing the design ≠ shipped:** filed
-      implementation slices **TEST-12/13/14**.
-- [x] **TEST-10** [EVAL] (P2) `[release]` — **DONE 2026-06-27.** Version the WS audio fixtures: carved
-      `!eval/fixtures/*.wav` out of the repo's blanket `*.wav` ignore (`.gitignore`). The blanket rule had swept the
-      fixtures in by accident (generic "don't commit audio"), which made the WS suite **un-runnable in CI** (no mic)
-      and **non-reproducible** (re-recording → different waveform → different WER). Fixtures are versioned test inputs,
-      not stray audio. Verified the carve-out (eval/fixtures wav committable; other `*.wav` still ignored) and updated
-      `fixtures/README.md`. Small files; git-lfs only if they grow. _(Strategic follow-up — golden traces as the
-      reviewable regression inputs — is covered by the trace-system-testing design.)_
-- [x] **TEST-9** [EVAL] (P2) `[release]` — **DONE 2026-06-27.** Wired the eval-commons voice-fixture recorder (W6 of
-      `../eval-commons/docs/design/fixture_recorder.md`) into this repo's `eval/`: `make record` / `record-list` /
-      `record-devices` / `setup-record` targets (recorder invoked as `python -m eval_commons.record.cli`);
-      committed `profiles/recording.env.example` (machine-local `recording.env` git-ignored); **added `reference` to
-      the `light_unreachable` judge case** so the recorder has a line to read (§5 decision — inert to the test, it's
-      judge-only) — TODO in the YAML to confirm the target stays unreachable on a live run; repointed
-      `fixtures/README.md` + `eval/README.md` at `make record` (kept the ffmpeg/TTS recipe as the alternative). Verified:
-      `make record-list` derives both fixtures, `eval-fixture-record` console script resolves, `make record-devices`
-      lists inputs, `make cli` still 5/5. Recording the WAVs themselves is the remaining manual (human-at-mic) step,
-      which this unblocks. `config-ui-stays-functional` N/A. The recorder code + its design live in eval-commons (its
-      own repo/process).
 - [x] **TEST-0** (P0) — Minimal end-to-end smoke/integration harness (refactor safety net, Gate 0). **DONE
       2026-06-01** → `irene/tests/test_smoke_e2e.py` (**5 passed / 1 xfailed**, ~21s; boots the WebAPI runner once
       as a subprocess + a CLI headless check). Green flows: WebAPI boots, `привет`→`greeting.hello`, `/nlu/recognize`
@@ -3002,6 +2836,163 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       + the **provider-delegated `pause_audio`/`resume_audio`/`stop_playback`**, ASR `switch_language`; (3) ABC
       enforcement — a component missing a port method fails at instantiation (regression guard for the ports↔components
       contract). Fixtures: the localization-asset-loader pattern + fake port impls. Relates to QUAL-24, ARCH-1.
+- [x] **TEST-9** [EVAL] (P2) `[release]` — **DONE 2026-06-27.** Wired the eval-commons voice-fixture recorder (W6 of
+      `../eval-commons/docs/design/fixture_recorder.md`) into this repo's `eval/`: `make record` / `record-list` /
+      `record-devices` / `setup-record` targets (recorder invoked as `python -m eval_commons.record.cli`);
+      committed `profiles/recording.env.example` (machine-local `recording.env` git-ignored); **added `reference` to
+      the `light_unreachable` judge case** so the recorder has a line to read (§5 decision — inert to the test, it's
+      judge-only) — TODO in the YAML to confirm the target stays unreachable on a live run; repointed
+      `fixtures/README.md` + `eval/README.md` at `make record` (kept the ffmpeg/TTS recipe as the alternative). Verified:
+      `make record-list` derives both fixtures, `eval-fixture-record` console script resolves, `make record-devices`
+      lists inputs, `make cli` still 5/5. Recording the WAVs themselves is the remaining manual (human-at-mic) step,
+      which this unblocks. `config-ui-stays-functional` N/A. The recorder code + its design live in eval-commons (its
+      own repo/process).
+- [x] **TEST-10** [EVAL] (P2) `[release]` — **DONE 2026-06-27.** Version the WS audio fixtures: carved
+      `!eval/fixtures/*.wav` out of the repo's blanket `*.wav` ignore (`.gitignore`). The blanket rule had swept the
+      fixtures in by accident (generic "don't commit audio"), which made the WS suite **un-runnable in CI** (no mic)
+      and **non-reproducible** (re-recording → different waveform → different WER). Fixtures are versioned test inputs,
+      not stray audio. Verified the carve-out (eval/fixtures wav committable; other `*.wav` still ignored) and updated
+      `fixtures/README.md`. Small files; git-lfs only if they grow. _(Strategic follow-up — golden traces as the
+      reviewable regression inputs — is covered by the trace-system-testing design.)_
+- [x] **TEST-11** [EVAL] (P2) `[deferred]` — **DONE 2026-06-27 (design).** Design for trace-driven system testing →
+      `docs/design/trace_system_testing.md`. Uses the shipped ARCH-19 trace record/replay as (1) an **offline,
+      deterministic, CI-able regression surface** — committed golden traces under `eval/traces/`, replayed via
+      `irene-replay-trace --local` through the existing `cli_provider` (assert `exit_code === 0`), tiered
+      `trace-system` (exit-code) vs `trace-ux` (DeepSeek judge) — and (2) **failure-trace capture**: always-trace +
+      keep-on-failure for the live WS suite (with a small SUT enabler — `request_id` in `/ws/audio` metadata) and
+      `--record-out`-on-mismatch offline, so a failed case ships a replayable trace (`--listen`/`--step`). Folds in
+      the fixture-versioning fix (TEST-10) and a trace↔WAV unification idea. **Completing the design ≠ shipped:** filed
+      implementation slices **TEST-12/13/14**.
+- [x] **TEST-12** [EVAL] (P2) `[deferred]` — **DONE 2026-06-28.** Offline golden-trace replay surface (S1 of
+      `trace_system_testing.md`) **+ the config-override enabler the user asked for.** (1) **`--set DOTTED.KEY=VALUE`**
+      config overrides — `apply_dotted_overrides` in `config/manager.py` (JSON-typed coercion, applied pre-validation so
+      Pydantic coerces+validates, strict: an explicit `--set` never silently falls back to defaults), wired into the
+      base runner (all `irene-*` runners); 8 unit tests. No more hand-editing temp config files to tweak a setting.
+      (2) **Replay surface:** `eval/trace.promptfooconfig.yaml` drives `irene-replay-trace -t … --config … --local`
+      through the existing `cli_provider` (assert `exit_code === 0`) — no new `eval-commons` code; `make replay` /
+      `replay-judge`; committed seed golden `eval/traces/timer_set_10min.json` (text trace, ~12 KB, portable) that
+      replays **green** under the pure WB7 config; `eval/traces/README.md` + the 4th surface in `howto-new-test.md`.
+      (3) **`diff_output` now normalizes volatile timestamps** (`_strip_volatile`) so a fire-and-forget action's
+      `started_at` doesn't break an otherwise-deterministic golden (+ tests). Recording surfaced **BUG-1** (spelled-ru
+      numerals; golden uses the digit form) and **BUG-2** (stale TTS↔Audio check — fixed here). The natural-speech timer
+      golden + the `trace-ux` LLM tier await BUG-1.
+- [x] **TEST-13** [EVAL] (P2) `[deferred]` — **DONE 2026-06-28.** Failure-trace capture for the live WS suite (S2,
+      design `trace_system_testing.md`). **D-6 SUT enabler:** when tracing is on, `WorkflowManager.process_text_input`/
+      `process_audio_input` stamp the trace `request_id` onto `result.metadata` (the `/ws/audio` response already
+      spreads `result.metadata`, so it surfaces with no handler change); additive, gated on tracing; config-ui N/A.
+      **D-13 keep-on-failure helper:** new project-agnostic `eval_commons.failures` (eval-commons `e740c80`) — reads the
+      promptfoo results JSON and copies each FAILING case's `<traces_dir>/<request_id>.json` into `traces/failures/`
+      (prunes the rest); robust to promptfoo nesting/version drift; reusable by wb-mqtt-bridge unchanged. Wired into the
+      thin `eval/Makefile` `ws` target behind `TRACE=1` (preserves promptfoo's exit code) + documented in `eval/README`.
+      **D-7 offline tier:** already satisfied — `irene-replay-trace --record-out` keeps the replayed trace on a mismatch
+      (the replay diffs `{text,success,actions}`); documented in the README. Reconciliation: `--record-out` pre-existed
+      (TEST-12); `/ws/audio` already had `intent_name` (QUAL-54) but not `request_id`. Gates: suite 1106 passed (+ 2
+      workflow_manager tests for the stamp; eval-commons +6), pyright 0, import-linter 9/9. Remaining: **TEST-14**
+      (trace↔WAV).
+- [x] **TEST-14** [EVAL] (P3) `[deferred]` — **DONE 2026-06-28.** Trace↔WAV unification (S3 / D-9): a golden audio
+      trace already carries its captured audio (base64 PCM16, the same bytes `--listen` plays), so a new
+      `irene-replay-trace --extract-wav <file.wav>` decodes it to a standard WAV — **record once, test twice** (one
+      golden trace serves both the offline replay tier *and* the live WS suite, no re-recording with a mic). It's a pure
+      trace→WAV transform: a standalone CLI mode that builds no core and runs no replay; writes at the captured
+      rate/channels (Irene's 16 kHz mono PCM16 → directly usable as a WS fixture; eval-commons `conform` aligns target
+      format if ever needed). Module fn `write_trace_audio_to_wav` (rejects text traces / non-PCM16). Documented in
+      `eval/README` (record-once-test-twice). Gates: suite 1109 passed (+3 extract-wav tests), pyright 0, import-linter
+      9/9. **This closes the trace-driven system-testing series** (TEST-11 design → TEST-12 offline replay → TEST-13
+      live-WS failure capture → TEST-14 trace↔WAV); no TEST- trace-playback tasks remain open.
+- [x] **TEST-15** [EVAL][WS] (P3) `[deferred]` — **DONE 2026-07-01.** The WS system suite now asserts ASR/WER for
+      offline ASR. **task-start-reconciliation flipped the premise:** the ledger assumed the SUT had to be changed to
+      surface the recognized transcript, but a live probe showed the SUT **already** exposes it at
+      `metadata.audio_processing.transcribed_text` on the batch path (`_process_single_audio_pipeline` writes it; the
+      `/ws/audio` handler forwards it in `_meta`). So the fix is **eval-side only** (user-confirmed approach): the shared
+      `ws_audio_provider` (in `../eval-commons`) now resolves the transcript in priority order —
+      `metadata.audio_processing.transcribed_text` → last streaming `partial` → reply text — so WER scores the
+      *recognized speech*, not the assistant's reply. **No SUT change.** Verified live against `configs/embedded-armv7`:
+      `make ws TARGET=local` = **4/4 pass** (WER 0 on `«поставь таймер на десять минут»`; intent `timer.set`; both
+      DeepSeek-judged UX cases pass with `DEEPSEEK_API_KEY` set), `make cli` still 5/5. Cleared the now-confirmed
+      intent-name + unreachable-device TODOs in `ws.promptfooconfig.yaml`; refreshed `eval/README` (WER tier works, UX
+      runs live). **This closes the trace-driven system-testing implementation slices** (TEST-12/13/14/15); the WS
+      suite is fully green where a local SUT can assert it. (DeepSeek Russian judge *calibration* remains advisory, not
+      a blocker — a standing UX-tier note, not a TEST- task.)
+- [x] **TEST-16** [EVAL][UX] (P3) `[deferred]` — **DONE 2026-07-02 (user suspected obsolete; reconciliation
+      showed it was blocked on the user's own gold labels — completed interactively in-session).** The DeepSeek
+      Russian UX judge is now **calibrated against native-Russian-speaker gold labels**: a regenerated 20-case set
+      (the 2026-07-01 probe lived in a session scratchpad and was gone), user-labeled live (16 confident + 4
+      borderline, excluded from κ), graded through the same llm-rubric→DeepSeek path against the SHIPPED rubrics.
+      Iterations with re-measure-all discipline: shipped rubric 81%/κ0.625 (judge too strict on terse replies,
+      lenient on bureaucratese — the OPPOSITE bias profile of the Claude-labeled probe, vindicating the human
+      gate) → terse-passes/bureaucratese-fails/next-step-optional 94%/κ0.875 → in-condition mixed-language example
+      **16/16, κ=1.0 in-sample, verdicts stable across repeat runs**. All four borderlines got defensible verdicts.
+      **Housed** in eval-commons `examples/ru-ux-calibration/` (set + gold + scorer + README, commit `4dd73d7`).
+      **Rubric infrastructure fixed en route:** the documented `file://…yaml#anchor` pattern NEVER worked in
+      promptfoo (fragment treated as filename — why the live suite had inline copies); shared rubrics split into
+      per-rubric `{ru,en}/*.txt` files, the yaml files retired, ARCHITECTURE §7.1 flipped to CALIBRATED, and the
+      live `ws.promptfooconfig.yaml` UX cases (RU+EN ×4) now reference the shared files directly (path proven live
+      from `eval/`). EN rubrics carry the same structural improvements, marked uncalibrated. **Gate met: Russian
+      UX pass/fail is CI-trustworthy** — standing caveats: κ is in-sample (add fresh negatives as suites grow) and
+      the calibration set must be re-run after ANY rubric edit.
+- [x] **TEST-17** [EVAL][MQTT] (P2) `[release]` — **DONE 2026-07-05. The Irene↔bridge contract pinned into
+      `eval-commons/contracts/`** (ARCH-26 §14 one-way inward sync; eval-commons `e571241`). Pinned byte-identical
+      from `wb-mqtt-bridge/contracts/` @ bridge `59f4f46` / catalog `7a1149c7` (contract patch **v1.1** + alias
+      vocabulary — pinning deliberately waited for VWB-20 so the first pin is the only pin): (a)
+      `openapi.json` (CatalogResponse + typed `CatalogParam` + canonical action shapes); (b) `catalog.golden.json`
+      (11 rooms + `global` aggregates + scenario managers, aliases, ru/en enum labels, units); plus the bridge
+      `STAMP.json`, a voice-side `PIN.json` (commit/version/date of the pin), and a consumer-story
+      `contracts/README.md` (re-pin procedure). (e) **The pin is load-bearing**: `tests/test_contracts_pin.py`
+      (8) validates the golden against the pinned `CatalogResponse` JSON Schema (the two halves can't disagree),
+      checks STAMP↔PIN↔golden version agreement, and asserts the v1.1 shape guarantees (aliases authored, ru
+      enum labels, °C/% units, `values`-XOR-`options_from`, no empty husks) — re-pinning a pre-patch artifact
+      fails loudly. **Carve-outs:** (c) the real WB7 dump joins when the bridge's `ops/` cutover happens (its
+      own README tracks it); (d) the `{utterance → canonical command}` crossover fixtures co-develop with
+      ARCH-8 PR-1 / TEST-18 (recorded there). `jsonschema` added to eval-commons dev extra.
+- [x] **TEST-18** [EVAL][MQTT] (P3) `[deferred]` — **DONE 2026-07-05. The `device_command` capture provider + Irene
+      producer contract tests (ARCH-26 §14) — the suite EXISTS and RUNS: first scoreboard 16/23** (all tier-1
+      actuation + clarify green; red = 3 reads → ARCH-8 PR-5, F40/F42 scenario routing → QUAL-64 matcher
+      tuning [user decision: leave red, tune later], F41 transliteration + F06 compound numeral → QUAL-35
+      T2 evidence). Two slices (fixtures-first fold, user 2026-07-05):
+      • **Slice A — crossover fixtures — DONE 2026-07-05** (interactive; eval-commons `941e245`; step 0
+        re-pin @ bridge `ee0a71d` / catalog `91909b54` was `e0d6b45`). Deliverable:
+        **`eval-commons/contracts/crossover_fixtures.json` — 23 fixtures** against the pinned catalog, all
+        four expect kinds `actuate | room-group | read | clarify`, tiered 1/2 (green-able with the QUAL-35
+        T1 donation baseline vs needs T2 units/transliteration), **guarded by
+        `tests/test_crossover_fixtures.py`** (8 tests: every binding verified against the golden — device
+        ids/capabilities/actions/param ranges/enums/rooms/groups/fields + fixtures↔pin version agreement;
+        16/16 green together with the pin guards — a re-pin flags stale fixtures loudly). Coverage: aliases
+        («телек»/«эппл»/«радиаторы»/«пол»), typed params with °C/% ranges, scenario enum via ru label
+        («кино с видеокассеты» → `movie_vhs`) + a transliteration case («эппл ти ви» → `movie_appletv`),
+        room-group scope `auto` vs «весь»→`all`, room aliases «зал»/«квартира», the depth-doctrine
+        named-device case («закрой тюль слева» stays device-form), the power-fence cases («печь»/«розетки»
+        reachable by NAME only). **The 3 open decisions resolved (user 2026-07-05):** light-subset pair
+        nouns («ночники»/«тумбочки»/«полки») **DROPPED from v1** — user will add bridge-side compound
+        devices later (those fixtures return with that re-pin); same-room capability ambiguity → **CLARIFY
+        in v1** (F20 playback, F21 climate), priority rules = later release → **QUAL-63**; sensor reads
+        **INCLUDED** (F30–F32, incl. `any_of` for the physically-equivalent bedroom room-temperature
+        sources). Immediately consumable by bridge VWB-16; voice-side this is the acceptance spec ARCH-8
+        PR-3/PR-4 build toward (test-first).
+        _Orig:_ **(UNGATED — startable now, pure data against the TEST-17 pin).** Author the
+        `{utterance → expected canonical command}` set into `eval-commons/contracts/` next to the pinned golden:
+        every parse+resolution path the golden exercises — power on/off via alias («включи свет в детской»),
+        ranged setters with units («поставь 22 градуса в спальне» → `climate.set_setpoint {temp: 22}`), percent
+        («яркость на 30»), cover, aggregates («выключи свет везде» → `all_lights`), scenario enums by ru label
+        («кино с видеокассеты» → `scenario.set {value: movie_vhs}`), room-alias forms («в зале»), sensor read.
+        Immediately consumable by the bridge's VWB-16 consumer half; voice-side they are the **acceptance spec
+        PR-3/PR-4 build toward** (test-first — the resolver meets a pre-existing failing suite, not post-hoc
+        assertions). NO input-switching fixtures (bridge VWB-19 gate, per QUAL-35 note).
+      • **Slice B — DONE 2026-07-05** (eval-commons `1bc7b03` + voice eval wiring): built as a **mock-bridge
+        capture** (refines §14.3's in-process capture — operationally superior: `eval_commons/mock_bridge.py`
+        serves the PINNED golden at `/system/catalog` and records every canonical POST fixture-shaped, so the
+        run also exercises the real `BridgeClient` wire serialization + the real startup catalog pull);
+        `device_command_provider` drives `/execute/command`, `device_command_assert` compares against the
+        fixture `expect`, `fixtures_to_tests` GENERATES the promptfoo cases (fixtures stay the single source
+        of truth). Voice side: `eval/device.promptfooconfig.yaml` + `make device / device-auto` (derives the
+        SUT config — env cannot override nested TOML) + EXECUTE_URL/BRIDGE_CAPTURE_URL in the target profiles.
+        _Orig:_ **(~~gated on ARCH-8 PR-1~~ UNGATED 2026-07-05).** A new eval-commons
+        promptfoo provider drives Irene with an utterance and returns the emitted canonical `DeviceCommand`
+        (captured by the PR-1 capturing bridge `OutputPort`, not POSTed) for assertion against the Slice-A
+        fixtures + the pinned openapi schema — the **producer** half of the bidirectional contract (the bridge's
+        consumer half = VWB-16). **Text-input first** (isolates NLU→resolver→handler, deterministic, no
+        audio/bridge); audio→canonical later (recorded RU fixtures, WS-suite pattern). The full suite turns
+        EXECUTABLE at ARCH-8 PR-4 + the QUAL-35 T1 donation baseline. ~~Gated on TEST-17~~ (pinned 2026-07-05).
+        Design §14.
 
 ### Internationalization (I18N)
 - [x] **I18N-1** [DESIGN] (P3) `[deferred]` — **DONE 2026-07-01 (design; no code).** Real English deployment design →
@@ -3102,56 +3093,6 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       parity with Russian; no donation changes needed. No code/asset change. Design §2.
 
 ### Build & CI (BUILD)
-- [x] **BUILD-10** [BUILD][OPS] (P2) `[release]` — **DONE 2026-07-02.** The `ops/` deploy story per
-      `build_release_process.md` D-5 (bridge "deploy = pull, not build"): **`ops/docker-compose.yml`** (Irene on
-      `:6000`, `../.assets` mount — gitignored — mem 800m/1.5 cpu with tune-at-bring-up note, log caps; the
-      config-ui service behind a compose **profile** `ui` so D-4's "not on the controller" is one
-      `--profile ui up` away); **`ops/update.sh`** — syncs the git-owned assets subtrees (donations/localization/
-      prompts/templates/web + the two contract schemas, enumerated explicitly with `rsync --delete` per subtree)
-      into the assets mount, then `compose pull && up -d && image prune -f`; runtime-owned subtrees
-      (models/cache/state/traces/credentials) provably untouched — **verified with a sandbox sync test** (planted
-      model + durable-action record survived); **`ops/wb-mqtt-voice.service`** systemd oneshot;
-      **`ops/INSTALL.md`** (install/update/rollback/variants/recovery, bridge style — incl. the EN-image switch
-      and the vYYYYMMDD-sha rollback pin). Deploy loop on the WB = `git pull && ./ops/update.sh` — the manual
-      assets-artifact download is fully retired. `build-docker.md` deployment section rewritten around `ops/`
-      (`user-facing-docs-are-done`). Compose YAML + script syntax validated; the on-WB7 run folds into ARCH-25
-      bring-up as designed. _Closes the BUILD-8 arc: design → BUILD-9 (CI/publish, first fully green run
-      `7e2c50b`) → BUILD-10 (ops)._
-- [x] **BUILD-9** [BUILD] (P2) `[release]` — **DONE 2026-07-02.** Bridge-aligned CI/publish workflow implemented
-      per `build_release_process.md` D-1…D-4/D-6/D-7. **`ci.yml`** replaces `backend-health` + `frontend-health` +
-      `build-images` (all three deleted): `changes` path-filter → `ledger-guard` (`check_scope.py` now runs in CI) +
-      `backend-health` (**py-dev-gates@v0.1.1** with `install-extras: all,dev` for the lint-imports/no-type-checking/
-      pyright trio; NEW `uv lock --check` step keeps lockfile honesty since the gate env is pip-resolved; the voice
-      gates + pytest kept) + `frontend-health`; publish jobs are dispatch-only, `needs:` green health (the
-      publish-from-red-tree hole is closed). **Matrix:** a `plan` job expands `targets`/`languages` choice inputs
-      (default all) into ≤6 backend builds — RU unsuffixed, EN `-en`, per-`<target>-<language>` buildx cache, tag
-      triple unchanged. **D-6 guards live:** after push, the image is pulled by digest and the run FAILS if
-      `/app/assets` is non-empty; size vs per-target budget (placeholders 3.5/4.5/10 GB — tighten after the first
-      dispatch prints actuals to the summary). **UI image:** `config-ui/Dockerfile` (node:22 → nginx:alpine, ONE
-      multi-arch manifest amd64+arm64+armv7) + nginx.conf + entrypoint writing `/runtime-config.js` from
-      `API_BASE_URL`; `apiClient` default = injected base → else `http://<page-hostname>:6000` (D-4 amended at
-      implementation: **no proxy** — Irene's API has no path prefix and serves permissive CORS; runtime-config
-      pattern instead). The assets GHA artifact is gone (BUILD-10's git-pull sync replaces it; the guide bridges the
-      gap with a manual rsync note). Docs: `build-docker.md` rewritten (7-package table, EN pulls, dispatch UX, D-6
-      guarantee, UI image section). **Verified:** UI image built + smoke-run locally (runtime-config injection, SPA
-      fallback, healthy 200s); config-ui `check`/`build`/`test` green (40 tests); `ci.yml` YAML-parses; the live
-      expression paths validate on the first real dispatch (noted). No backend code touched.
-- [x] **BUILD-8** [BUILD][DESIGN] (P3) `[deferred]` — **DONE 2026-07-02 (design agreed, interactive).** The
-      "additional asks" arrived: organize this repo's build the way `../wb-mqtt-bridge` does. Two comparative
-      maps (voice vs bridge build machinery) fed the design at `docs/design/build_release_process.md`; four
-      decisions user-confirmed: **(D-2)** RU images keep unsuffixed names, EN adds `-en` (6 backend packages);
-      **(D-4)** config-ui ships as a bridge-style nginx image (`wb-mqtt-voice-ui`, one multi-arch manifest) but
-      is NOT deployed to the controller yet; **(D-3)** publishing stays manual — one dispatch drives the whole
-      targets×languages matrix, gated on green health jobs (today's `build-images.yml` can publish from a red
-      tree); **(D-5)** `ops/` deploy-by-pull with assets arriving by `git pull` + rsync (replaces the manual
-      GHA-artifact download), state subtrees never touched. **User hard requirement audited (D-6): ML model
-      files are NOT baked into images** (runtime stages copy only code+venv; `/app/assets` empty; models
-      download at runtime) — the one deliberate exception is the profile's spaCy NLU wheel (~15–45MB, one per
-      language); image bulk is dependency weight (torch on standalone). Guards specified: empty-`/app/assets`
-      assertion + per-image size budgets in the publish workflow. Also: adopt `py-dev-gates@v0.1.1`, run
-      `check_scope.py` in CI, keep the analyzer stage + buildx caching (voice is ahead of the bridge there).
-      Stale `docker_build_review.md` annotated obsolete (pre-BUG-14 reality). Follow-ups filed: **BUILD-9**
-      (ci.yml + matrix + guards + UI image) and **BUILD-10** (`ops/`), both `[release]`.
 - [x] **BUILD-1** (P0) — Verify clean `uv sync` + CLI and WebAPI boot at v15. **DONE 2026-06-01** (`bab6f97`):
       `uv sync --extra all` clean; `--check-deps` 5/5; **WebAPI** boots (workflow READY, 10 routers) and
       `POST /execute/command "привет"` → `greeting.hello` end-to-end; **CLI** boots and (after fix) headless
@@ -3315,6 +3256,56 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       **Flagged (not fixed):** `Component.start`→`is_dependencies_available` `__import__`s the returned strings — dead
       code (ComponentManager uses `initialize()`; nothing calls `.start()`), but now a landmine since returns are
       extra-names; remove or rewrite later.
+- [x] **BUILD-8** [BUILD][DESIGN] (P3) `[deferred]` — **DONE 2026-07-02 (design agreed, interactive).** The
+      "additional asks" arrived: organize this repo's build the way `../wb-mqtt-bridge` does. Two comparative
+      maps (voice vs bridge build machinery) fed the design at `docs/design/build_release_process.md`; four
+      decisions user-confirmed: **(D-2)** RU images keep unsuffixed names, EN adds `-en` (6 backend packages);
+      **(D-4)** config-ui ships as a bridge-style nginx image (`wb-mqtt-voice-ui`, one multi-arch manifest) but
+      is NOT deployed to the controller yet; **(D-3)** publishing stays manual — one dispatch drives the whole
+      targets×languages matrix, gated on green health jobs (today's `build-images.yml` can publish from a red
+      tree); **(D-5)** `ops/` deploy-by-pull with assets arriving by `git pull` + rsync (replaces the manual
+      GHA-artifact download), state subtrees never touched. **User hard requirement audited (D-6): ML model
+      files are NOT baked into images** (runtime stages copy only code+venv; `/app/assets` empty; models
+      download at runtime) — the one deliberate exception is the profile's spaCy NLU wheel (~15–45MB, one per
+      language); image bulk is dependency weight (torch on standalone). Guards specified: empty-`/app/assets`
+      assertion + per-image size budgets in the publish workflow. Also: adopt `py-dev-gates@v0.1.1`, run
+      `check_scope.py` in CI, keep the analyzer stage + buildx caching (voice is ahead of the bridge there).
+      Stale `docker_build_review.md` annotated obsolete (pre-BUG-14 reality). Follow-ups filed: **BUILD-9**
+      (ci.yml + matrix + guards + UI image) and **BUILD-10** (`ops/`), both `[release]`.
+- [x] **BUILD-9** [BUILD] (P2) `[release]` — **DONE 2026-07-02.** Bridge-aligned CI/publish workflow implemented
+      per `build_release_process.md` D-1…D-4/D-6/D-7. **`ci.yml`** replaces `backend-health` + `frontend-health` +
+      `build-images` (all three deleted): `changes` path-filter → `ledger-guard` (`check_scope.py` now runs in CI) +
+      `backend-health` (**py-dev-gates@v0.1.1** with `install-extras: all,dev` for the lint-imports/no-type-checking/
+      pyright trio; NEW `uv lock --check` step keeps lockfile honesty since the gate env is pip-resolved; the voice
+      gates + pytest kept) + `frontend-health`; publish jobs are dispatch-only, `needs:` green health (the
+      publish-from-red-tree hole is closed). **Matrix:** a `plan` job expands `targets`/`languages` choice inputs
+      (default all) into ≤6 backend builds — RU unsuffixed, EN `-en`, per-`<target>-<language>` buildx cache, tag
+      triple unchanged. **D-6 guards live:** after push, the image is pulled by digest and the run FAILS if
+      `/app/assets` is non-empty; size vs per-target budget (placeholders 3.5/4.5/10 GB — tighten after the first
+      dispatch prints actuals to the summary). **UI image:** `config-ui/Dockerfile` (node:22 → nginx:alpine, ONE
+      multi-arch manifest amd64+arm64+armv7) + nginx.conf + entrypoint writing `/runtime-config.js` from
+      `API_BASE_URL`; `apiClient` default = injected base → else `http://<page-hostname>:6000` (D-4 amended at
+      implementation: **no proxy** — Irene's API has no path prefix and serves permissive CORS; runtime-config
+      pattern instead). The assets GHA artifact is gone (BUILD-10's git-pull sync replaces it; the guide bridges the
+      gap with a manual rsync note). Docs: `build-docker.md` rewritten (7-package table, EN pulls, dispatch UX, D-6
+      guarantee, UI image section). **Verified:** UI image built + smoke-run locally (runtime-config injection, SPA
+      fallback, healthy 200s); config-ui `check`/`build`/`test` green (40 tests); `ci.yml` YAML-parses; the live
+      expression paths validate on the first real dispatch (noted). No backend code touched.
+- [x] **BUILD-10** [BUILD][OPS] (P2) `[release]` — **DONE 2026-07-02.** The `ops/` deploy story per
+      `build_release_process.md` D-5 (bridge "deploy = pull, not build"): **`ops/docker-compose.yml`** (Irene on
+      `:6000`, `../.assets` mount — gitignored — mem 800m/1.5 cpu with tune-at-bring-up note, log caps; the
+      config-ui service behind a compose **profile** `ui` so D-4's "not on the controller" is one
+      `--profile ui up` away); **`ops/update.sh`** — syncs the git-owned assets subtrees (donations/localization/
+      prompts/templates/web + the two contract schemas, enumerated explicitly with `rsync --delete` per subtree)
+      into the assets mount, then `compose pull && up -d && image prune -f`; runtime-owned subtrees
+      (models/cache/state/traces/credentials) provably untouched — **verified with a sandbox sync test** (planted
+      model + durable-action record survived); **`ops/wb-mqtt-voice.service`** systemd oneshot;
+      **`ops/INSTALL.md`** (install/update/rollback/variants/recovery, bridge style — incl. the EN-image switch
+      and the vYYYYMMDD-sha rollback pin). Deploy loop on the WB = `git pull && ./ops/update.sh` — the manual
+      assets-artifact download is fully retired. `build-docker.md` deployment section rewritten around `ops/`
+      (`user-facing-docs-are-done`). Compose YAML + script syntax validated; the on-WB7 run folds into ARCH-25
+      bring-up as designed. _Closes the BUILD-8 arc: design → BUILD-9 (CI/publish, first fully green run
+      `7e2c50b`) → BUILD-10 (ops)._
 - [x] **BUILD-11** [BUILD][DOCKER] (P1) `[release]` — **DONE 2026-07-06. First real publish dispatch + boot
       validation.** Dispatch `28774806674` (all targets × all languages + config-ui) — every job green, first
       artifacts ever on GHCR: `wb-mqtt-voice-{standalone,aarch64,armv7}[-en]` + `wb-mqtt-voice-ui`.
@@ -3342,8 +3333,6 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       dev-session process kills; the first item for ARCH-33's `/inbox`). Note: the design's leak-fence +
       owner-review model is what makes an auto-opened PR safe — it is reviewed, never merged by the bot.
 
-
-
 ### Models & Assets (ASSET)
 - [x] **ASSET-1** — Refresh stale model IDs (Anthropic→Claude 4.x, Whisper large-v3, ElevenLabs multilingual_v2, spaCy 3.8, gpt-4→gpt-4o-mini). → fc85306
 - [x] **ASSET-2** (P1) — **Liveness-checked ALL model download URLs. DONE 2026-06-03.** Swept every model URL in
@@ -3358,23 +3347,15 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       (stub feature-extraction; a TF *demo* model, not a real wakeword model), so it's the ESP32/wakeword review's
       keep-fix-cut call, not a URL patch. **Caveat honored:** network is fake-IP mode (all hosts → `198.18.0.0/15`,
       normal); judged on bytes-served vs stall, not the IP. **Torch.hub hedge:** unneeded — `models.silero.ai` is healthy.
-- [x] **ASSET-5** [WAKE][ASSET] (P2) `[release]` — **DONE 2026-07-04. Wake-word packs through the AssetManager**
-      (implements ARCH-29 / `docs/design/wakeword_models.md`; first RU model «Ирина» consumed from HF —
-      the wakeword-training factory's first handoff). AssetManager: multi-file model support (`files:
-      {filename: url}` catalog entries → `_download_files_pack`, staging dir + atomic rename, existing
-      lock/populated-check/healing) + `download_model_files()` for ad-hoc packs. MicroWakeWordProvider:
-      4-rung `_build_detector` (local manifest / wheel built-ins / v2 manifest URL with sibling-`.tflite`
-      derivation / released catalog `{irina: HF droman42/microwakeword-irina-ru}`), `_get_default_extension`
-      → `""` (directory packs `models/microwakeword/<word>/`), catalog advertised in
-      `get_supported_wake_words`; catalog-fetch failures log WARNING (unknown words stay debug). Configs:
-      `standalone-x86_64` → microwakeword/«Ирина» (0.97), `standalone-x86_64-en` → microwakeword/Alexa (0.9);
-      config-master example block. Docs: `voice-trigger.md` rewritten (model sourcing + RU words section),
-      «Борис»→«Валера»/«Наташа» roster fix in `esp32.md` + `esp32-fit.dot` (png regenerated). Tests:
-      `test_wakeword_assets.py` (11, hermetic — fake pmw + patched fetch). **Verified live:** irina pack
-      downloaded from HF via AssetManager (60,968-byte tflite), real pymicro-wakeword detectors: silence
-      negative, **16/16 synthetic + 6/6 real household «Ирина» recordings detected @0.97** (initial 0/16 was
-      a harness artifact — clips ending exactly at the word need trailing audio to flush the sliding window;
-      mic streams always have it).
+- [x] **ASSET-3** (P2) — **DONE 2026-06-03 (with QUAL-13 Stage 1).** Migrated `lingua-franca` (abandoned MycroftAI git
+      pin) → **`ovos-number-parser>=0.5.1`** (maintained OVOS successor, on PyPI, pure-Python → no armv7 wheel concern).
+      Investigation found irene's real usage was tiny (`pronounce_number` + the stateless successor needs `lang=` per
+      call, no global `load_language`) — confined to `irene/utils/text_processing.py`. **Russian now routes through the
+      dependency-free in-repo pure-Python path** (`num_to_text_ru`/`decimal_to_text_ru` — better than ovos's literal
+      "точка", and works on edge **without** the extra); non-ru uses ovos (degrades to raw digits if the optional extra
+      is absent). `load_language` shim → no-op. Removed the dead git pin from `pyproject.toml` + lock; `ovos-date-parser`
+      NOT added (irene needs no date parsing). _(Remaining: the 4 provider files' lingua-franca dep-hint strings are
+      deleted with those providers in QUAL-13 Stage 2; examples still import lingua_franca — demo-only, harmless.)_
 - [x] **ASSET-4** [VAD][ASSET] (P2) `[release]` — **DONE 2026-07-04. Silero VAD model download moved into the
       AssetManager; engine never downloads.** (Chat-surfaced VAD review 2026-07-04; findings were inline in this
       entry — no review doc.) Was: `SileroVADEngine._ensure()` ran a raw synchronous `urllib.request.urlretrieve`
@@ -3394,25 +3375,30 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       compiled into the `pymicro-vad` wheel (`micro_vad_cpp.abi3.so`); energy has no model. Tests:
       `test_vad_assets.py` (10). Verified live: real GitHub download through AssetManager + dead-URL → energy
       fallback.
-- [x] **ASSET-3** (P2) — **DONE 2026-06-03 (with QUAL-13 Stage 1).** Migrated `lingua-franca` (abandoned MycroftAI git
-      pin) → **`ovos-number-parser>=0.5.1`** (maintained OVOS successor, on PyPI, pure-Python → no armv7 wheel concern).
-      Investigation found irene's real usage was tiny (`pronounce_number` + the stateless successor needs `lang=` per
-      call, no global `load_language`) — confined to `irene/utils/text_processing.py`. **Russian now routes through the
-      dependency-free in-repo pure-Python path** (`num_to_text_ru`/`decimal_to_text_ru` — better than ovos's literal
-      "точка", and works on edge **without** the extra); non-ru uses ovos (degrades to raw digits if the optional extra
-      is absent). `load_language` shim → no-op. Removed the dead git pin from `pyproject.toml` + lock; `ovos-date-parser`
-      NOT added (irene needs no date parsing). _(Remaining: the 4 provider files' lingua-franca dep-hint strings are
-      deleted with those providers in QUAL-13 Stage 2; examples still import lingua_franca — demo-only, harmless.)_
+- [x] **ASSET-5** [WAKE][ASSET] (P2) `[release]` — **DONE 2026-07-04. Wake-word packs through the AssetManager**
+      (implements ARCH-29 / `docs/design/wakeword_models.md`; first RU model «Ирина» consumed from HF —
+      the wakeword-training factory's first handoff). AssetManager: multi-file model support (`files:
+      {filename: url}` catalog entries → `_download_files_pack`, staging dir + atomic rename, existing
+      lock/populated-check/healing) + `download_model_files()` for ad-hoc packs. MicroWakeWordProvider:
+      4-rung `_build_detector` (local manifest / wheel built-ins / v2 manifest URL with sibling-`.tflite`
+      derivation / released catalog `{irina: HF droman42/microwakeword-irina-ru}`), `_get_default_extension`
+      → `""` (directory packs `models/microwakeword/<word>/`), catalog advertised in
+      `get_supported_wake_words`; catalog-fetch failures log WARNING (unknown words stay debug). Configs:
+      `standalone-x86_64` → microwakeword/«Ирина» (0.97), `standalone-x86_64-en` → microwakeword/Alexa (0.9);
+      config-master example block. Docs: `voice-trigger.md` rewritten (model sourcing + RU words section),
+      «Борис»→«Валера»/«Наташа» roster fix in `esp32.md` + `esp32-fit.dot` (png regenerated). Tests:
+      `test_wakeword_assets.py` (11, hermetic — fake pmw + patched fetch). **Verified live:** irina pack
+      downloaded from HF via AssetManager (60,968-byte tflite), real pymicro-wakeword detectors: silence
+      negative, **16/16 synthetic + 6/6 real household «Ирина» recordings detected @0.97** (initial 0/16 was
+      a harness artifact — clips ending exactly at the word need trailing audio to flush the sliding window;
+      mic streams always have it).
 
 ### Documentation (DOC)
-- [x] **DOC-9** [EVAL] (P2) `[release]` — **DONE 2026-06-27.** User-facing guide for the eval harness:
-      `docs/guides/howto-new-test.md` (matches the `howto-*` recipe voice + a decision diagram
-      `docs/images/howto-test.{dot,png}`). Walks through the three surfaces (CLI contract, WS system, WS UX-judged),
-      authoring a case in each, recording the audio fixture (`make record`), and keeping cases endpoint-agnostic
-      (TARGET/CONFIG). **Wired into the howto index** like its siblings: listed in `CONTRIBUTING.md` ("Add a test",
-      beside add-an-intent/model/language) and the top-level `README` pointer; also cross-linked from `eval/README.md`
-      (reference ⟷ walkthrough). No internal tracking language in the prose (user-facing-docs voice). Complements the
-      existing `eval/README.md` + `fixtures/README.md` rather than duplicating them.
+- [x] **DOC-5b** (P2) — DONE 2026-06-08: regenerated `guides/DONATION_FILE_SPECIFICATION.md` for the v1.1
+      two-part model (language-neutral `contract.json` + per-language `<lang>.json`), with full field reference
+      from `donation_contract_v1.1.json` (method/param schema, type + entity_type enums) and the cross-language
+      validation rule. Old single-file/v1.0 body + drift banner replaced.
+
 - [x] **DOC-1** — Sync README/architecture to v15; archive ~28 historical docs to `docs/archive/`. → 4a55519
 - [x] **DOC-2** (P2) — DONE 2026-06-08: archived the entire `docs/TODO/` subfolder + `docs/TODO.md` to
       `docs/archive/` (superseded by this plan). The open TODO11/microWakeWord work is tracked under
@@ -3432,10 +3418,6 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       `ASSET_MANAGEMENT.md` (12 TOML-nesting fixes `[providers.X]`→`[X.providers]`), `train_schedule_handler.md`
       (env → `IRENE_INTENT_SYSTEM__TRAIN_SCHEDULE__*`), `voice_trigger.md` (YAML→TOML), and authoritative
       correction banners on `guides/DONATION_FILE_SPECIFICATION.md` + `plugins/universal_tts.md`.
-- [x] **DOC-5b** (P2) — DONE 2026-06-08: regenerated `guides/DONATION_FILE_SPECIFICATION.md` for the v1.1
-      two-part model (language-neutral `contract.json` + per-language `<lang>.json`), with full field reference
-      from `donation_contract_v1.1.json` (method/param schema, type + entity_type enums) and the cross-language
-      validation rule. Old single-file/v1.0 body + drift banner replaced.
 - [x] **DOC-6** (P2) — Archived stale historical-plan docs (`config_schemas`, `language_support`,
       `configuration_guide`, `PIPELINE_IMPLEMENTATION`, `irene_current`) → `docs/archive/`.
 - [x] **DOC-7** [PEX] (P1) — DONE 2026-06-08: the parameter-extraction reference is covered across the new
@@ -3455,73 +3437,16 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       (client registry, physical identity — the timer-knows-its-room story). Content verified against
       TODAY'S code (post QUAL-27/28/36, BUG-4, ARCH-27/28), NOT transcribed from the defect-era QUAL-25
       snapshot. Linked from README's architecture list + cross-linked from `dataflow.md`.
-
+- [x] **DOC-9** [EVAL] (P2) `[release]` — **DONE 2026-06-27.** User-facing guide for the eval harness:
+      `docs/guides/howto-new-test.md` (matches the `howto-*` recipe voice + a decision diagram
+      `docs/images/howto-test.{dot,png}`). Walks through the three surfaces (CLI contract, WS system, WS UX-judged),
+      authoring a case in each, recording the audio fixture (`make record`), and keeping cases endpoint-agnostic
+      (TARGET/CONFIG). **Wired into the howto index** like its siblings: listed in `CONTRIBUTING.md` ("Add a test",
+      beside add-an-intent/model/language) and the top-level `README` pointer; also cross-linked from `eval/README.md`
+      (reference ⟷ walkthrough). No internal tracking language in the prose (user-facing-docs voice). Complements the
+      existing `eval/README.md` + `fixtures/README.md` rather than duplicating them.
 
 ### UI / config-ui (UI)
-- [x] **UI-14** [UI] (P3) `[deferred]` — **DONE 2026-06-28.** config-ui efficiency + hardcoded-list/altitude (review
-      §E). **Efficiency (behavior-preserving, gate-green):** E1 derived `hasChanges` instead of the state-via-effect
-      anti-pattern on both Templates/Prompts pages (removed the effect + the redundant `setHasChanges(false)` calls —
-      verified each coincided with `data===original`); E2 `TomlPreview` debounce → `useRef` (no re-render per keystroke);
-      E3 all 14 `JSON.parse(JSON.stringify)` deep-copies → `structuredClone`; E5 memoized LemmasEditor's nested-loop
-      suggestion scan + per-row conflict map. **E4 skipped** (`performAnalysis` also runs from a manual path → threading
-      `currentHash` risks a cache-key mismatch; minor perf, real risk). **Altitude:** E6 the `ContractEditor`
-      PARAMETER_TYPES/ENTITY_TYPES/ROOM_CONTEXTS dropdowns now derive from `satisfies Record<Union,…>` keys, so a backend
-      donation-enum change **fails the build** instead of silently dropping options (the review's drift concern, fixed at
-      compile time since a TS union can't be enumerated at runtime). **E7/E9/E10 spun out as UI-16** — E7 (component
-      roster) + E9 (widget heuristics) are **blocked on backend schema metadata** (no `is_component`/`widget` hint
-      exists); E10 (spaCy-attr i18n) is niche/low-value. **E8 assessed non-issue** — `LanguageTabs` display names are
-      inherently UI + degrade gracefully; the `['en','ru']` fallback is a defensible default. Gate
-      (`config-ui-stays-functional`): `npm run check` + `npm run build` green. Like UI-12, the review's §E altitude items
-      were partly over-credited (most need backend signals or are non-issues); the genuine config-ui wins (efficiency +
-      E6 drift-guard) are done.
-- [x] **UI-13** [UI] (P3) `[deferred]` — **DONE 2026-06-28.** config-ui dead-code removal (review §D — unused *exports*,
-      which ESLint's unused-locals rule can't see). Each verified 0 external refs before deleting; the gate (type-check)
-      would catch a mis-call. Removed: `types/index.ts` 8 never-imported utility aliases (Maybe/Optional/RequiredKeys/
-      ChangeHandler/ClickHandler/AsyncClickHandler/ApiMethod/LoadingState; kept `ConnectionStatus`); `types/components.ts`
-      8 dead interfaces (TokenPatternsEditorProps, SlotPatternsEditorProps, HandlerListProps, ConfigSection+ConfigField,
-      SearchFilters, BulkOperationResult, MonitoringData; 239→174 lines); `spacyAttributeHelpers.ts` `validateSpacyAttribute`;
-      `safeStringify.ts` `wouldShowObjectObject`. **Plus folded in:** the 12 hand-written `*Request` types in `api.ts`
-      that C1 (UI-12) orphaned (the same-named `openapi.gen.ts` schemas are separate/generated), and the unused
-      `ajv`/`ajv-formats` deps (UI-11 §B finding — `npm uninstall`; not imported anywhere). Gate
-      (`config-ui-stays-functional`): `npm run check` (type-check + lint + orphans) + `npm run build` green — confirming
-      everything removed was truly dead.
-- [x] **UI-12** [UI] (P3) `[deferred]` — **DONE 2026-06-28.** config-ui duplication consolidation (review §C). **The two
-      genuinely-clean dedups done; C2–C5 assessed and declined as over-credited.** **C1** — the `apiClient` per-language
-      CRUD quintet (donations/templates/prompts/localizations, ~250 dup lines) → 6 shared private helpers + thin typed
-      wrappers; call sites/signatures/requests unchanged; 12 now-unused `*Request` imports removed (`123ce3b`). **C6** —
-      the `CardPatternsEditor`/`ExtractionFillersEditor` controlled decompile→compile scaffold → `useDecompiledPatterns`
-      hook (`99c1432`). Both type-proven & behavior-preserving; gate green. **C2–C5 assessed-divergent** (annotated in
-      the review doc): the pages/editors are *same-concept, divergent-presentation*, not clones — C2's two pages diverge
-      in ~10 (often intentional) behaviors; C3's list editors carry per-row conflict badges (Lemmas) / index+styling
-      (Spacy) so they aren't faithful `ArrayOfStringsEditor` swaps; C4/C5's `TemplateKeyEditor` already uses
-      `ArrayOfStringsEditor` and has read-only keys while `LocalizationKeyEditor` adds a type-switch + domain hints —
-      merging would **change UX**, not dedup. Net: ~280 lines genuinely removed (C1+C6); the §C over-credit recorded so
-      it isn't re-litigated. Two optional micro-consistency wins (Localization array → `ArrayOfStringsEditor`; object
-      branches → `KeyValueEditor`) noted, not pursued (UX-touching, no meaningful dup). Decisions: C2 skip + C2–C5 close
-      both user calls (2026-06-28). Gate (`config-ui-stays-functional`): `npm run check` + `npm run build` green.
-- [x] **UI-11** [UI] (P3) `[deferred]` — **DONE 2026-06-28.** config-ui type-contract drift in `src/types/api.ts`
-      (review `config_ui_review.md` §B) — restores the type-check half of `config-ui-stays-functional`. Realigned the 4
-      drifted types to the backend `CoreConfig` (verified against the generated `openapi.gen.ts` + `irene/config/
-      models.py`): **(B1)** added `outputs: OutputConfig` + `trace: TraceConfig` to `CoreConfig` and defined those
-      interfaces; **(B2)** added canonical `default_language`/`supported_languages` (QUAL-36), kept `language` as the
-      deprecated legacy field; **(B3)** removed the phantom `default_language`/`supported_languages` from `NLUConfig`
-      (they live on `CoreConfig`); **(B4)** rewrote `VADConfig` to the ARCH-18 shape (dropped ~10 phantom flat per-engine
-      fields, added `default_provider` + `providers`). **Zero consumer churn** — grep confirmed no component read any
-      drifted field (the editor renders from the backend schema), so the realign is pure type-accuracy. Gate
-      (`config-ui-stays-functional`): `npm run check` + `npm run build` green. _Durable follow-up considered: the
-      generated `openapi.gen.ts` is current but unused while hand-written `api.ts` is consumed — making `api.ts` derive
-      from the generated schema would prevent recurrence, but that's a larger structural refactor (sub-interface
-      consumers) left for a future call. `ajv`/`ajv-formats` remain unused deps (client validation is backend-delegated)._
-- [x] **UI-10** [DEPS] (P2) `[release]` — **DONE 2026-06-27.** config-ui major dependency upgrades clearing the 6
-      Dependabot alerts the lockfile-only housekeeping couldn't (all needed breaking majors outside the declared
-      ranges): `vite ^5`→`^8.1.0` + `@vitejs/plugin-react ^4`→`^6.0.3` (3 vite advisories + esbuild dev-server; vite 8
-      uses the rolldown bundler), `react-syntax-highlighter ^15`→`^16.1.1` (prismjs DOM-clobbering — the only runtime
-      one; `Prism` + prism style imports unchanged), `@typescript-eslint ^6`→`^8.62.0` + `eslint ^8.45`→`^8.57.1`
-      (minimatch ReDoS in lint tooling — stayed on eslintrc, **no eslint-9 flat-config migration**). ts-eslint 8's
-      stricter `recommended-type-checked` surfaced 6 lint errors: 5 unnecessary-type-assertions auto-fixed, 1 unused
-      catch binding → optional-catch (`apiClient.ts`). Gate green: `npm run check` (type-check + lint + orphans) +
-      `npm run build` + vitest 40/40; `npm audit` → **0 vulnerabilities**. `package.json` intent changed (deliberate
-      version decision, per the `every-task-in-the-ledger` carve-out — vs. the 2 lockfile-only bumps done as housekeeping).
 - [x] **UI-1** [DEDITOR] (P2) — **DONE 2026-06-06.** Designed the human-friendly donation/pattern authoring model →
       `config-ui/docs/donation_editor_ux.md`. **Persona-driven** (author knows handlers, **zero spaCy/NLU**): the model
       is **five everyday cards + an Advanced escape hatch** (a word [+"include its forms"] / one-of-several-words /
@@ -3686,7 +3611,70 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       (simple-field `renderField` and direct widget calls) funnel through `ConfigWidget`. Reused the already-present
       `KeyValueEditor` (the deleted `KeyValueOfStringArray` from UI-8 was a different, string-array variant). DoD met:
       `cd config-ui && npm run check` (type-check + lint 0-warn + orphan guard) + `npm run build` green. Refs: UI-5/UI-8.
-
+- [x] **UI-10** [DEPS] (P2) `[release]` — **DONE 2026-06-27.** config-ui major dependency upgrades clearing the 6
+      Dependabot alerts the lockfile-only housekeeping couldn't (all needed breaking majors outside the declared
+      ranges): `vite ^5`→`^8.1.0` + `@vitejs/plugin-react ^4`→`^6.0.3` (3 vite advisories + esbuild dev-server; vite 8
+      uses the rolldown bundler), `react-syntax-highlighter ^15`→`^16.1.1` (prismjs DOM-clobbering — the only runtime
+      one; `Prism` + prism style imports unchanged), `@typescript-eslint ^6`→`^8.62.0` + `eslint ^8.45`→`^8.57.1`
+      (minimatch ReDoS in lint tooling — stayed on eslintrc, **no eslint-9 flat-config migration**). ts-eslint 8's
+      stricter `recommended-type-checked` surfaced 6 lint errors: 5 unnecessary-type-assertions auto-fixed, 1 unused
+      catch binding → optional-catch (`apiClient.ts`). Gate green: `npm run check` (type-check + lint + orphans) +
+      `npm run build` + vitest 40/40; `npm audit` → **0 vulnerabilities**. `package.json` intent changed (deliberate
+      version decision, per the `every-task-in-the-ledger` carve-out — vs. the 2 lockfile-only bumps done as housekeeping).
+- [x] **UI-11** [UI] (P3) `[deferred]` — **DONE 2026-06-28.** config-ui type-contract drift in `src/types/api.ts`
+      (review `config_ui_review.md` §B) — restores the type-check half of `config-ui-stays-functional`. Realigned the 4
+      drifted types to the backend `CoreConfig` (verified against the generated `openapi.gen.ts` + `irene/config/
+      models.py`): **(B1)** added `outputs: OutputConfig` + `trace: TraceConfig` to `CoreConfig` and defined those
+      interfaces; **(B2)** added canonical `default_language`/`supported_languages` (QUAL-36), kept `language` as the
+      deprecated legacy field; **(B3)** removed the phantom `default_language`/`supported_languages` from `NLUConfig`
+      (they live on `CoreConfig`); **(B4)** rewrote `VADConfig` to the ARCH-18 shape (dropped ~10 phantom flat per-engine
+      fields, added `default_provider` + `providers`). **Zero consumer churn** — grep confirmed no component read any
+      drifted field (the editor renders from the backend schema), so the realign is pure type-accuracy. Gate
+      (`config-ui-stays-functional`): `npm run check` + `npm run build` green. _Durable follow-up considered: the
+      generated `openapi.gen.ts` is current but unused while hand-written `api.ts` is consumed — making `api.ts` derive
+      from the generated schema would prevent recurrence, but that's a larger structural refactor (sub-interface
+      consumers) left for a future call. `ajv`/`ajv-formats` remain unused deps (client validation is backend-delegated)._
+- [x] **UI-12** [UI] (P3) `[deferred]` — **DONE 2026-06-28.** config-ui duplication consolidation (review §C). **The two
+      genuinely-clean dedups done; C2–C5 assessed and declined as over-credited.** **C1** — the `apiClient` per-language
+      CRUD quintet (donations/templates/prompts/localizations, ~250 dup lines) → 6 shared private helpers + thin typed
+      wrappers; call sites/signatures/requests unchanged; 12 now-unused `*Request` imports removed (`123ce3b`). **C6** —
+      the `CardPatternsEditor`/`ExtractionFillersEditor` controlled decompile→compile scaffold → `useDecompiledPatterns`
+      hook (`99c1432`). Both type-proven & behavior-preserving; gate green. **C2–C5 assessed-divergent** (annotated in
+      the review doc): the pages/editors are *same-concept, divergent-presentation*, not clones — C2's two pages diverge
+      in ~10 (often intentional) behaviors; C3's list editors carry per-row conflict badges (Lemmas) / index+styling
+      (Spacy) so they aren't faithful `ArrayOfStringsEditor` swaps; C4/C5's `TemplateKeyEditor` already uses
+      `ArrayOfStringsEditor` and has read-only keys while `LocalizationKeyEditor` adds a type-switch + domain hints —
+      merging would **change UX**, not dedup. Net: ~280 lines genuinely removed (C1+C6); the §C over-credit recorded so
+      it isn't re-litigated. Two optional micro-consistency wins (Localization array → `ArrayOfStringsEditor`; object
+      branches → `KeyValueEditor`) noted, not pursued (UX-touching, no meaningful dup). Decisions: C2 skip + C2–C5 close
+      both user calls (2026-06-28). Gate (`config-ui-stays-functional`): `npm run check` + `npm run build` green.
+- [x] **UI-13** [UI] (P3) `[deferred]` — **DONE 2026-06-28.** config-ui dead-code removal (review §D — unused *exports*,
+      which ESLint's unused-locals rule can't see). Each verified 0 external refs before deleting; the gate (type-check)
+      would catch a mis-call. Removed: `types/index.ts` 8 never-imported utility aliases (Maybe/Optional/RequiredKeys/
+      ChangeHandler/ClickHandler/AsyncClickHandler/ApiMethod/LoadingState; kept `ConnectionStatus`); `types/components.ts`
+      8 dead interfaces (TokenPatternsEditorProps, SlotPatternsEditorProps, HandlerListProps, ConfigSection+ConfigField,
+      SearchFilters, BulkOperationResult, MonitoringData; 239→174 lines); `spacyAttributeHelpers.ts` `validateSpacyAttribute`;
+      `safeStringify.ts` `wouldShowObjectObject`. **Plus folded in:** the 12 hand-written `*Request` types in `api.ts`
+      that C1 (UI-12) orphaned (the same-named `openapi.gen.ts` schemas are separate/generated), and the unused
+      `ajv`/`ajv-formats` deps (UI-11 §B finding — `npm uninstall`; not imported anywhere). Gate
+      (`config-ui-stays-functional`): `npm run check` (type-check + lint + orphans) + `npm run build` green — confirming
+      everything removed was truly dead.
+- [x] **UI-14** [UI] (P3) `[deferred]` — **DONE 2026-06-28.** config-ui efficiency + hardcoded-list/altitude (review
+      §E). **Efficiency (behavior-preserving, gate-green):** E1 derived `hasChanges` instead of the state-via-effect
+      anti-pattern on both Templates/Prompts pages (removed the effect + the redundant `setHasChanges(false)` calls —
+      verified each coincided with `data===original`); E2 `TomlPreview` debounce → `useRef` (no re-render per keystroke);
+      E3 all 14 `JSON.parse(JSON.stringify)` deep-copies → `structuredClone`; E5 memoized LemmasEditor's nested-loop
+      suggestion scan + per-row conflict map. **E4 skipped** (`performAnalysis` also runs from a manual path → threading
+      `currentHash` risks a cache-key mismatch; minor perf, real risk). **Altitude:** E6 the `ContractEditor`
+      PARAMETER_TYPES/ENTITY_TYPES/ROOM_CONTEXTS dropdowns now derive from `satisfies Record<Union,…>` keys, so a backend
+      donation-enum change **fails the build** instead of silently dropping options (the review's drift concern, fixed at
+      compile time since a TS union can't be enumerated at runtime). **E7/E9/E10 spun out as UI-16** — E7 (component
+      roster) + E9 (widget heuristics) are **blocked on backend schema metadata** (no `is_component`/`widget` hint
+      exists); E10 (spaCy-attr i18n) is niche/low-value. **E8 assessed non-issue** — `LanguageTabs` display names are
+      inherently UI + degrade gracefully; the `['en','ru']` fallback is a defensible default. Gate
+      (`config-ui-stays-functional`): `npm run check` + `npm run build` green. Like UI-12, the review's §E altitude items
+      were partly over-credited (most need backend signals or are non-issues); the genuine config-ui wins (efficiency +
+      E6 drift-guard) are done.
 
 ### Release Readiness (REL)
 - [x] **REL-1** (P0) `[release]` — **DONE 2026-07-04 (interactive session). Definition-of-release SIGNED OFF.**
@@ -3701,7 +3689,6 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       checked with evidence (uv sync/boots, CI green, pyright **0 errors** standard mode, 10 import-linter
       contracts, three nets green, live model URLs); remaining open: docs/quickstart (REL-2), config-ui
       functional pass + Docker boot (REL-3 + BUILD-11). Checklist rewritten in `RELEASE_PLAN.md` header.
-
 - [x] **REL-2** (P1) `[release]` — **DONE 2026-07-06. The release-time config story, driven by live
       first-touch evidence** (the user's own bare-`irene-cli` stumble earlier the same day became the
       acceptance test). Shipped: **(1) `configs/config-example.toml`** — curated text-first starter
@@ -3728,4 +3715,3 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       ARM boot validation (ARCH-25) and a clean `check_scope.py` (every `[release]` task `[x]`), so the tag is
       the FINAL release act, cut when ARCH-25 closes. REL-3's own deliverables (version decision, changelog,
       functional pass) are complete.
-

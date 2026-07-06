@@ -15,6 +15,16 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-06 — QUAL-74 DONE (filed + completed same day) — the ledger sorts itself, third guard
+  of the evening.** The user's third catch: no ID ordering inside sections. The audit showed it
+  was never a rule — the done-archive grew in completion order (56 violations, most predating
+  today) — so this one is a convention SET rather than restored: ascending by ID within each
+  section, both files, completions inserted at their sorted position. Both files mechanically
+  resorted with a zero-loss assertion; check_scope gains its third new tripwire in two hours.
+  The trilogy (QUAL-72 stranded completions, QUAL-73 misfiled sections, QUAL-74 ordering) shares
+  one moral: every ledger convention a hurried maintainer can break now breaks the gate instead.
+
+
 - **2026-07-06 — QUAL-73 DONE (filed + completed same day) — the gate learns sections too.** The
   user's second catch of the evening: BUILD-13 filed under the ARCH section (in-place filing at a
   design task's completion) and, found by the audit it triggered, BUG-29 sitting at the tail of

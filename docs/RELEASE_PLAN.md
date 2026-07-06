@@ -155,6 +155,40 @@ and the structural refactors **move code** — so blind refactoring/fixing is th
 Target pattern: **Hexagonal (Ports & Adapters)** — SIGNED OFF 2026-06-01. Code is already ~80% there
 (interfaces=ports, providers=adapters, components=app services, entry-points=registry).
 See `docs/review/phase1_architecture_map.md` §5.
+
+- [ ] **ARCH-16** [IO] (P-deferred) — **I/O daemon multiplexer + runners→thin presets (deferred ARCH-15 PR-10).**
+      The I/O hexagon (ARCH-15) is complete and every channel runs; this is the internal-cleanliness endgame, deferred
+      2026-06-07 as low-incremental-value / higher-risk. Scope: (a) **remote interactive text-attach channel** (e.g.
+      `/ws/cli` — attach a debug-CLI from a notebook, text in/out, routed through the workflow + OutputManager,
+      origin-paired; the *reproduce* half of the operator scenario, pairing with the PR-6b `/ws/observe` *observe* half) —
+      the highest-value, low-risk piece, additive + testable; (b) **runners → thin config-preset launchers** over **one
+      daemon multiplexer** that consumes all active input sources concurrently (generalising PR-5b's CLI consume loop) +
+      **runtime attach/detach** (§4/§8) — fuses the CLI/webapi/vosk shapes; the larger, riskier refactor (low e2e
+      coverage on interactive paths). Also carries the small ARCH-15 follow-ons: **PR-6c web-app JS** (open `/ws/output`,
+      thread `client_id` into POSTs, render pushed frames — web-template edit) and **PR-7 capability-matrix display**
+      (read-only outputs×modalities). Refs: `io_architecture.md` §4/§8/§12 (PR-10), ARCH-15, ARCH-6.
+- [ ] **ARCH-23** [ESP32] (P-TBD) `[deferred]` — **ESP32 firmware rewrite (ESP-IDF + PlatformIO).** Build the headless
+      voice-satellite firmware to the ARCH-22 contract (**`docs/design/esp32_satellite.md`**), replacing the quarantined
+      `ESP32/firmware/` draft (rev 2, inspiration only — its protocol predates the backend; UI/output/codec are stubs). Per
+      D-1..D-18: board + digital I2S mic + MAX98357A speaker, half-duplex (D-2/D-7); ESP-IDF/PlatformIO not Arduino (D-3);
+      the wire protocol §4 (register → PCM → `{"type":"end"}`; reply channel `speak_begin`/PCM/`speak_end`); ported
+      microWakeWord on `esp-tflite-micro` with the **TFLite-Micro micro-features frontend** + µVAD (D-9, NOT the draft's
+      MFCC/energy VAD); models in a flash data-partition, runtime-loaded (D-12); two-stage SoftAP→STA provisioning + the
+      device admin UI + CSR submission (D-16/D-17, against Plane-B `nginx/`); config-preserving OTA (D-18). Likely a separate
+      firmware repo eventually (per `esp32_wakeword_review.md` quarantine). Substantial standalone C++ effort; tracked here so
+      it's not an orphan finding. Depends on hardware selection finalised (mic/speaker parts) + the Plane-B controller deploy.
+- [ ] **ARCH-25** [INFER][HW] (P-TBD) `[release]` — **Satellite hardware bring-up — WB7 (armv7) + WB8.5 (aarch64)
+      on-device re-validation.** The single convergence point for the hardware-gated verification the software tasks defer
+      here (split out of **ARCH-10** 2026-06-16, now implementation-complete). Deploy the `embedded-armv7` /
+      `embedded-aarch64` images (**BUILD-3**) on the real boxes and confirm the satellite stack boots and serves
+      end-to-end: **(1)** container boots, web API on :6000, baked config + mounted assets-root resolve; **(2)** sherpa-onnx
+      ASR runs at acceptable **RTF/latency** on the A7/A53 (vosk-small on WB7, whisper-small on WB8.5) with RU parity;
+      **(3)** the **ESP32 server-authoritative streaming endpoint** (ARCH-10, built + seam-tested) validates on device —
+      real `OnlineRecognizer` endpoint RTF/latency over `/ws/audio` `mode:"streaming"`; **(4)** Piper / `piper_ruaccent`
+      TTS synthesis + the SPEECH reply rides back to the ESP32 over the reply channel; **(5)** wake-word/microVAD `.tflite`
+      coverage on aarch64 (QUAL-19/20). Absorbs the boot / on-device remainders that **ARCH-24** + **BUILD-3** point here,
+      and gates **Definition-of-release item #1**. User/hardware-gated — no CI surrogate. Refs:
+      `torch_free_armv7_voice.md`, `esp32_satellite.md` §4.4/§12, BUILD-3, ARCH-10.
 - [ ] **ARCH-34** `[deferred]` [FEEDBACK] — **Bridge-evidence enrichment for smart-home reports**
       (filed 2026-07-06, user loud-thinking; v1.1 — layers on the shipped ARCH-30/31/32 baseline, gated on
       a bridge read endpoint). When a problem report is filed and the ARCH-32 request ring shows smart-home
@@ -178,27 +212,6 @@ See `docs/review/phase1_architecture_map.md` §5.
       `openapi.json` → consumed via the CONTRACTS PIN path (like the catalog — pin inward, never hand-edit);
       the endpoint carries a rate guard (gzipped logs) → the voice caller needs a bounded timeout + graceful
       429 alongside the bridge-unreachable-is-evidence rule.
-- [ ] **ARCH-16** [IO] (P-deferred) — **I/O daemon multiplexer + runners→thin presets (deferred ARCH-15 PR-10).**
-      The I/O hexagon (ARCH-15) is complete and every channel runs; this is the internal-cleanliness endgame, deferred
-      2026-06-07 as low-incremental-value / higher-risk. Scope: (a) **remote interactive text-attach channel** (e.g.
-      `/ws/cli` — attach a debug-CLI from a notebook, text in/out, routed through the workflow + OutputManager,
-      origin-paired; the *reproduce* half of the operator scenario, pairing with the PR-6b `/ws/observe` *observe* half) —
-      the highest-value, low-risk piece, additive + testable; (b) **runners → thin config-preset launchers** over **one
-      daemon multiplexer** that consumes all active input sources concurrently (generalising PR-5b's CLI consume loop) +
-      **runtime attach/detach** (§4/§8) — fuses the CLI/webapi/vosk shapes; the larger, riskier refactor (low e2e
-      coverage on interactive paths). Also carries the small ARCH-15 follow-ons: **PR-6c web-app JS** (open `/ws/output`,
-      thread `client_id` into POSTs, render pushed frames — web-template edit) and **PR-7 capability-matrix display**
-      (read-only outputs×modalities). Refs: `io_architecture.md` §4/§8/§12 (PR-10), ARCH-15, ARCH-6.
-- [ ] **ARCH-23** [ESP32] (P-TBD) `[deferred]` — **ESP32 firmware rewrite (ESP-IDF + PlatformIO).** Build the headless
-      voice-satellite firmware to the ARCH-22 contract (**`docs/design/esp32_satellite.md`**), replacing the quarantined
-      `ESP32/firmware/` draft (rev 2, inspiration only — its protocol predates the backend; UI/output/codec are stubs). Per
-      D-1..D-18: board + digital I2S mic + MAX98357A speaker, half-duplex (D-2/D-7); ESP-IDF/PlatformIO not Arduino (D-3);
-      the wire protocol §4 (register → PCM → `{"type":"end"}`; reply channel `speak_begin`/PCM/`speak_end`); ported
-      microWakeWord on `esp-tflite-micro` with the **TFLite-Micro micro-features frontend** + µVAD (D-9, NOT the draft's
-      MFCC/energy VAD); models in a flash data-partition, runtime-loaded (D-12); two-stage SoftAP→STA provisioning + the
-      device admin UI + CSR submission (D-16/D-17, against Plane-B `nginx/`); config-preserving OTA (D-18). Likely a separate
-      firmware repo eventually (per `esp32_wakeword_review.md` quarantine). Substantial standalone C++ effort; tracked here so
-      it's not an orphan finding. Depends on hardware selection finalised (mic/speaker parts) + the Plane-B controller deploy.
 - [ ] **ARCH-36** `[release]` [SATELLITE] — **`irene-satellite` implementation** (from ARCH-35, design
       `docs/design/python_satellite.md` — S-1..S-9 AGREED 2026-07-06; gates ARCH-25 items (3)/(4)). Build
       order per design §9: **(1)** `SatelliteConfig` (`[satellite]` + `[satellite.tls]`) + config-ui type
@@ -220,30 +233,8 @@ See `docs/review/phase1_architecture_map.md` §5.
       subject as `X-Client-Cert-CN` but NOTHING consumes it — when present, Irene's /ws register must require
       cert identity == claimed `client_id` (also fix/rename: the header carries the full DN, not the CN).
       Trivial findings (c) PATH-dependent script call and (d) README wording were fixed at verification.
-- [ ] **ARCH-25** [INFER][HW] (P-TBD) `[release]` — **Satellite hardware bring-up — WB7 (armv7) + WB8.5 (aarch64)
-      on-device re-validation.** The single convergence point for the hardware-gated verification the software tasks defer
-      here (split out of **ARCH-10** 2026-06-16, now implementation-complete). Deploy the `embedded-armv7` /
-      `embedded-aarch64` images (**BUILD-3**) on the real boxes and confirm the satellite stack boots and serves
-      end-to-end: **(1)** container boots, web API on :6000, baked config + mounted assets-root resolve; **(2)** sherpa-onnx
-      ASR runs at acceptable **RTF/latency** on the A7/A53 (vosk-small on WB7, whisper-small on WB8.5) with RU parity;
-      **(3)** the **ESP32 server-authoritative streaming endpoint** (ARCH-10, built + seam-tested) validates on device —
-      real `OnlineRecognizer` endpoint RTF/latency over `/ws/audio` `mode:"streaming"`; **(4)** Piper / `piper_ruaccent`
-      TTS synthesis + the SPEECH reply rides back to the ESP32 over the reply channel; **(5)** wake-word/microVAD `.tflite`
-      coverage on aarch64 (QUAL-19/20). Absorbs the boot / on-device remainders that **ARCH-24** + **BUILD-3** point here,
-      and gates **Definition-of-release item #1**. User/hardware-gated — no CI surrogate. Refs:
-      `torch_free_armv7_voice.md`, `esp32_satellite.md` §4.4/§12, BUILD-3, ARCH-10.
 
 ### Code Quality & Review (QUAL)
-- [ ] **QUAL-60** [INTENTS][LLM] (P3) `[deferred]` — **Summarize-then-truncate for the LLM conversation window
-      (BUG-18 follow-up; user chose "window now + file summarization" 2026-07-02).** BUG-18 bounds the conversation
-      store with a plain rolling window (last `max_context_length` turns; seed system prompt pinned) — older context
-      is simply forgotten. This task adds continuity for long conversations: when the window overflows, compress the
-      dropped turns into a pinned summary message via one LLM call. Needs: a Russian-capable summarization prompt
-      (localized, prompt-asset-driven like the handler's other prompts), a fallback to plain windowing when the LLM
-      call fails/times out, and a decision on re-summarization cadence (every overflow vs. every K overflows). Seam:
-      `ConversationIntentHandler._trim_llm_context` / `UnifiedConversationContext.trim_handler_messages` — the trim
-      call is already the single choke point, so summarization slots in front of it without touching call sites.
-      _Filed 2026-07-02 from BUG-18._
 
 #### Cross-cutting systemic remediation — principles (the Gate 2 lens)
 _Apply to every remediation task below (from the 4 review docs + QUAL-25/26). Source: `dataflow_reconciliation.md`._
@@ -259,14 +250,7 @@ _Apply to every remediation task below (from the 4 review docs + QUAL-25/26). So
   is a valid curated **superset**; deployment configs are minimal subsets — the check must not flag the superset.
 - **④ Data-contract integrity** — a model field means **one thing end-to-end**; no rename residue
   (`Intent.text`/`raw_text`, `WakeWordResult.word`/`wake_word`, action key `action_name`/`domain`, session scope).
-- [ ] **QUAL-68** `[deferred]` [PEX][MQTT] — **Relative adjustments by voice («сделай поярче», «потеплее»,
-      «притуши») — read-modify-write (filed 2026-07-06; QUAL-35 Slice 3 scope decision: not for first release).**
-      Today the LLM NLU tier classifies these correctly (set_brightness/set_setpoint) and asks for the absolute
-      value — honest v1 UX. The build: read the device's current level/setpoint through the EXISTING state-read
-      path, apply a step (fixtures assume ±10 % brightness / ±1 °C), emit the absolute `set`; add the donation
-      phrases («поярче», «потемнее», «потеплее», «похолоднее», «притуши») — dedicated methods or a `delta` param.
-      **Fixtures F100–F102 are already authored RED** in eval-commons `crossover_fixtures.json` (mock static state
-      carries `level: 60`; deltas recorded in the fixture notes) — flipping them green completes this.
+
 - [ ] **QUAL-53** [NLU] (P3) `[deferred]` — **Trace-driven improvement of the cheap NLU tiers** (split from QUAL-51,
       2026-06-16). When an utterance falls through to the LLM classifier, that's a signal the cheap deterministic tiers
       (keyword matcher, spaCy) *should* have caught it. Build an **offline analysis process, integrated with trace
@@ -282,6 +266,16 @@ _Apply to every remediation task below (from the 4 review docs + QUAL-25/26). So
       `spacy_provider.recognize` never consumes `token_patterns` — they're validated then stashed in
       `advanced_patterns` only. Reviving the spaCy tier therefore means BOTH halves: authoring smart-home patterns
       AND building the Matcher/EntityRuler recognition+slot-filling path the provider currently lacks.
+- [ ] **QUAL-60** [INTENTS][LLM] (P3) `[deferred]` — **Summarize-then-truncate for the LLM conversation window
+      (BUG-18 follow-up; user chose "window now + file summarization" 2026-07-02).** BUG-18 bounds the conversation
+      store with a plain rolling window (last `max_context_length` turns; seed system prompt pinned) — older context
+      is simply forgotten. This task adds continuity for long conversations: when the window overflows, compress the
+      dropped turns into a pinned summary message via one LLM call. Needs: a Russian-capable summarization prompt
+      (localized, prompt-asset-driven like the handler's other prompts), a fallback to plain windowing when the LLM
+      call fails/times out, and a decision on re-summarization cadence (every overflow vs. every K overflows). Seam:
+      `ConversationIntentHandler._trim_llm_context` / `UnifiedConversationContext.trim_handler_messages` — the trim
+      call is already the single choke point, so summarization slots in front of it without touching call sites.
+      _Filed 2026-07-02 from BUG-18._
 - [ ] **QUAL-63** `[deferred]` [PEX][MQTT] (P3) — **Priority rules for same-room capability ambiguity**
       (filed from TEST-18 Slice A; user 2026-07-05: clarify "for v1, but actually it can be done thru
       priorities — later release"). When one utterance matches several same-room devices on the same
@@ -291,11 +285,17 @@ _Apply to every remediation task below (from the 4 review docs + QUAL-25/26). So
       seasonal heating-vs-cooling default — with clarify remaining the fallback when no rule decides.
       Builds on the QUAL-35 resolver (note 6); fixture impact = NEW priority-variant fixtures beside
       F20/F21, not edits. Any config surface added → the `config-ui-stays-functional` gate applies.
+- [ ] **QUAL-68** `[deferred]` [PEX][MQTT] — **Relative adjustments by voice («сделай поярче», «потеплее»,
+      «притуши») — read-modify-write (filed 2026-07-06; QUAL-35 Slice 3 scope decision: not for first release).**
+      Today the LLM NLU tier classifies these correctly (set_brightness/set_setpoint) and asks for the absolute
+      value — honest v1 UX. The build: read the device's current level/setpoint through the EXISTING state-read
+      path, apply a step (fixtures assume ±10 % brightness / ±1 °C), emit the absolute `set`; add the donation
+      phrases («поярче», «потемнее», «потеплее», «похолоднее», «притуши») — dedicated methods or a `delta` param.
+      **Fixtures F100–F102 are already authored RED** in eval-commons `crossover_fixtures.json` (mock static state
+      carries `level: 60`; deltas recorded in the fixture notes) — flipping them green completes this.
 
 ### Bugs (BUG)
 _Discrete functional defects (distinct from QUAL refactors/quality work). Surfaced from any source; filed before fixing._
-
-
 
 ### Tests (TEST)
 > **Strategy (decided 2026-06-01): do NOT keep repairing the existing suite.** Most tests were written against
@@ -327,6 +327,7 @@ _Trace-driven system testing (design `docs/design/trace_system_testing.md`, TEST
 _Real English deployment across all three Docker arches (armv7/aarch64/x86_64) + English eval. Design
 `docs/design/multilingual_deployment.md` (I18N-1 ✓) → the implementation slices below. English models are slim and
 size-matched to the Russian stack; language is a per-config/deployment choice (auto-detect is NOT wired to ASR/TTS)._
+
 - [ ] **BUILD-13** `[deferred]` [SATELLITE][DOCKER] — **Pi/aarch64 satellite docker image** (ARCH-35 S-8:
       explicit deferred follow-up — `uv run irene-satellite` covers the release need). A slim aarch64 image
       on the `satellite.toml` profile (mic device passthrough, credentials volume for the S-6 material),
@@ -339,6 +340,7 @@ size-matched to the Russian stack; language is a per-config/deployment choice (a
 ### UI / config-ui (UI)
 React/Vite donation+config editor. Front-end feature/UX work (the BUILD-4 build gate stays under Build & CI).
 Governed by `config-ui-stays-functional` (config-ui must stay functional).
+
 - [ ] **UI-4** [WORKFLOWVIZ] (P-deferred) — A config-ui **"Workflow Control" / pipeline-visualization page** (live
       React-Flow DAG of the component/provider pipeline, per-stage input/output inspection, provider switching, SSE
       updates). **Source design archived** at `docs/archive/workflow_control.md` (Sep-2025, never built). **Strongly

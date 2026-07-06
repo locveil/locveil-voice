@@ -115,6 +115,22 @@ def main() -> int:
         return out
     misplaced = misfiled(ledger_text, "active") + misfiled(done_text, "done")
 
+    # section ordering: entries ascend by ID number within each workstream section, both files
+    # (convention set 2026-07-06 — completion-order appends had left the done file unsorted).
+    def unordered(text: str, which: str) -> list[str]:
+        out, section, prev = [], None, None
+        for line in text.split("\n"):
+            if line.startswith("### "):
+                section, prev = line.strip("# ").strip(), None
+            m = re.match(r"^- \[[ x]\] \*\*([A-Z]+)-(\d+)\*\*", line)
+            if m and section:
+                num = int(m.group(2))
+                if prev is not None and num < prev:
+                    out.append(f"{m.group(1)}-{num} appears after {m.group(1)}-{prev} in '{section}' [{which}]")
+                prev = num
+        return out
+    out_of_order = unordered(ledger_text, "active") + unordered(done_text, "done")
+
     failed = False
     print("== check_scope: release-scope drift guard ==\n")
 
@@ -128,6 +144,12 @@ def main() -> int:
         failed = True
         print("MISFILED tasks (ID prefix does not match the enclosing workstream section):")
         for t in misplaced:
+            print(f"  - {t}")
+        print()
+    if out_of_order:
+        failed = True
+        print("OUT-OF-ORDER tasks (IDs must ascend within a section):")
+        for t in out_of_order:
             print(f"  - {t}")
         print()
     if orphans:
