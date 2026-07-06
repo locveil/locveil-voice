@@ -140,6 +140,15 @@ symbol_replacement = true
 enabled = true
 
 # ============================================================
+# PROBLEM REPORTING — «сообщи о проблеме»
+# ============================================================
+# Off by default: the intent answers honestly that reporting isn't set up.
+# Upgrade path: [reports] in config-master once delivery is provisioned.
+[reports]
+enabled = false
+capture_ttl_seconds = 90
+
+# ============================================================
 # INTENT SYSTEM — the handlers
 # ============================================================
 [intent_system]
@@ -148,7 +157,7 @@ confidence_threshold = 0.7
 fallback_intent = "conversation.general"
 
 [intent_system.handlers]
-enabled = ["conversation", "greetings", "timer", "datetime", "system", "smart_home"]
+enabled = ["conversation", "greetings", "timer", "datetime", "system", "smart_home", "report"]
 disabled = []
 auto_discover = true
 discovery_paths = ["irene.intents.handlers"]

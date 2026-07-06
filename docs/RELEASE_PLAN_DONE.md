@@ -929,6 +929,21 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       D-11 model policy: `claude-fable-5` for the whole run, pinned in one env var. Implementation filed:
       **ARCH-31/32/33 + BUILD-12** here, **VWB-25** into the bridge (uncommitted, per
       `cross-repo-source-of-truth`). Raw audio, user registry, curated public issues = explicitly v2.
+- [x] **ARCH-31** `[release]` [FEEDBACK] — **DONE 2026-07-06. Problem-report dialog + verbatim capture
+      (voice side).** Pending-clarification gains `mode` ("combine" default = unchanged QUAL-31/44
+      behavior; "verbatim" = the next utterance IS the answer) + `expires_at`; the workflow pre-check
+      consumes verbatim RAW — no text processing, no NLU, no QUAL-44 (pinned by test: «свет в спальне не
+      включается» lands as `description`, NLU never consulted) — and drops an EXPIRED record silently
+      (D-5). New `report` handler (`report.problem`) + donation (contract/ru/en, D-9 phrases) + templates
+      (6 keys × ru/en) + pyproject ENTRY-POINT (the miss the smoke suite caught: handlers discover via
+      entry-points, not files); cancel words as recognition constants; service seam `set_report_service`
+      (ARCH-32 injects; None ⇒ honest «Отправка отчётов не настроена» at turn 1, nothing armed — verified
+      live). `ReportsConfig` (`[reports]`: enabled=false, capture_ttl_seconds=90) in CoreConfig + master +
+      example + ALL 6 docker configs' handler lists (+ config-ui type parity, check+build green). Tests:
+      7 dialog/workflow cases + 3 routing cases (no collisions: «расскажи о себе»→system.about,
+      «что такое…»→reference intact). Suite 1318, device gate 48/48, donation gate 15 handlers 0/0,
+      config gate 13/13, pyright 0. User-facing docs land with ARCH-32 (feature is off until delivery exists).
+
 
 
 ### Code Quality & Review (QUAL)

@@ -153,12 +153,6 @@ and the structural refactors **move code** — so blind refactoring/fixing is th
 Target pattern: **Hexagonal (Ports & Adapters)** — SIGNED OFF 2026-06-01. Code is already ~80% there
 (interfaces=ports, providers=adapters, components=app services, entry-points=registry).
 See `docs/review/phase1_architecture_map.md` §5.
-- [ ] **ARCH-31** `[release]` [FEEDBACK] — **Problem-report dialog + verbatim capture (voice side)** (from
-      ARCH-30 §10.1-2, design `docs/design/problem_reports.md` §2). Verbatim mode on the pending-clarification
-      state (`mode`, `expires_at`; workflow pre-check BEFORE the QUAL-44 arbitration — a description must never
-      execute as a command); new `report` handler + donation + ru/en templates (phrases per D-9); cancel words;
-      TTL per D-5 (`capture_ttl_seconds`, default 90); QUAL-64-suite routing regression cases; dialog unit tests
-      (arm → verbatim → cancel/TTL).
 - [ ] **ARCH-32** `[release]` [FEEDBACK] — **Support bundle + delivery (voice side)** (ARCH-30 §10.3-5, design
       §3-6). Trace ring buffer (last 5 requests, always on); `ReportBundleCollector` (+ redaction pass §4 +
       envelope §5); `ReportSinkPort` + `GitHubReportSink` (issues + contents API); `[reports]` config (enabled,

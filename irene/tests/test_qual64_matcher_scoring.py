@@ -18,7 +18,7 @@ from irene.providers.nlu.hybrid_keyword_matcher import HybridKeywordMatcherProvi
 ALL_HANDLERS = ["timer", "random_handler", "system_service_handler", "audio_playback_handler",
                 "system", "greetings", "smart_home", "text_enhancement_handler",
                 "provider_control_handler", "conversation", "datetime", "translation_handler",
-                "voice_synthesis_handler", "speech_recognition_handler"]
+                "voice_synthesis_handler", "speech_recognition_handler", "report"]
 
 CASES = [
     # the QUAL-64 exhibits — longer specific phrases must beat bare verbs
@@ -47,6 +47,10 @@ CASES = [
     # tie fell to donation load order — system.about lost its own literal phrase to the
     # two-token «расскажи о» prefix. Tie-break = matched-pattern token count, never load order.
     ("расскажи о себе", "system.about"),
+    # ARCH-31: the report intent and its non-collisions
+    ("сообщи о проблеме", "report.problem"),
+    ("у меня проблема", "report.problem"),
+    ("что-то не работает", "report.problem"),
     ("кто ты", "system.about"),
     ("что такое фотосинтез", "conversation.reference"),
     ("расскажи о погоде в москве", "conversation.reference"),

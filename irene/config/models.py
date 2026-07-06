@@ -494,6 +494,17 @@ class MonitoringConfig(BaseModel):
     # All functionality available through /monitoring/* endpoints (WebAPIPlugin integration)
 
 
+class ReportsConfig(BaseModel):
+    """Problem reporting («сообщи о проблеме») — ARCH-30 design (`docs/design/problem_reports.md`).
+
+    ARCH-31 ships the dialog (this section's `enabled` + `capture_ttl_seconds`); ARCH-32 adds the
+    delivery fields (repo, token env, rate limits). Disabled ⇒ the intent answers honestly that
+    reporting isn't set up — it never half-works."""
+    enabled: bool = Field(default=False, description="Enable problem reporting (the report intent files real tickets)")
+    capture_ttl_seconds: int = Field(default=90, ge=10,
+                                     description="Verbatim-capture window after «опишите проблему» (design D-5)")
+
+
 class TraceConfig(BaseModel):
     """Trace persistence configuration (ARCH-19).
 
@@ -1310,6 +1321,7 @@ class CoreConfig(BaseSettings):
     monitoring: MonitoringConfig = Field(default_factory=MonitoringConfig, description="Monitoring component configuration (Phase 5 unified metrics system)")
     nlu_analysis: NLUAnalysisConfig = Field(default_factory=NLUAnalysisConfig, description="NLU Analysis component configuration (Phase 2)")
     trace: TraceConfig = Field(default_factory=TraceConfig, description="Trace persistence configuration (ARCH-19)")
+    reports: ReportsConfig = Field(default_factory=ReportsConfig, description="Problem reporting configuration (ARCH-30)")
     
     
     # Language and locale — SINGLE SOURCE OF TRUTH (QUAL-36).

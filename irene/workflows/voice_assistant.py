@@ -23,7 +23,7 @@ from ..core.metrics import get_metrics_collector
 from ..core.trace_context import (
     TraceContext, make_trace, save_trace, trace_scope, replay_request, trace_step,
 )
-from ..intents.models import AudioData, IntentResult
+from ..intents.models import AudioData, Intent, IntentResult
 from ..intents.context_models import UnifiedConversationContext
 from ..utils.audio_helpers import test_audio_playback_capability, calculate_audio_buffer_size
 from ..config.manager import ConfigValidationError
@@ -515,6 +515,39 @@ class UnifiedVoiceAssistantWorkflow(Workflow):
         # before. Cost: one extra NLU pass, only on clarifying turns (rare).
         effective_input = input_data
         pending = conversation_context.take_pending_clarification()
+
+        # ARCH-31: an EXPIRED pending record (verbatim capture armed, user walked away) is dropped
+        # silently — this turn is an ordinary command again (design D-5: no nagging, no re-prompt).
+        if pending is not None and pending.get("expires_at") and time.time() > pending["expires_at"]:
+            self.logger.info(f"ARCH-31: pending '{pending.get('intent_name')}' expired — "
+                             f"processing this turn as a normal command")
+            pending = None
+
+        # ARCH-31: verbatim mode — the utterance IS the answer, consumed RAW. No text processing,
+        # no NLU, and explicitly no QUAL-44 arbitration: a problem description like «свет в спальне
+        # не включается» recognizes as a confident smart-home command and must NOT be executed.
+        if pending is not None and pending.get("mode") == "verbatim":
+            intent = Intent(
+                name=pending["intent_name"],
+                entities={pending["missing_param"]: input_data},
+                confidence=1.0,
+                raw_text=input_data,
+                domain=pending["intent_name"].partition(".")[0],
+                action=pending["intent_name"].partition(".")[2],
+            )
+            await trace_step("verbatim_capture", {"intent": intent.name,
+                                                  "param": pending["missing_param"]})
+            result = await self.intent_orchestrator.execute(intent, conversation_context,
+                                                            trace_context)
+            conversation_context.record_turn(
+                user_text=input_data,
+                response=result.text,
+                intent=intent.name
+            )
+            if trace_context:
+                trace_context.record_context_snapshot("after", conversation_context)
+            return result
+
         if pending is not None:
             bare_intent = await self.nlu.process(input_data, conversation_context, None,
                                                  original_text=input_data)

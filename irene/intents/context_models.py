@@ -632,15 +632,26 @@ class UnifiedConversationContext:
         self.last_activity = time.time()
 
     # --- QUAL-31: multi-turn clarification (slot-filling) ---------------------------------------
-    def set_pending_clarification(self, intent_name: str, missing_param: str, original_text: str) -> None:
+    def set_pending_clarification(self, intent_name: str, missing_param: str, original_text: str,
+                                  mode: str = "combine",
+                                  ttl_seconds: Optional[float] = None) -> None:
         """Arm a one-shot clarification: remember that we asked the user to supply ``missing_param``
         for ``intent_name`` (whose triggering utterance was ``original_text``), so the next turn can be
-        interpreted as the answer and used to resume the original command (QUAL-31 Grade 2)."""
+        interpreted as the answer and used to resume the original command (QUAL-31 Grade 2).
+
+        Modes (ARCH-31): ``combine`` (default — the QUAL-31/44 behavior: the answer is glued onto
+        the original utterance and re-understood, with new-command arbitration) or ``verbatim``
+        (the next utterance IS the answer, consumed raw with no NLU arbitration — a problem
+        description like «свет не включается» must never execute as a command). ``ttl_seconds``
+        sets ``expires_at``; the workflow drops an expired record silently. Combine mode keeps its
+        historical no-expiry behavior unless a TTL is passed."""
         self.pending_clarification = {
             "intent_name": intent_name,
             "missing_param": missing_param,
             "original_text": original_text,
             "created_at": time.time(),
+            "mode": mode,
+            "expires_at": (time.time() + ttl_seconds) if ttl_seconds else None,
         }
         self.last_activity = time.time()
 

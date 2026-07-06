@@ -1,0 +1,37 @@
+{
+  "$schema": "../../donation_language_v1.1.json",
+  "schema_version": "1.1",
+  "language": "ru",
+  "handler_domain": "report",
+  "description": "Сообщения о проблемах: пользователь описывает проблему, Ирина отправляет отчёт",
+  "method_donations": [
+    {
+      "method_name": "_handle_problem",
+      "intent_suffix": "problem",
+      "description": "Сообщить о проблеме",
+      "phrases": [
+        "сообщи о проблеме",
+        "сообщить о проблеме",
+        "у меня проблема",
+        "что-то не работает",
+        "пожаловаться"
+      ],
+      "lemmas": [
+        "проблема",
+        "пожаловаться"
+      ],
+      "examples": [
+        {
+          "text": "сообщи о проблеме",
+          "parameters": {}
+        }
+      ],
+      "parameters": [
+        {
+          "name": "description",
+          "description": "Описание проблемы своими словами (заполняется вторым ходом диалога)"
+        }
+      ]
+    }
+  ]
+}

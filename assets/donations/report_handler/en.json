@@ -1,0 +1,37 @@
+{
+  "$schema": "../../donation_language_v1.1.json",
+  "schema_version": "1.1",
+  "language": "en",
+  "handler_domain": "report",
+  "description": "Problem reporting: the user describes an issue, Irene files a report",
+  "method_donations": [
+    {
+      "method_name": "_handle_problem",
+      "intent_suffix": "problem",
+      "description": "Report a problem",
+      "phrases": [
+        "report a problem",
+        "i have a problem",
+        "something is not working",
+        "something is broken",
+        "file a complaint"
+      ],
+      "lemmas": [
+        "problem",
+        "report"
+      ],
+      "examples": [
+        {
+          "text": "report a problem",
+          "parameters": {}
+        }
+      ],
+      "parameters": [
+        {
+          "name": "description",
+          "description": "The problem described in the user's own words (filled by the dialog's second turn)"
+        }
+      ]
+    }
+  ]
+}

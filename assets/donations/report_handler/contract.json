@@ -1,0 +1,29 @@
+{
+  "$schema": "../../donation_contract_v1.1.json",
+  "schema_version": "1.1",
+  "donation_version": "1.0.0",
+  "handler_domain": "report",
+  "intent_name_patterns": [
+    "report.problem"
+  ],
+  "domain_patterns": [
+    "report"
+  ],
+  "method_donations": [
+    {
+      "method_name": "_handle_problem",
+      "intent_suffix": "problem",
+      "boost": 1.2,
+      "room_context": "none",
+      "parameters": [
+        {
+          "name": "description",
+          "type": "string",
+          "required": false,
+          "entity_type": "generic"
+        }
+      ]
+    }
+  ],
+  "global_parameters": []
+}

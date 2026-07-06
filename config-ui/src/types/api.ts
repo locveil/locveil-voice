@@ -501,6 +501,7 @@ export interface CoreConfig {
   vad: VADConfig;
   monitoring: MonitoringConfig;
   trace: TraceConfig;
+  reports: ReportsConfig;
 
 
   // Language and locale (QUAL-36: default_language + supported_languages are the canonical source of
@@ -543,6 +544,12 @@ export interface TraceConfig {
   max_stages: number;
   max_data_size_mb: number;
   max_log_records: number;
+}
+
+// Problem reporting (ARCH-30 — «сообщи о проблеме»); delivery fields arrive with ARCH-32
+export interface ReportsConfig {
+  enabled: boolean;
+  capture_ttl_seconds: number;
 }
 
 export interface SystemConfig {

@@ -1,0 +1,8 @@
+# Russian templates for report_handler (ARCH-30 problem reporting)
+
+ask_description: "Опишите проблему своими словами."
+cancelled: "Хорошо, не буду отправлять отчёт."
+confirm_sent: "Отчёт отправлен, спасибо!"
+confirm_spooled: "Сейчас нет связи — отправлю отчёт, как только появится."
+err_unconfigured: "Отправка отчётов не настроена."
+err_failed: "Не получилось отправить отчёт."

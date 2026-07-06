@@ -449,6 +449,16 @@ max_phrases_per_intent = 3         # Sample phrases per intent in the classifier
 # provider = "deepseek"            # Optional: pin the LLM provider; omit to use the [llm] default
 
 # ============================================================
+# PROBLEM REPORTING (ARCH-30 — docs/design/problem_reports.md)
+# ============================================================
+# «Сообщи о проблеме»: a two-turn dialog captures the user's description verbatim and files a
+# ticket with a support bundle. Disabled ⇒ the intent answers honestly that reporting isn't set
+# up. Delivery fields (repo, token) arrive with the ARCH-32 build; enabling requires them.
+[reports]
+enabled = false                     # Enable problem reporting (files real tickets when delivery is configured)
+capture_ttl_seconds = 90            # Verbatim-capture window after «опишите проблему» (design D-5)
+
+# ============================================================
 # TEXT PROCESSOR COMPONENT CONFIGURATION
 # ============================================================
 [text_processor]
@@ -508,7 +518,7 @@ latency_threshold_ms = 5.0          # Alert threshold for disambiguation latency
 
 # Intent handler configuration
 [intent_system.handlers]
-enabled = ["conversation", "greetings", "timer", "datetime", "system", "text_enhancement_handler", "smart_home"]  # Enabled handlers
+enabled = ["conversation", "greetings", "timer", "datetime", "system", "text_enhancement_handler", "smart_home", "report"]  # Enabled handlers
 disabled = []                       # Disabled handlers
 auto_discover = true               # Automatically discover handlers
 discovery_paths = ["irene.intents.handlers"]  # Entry-point discovery paths

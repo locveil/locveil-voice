@@ -15,6 +15,21 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-06 — ARCH-31 DONE — the problem-report dialog, and the capture that must not obey.**
+  The heart of the build is a single inversion: for one turn, Irene deliberately does NOT
+  understand you. Verbatim mode on the pending-clarification state makes the workflow consume
+  the next utterance raw — no text processing, no NLU, no QUAL-44 arbitration — because a
+  problem description («свет в спальне не включается») IS a confident smart-home command to the
+  matcher, and executing it instead of recording it would be the feature disproving itself. The
+  test suite pins exactly that. Expiry per D-5 (90 s, configurable) dies silently; cancel words
+  end it politely; with `[reports]` disabled the intent answers «Отправка отчётов не настроена»
+  at turn one and never arms. One discovery the smoke net caught: handlers register via
+  pyproject ENTRY-POINTS, not by existing as files — the report handler booted only after the
+  registration (+ a lesson relearned: bare `uv sync` strips extras AND the editable eval-commons;
+  full-extras + `make setup` restore). All 8 configs updated (master + example + 6 docker:
+  handler lists; [reports] section in master/example), config-ui type parity green. Suite 1318,
+  device gate 48/48, donation gate 15/0/0. Next: ARCH-32 (bundle + delivery).
+
 - **2026-07-06 — ARCH-30 DONE (same-day interactive design session) — problem reporting
   end-to-end, design AGREED.** «Сообщи о проблеме» → verbatim-captured description → support
   bundle → private ticket → GitHub-Claude triage → fix PRs / handovers / owner escalations.
