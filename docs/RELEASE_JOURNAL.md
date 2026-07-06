@@ -15,6 +15,13 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-07 — ARCH-38 doc/profile catch-up (user review).** Two gaps closed in the same
+  breath: `configs/satellite.toml` gained its `[trace]` stanza (off by default, `--trace` flips
+  it; segmenter level so satellite traces carry the VAD-tuning frames), and the hand-written
+  WebSocket protocol document — `docs/guides/websocket-api.md`, the real protocol reference —
+  now teaches `wants_trace`/the `trace` grant/the per-response trace frame, plus the mTLS
+  certificate-identity rule on both `/ws/audio` and the reply channel.
+
 - **2026-07-07 — ARCH-38 DONE — satellite tracing shipped, hours after its design.** `--trace` on
   a room node now means something real: one merged file per utterance with the device story (raw
   mic ring, VAD frames, wake-gate verdicts including the skips, the wire exchange with RTT, the

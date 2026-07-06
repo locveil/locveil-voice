@@ -29,18 +29,26 @@ conversation continuity — lives as long as the socket.
   "room_name": "Кухня",
   "sample_rate": 16000,
   "wants_audio": true,
-  "mode": "streaming"
+  "mode": "streaming",
+  "wants_trace": false
 }
 ```
 
 `client_id` is the device's stable identity — replies, timers and missed announcements are
 addressed to it. `room_name` is the device's primary room; `covered_rooms` (optional list) adds
 rooms it also manages. `wants_audio: true` asks for spoken replies — which arrive on the
-**reply channel** (below), never on this socket. Optional extras: `name` (human-friendly
-device name) and `available_devices` (what the device can actuate — reserved for the
-smart-home integration).
+**reply channel** (below), never on this socket. `wants_trace: true` (default `false`) asks for
+the server's execution trace after each response — see **Execution traces** below. Optional
+extras: `name` (human-friendly device name) and `available_devices` (what the device can
+actuate — reserved for the smart-home integration).
 
-The server confirms: `{"type": "registered", "client_id": "...", "session_id": "..."}`.
+The server confirms: `{"type": "registered", "client_id": "...", "session_id": "...",
+"trace": false}` — `trace` is the explicit answer to `wants_trace` (it stays `false` unless
+the server's operator has enabled remote trace requests).
+
+When the connection comes through the fleet's mutual-TLS gate, the certificate is the
+identity: a `client_id` that doesn't match the certificate's common name is refused at
+registration. Plain connections on a trusted network are not affected.
 
 **2. Stream audio.** Send binary PCM frames. What ends an utterance depends on the mode:
 
@@ -73,6 +81,22 @@ This is the same canonical result shape the REST `/execute/command` endpoint ret
 is the reply, `intent_name` says what was recognized, `success`/`error` report the outcome.
 Then the loop re-arms for the next utterance.
 
+**4. Execution traces (optional).** If registration asked for traces *and* the server granted
+them (`"trace": true` in the confirmation), each response is followed by exactly one extra
+text frame:
+
+```json
+{ "type": "trace", "request_id": "…", "trace": { "…": "the full execution trace" } }
+```
+
+The payload is the same self-contained trace document the server's own tracing writes —
+every pipeline stage with its timing, the recognition verdicts, the recorded output (see
+[tracing & replay](tracing.md)). Granting is the server operator's decision:
+`[trace] allow_remote_request = true` in the server's configuration; without it,
+`wants_trace` is answered with `"trace": false` and no trace frames are ever sent. A client
+that didn't ask never sees this frame — firmware can ignore the feature entirely by
+registering with the default.
+
 ## `/ws/audio/reply` — spoken replies
 
 The return half of the satellite pair. The device opens this socket, registers, and then only
@@ -84,6 +108,9 @@ Register with the device's *output* audio contract:
 ```json
 { "type": "register-reply", "client_id": "kitchen_node", "audio_out": { "rate": 22050, "channels": 1 } }
 ```
+
+The same certificate rule as `/ws/audio` applies behind the mutual-TLS gate: a device can only
+claim its own reply channel — otherwise it would receive another room's speech.
 
 After `{"type": "registered", ...}`, each spoken reply arrives as a bracketed binary burst:
 

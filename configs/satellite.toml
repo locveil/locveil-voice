@@ -117,6 +117,20 @@ enabled = true
 enabled = true
 
 # ============================================================
+# TRACING — the end-to-end utterance trace (ARCH-38)
+# ============================================================
+# Off by default; `--trace` flips enabled per run (add `--trace-raw-mic` for the raw mic ring).
+# When on, every sent utterance writes ONE merged file under <assets_root>/traces/: the device
+# story (mic, VAD frames, wake-gate decisions, uplink, reply as played) with the CONTROLLER's
+# execution trace nested inside — the controller shares its half only if ITS config sets
+# [trace] allow_remote_request = true. Read the nested half:
+#   uv run irene-replay-trace -t traces/<id>.json --show-controller
+[trace]
+enabled = false
+capture_raw_mic = false
+capture_level = "segmenter"          # satellite traces carry vad_frames — the [vad] tuning view
+
+# ============================================================
 # ASSETS — models (the wake-word pack) download here on first use
 # ============================================================
 [assets]
