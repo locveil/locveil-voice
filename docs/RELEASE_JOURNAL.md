@@ -15,6 +15,16 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-07 — ARCH-37 DONE (filed + designed same day) → ARCH-38 filed [release].** Satellite
+  tracing designed in session: one utterance, one trace, two machines. The satellite gets its
+  device story back (`--trace` was silently inert on a room node — raw mic, VAD frames, wake-gate
+  verdicts, uplink, reply as played), and the §3 wire contract grows `wants_trace` (default false,
+  ESP32-honest) with the controller's execution trace returning as an in-band frame after each
+  response — through the mTLS proxy unchanged, gated by a new default-off `[trace]
+  allow_remote_request` on the controller. One merged self-contained file per utterance,
+  satellite-side. eval-commons needs no change (additive default). Retagged nothing; the release
+  gate grows by one deliberate task because bring-up debugging wants this in hand.
+
 - **2026-07-06 — ARCH-36 DONE — the Python satellite, same day as its design.** `irene-satellite`
   turns any Python box into a room node: mic → VAD → wake word «Ирина» locally, the utterance to
   the controller over the same /ws/audio contract the ESP32 firmware will speak, replies played

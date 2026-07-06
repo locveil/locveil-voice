@@ -51,13 +51,18 @@ local + wb7); the runner takes no runtime dependency on the test framework.
 
 ```
 client → TEXT   {"type":"register","client_id":..,"room_name":..,"sample_rate":16000,
-                 "wants_audio":true,"mode":"single"|"streaming"}
-server → TEXT   {"type":"registered","client_id":..,"session_id":..}
+                 "wants_audio":true,"mode":"single"|"streaming","wants_trace":false}
+server → TEXT   {"type":"registered","client_id":..,"session_id":..,"trace":true|false}
 client → BINARY PCM16 mono frames (paced, frame_ms≈32)
 client → TEXT   {"type":"end"}                      # single mode: utterance boundary
 server → TEXT   {"type":"partial","text":..}        # streaming mode only, 0+
 server → TEXT   {"type":"response", ...canonical result shape...}
+server → TEXT   {"type":"trace","request_id":..,"trace":{...}}  # only when trace granted (ARCH-37)
 ```
+
+`wants_trace` defaults to `false` (a device that doesn't ask never sees a trace frame); the
+`registered` ack's `trace` field is the explicit grant — the controller honors the request only
+when its `[trace] allow_remote_request` is on. Full design: `satellite_tracing.md` (ARCH-37).
 
 Registration carries the D-14 identity (client_id, room) — the satellite is a registered
 client: room-scoped sessions, «включи свет» resolves to ITS room, deferred completions address

@@ -1027,6 +1027,17 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       **(6)** `docs/guides/satellite.md` + satellite-flow diagram + README (highlights/docs/status) +
       QUICKSTART run mode + CHANGELOG. `irene.satellite` added to 4 import-linter forbidden lists (11/11
       kept). Suite 1349 green, pyright 0, config-ui check+build clean. Live-mic behavior stays ARCH-25.
+- [x] **ARCH-37** `[release]` [SATELLITE][DESIGN] — **DONE 2026-07-07 (same-day interactive session).
+      Satellite tracing design** — the end-to-end utterance trace across two machines. Deliverable:
+      `docs/design/satellite_tracing.md` (T-1..T-6 AGREED): in-band WS delivery with `wants_trace` as a
+      first-class §3 contract field (default false — the ESP32 implements the field; grant acknowledged in
+      the `registered` ack); controller gate `[trace] allow_remote_request` default off, declines recorded
+      satellite-side; ONE merged self-contained file written by the satellite (device stages + nested
+      `controller_trace` + `reply_audio`, ARCH-19 rotation); full device story (raw mic, VAD frames, wake
+      armed-window verdicts, uplink lifecycle, reply as played); single-mode scope (streaming = always-on
+      model, no device story to trace); eval-commons unaffected (additive default-false field, and the WS
+      protocol is not part of the bridge pin). `python_satellite.md` §3 amended in the same change (single
+      written truth). Implementation filed as **ARCH-38** `[release]`.
 
 ### Code Quality & Review (QUAL)
 - [x] **QUAL-1** — Phase-0 static baseline (ruff/pyright/vulture/validators/import-graph). → `docs/review/phase0_static_baseline.md` (6e39886)
