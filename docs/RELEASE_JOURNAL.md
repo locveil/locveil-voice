@@ -24,7 +24,12 @@ newest entries near the top of each dated section.
   CSR-approval dance and connecting mTLS-wss through nginx before any ESP32 exists, with a
   hermetic docker-nginx e2e so the security plane gets CI regression coverage. First-class
   product mode too: a Pi with a mic is a supported room node. ARCH-36 files the build; ARCH-25
-  items (3)/(4) stop being unverifiable.
+  items (3)/(4) stop being unverifiable. The session closed with a user-requested audit of the
+  Plane-B nginx implementation against its documentation: CONFORMANT on every major claim (two
+  zones, EC-only, untrusted-CSR handling, double-guarded CA, GET-only mTLS statics, idempotent
+  playbook) — four findings: a stale "Irene runs elsewhere" premise (it deploys ON the WB7 now;
+  README corrected, vars at ARCH-25), an unconsumed X-Client-Cert-CN header (identity binding →
+  ARCH-36 scope), and two one-liners fixed on the spot.
 
 
 - **2026-07-06 — REL-3 DONE (bar the tag) — 15.0.0 confirmed, changelog written, config-ui pass

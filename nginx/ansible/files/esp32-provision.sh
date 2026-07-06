@@ -44,7 +44,7 @@ case "$cmd" in
     [[ -f "$PEND/$id.csr" ]] || { echo "no pending CSR for '$id'" >&2; exit 3; }
     echo "Reviewing CSR for '$id':"
     csr_info "$PEND/$id.csr"
-    SRV_DIR="$SRV_DIR" esp32-sign-csr.sh "$id"
+    SRV_DIR="$SRV_DIR" /usr/local/bin/esp32-sign-csr.sh "$id"
     ;;
   revoke)
     id="${1:-}"; valid_id "${id:-}" || usage

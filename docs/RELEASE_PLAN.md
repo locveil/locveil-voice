@@ -238,6 +238,14 @@ See `docs/review/phase1_architecture_map.md` §5.
       CSR→approve→mTLS-wss cycle, CI-able) + S-9 loopback e2e + unit tests (framing, register shapes,
       reconnect, wake gate); **(6)** `docs/guides/satellite.md` + diagram + README/QUICKSTART. Entry-point
       registration in pyproject (the ARCH-31 lesson). Live-mic behavior stays a manual ARCH-25 item.
+      **Plane-B verification findings folded in (2026-07-06, user-requested doc-vs-implementation audit —
+      implementation CONFORMS to esp32_satellite.md §12.4-6/D-13/17/18 on all major points; two findings are
+      this task's scope):** **(a)** the `esp32_irene_upstream` premise is stale — Irene now deploys ON the
+      WB7, so the mTLS-wss path requires the nginx vars set to `127.0.0.1:8080` (README already corrected;
+      group_vars at deploy time = ARCH-25 step); **(b)** identity binding: nginx injects the mTLS-verified
+      subject as `X-Client-Cert-CN` but NOTHING consumes it — when present, Irene's /ws register must require
+      cert identity == claimed `client_id` (also fix/rename: the header carries the full DN, not the CN).
+      Trivial findings (c) PATH-dependent script call and (d) README wording were fixed at verification.
 - [ ] **BUILD-13** `[deferred]` [SATELLITE][DOCKER] — **Pi/aarch64 satellite docker image** (ARCH-35 S-8:
       explicit deferred follow-up — `uv run irene-satellite` covers the release need). A slim aarch64 image
       on the `satellite.toml` profile (mic device passthrough, credentials volume for the S-6 material),

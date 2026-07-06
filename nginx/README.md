@@ -23,7 +23,7 @@ weight.
   transport. Solves the cert chicken-and-egg without a bootstrap secret.
 - **`:443` mTLS operations** — `ssl_verify_client on` against the home CA, so only a **provisioned device
   with a CA-signed cert** can pull firmware/models. This is also where Irene's `/ws/audio*` is reverse-
-  proxied **if Irene runs on this host** (commented in the template — Irene typically runs elsewhere).
+  proxied **if Irene runs on this host** (enabled by setting `esp32_irene_upstream` — since the release deploys Irene ON the controller, set it to `127.0.0.1:8080`).
 
 ## Approval model (CSR-approval, D-17) — the operator CLI
 
