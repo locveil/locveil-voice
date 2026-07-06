@@ -2288,6 +2288,18 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       Error-path nuance: a template call inside an `except` must never mask the ORIGINAL failure — new
       `_template_or(name, lang, fallback)` base helper: localized when assets are healthy, last-resort
       literal when the template system itself is broken (a unit test caught exactly this).
+- [x] **BUG-29** `[release]` [UI][CONFIG] — **DONE 2026-07-06. Default `web_port` 6000 → 8080 —
+      the config-ui could not reach the backend from ANY browser** (found in the REL-3 manual functional
+      pass; the exact class of defect no automated test catches — `curl` is happy on 6000, a browser is not).
+      Port 6000 is X11, on Chromium/Firefox's hard-blocked list → every config-ui request failed
+      `net::ERR_UNSAFE_PORT` before leaving the browser (a retry-storm of 35k+ requests). Violated
+      `config-ui-stays-functional` on the shipped defaults. Swept 6000→8080 (word-boundary, 16000 sample
+      rates untouched) across all 13 configs, the `CoreConfig.web_port` model default (the source of truth),
+      the config-ui `defaultApiBase()` + generated openapi default, `ops/docker-compose.yml`, all 3
+      Dockerfiles (CMD/EXPOSE), `ops/INSTALL.md`, QUICKSTART (was inconsistently 8000). 8080 chosen (user):
+      browser-safe, no collision with the bridge (8000) or config-ui (3000). Verified: default boot binds
+      8080; config gate 13/13; config-ui check+build green.
+
 
 
 

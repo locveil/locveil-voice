@@ -70,15 +70,15 @@ Then type, e.g.:
 
 ### WebAPI (REST + WebSocket + the config-ui backend)
 ```bash
-uv run irene-webapi -c configs/config-example.toml --host 0.0.0.0 --port 8000
+uv run irene-webapi -c configs/config-example.toml --port 8080
 ```
 Smoke-check:
 ```bash
-curl http://localhost:8000/health
-curl -X POST http://localhost:8000/execute/command -H 'Content-Type: application/json' \
+curl http://localhost:8080/health
+curl -X POST http://localhost:8080/execute/command -H 'Content-Type: application/json' \
      -d '{"command":"привет"}'
 ```
-Interactive API docs: open `http://localhost:8000/docs`.
+Interactive API docs: open `http://localhost:8080/docs`.
 
 ### Voice (microphone)
 The full spoken pipeline from a local microphone — **Microphone → VAD → [wake word] → ASR → intent →
@@ -94,7 +94,7 @@ plus the matching ASR model installed**, so it's heavier than the text flows abo
 `--list-devices` (pick a microphone), `--check-deps`, and `--trace` (see [tracing & replay](guides/tracing.md)).
 
 ### config-ui (browser config editor)
-Needs the WebAPI backend running (step above), which it talks to at `http://localhost:8000`.
+Needs the WebAPI backend running (step above), which it talks to at `http://localhost:8080`.
 ```bash
 cd config-ui
 npm ci

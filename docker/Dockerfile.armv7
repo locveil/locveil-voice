@@ -135,7 +135,7 @@ ENV PYTHONPATH=/app PYTHONUNBUFFERED=1 PYTHONOPTIMIZE=2
 ENV MALLOC_TRIM_THRESHOLD_=100000 MALLOC_TOP_PAD_=65536
 
 # Satellite server: the back-half (ASR→NLU→intent→TTS) over the WS transport for the ESP32.
-CMD ["python", "-O", "-m", "irene.runners.webapi_runner", "--host", "0.0.0.0", "--port", "6000"]
+CMD ["python", "-O", "-m", "irene.runners.webapi_runner", "--host", "0.0.0.0", "--port", "8080"]
 
 # Web API / ESP32 transport port (8000 is taken by wb-mqtt-bridge)
-EXPOSE 6000
+EXPOSE 8080

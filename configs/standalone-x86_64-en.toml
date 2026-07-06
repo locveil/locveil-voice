@@ -37,7 +37,7 @@ context_timeout_minutes = 30
 microphone_enabled = true       # local mic → VAD is required to segment the raw chunk stream
 audio_playback_enabled = true   # local speaker
 web_api_enabled = true
-web_port = 6000
+web_port = 8080
 metrics_enabled = false
 metrics_port = 9090
 

@@ -12,7 +12,7 @@ services:
     container_name: wb-mqtt-voice
     restart: unless-stopped
     ports:
-      - "6000:6000"
+      - "8080:8080"
     volumes:
       # The single assets root: git-owned content (synced in by update.sh) + everything
       # the assistant writes (models download here on first boot; durable state lives in
@@ -39,7 +39,7 @@ services:
     ports:
       - "3000:3000"
     environment:
-      # Empty = the app talks to Irene on the same host the page is served from, :6000.
+      # Empty = the app talks to Irene on the same host the page is served from, :8080.
       API_BASE_URL: ""
     mem_limit: 64m
     logging:

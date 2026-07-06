@@ -7457,7 +7457,7 @@ export interface components {
             /**
              * Web Port
              * @description Web API server port (8000 is taken by wb-mqtt-bridge)
-             * @default 6000
+             * @default 8080
              */
             web_port: number;
             /**

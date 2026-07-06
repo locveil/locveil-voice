@@ -15,6 +15,18 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-06 — BUG-29 DONE — the config-ui never worked from a browser on the default port, and
+  only a human clicking found it.** REL-3's manual functional pass did exactly its job: port 6000
+  (the shipped default everywhere) is X11, hard-blocked by Chrome/Firefox as ERR_UNSAFE_PORT, so
+  the config-ui — a first-class contract consumer — failed every request before it left the
+  browser, in a 35k-request retry storm. curl never cared; no gate could have. Swept 6000→8080
+  across configs, the model default, the UI's own default, docker, ops, and docs. Honest process
+  note: I burned several turns on an IPv4/IPv6-localhost theory built on a false premise (the "no
+  request reached the app" test was on the blocked port, so it proved nothing) before the user's
+  DevTools screenshot showed the real error in three words. Ask for the browser's actual error
+  first, next time.
+
+
 - **2026-07-06 — BUG-28 DONE — the reporting system catches its first real bug, hours after
   going live.** The smoke test's "тестовый отчёт" turned out not to be a test at all: the cloud
   triage read the bundle's logs, spotted durable timers dying silently across restarts, opened a

@@ -8,7 +8,7 @@
 #
 # The standalone runs voice_runner (local mic + the web API), so it needs host audio at run time:
 #   docker run --device /dev/snd -e IRENE_CONFIG_FILE=/app/runtime-config.toml \
-#     -v ./assets:/app/assets -p 6000:6000 irene:standalone
+#     -v ./assets:/app/assets -p 8080:8080 irene:standalone
 # Override the baked config with: -e IRENE_CONFIG_FILE=/cfg/my.toml -v ./my.toml:/cfg/my.toml
 #
 # Usage:
@@ -98,5 +98,5 @@ ENV IRENE_ASSETS_ROOT=/app/assets
 ENV PYTHONPATH=/app PYTHONUNBUFFERED=1
 
 # Standalone: voice_runner = local mic pipeline + the web API (needs `--device /dev/snd` at run time).
-CMD ["python", "-m", "irene.runners.voice_runner", "--host", "0.0.0.0", "--port", "6000"]
-EXPOSE 6000
+CMD ["python", "-m", "irene.runners.voice_runner", "--host", "0.0.0.0", "--port", "8080"]
+EXPOSE 8080

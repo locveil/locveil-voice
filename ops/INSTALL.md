@@ -30,7 +30,7 @@ systemctl daemon-reload
 systemctl enable --now wb-mqtt-voice
 ```
 
-The web API answers on port **6000** (`curl http://localhost:6000/health`). Speech models
+The web API answers on port **8080** (`curl http://localhost:8080/health`). Speech models
 download into `.assets/` on first boot — the first start takes a few minutes; subsequent starts
 reuse them.
 
@@ -65,7 +65,7 @@ and run `docker compose up -d`. Return to `:latest` the same way.
 - **The configuration editor** — not part of the standard deployment. Bring it up on demand:
 
   ```sh
-  docker compose --profile ui up -d      # serves on port 3000, talks to Irene on :6000
+  docker compose --profile ui up -d      # serves on port 3000, talks to Irene on :8080
   docker compose --profile ui down       # and away again
   ```
 

@@ -45,7 +45,7 @@ audio_playback_enabled = true      # Enable audio playback hardware capability
 
 # Service capabilities - what services to run
 web_api_enabled = true             # Enable REST API and WebSocket server
-web_port = 6000                    # Web API server port (1-65535)
+web_port = 8080                    # Web API server port (1-65535)
 # NOTE: Metrics configuration moved to [monitoring] section (Phase 5 unification)
 
 # Observation tap (ARCH-15) - gated /ws/observe debug stream of the pipeline event bus.

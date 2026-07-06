@@ -16,7 +16,7 @@ log_level = "INFO"
 microphone_enabled = true      # REQUIRED: Hardware capability for VOSK
 audio_playback_enabled = true  # Enable audio output for responses
 web_api_enabled = false        # VOSK runner doesn't need web API
-web_port = 6000
+web_port = 8080
 metrics_enabled = false
 metrics_port = 9090
 

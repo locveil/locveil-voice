@@ -112,13 +112,13 @@ declare global {
 }
 
 /** Resolve the backend base URL: deploy-time injection wins; otherwise assume Irene
- *  runs on the same host as the page, on its standard port 6000 (covers both local
+ *  runs on the same host as the page, on its standard port 8080 (covers both local
  *  dev at localhost and the deployed UI served next to the backend). */
 function defaultApiBase(): string {
   const injected = typeof window !== 'undefined' ? window.__IRENE_API_BASE__ : undefined;
   if (injected) return injected;
   const hostname = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
-  return `http://${hostname}:6000`;
+  return `http://${hostname}:8080`;
 }
 
 class IreneApiClient {
