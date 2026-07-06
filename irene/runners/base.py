@@ -214,11 +214,15 @@ class BaseRunner(ABC):
         log_level = LogLevel(args.log_level)
         if args.debug:
             log_level = LogLevel.DEBUG
-            
+
+        # Interactive runners (the CLI REPL) keep the screen clean: log lines interleaving
+        # with the `irene>` prompt make it unreadable. Logs still go to the file (and the
+        # ARCH-19 trace handler); --debug deliberately brings them back to the console.
+        enable_console = (not self.runner_config.supports_interactive) or args.debug
         setup_logging(
             level=log_level,
             log_file=Path("logs/irene.log"),
-            enable_console=True
+            enable_console=enable_console
         )
     
     def _install_trace_logger(self, config: CoreConfig) -> None:

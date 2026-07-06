@@ -15,6 +15,14 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-06 — QUAL-70 DONE (filed + completed same day, user) — a clean REPL.** The CLI's
+  console was a log firehose with an `irene>` prompt drowning in it. Two sources silenced:
+  the root console handler (interactive runners now log to file + trace only — `--debug`
+  brings the console back on purpose) and the embedded background uvicorn (its own handlers
+  bypass root logging entirely; now built with `log_config=None` so it propagates to the
+  file like everything else). The foreground webapi server is untouched — docker logs
+  depend on its console output. The CLI now shows exactly: banners, prompt, replies.
+
 - **2026-07-06 — REL-2 DONE — the first-run story, written by a live stumble.** The morning's
   bare-`irene-cli` transcript became the acceptance test, and everything followed from it.
   `configs/config-example.toml`: a curated text-first starter — hybrid NLU only, zero downloads,

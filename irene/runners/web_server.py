@@ -209,8 +209,12 @@ class WebServerMixin:
 
     # --- serve -------------------------------------------------------------------------------------
 
-    def _build_uvicorn_server(self, args):
-        """Build a configured uvicorn.Server from the app + args (None if the app isn't built)."""
+    def _build_uvicorn_server(self, args, quiet_logging: bool = False):
+        """Build a configured uvicorn.Server from the app + args (None if the app isn't built).
+
+        quiet_logging: skip uvicorn's OWN logging config (its handlers write straight to the
+        terminal, bypassing the root handlers) — uvicorn's loggers then propagate to the root
+        logger, i.e. wherever the runner routed logs (file-only for the CLI REPL)."""
         import uvicorn  # type: ignore
 
         if not self.app:
@@ -228,6 +232,9 @@ class WebServerMixin:
             "reload": args.reload,
             "workers": args.workers if not args.reload else 1,
         }
+        if quiet_logging:
+            config_kwargs["log_config"] = None
+            config_kwargs["access_log"] = False
         config_kwargs.update(ssl_config)
         return uvicorn.Server(uvicorn.Config(**config_kwargs))  # type: ignore
 
@@ -264,7 +271,9 @@ class WebServerMixin:
         (e.g. the CLI REPL). Returns (server, task); to stop: `server.should_exit = True; await task`.
         Returns (None, None) if the app isn't built."""
         import asyncio
-        server = self._build_uvicorn_server(args)
+        # quiet_logging: the foreground here is a REPL — uvicorn's own console handlers would
+        # scribble over the prompt; its logs propagate to the root handlers (file) instead.
+        server = self._build_uvicorn_server(args, quiet_logging=True)
         if server is None:
             return None, None
         self._web_banner(args, alongside="the console")

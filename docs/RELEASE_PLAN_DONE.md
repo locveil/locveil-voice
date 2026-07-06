@@ -2219,6 +2219,17 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       `scan_utterance` legs), so a device carrying the group noun as an ALIAS cannot demote «свет» to
       device-form. **New fixture F17** («включи свет в гардеробе» → room-group wardrobe/light/auto) pins
       that interaction; guard 8/8, device tier-1 gate **48/48**.
+- [x] **QUAL-70** `[release]` [UX][CLI] — **DONE 2026-07-06 (filed + completed same day, user request).
+      Clean REPL: interactive runners log to file + trace only.** Two console-noise sources silenced for
+      the CLI: (1) the root console handler — `_setup_logging` now keys `enable_console` off
+      `supports_interactive` (CLI off, WebAPI/voice unchanged); `--debug` deliberately brings console
+      logs back; (2) the embedded background uvicorn — `_serve_in_background` builds it with
+      `log_config=None` + `access_log=False`, so its loggers propagate to the root handlers (file)
+      instead of scribbling over the prompt; the FOREGROUND webapi server is untouched (docker logs
+      depend on it). Verified live: `irene-cli -c configs/config-example.toml` shows banners + replies
+      only; `logs/irene.log` carries the full log; `--debug` restores 500+ console lines. Suite 1300,
+      pyright 0.
+
 
 
 
