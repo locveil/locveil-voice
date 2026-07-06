@@ -1,0 +1,159 @@
+# ============================================================
+# IRENE — FIRST-RUN CONFIGURATION
+# ============================================================
+#
+# A curated, working starting point: the TEXT pipeline only — type commands,
+# get answers. No models to download, no API keys, nothing to install beyond
+# `uv sync`. Try it:
+#
+#     uv run irene-cli -c configs/config-example.toml
+#
+# then type «который час», «поставь таймер на 5 минут», «привет».
+# The web API runs alongside on http://localhost:6000 (REST docs at /docs).
+#
+# When you outgrow it, each "upgrade path" comment below names the section to
+# lift from configs/config-master.toml — the documented reference for EVERY
+# option. Copy this file (e.g. to config.toml) and grow it there.
+# ============================================================
+
+name = "Irene"
+version = "15.0.0"
+debug = false
+log_level = "INFO"
+
+# The single language policy for this instance (sessions, recognition, assets).
+default_language = "ru"
+supported_languages = ["ru", "en"]
+timezone = "UTC"
+
+max_concurrent_commands = 10
+command_timeout_seconds = 30.0
+context_timeout_minutes = 30
+
+# ============================================================
+# SYSTEM — what this machine offers
+# ============================================================
+[system]
+microphone_enabled = false          # text-first: no microphone
+audio_playback_enabled = false      # ...and no speakers
+web_api_enabled = true              # REST + WebSocket server alongside the CLI
+web_port = 6000
+
+# ============================================================
+# INPUTS — where commands come from
+# ============================================================
+[inputs]
+microphone = false
+web = true                          # POST /execute/command, the config-ui backend
+cli = true                          # the interactive console
+default_input = "cli"
+
+[inputs.web_config]
+enabled = true
+websocket_enabled = true
+rest_api_enabled = true
+
+[inputs.cli_config]
+enabled = true
+prompt_prefix = "irene> "
+history_enabled = true
+
+# ============================================================
+# OUTPUTS — where answers go
+# ============================================================
+[outputs]
+console = true
+console_prefix = "📝 "
+web_push = true                     # browser push channel (/ws/output) for deferred results
+
+[outputs.bridge]
+# Smart-home control through wb-mqtt-bridge. Leave disabled until you have a
+# bridge to talk to — see docs/guides/smart-home.md for the whole story.
+enabled = false
+base_url = "http://localhost:8000"
+timeout_seconds = 5.0
+
+# ============================================================
+# COMPONENTS — the processing pipeline
+# ============================================================
+# These flags decide what LOADS. A section further down is ignored while its
+# component flag here is off.
+[components]
+intent_system = true                # essential — understands and executes commands
+nlu = true                          # text → intent
+text_processor = true               # text normalization around the pipeline
+monitoring = true                   # metrics + health endpoints
+tts = false                         # upgrade path: [tts] in config-master (voice replies)
+audio = false                       # upgrade path: [audio] in config-master (speakers)
+asr = false                         # upgrade path: [asr] in config-master (microphone speech)
+voice_trigger = false               # upgrade path: [voice_trigger] (wake word)
+llm = false                         # upgrade path: [llm] + an API key (richer conversation)
+configuration = false               # config-editing REST API (the config-ui backend)
+nlu_analysis = false                # NLU conflict-analysis tooling (development aid)
+
+# ============================================================
+# NLU — how text becomes an intent
+# ============================================================
+[nlu]
+enabled = true
+confidence_threshold = 0.7
+fallback_intent = "conversation.general"
+# One fast offline recognizer. Upgrade path: add "spacy_nlu" (linguistic
+# matching, downloads a model on first boot) and/or "llm" (cloud fallback for
+# fuzzy phrasings) — see [nlu] in config-master.
+provider_cascade_order = ["hybrid_keyword_matcher"]
+max_cascade_attempts = 4
+cascade_timeout_ms = 200
+auto_detect_language = true
+language_detection_confidence_threshold = 0.8
+
+[nlu.providers.hybrid_keyword_matcher]
+enabled = true
+confidence_threshold = 0.7
+fuzzy_enabled = true
+fuzzy_threshold = 0.8
+pattern_confidence = 0.9
+case_sensitive = false
+normalize_unicode = true
+
+# ============================================================
+# TEXT PROCESSOR — normalization stages
+# ============================================================
+[text_processor]
+enabled = true
+stages = ["asr_output", "tts_input"]
+
+# Both normalizers run on the TTS side only: converting digits to words or
+# Latin to Cyrillic BEFORE understanding corrupts the command («hdmi1»,
+# English input). Keep them off asr_output.
+[text_processor.normalizers.numbers]
+enabled = true
+stages = ["tts_input"]
+
+[text_processor.normalizers.prepare]
+enabled = true
+stages = ["tts_input"]
+latin_to_cyrillic = true
+symbol_replacement = true
+
+[text_processor.providers.unified_text_processor]
+enabled = true
+
+# ============================================================
+# INTENT SYSTEM — the handlers
+# ============================================================
+[intent_system]
+enabled = true
+confidence_threshold = 0.7
+fallback_intent = "conversation.general"
+
+[intent_system.handlers]
+enabled = ["conversation", "greetings", "timer", "datetime", "system", "smart_home"]
+disabled = []
+auto_discover = true
+discovery_paths = ["irene.intents.handlers"]
+
+[intent_system.handlers.asset_validation]
+strict_mode = true
+validate_spacy_patterns = false
+validate_json_schema = true

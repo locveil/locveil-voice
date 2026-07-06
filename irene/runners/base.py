@@ -258,8 +258,13 @@ class BaseRunner(ABC):
             if not args.quiet:
                 print(f"✅ Loaded configuration from: {args.config}")
         elif self.runner_config.requires_config_file:
-            print(f"❌ Configuration file not found: {args.config}")
-            print(f"💡 {self.runner_config.name} runner requires a configuration file")
+            # REL-2: the first-touch failure must name the remedy, not leak component internals.
+            # (The built-in default config has no NLU providers, so a silent fall-back "boots"
+            # but dies confusingly on the first command — better to stop here with directions.)
+            print(f"❌ No configuration found: {args.config}")
+            print("💡 Pass one with -c — for a first run:  -c configs/config-example.toml")
+            print("   Or set IRENE_CONFIG_FILE. Every option is documented in")
+            print("   configs/config-master.toml; see docs/QUICKSTART.md.")
             raise ValueError(f"Configuration file not found: {args.config}")
         else:
             config = config_manager.get_default_config()

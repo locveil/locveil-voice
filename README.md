@@ -6,8 +6,12 @@ default. It runs locally on its own and couples to a smart home over MQTT when y
 Russian-first, English supported. Version 15.0.0 · Python 3.11+ · MIT.
 
 > **Status — pre-release, under active development.** The architecture is settled and the core works
-> (CLI and web API, intent handling, timers, the browser config UI). Smart-home/MQTT and the ESP32
-> voice satellite are designed but not yet built, and the project isn't packaged for release yet.
+> (CLI and web API, intent handling, timers, smart-home control through
+> [wb-mqtt-bridge](docs/guides/smart-home.md), the browser config UI), and Docker images publish to
+> GHCR. The ESP32 voice satellite and on-device deployment await hardware bring-up.
+>
+> First run: `uv run irene-cli -c configs/config-example.toml` — see the
+> [Quickstart](docs/QUICKSTART.md).
 
 ## Highlights
 

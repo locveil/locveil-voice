@@ -35,8 +35,10 @@ is `scripts/check_scope.py` clean) · **Status:** active · **Version:** 15.0.0
       eval `make cli`. _No coverage-% criterion (decided 2026-07-04): the layered nets are the safety story._
 - [x] Models point to current versions with live download URLs (ASSET-2 sweep; ASSET-4 VAD + ASSET-5 wake-word
       re-homed through the AssetManager with live-download verification 2026-07-04).
-- [ ] Docs accurate at the release version; quickstart works end-to-end → **REL-2** (curated `config-example.toml`,
-      README pointer, friendlier config-validation failure message).
+- [x] Docs accurate at the release version; quickstart works end-to-end — ✓ REL-2 (2026-07-06):
+      `configs/config-example.toml` (curated first-run starter, boots + answers live), friendly no-config
+      runner failure (acceptance driven by a live first-touch transcript), README status + first-run
+      pointer, QUICKSTART finalized (example-first, smart-home in scope, GHCR images noted).
 - [ ] **`config-ui` builds + type-checks clean** (CI-gated ✓) **and is functional against the release backend** —
       the functional pass is a manual check at release time (**REL-3** checklist item).
 
@@ -316,21 +318,6 @@ Governed by `config-ui-stays-functional` (config-ui must stay functional).
       `code.toUpperCase()`; the `DonationsPage` `['en','ru']` fallback is a defensible default for a rare miss._
 
 ### Release Readiness (REL)
-- [ ] **REL-2** (P1) `[release]` — `config-example.toml` + quickstart finalization (the release-time config story).
-      _Progress 2026-06-07 (tester-handover prep):_ drafted **`docs/QUICKSTART.md`** (install → config → run CLI/WebAPI/
-      config-ui → in/out-of-scope → reporting), and **fixed the `env-example.txt` template** (the quickstart's `.env`
-      source crashed a fresh run: it enabled TTS but used the wrong field `AUDIO_OUTPUT`, leaving Audio off → invalid
-      config). Recommends the lightweight `minimal`/`api-only` profiles for first run. **Remaining for release:** a curated
-      `config-example.toml` (vs the heavy `config-master.toml`), final README pointer, and a friendlier runner message on
-      config-validation failure.
-      _Intake evidence 2026-07-06 (live first-touch session, user):_ **bare `irene-cli` has no working invocation
-      without `-c`.** (a) No config found → silent fall-back to `create_default_config()` (bare `CoreConfig`:
-      `components.nlu=false`) → first command dies with the internals-leaking "Required component 'nlu' not
-      available"; (b) `--headless` force-enables the components but the default config underneath has an EMPTY
-      `[nlu]` `provider_cascade_order` and no provider sections → "No providers available for intent recognition.
-      JSON donation initialization may have failed" (misleading — donations are fine, the provider list is empty).
-      Acceptance addendum: both invocations must either work or say plainly "no configuration found — pass
-      `-c configs/…` or set `IRENE_CONFIG_FILE`". Verified working meanwhile: `irene-cli -c configs/config-master.toml`.
 - [ ] **REL-3** (P1) `[release]` — Version bump / changelog / tag.
 
 ---

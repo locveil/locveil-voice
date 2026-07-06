@@ -15,6 +15,21 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-06 — REL-2 DONE — the first-run story, written by a live stumble.** The morning's
+  bare-`irene-cli` transcript became the acceptance test, and everything followed from it.
+  `configs/config-example.toml`: a curated text-first starter — hybrid NLU only, zero downloads,
+  zero keys, web API alongside, smart_home enabled with the bridge off (so the first device
+  command earns the honest «умный дом не подключён» instead of a mystery) — and every disabled
+  capability comments which config-master section to lift. The silent default-config fall-back is
+  gone from the CLI/WebAPI runners (it could NEVER work — the built-in default has an empty NLU
+  provider list): bare and `--headless` runs now stop with directions naming the example config,
+  `IRENE_CONFIG_FILE`, and the QUICKSTART. README lost its stale "smart-home not yet built /
+  not packaged" status (both false since ARCH-8 and BUILD-11) and gained the first-run one-liner;
+  QUICKSTART finalized around example-first flow with console-script invocations. Verified live:
+  example boots, «который час» answers, «включи свет» degrades honestly; suite 1300; config gate
+  13/13; pyright 0. The exit-criterion checkbox for docs/quickstart flipped — REL-3 + ARCH-25 are
+  all that remain.
+
 - **2026-07-06 — DOC-8 DONE — the data-models map, shipped where it belongs.** The task predates
   the `docs/architecture/` family, so the deliverable moved there (user: user-facing naming, family
   prose, diagrams): `docs/architecture/data-models.md` + `docs/images/data-models.dot/png`. The

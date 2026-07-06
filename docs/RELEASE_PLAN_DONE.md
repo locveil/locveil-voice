@@ -3517,3 +3517,19 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       checked with evidence (uv sync/boots, CI green, pyright **0 errors** standard mode, 10 import-linter
       contracts, three nets green, live model URLs); remaining open: docs/quickstart (REL-2), config-ui
       functional pass + Docker boot (REL-3 + BUILD-11). Checklist rewritten in `RELEASE_PLAN.md` header.
+
+- [x] **REL-2** (P1) `[release]` — **DONE 2026-07-06. The release-time config story, driven by live
+      first-touch evidence** (the user's own bare-`irene-cli` stumble earlier the same day became the
+      acceptance test). Shipped: **(1) `configs/config-example.toml`** — curated text-first starter
+      (hybrid NLU only, no model downloads, no keys; web API alongside; smart_home enabled with the
+      bridge off → honest «умный дом не подключён»; every disabled capability comments its upgrade-path
+      section in config-master) — boots + answers live («который час» → the time), passes the CI config
+      gate (13/13 valid); **(2) the friendly no-config failure** — `requires_config_file=True` for the
+      CLI + WebAPI runners (voice already had it): bare and `--headless` invocations now print "No
+      configuration found … -c configs/config-example.toml … IRENE_CONFIG_FILE … QUICKSTART" instead of
+      leaking component internals (the silent default-config fall-back could never work — empty NLU
+      provider list); Docker unaffected (images bake `IRENE_CONFIG_FILE`); **(3) README** — stale status
+      paragraph corrected (smart-home built, GHCR images real) + first-run one-liner; **(4) QUICKSTART
+      finalized** — example-config-first flow, console-script invocations, smart-home moved from
+      "not implemented" to in-scope-with-bridge, GHCR images noted, test count refreshed.
+      Suite 1300, config gate 13/13, pyright 0.

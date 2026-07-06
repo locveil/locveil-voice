@@ -120,7 +120,9 @@ class CLIRunner(WebServerMixin, BaseRunner, InteractiveRunnerMixin):
         runner_config = RunnerConfig(
             name="CLI",
             description="Command line interface for Irene (CLI input + web API)",
-            requires_config_file=False,
+            # REL-2: a config is required — the built-in default has no NLU providers, so the
+            # old silent fall-back always died on the first command with internals-speak.
+            requires_config_file=True,
             supports_interactive=True,
             required_dependencies=["core"]
         )

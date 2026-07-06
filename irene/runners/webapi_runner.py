@@ -42,7 +42,9 @@ class WebAPIRunner(WebServerMixin, BaseRunner):
         runner_config = RunnerConfig(
             name="WebAPI",
             description="Web API Server Mode (web input only)",
-            requires_config_file=False,
+            # REL-2: same as the CLI runner — no silent default-config fall-back (it has no
+            # NLU providers and fails confusingly at the first request).
+            requires_config_file=True,
             supports_interactive=False,
             required_dependencies=["fastapi", "uvicorn"]
         )

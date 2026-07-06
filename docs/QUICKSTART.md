@@ -29,23 +29,29 @@ cp docs/env-example.txt .env      # then fill in the keys you need
 
 ## 3. Pick a config
 
-Start from the documented reference and trim it: `cp configs/config-master.toml config.toml`, then pass
-it with `-c config.toml`. The shipped configs:
+**A config file is required** — running without one stops with directions instead of guessing.
+For a first run, use the shipped starter as-is:
+
+```bash
+uv run irene-cli -c configs/config-example.toml
+```
+
+That's the whole text pipeline — type commands, get answers, web API alongside — with **no model
+downloads and no API keys**. To grow it, copy it (`cp configs/config-example.toml config.toml`) and
+lift sections from the reference; the example's comments name which section covers each upgrade.
+The shipped configs:
 
 | Config | Use for |
 |---|---|
-| `configs/config-master.toml` | the documented reference (every option) — copy and trim it |
+| `configs/config-example.toml` | **first run** — curated text-only starter, works out of the box |
+| `configs/config-master.toml` | the documented reference (every option) — lift sections from it |
 | `configs/full.toml` | everything enabled (heavy) |
 | `configs/embedded-armv7.toml` / `configs/embedded-aarch64.toml` | ESP32 satellite controllers (WB7 / WB8) |
 | `configs/standalone-x86_64.toml` | a standalone x86 voice box |
 
-> **Lightweight first run (no model downloads):** in your `config.toml` set `[components]` `tts = false`,
-> `audio = false`, `asr = false`. The text pipeline (NLU + intents) needs no models — perfect for the CLI
-> and WebAPI flows below. The **`[components]`** flags are what actually load a component (a sub-section's
-> `enabled = true` is ignored when its `[components]` flag is off).
->
-> For **voice**, leave `asr`/`tts`/`audio` **on** in `[components]` and install the matching models — that's
-> heavier than the text flows.
+> The **`[components]`** flags are what actually load a component (a sub-section's `enabled = true`
+> is ignored while its `[components]` flag is off). For **voice**, turn `asr`/`tts`/`audio` on and
+> install the matching models — heavier than the text flows.
 
 ---
 
@@ -53,7 +59,7 @@ it with `-c config.toml`. The shipped configs:
 
 ### CLI (interactive text)
 ```bash
-uv run python -m irene.runners.cli -c config.toml          # text-only: asr/tts/audio off in [components]
+uv run irene-cli -c configs/config-example.toml            # or your own -c config.toml
 ```
 Then type, e.g.:
 - `привет` → a greeting
@@ -64,7 +70,7 @@ Then type, e.g.:
 
 ### WebAPI (REST + WebSocket + the config-ui backend)
 ```bash
-uv run python -m irene.runners.webapi_runner -c config.toml --host 0.0.0.0 --port 8000
+uv run irene-webapi -c configs/config-example.toml --host 0.0.0.0 --port 8000
 ```
 Smoke-check:
 ```bash
@@ -78,7 +84,7 @@ Interactive API docs: open `http://localhost:8000/docs`.
 The full spoken pipeline from a local microphone — **Microphone → VAD → [wake word] → ASR → intent →
 spoken reply**:
 ```bash
-uv run python -m irene.runners.voice_runner -c config.toml   # voice config (asr/tts/audio on) + models; or `irene-voice`
+uv run irene-voice -c config.toml       # a voice-capable config (asr/tts/audio on) + models
 ```
 It always uses microphone-only input (other inputs are overridden), but is otherwise **config-driven**:
 the ASR engine is whatever **`[asr] default_provider`** selects (`vosk` / `whisper` / `sherpa_onnx` / …)
@@ -102,13 +108,17 @@ npm run dev          # opens a Vite dev server (printed URL, usually http://loca
 **Test these:**
 - Text commands via CLI and `POST /execute/command`: greetings, date/time, timers, conversation, system (`help`/`status`/`version`).
 - WebAPI endpoints: `/health`, `/status`, `/execute/command`, `/docs`.
-- config-ui: browse + edit config sections (incl. the new **Output Channels** `[outputs]` section), donation/prompt editors, language switch.
+- config-ui: browse + edit config sections (incl. the **Output Channels** `[outputs]` section), donation/prompt editors, language switch.
+- **Smart-home commands** («включи свет», «закрой шторы») — but only with a running
+  [wb-mqtt-bridge](guides/smart-home.md) and `[outputs.bridge]` enabled. Without one, the honest
+  spoken answer is «умный дом не подключён» — that reply is correct behavior, not a bug.
 
 **NOT in this build (don't file these as bugs):**
-- **Smart-home / device control** ("включи свет в гостиной") — the MQTT/bridge integration is designed but **not implemented** (ARCH-8). Device/room commands will report a resolution failure by design.
 - **ESP32 voice satellite** and the wake-word path.
 - **Voice/ASR** end-to-end unless you deliberately enable `asr`/`tts`/`audio` in `[components]` + install models.
-- **Docker** packaging (release-phase item).
+
+**Docker images** are published to GHCR (`ghcr.io/droman42/wb-mqtt-voice-*`); running from an image
+instead of a checkout is covered by [`ops/INSTALL.md`](../ops/INSTALL.md) (controller deployment).
 
 ## 6. Tests & coverage
 
@@ -131,7 +141,7 @@ shim. And on a Python that already has stdlib `sqlite3`, the installer is a harm
 checks first and only aliases when native sqlite is missing).
 
 ## 7. Known state (so you can calibrate)
-- The **test suite is green** (~890 passing) and enforced in CI (`backend-health`); the user-facing
+- The **test suite is green** (~1300 passing) and enforced in CI (`backend-health`); the user-facing
   flows above are verified working (see `irene/tests/test_smoke_e2e.py`).
 - If a **core text flow** (greeting, time, timer, conversation, a WebAPI endpoint, or config-ui editing)
   misbehaves — **that** is worth reporting.
