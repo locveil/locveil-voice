@@ -15,6 +15,16 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-06 — QUAL-72 DONE (filed + completed same day) — the scope gate learns to catch the
+  maintainer.** The user spotted three completions (BUILD-12, ARCH-33, REL-3) marked [x] in the
+  ACTIVE plan instead of moved to the done-archive — a plain single-task-ledger violation that
+  check_scope.py silently accepted through multiple green runs (it counts [x] across both files,
+  so a stranded entry read as "done" rather than as drift). Entries moved; the gate now fails on
+  any `- [x] **ID**` in the active file, canary-verified. The uncomfortable truth worth recording:
+  the drift guard existed precisely for contradictory status markers and did not treat the most
+  literal contradiction — a completed task in the active file — as one.
+
+
 - **2026-07-06 — ARCH-35 DONE (same-day design session) — the satellite without firmware.** The
   question «how do I test ARCH-25?» answered itself once the inventory was honest: the voice
   runner already composes every satellite-side piece, and eval-commons' WS provider already

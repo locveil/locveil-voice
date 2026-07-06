@@ -96,9 +96,20 @@ def main() -> int:
         if exists_marked and Path(f).name not in on_disk:
             dead.append(f)
 
+    # stranded completions: a task DECLARED [x] in the ACTIVE file violates single-task-ledger —
+    # completion must MOVE the entry to the done-archive in the same change, not flip it in place
+    # (three entries drifted exactly this way on 2026-07-06 before this check existed).
+    stranded = re.findall(r"^- \[x\] \*\*([A-Z]+-\d+)\*\*", ledger_text, flags=re.M)
+
     failed = False
     print("== check_scope: release-scope drift guard ==\n")
 
+    if stranded:
+        failed = True
+        print("STRANDED completions ([x] task entries still in the ACTIVE plan — move them to RELEASE_PLAN_DONE.md):")
+        for tid in stranded:
+            print(f"  - {tid}")
+        print()
     if orphans:
         failed = True
         print("ORPHAN findings (task ID in a review/design doc but NOT in the ledger):")

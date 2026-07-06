@@ -2324,6 +2324,14 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       Dockerfiles (CMD/EXPOSE), `ops/INSTALL.md`, QUICKSTART (was inconsistently 8000). 8080 chosen (user):
       browser-safe, no collision with the bridge (8000) or config-ui (3000). Verified: default boot binds
       8080; config gate 13/13; config-ui check+build green.
+- [x] **QUAL-72** `[release]` [PROCESS] — **DONE 2026-07-06 (filed + completed same day; user caught the
+      drift). `check_scope.py` now flags STRANDED completions** — a `- [x] **ID**` task entry still in the
+      ACTIVE plan is a `single-task-ledger` violation (completion must MOVE the entry to the done-archive in
+      the same change), and the gate silently accepted it: three same-day completions (BUILD-12, ARCH-33,
+      REL-3) were flipped in place instead of moved, and every gate run since passed. Entries moved; the
+      guard now fails on the class (canary-verified both directions). The gate that exists to catch drift
+      must catch the maintainer's own drift first.
+
 
 
 
