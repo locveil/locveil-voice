@@ -196,6 +196,12 @@ See `docs/review/phase1_architecture_map.md` §5.
       bridge-involved bugs WITHOUT a handover (it now holds the dispatch ring + persisted-vs-live diff), and
       when it does hand over the bridge lens gets real house evidence. Paired bridge amendment: VWB-28's
       collector must expose the read endpoint (dropped uncommitted into the bridge ledger 2026-07-06).
+      **Bridge intake corrections/facts (2026-07-06, accepted):** the amendment's consumer-(1) claim ("their
+      UI needs evidence preview before send") was WRONG — their design §2 explicitly excludes preview (B-4);
+      the ask stands on ARCH-34 alone. For activation: the evidence envelope lands in the bridge's
+      `openapi.json` → consumed via the CONTRACTS PIN path (like the catalog — pin inward, never hand-edit);
+      the endpoint carries a rate guard (gzipped logs) → the voice caller needs a bounded timeout + graceful
+      429 alongside the bridge-unreachable-is-evidence rule.
 - [ ] **ARCH-16** [IO] (P-deferred) — **I/O daemon multiplexer + runners→thin presets (deferred ARCH-15 PR-10).**
       The I/O hexagon (ARCH-15) is complete and every channel runs; this is the internal-cleanliness endgame, deferred
       2026-06-07 as low-incremental-value / higher-risk. Scope: (a) **remote interactive text-attach channel** (e.g.
