@@ -2330,6 +2330,13 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       Both files mechanically resorted (205 entries, zero loss — asserted), `check_scope.py` fails on
       out-of-order IDs (canary-verified), CLAUDE.md `single-task-ledger` states it. Completes the evening's
       guard triad with QUAL-72 (stranded [x]) + QUAL-73 (misfiled sections).
+- [x] **QUAL-75** `[release]` [MQTT] — **DONE 2026-07-06 (filed + completed same day). Consume the bridge's
+      contract v1.4 (VWB-28): re-pin @ `fc8eb31`** — openapi gains `POST /reports` + `GET /reports/evidence`
+      with the **`EvidenceEnvelope`** schema (the B-11 read seam our ARCH-34 amendment asked for, delivered
+      same-day); catalog golden byte-unchanged (`acc1e18b`) so all 48 device fixtures stand untouched;
+      eval-commons guard 8/8. **ARCH-34's dependency gate is now LIFTED** — the endpoint exists and its
+      envelope is pinned; ARCH-34 stays `[deferred]` by the v1.1 scope decision, but activation is now
+      pure voice-side work (bounded call + `bridge/` bundle subtree + envelope-pin expectation).
 
 ### Bugs (BUG)
 - [x] **BUG-1** [NLU/TIMER] (P2) `[release]` — **DONE 2026-06-28.** Spelled-out numbers didn't reach parameter

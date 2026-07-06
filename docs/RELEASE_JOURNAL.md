@@ -15,6 +15,16 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-06 — QUAL-75 DONE (filed + completed same day) — contract v1.4 consumed; the bridge
+  closed the whole reporting loop from its side in one afternoon.** VWB-28 landed end-to-end over
+  there — the UI bug button, the dispatch/MQTT evidence rings, redaction, spool, rate limits — and
+  our B-11 amendment came back delivered, not just accepted: `GET /reports/evidence` with the
+  `EvidenceEnvelope` as an owned contract surface in openapi. Re-pinned @ fc8eb31 (catalog
+  byte-unchanged, all 48 fixtures stand; guard 8/8). ARCH-34's dependency gate is lifted — it
+  stays v1.1 by scope choice alone. They also ported our ledger guard triad (their DOC-12) and
+  joined the /inbox loop (VWB-26) — both repos now run the same discipline, same day it was asked.
+
+
 - **2026-07-06 — DOC-12 filed into the bridge (uncommitted) — the guard triad goes cross-repo.**
   The user wants both projects on one ledger discipline, so the evening's three machine-enforced
   conventions (stranded completions, misfiled sections, ID ordering — voice QUAL-72/73/74) are

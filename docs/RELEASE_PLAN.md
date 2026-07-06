@@ -211,7 +211,10 @@ See `docs/review/phase1_architecture_map.md` §5.
       the ask stands on ARCH-34 alone. For activation: the evidence envelope lands in the bridge's
       `openapi.json` → consumed via the CONTRACTS PIN path (like the catalog — pin inward, never hand-edit);
       the endpoint carries a rate guard (gzipped logs) → the voice caller needs a bounded timeout + graceful
-      429 alongside the bridge-unreachable-is-evidence rule.
+      429 alongside the bridge-unreachable-is-evidence rule. **GATE LIFTED 2026-07-06 (QUAL-75):** the
+      bridge shipped VWB-28 same-day incl. B-11 `GET /reports/evidence` + the `EvidenceEnvelope` schema,
+      pinned @ contract v1.4 — activation is now pure voice-side work; the `[deferred]` tag stands by the
+      v1.1 scope decision, not by dependency.
 - [ ] **ARCH-36** `[release]` [SATELLITE] — **`irene-satellite` implementation** (from ARCH-35, design
       `docs/design/python_satellite.md` — S-1..S-9 AGREED 2026-07-06; gates ARCH-25 items (3)/(4)). Build
       order per design §9: **(1)** `SatelliteConfig` (`[satellite]` + `[satellite.tls]`) + config-ui type
