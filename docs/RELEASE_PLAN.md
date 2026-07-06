@@ -170,6 +170,23 @@ See `docs/review/phase1_architecture_map.md` §5.
       `/inbox` skill: list open fix PRs on wb-mqtt-voice + `needs-owner` tickets (voice lens) in
       wb-user-reports, then walk them one-by-one interactively; CLAUDE.md line: mention pending items at
       session start (never auto-run). Bridge twin rides the VWB-25 filing.
+- [ ] **ARCH-34** `[deferred]` [FEEDBACK] — **Bridge-evidence enrichment for smart-home reports**
+      (filed 2026-07-06, user loud-thinking; v1.1 — layers on the shipped ARCH-30/31/32 baseline, gated on
+      a bridge read endpoint). When a problem report is filed and the ARCH-32 request ring shows smart-home
+      involvement (`intent_name.startswith("smart_home")` in the recent window — the discriminator already
+      exists, no new capture) OR `[outputs.bridge]` is enabled, the voice collector calls the bridge's
+      evidence endpoint (`GET /reports/evidence` — the bridge's own report collector exposed as a READ
+      seam, not just `POST /reports`'s internal step) and folds the response into the bundle under a
+      `bridge/` subtree. Closes the gap the bridge design already NAMES (problem_reports_bridge.md §8/B-3:
+      a voice→bridge handover arrives with only voice evidence, cloud triage has no house access) — better
+      than their deferred manual CLI: automatic, at filing time. Design points: bridge-unreachable IS
+      evidence (record it, never fatal — mirrors BRIDGE_UNREACHABLE); don't hard-gate on the heuristic
+      (over-attaching into the same private repo is free); bridge redacts before returning (owns its
+      secrets, B-5); the evidence envelope is a shared contract the bridge OWNS + voice pins
+      (`cross-repo-source-of-truth`). Payoff = triage quality: the voice lens can often diagnose/fix
+      bridge-involved bugs WITHOUT a handover (it now holds the dispatch ring + persisted-vs-live diff), and
+      when it does hand over the bridge lens gets real house evidence. Paired bridge amendment: VWB-28's
+      collector must expose the read endpoint (dropped uncommitted into the bridge ledger 2026-07-06).
 - [ ] **ARCH-16** [IO] (P-deferred) — **I/O daemon multiplexer + runners→thin presets (deferred ARCH-15 PR-10).**
       The I/O hexagon (ARCH-15) is complete and every channel runs; this is the internal-cleanliness endgame, deferred
       2026-06-07 as low-incremental-value / higher-risk. Scope: (a) **remote interactive text-attach channel** (e.g.

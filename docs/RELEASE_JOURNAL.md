@@ -15,6 +15,17 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-06 — ARCH-34 filed [deferred] (user loud-thinking) — bridge-evidence enrichment for
+  smart-home reports.** When a report is filed and the request ring shows smart-home involvement,
+  the voice collector pulls bridge-side evidence (dispatch ring, MQTT window, persisted-vs-live
+  diff) from a bridge READ endpoint and folds it into the bundle. The discriminator already exists
+  (ARCH-32's ring carries intent names), so the voice cost is small; the ask to the bridge is small
+  and self-serving (its own UI wants the same collector-as-read-endpoint seam). Closes the gap the
+  bridge design already names — a voice→bridge handover with no house access — automatically and at
+  filing time, superseding their deferred manual CLI. v1.1: gated on the bridge exposing the endpoint;
+  paired amendment dropped uncommitted into VWB-28.
+
+
 - **2026-07-06 — BUILD-12 DONE — the reporting loop closed, live, and immediately did its job.**
   Bootstrapped `../wb-user-reports` (repo, labels, workflows, lens files, secrets, app install,
   PATs) and ran the real smoke: «сообщи о проблеме» through the web API produced a ticket + a
