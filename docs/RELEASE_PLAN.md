@@ -260,6 +260,20 @@ _Discrete functional defects (distinct from QUAL refactors/quality work). Surfac
 _Trace-driven system testing (design `docs/design/trace_system_testing.md`, TEST-11 ✓) — all implementation slices
 (TEST-12/13/14/15) done; see `RELEASE_PLAN_DONE.md`._
 
+- [ ] **TEST-19** `[deferred]` [TEST][I18N][MQTT] — **English axis for the device suite + EN misroute fixes**
+      (filed 2026-07-06 from the BUG-5 probing session; post-release per user — an external EN tester exists, RU
+      ships first). **Scope (one task, fixtures + fixes together, user decision):** (1) `utterance.en` on the
+      crossover fixtures where an EN phrasing is meaningful + `fixtures_to_tests` emits per-language cases +
+      an `eval/Makefile` `LANG=en` knob (SUT config derived from the `standalone-x86_64-en` profile — the suite
+      is text-driven, no audio, so this is cheap); (2) run the EN scoreboard and fix what's red at the right
+      altitude (donation patterns first — the QUAL-64/Slice-3 lesson; BUG-5 already fixed the article-blind
+      timer phrases this way). **Seed evidence — four PRE-EXISTING EN misroutes found by probing 2026-07-06**
+      (all reproduce at pre-BUG-5 HEAD too): "cancel the timer" → `voice_synthesis.cancel` (0.89, bare-cancel
+      greed); "switch asr to whisper" → `smart_home.input_select` (0.71, «switch…to» greed); "translate hello
+      to german" → `greeting.hello` (0.86, keyword beats verb); bare "pause" → `audio.stop` (1.00 — note the
+      RU twin «поставь на паузу» routes `smart_home.playback_pause`; decide the intended EN owner before
+      fixing). Consumer half unaffected: `expect` stays canonical, the bridge replays language-blind.
+
 ### Build & CI (BUILD)
 _Real English deployment across all three Docker arches (armv7/aarch64/x86_64) + English eval. Design
 `docs/design/multilingual_deployment.md` (I18N-1 ✓) → the implementation slices below. English models are slim and
