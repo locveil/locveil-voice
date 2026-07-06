@@ -974,6 +974,20 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       mode (a Pi room node), `[satellite]` config section with config-ui parity, hermetic TLS e2e in CI.
       Unblocks ARCH-25 (3)/(4), which were otherwise unverifiable (no firmware). Implementation filed:
       **ARCH-36** `[release]`; **BUILD-13** `[deferred]` (Pi image, S-8).
+- [x] **ARCH-33** `[release]` [FEEDBACK] — **DONE 2026-07-06. Owner review loop (`/inbox`), voice side.**
+      `.claude/skills/inbox/SKILL.md`: gathers the queue from the SOURCE OF TRUTH (the reports repo, not this
+      repo's PR list) — `fix-pr-open` + `needs-owner` tickets, lens:voice — then walks them ONE AT A TIME,
+      each waiting for the owner's decision. The fix-PR path's load-bearing instruction: **verify the finding
+      independently, never trust the triage** (the cloud reasons from a bundle it can't re-run; a report is
+      often a transient or a dev-session artifact — PR #1 is the live example) → reproduce/refute → merge/
+      revise/reject. The needs-owner path presents the triage's reporter-language reply draft for approval
+      (no user registry in v1, so the owner relays out-of-band). Leak fence restated (bundle data stays out
+      of public PRs); read-only until an explicit decision. **CLAUDE.md `problem-report-inbox` invariant:** a
+      non-blocking session-start `gh` check mentions any waiting items in one line + offers `/inbox`, never
+      auto-enters, silently skips on gh failure. Verified live: the queue queries correctly surface ticket #2
+      (fix-pr-open → PR #1), zero needs-owner. **The problem-reporting workstream (ARCH-30→34, BUILD-12) is
+      complete bar ARCH-34 (deferred v1.1).** PR #1 is `/inbox`'s first real customer.
+
 
 
 
@@ -3298,6 +3312,20 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       **(4)** sizes recorded in the journal. Zero defects surfaced — no BUGs filed. Observation for ARCH-25/
       REL-2: the RU image logs harmless `en_core_web_md not installed` ERRORs (spaCy en preference list in the
       config; degrades gracefully to ru).
+- [x] **BUILD-12** `[release]` [FEEDBACK][CI] — **DONE 2026-07-06. `wb-user-reports` bootstrapped + the
+      full loop smoke-proven live.** Repo created (sibling `../wb-user-reports`), labels, both lens files,
+      triage + prune workflows, secrets (`CLAUDE_CODE_OAUTH_TOKEN`, `REPORTS_CROSS_REPO_TOKEN`), Claude App
+      on all three repos, device PAT. **Live smoke:** «сообщи о проблеме» → ticket #2 + bundle committed to
+      the repo → triage ran → posted analysis, flipped `fix-pr-open`, and OPENED a fix PR on wb-mqtt-voice
+      (the device→ticket→triage→PR loop, all four triage actions). The smoke flushed THREE CI-config gaps in
+      the authored workflow, each fixed on the reports repo (none in shipped code): `id-token: write` (Claude
+      action OIDC), `GH_TOKEN` in the step env (gh write auth), and `--allowedTools` (the action's default
+      tool gate denied every gh/uv/pytest call — 26 denials, the real culprit behind the silent no-ops). Loop
+      safety confirmed working: the triage's own comment/label re-fires were `[bot]`-skipped. **PR #1 is a
+      PROPOSAL awaiting owner review** (durable-action restart survival — plausible but triggered by
+      dev-session process kills; the first item for ARCH-33's `/inbox`). Note: the design's leak-fence +
+      owner-review model is what makes an auto-opened PR safe — it is reviewed, never merged by the bot.
+
 
 
 ### Models & Assets (ASSET)
@@ -3673,3 +3701,15 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       finalized** — example-config-first flow, console-script invocations, smart-home moved from
       "not implemented" to in-scope-with-bridge, GHCR images noted, test count refreshed.
       Suite 1300, config gate 13/13, pyright 0.
+- [x] **REL-3** (P1) `[release]` — **DONE 2026-07-06 (bar the tag ceremony). Version / changelog /
+      functional pass.** Version **held at 15.0.0 for the entire release** (user 2026-07-06 — the bump rides
+      the NEXT release, not this one), so the 'bump' is a confirmed no-op. `CHANGELOG.md` authored (the
+      revival release — architecture / understanding / capabilities / operations) + README-linked. config-ui
+      MANUAL functional pass PASSED against the running backend (the exit-criterion's human check) —
+      sections incl. the new `reports`, donations, templates, localizations, ru/en switch, monitoring all
+      live — and it earned its keep by catching **BUG-29** (default `web_port` 6000 was X11 / browser-blocked;
+      swept to 8080). **The `git tag v15.0.0` is deliberately NOT created here:** the release artifact requires
+      ARM boot validation (ARCH-25) and a clean `check_scope.py` (every `[release]` task `[x]`), so the tag is
+      the FINAL release act, cut when ARCH-25 closes. REL-3's own deliverables (version decision, changelog,
+      functional pass) are complete.
+
