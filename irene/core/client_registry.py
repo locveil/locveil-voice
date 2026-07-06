@@ -131,6 +131,10 @@ class ActionRecord:
     status: str = "running"
     timed_out: bool = False                  # set by the timeout monitor before it cancels (BUG-19:
                                              # lets the done-callback distinguish timeout from user-cancel)
+    deliberate_cancel: bool = False          # set BEFORE .cancel() by paths that revoke the promise
+                                             # (user cancel, store-cap eviction); an unmarked cancel is
+                                             # process teardown — the durable record must then survive
+                                             # for restart reconciliation (ARCH-28 shutdown discipline)
     durable: bool = False                    # ARCH-28: a persisted record exists; completion must delete it
     redeliver: bool = False                  # ARCH-28 D-6: completion notice survives an offline reply channel
     session_id: Optional[str] = None         # conversation that launched it (informational)
@@ -492,6 +496,7 @@ class ClientRegistry:
             # kept running as an untracked zombie. Cancelling routes it through its own
             # done-callback (history records "cancelled").
             if oldest.task is not None and not oldest.task.done():
+                oldest.deliberate_cancel = True  # eviction revokes the promise — reap durably too
                 oldest.task.cancel()
             logger.warning(f"Action store cap ({self.max_actions_per_identity}) hit for "
                            f"'{record.physical_id}'; evicted + cancelled oldest action "

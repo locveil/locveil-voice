@@ -223,8 +223,10 @@ async def reconcile_durable_actions(store: DurableActionStorePort,
 
     For each record: future deadline → the owning handler's ``rearm_durable_action`` relaunches
     it (reusing the persisted ``action_name``); missed by ≤ grace → fire now with an apology;
-    older / unknown handler / re-arm failure → expiry announcement. Every outcome DELETES the
-    old record (re-arm persists a fresh one through the normal launch path).
+    older / unknown handler / re-arm failure → expiry announcement. A consumed record (fired
+    late / expired) is DELETED; a successful re-arm already REPLACED it — the relaunch persists
+    a fresh record under the same ``action_name`` (D-8), so deleting here would destroy the
+    re-armed promise and the timer would die silently at the next restart.
     """
     now = time.time()
     stats = {"rearmed": 0, "fired_late": 0, "expired": 0}
@@ -243,8 +245,9 @@ async def reconcile_durable_actions(store: DurableActionStorePort,
         except Exception as e:
             logger.error(f"Re-arm failed for durable action '{record.action_name}': {e}")
             outcome = "expired"
-        finally:
-            # The old record never survives reconciliation (a re-arm registered a NEW one).
+        if outcome != "rearmed":
+            # Consumed (announced) — delete. Rearmed records were upserted in place (same key)
+            # by the relaunch and MUST survive for the next restart's reconciliation.
             store.delete(record.action_name)
 
         if outcome in ("fired_late", "expired"):

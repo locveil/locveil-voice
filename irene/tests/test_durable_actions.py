@@ -185,9 +185,10 @@ class _NotifyStub:
 
 
 class TestRestartRecovery(unittest.TestCase):
-    def test_future_deadline_rearms_via_handler_and_deletes_old_record(self):
-        """THE restart test: launch durable → 'restart' (fresh store instance over the same
-        file) → reconcile → the handler re-arms and the old record is superseded."""
+    def test_future_deadline_rearms_via_handler_and_replaces_old_record(self):
+        """THE restart test: launch durable → graceful shutdown (teardown cancels the task,
+        the record survives it) → reconcile over a fresh store instance → the handler re-arms
+        and the RE-ARMED record (same action_name, D-8) is what the store holds afterwards."""
         import tempfile
         from pathlib import Path
         with tempfile.TemporaryDirectory() as td:
@@ -201,13 +202,11 @@ class TestRestartRecovery(unittest.TestCase):
                         action, action_name="t9", domain="timers", physical_id="kitchen",
                         owner_session_id="s1", timeout=600, durable=True, duration_seconds=600)
                     rec = env.reg.get_action("kitchen", "t9")
-                    rec.task.cancel()  # process "dies": the task never completes...
-                    # ...but suppress the done-callback's delete by making the cancel look
-                    # like a crash: re-save the record the callback removed.
+                    rec.task.cancel()  # graceful shutdown: teardown cancels the live task...
                     await asyncio.gather(rec.task, return_exceptions=True)
                     await asyncio.sleep(0); await asyncio.sleep(0)
-                    env.store.save(_record("t9", handler="_Handler", deadline=time.time() + 595,
-                                           params={"duration_seconds": 600}))
+                    # ...and the persisted promise SURVIVES it (shutdown discipline, D-2).
+                    self.assertEqual([r.action_name for r in env.store.load_all()], ["t9"])
 
                 # "restart": a NEW store instance over the same file
                 store2 = JsonFileDurableActionStore(path / "durable_actions.json")
@@ -216,13 +215,21 @@ class TestRestartRecovery(unittest.TestCase):
                 class _RearmHandler:
                     async def rearm_durable_action(self, record):
                         rearmed.append(record)
+                        # the real hook relaunches through the normal launch path, which
+                        # re-persists under the SAME action_name with the remaining time
+                        store2.save(_record(record.action_name, handler="_RearmHandler",
+                                            deadline=time.time() + 595,
+                                            params={"duration_seconds": 595}))
                         return True
 
                 stats = await reconcile_durable_actions(
                     store2, {"_Handler": _RearmHandler()}, _NotifyStub())
                 self.assertEqual(stats["rearmed"], 1)
                 self.assertEqual([r.action_name for r in rearmed], ["t9"])
-                self.assertEqual(store2.load_all(), [])   # old record never survives reconcile
+                # the re-armed record IS the promise now — reconcile must not consume it
+                survivors = store2.load_all()
+                self.assertEqual([r.action_name for r in survivors], ["t9"])
+                self.assertEqual(survivors[0].handler, "_RearmHandler")
             asyncio.run(run())
 
     def test_missed_within_grace_fires_with_apology(self):
@@ -264,6 +271,149 @@ class TestRestartRecovery(unittest.TestCase):
                 stats = await reconcile_durable_actions(store, {}, _NotifyStub())
                 self.assertEqual(stats["expired"], 1)
                 self.assertEqual(store.load_all(), [])
+            asyncio.run(run())
+
+
+# --------------------------------------------------------------------------- shutdown discipline
+
+class _FailureNotifyStub:
+    def __init__(self):
+        self.completions = []
+        self.failures = []
+
+    async def send_action_completion_notification(self, **kw):
+        self.completions.append(kw)
+        return True
+
+    async def send_action_failure_notification(self, **kw):
+        self.failures.append(kw)
+        return True
+
+
+class TestShutdownDiscipline(unittest.TestCase):
+    """ARCH-28 shutdown discipline: teardown must never consume an in-flight durable promise
+    (it is exactly what recovery needs) — while deliberate cancels must (anti-resurrection)."""
+
+    async def _launch_and_cancel(self, env, *, mark=None, notify=None):
+        async def action(duration_seconds):
+            await asyncio.sleep(30)
+        h = _handler()
+        h._notification_service = notify
+        await h.execute_fire_and_forget_action(
+            action, action_name="t1", domain="timers", physical_id="kitchen",
+            owner_session_id="s1", timeout=600, durable=True, duration_seconds=600)
+        rec = env.reg.get_action("kitchen", "t1")
+        if mark:
+            setattr(rec, mark, True)
+        rec.task.cancel()
+        await asyncio.gather(rec.task, return_exceptions=True)
+        for _ in range(3):
+            await asyncio.sleep(0)   # drain done-callback + notification task
+
+    def test_teardown_cancel_preserves_record_and_stays_silent(self):
+        import tempfile
+        from pathlib import Path
+        with tempfile.TemporaryDirectory() as td:
+            async def run():
+                with _Env(Path(td)) as env:
+                    notify = _FailureNotifyStub()
+                    await self._launch_and_cancel(env, notify=notify)   # unmarked = teardown
+                    self.assertEqual([r.action_name for r in env.store.load_all()], ["t1"])
+                    self.assertEqual(notify.failures, [])   # re-arms next start — not a failure
+            asyncio.run(run())
+
+    def test_user_cancel_reaps_durable_record_and_announces(self):
+        import tempfile
+        from pathlib import Path
+        with tempfile.TemporaryDirectory() as td:
+            async def run():
+                with _Env(Path(td)) as env:
+                    notify = _FailureNotifyStub()
+                    await self._launch_and_cancel(env, mark="deliberate_cancel", notify=notify)
+                    self.assertEqual(env.store.load_all(), [])   # promise revoked — never resurrect
+                    self.assertEqual(len(notify.failures), 1)
+                    self.assertEqual(notify.failures[0]["error"], "cancelled")
+            asyncio.run(run())
+
+    def test_timeout_cancel_reaps_durable_record(self):
+        import tempfile
+        from pathlib import Path
+        with tempfile.TemporaryDirectory() as td:
+            async def run():
+                with _Env(Path(td)) as env:
+                    notify = _FailureNotifyStub()
+                    await self._launch_and_cancel(env, mark="timed_out", notify=notify)
+                    self.assertEqual(env.store.load_all(), [])
+                    self.assertEqual(notify.failures[0]["error"], "timeout")
+            asyncio.run(run())
+
+    def test_promise_survives_two_graceful_restarts(self):
+        """The reported field failure end-to-end: set timer → restart (re-arm) → restart again
+        — the promise must still re-arm, not die silently."""
+        import tempfile
+        from pathlib import Path
+        with tempfile.TemporaryDirectory() as td:
+            async def run():
+                path = Path(td)
+
+                class _RearmingHandler(_Handler):
+                    async def rearm_durable_action(self, record):
+                        params = dict((record.rearm or {}).get("params") or {})
+                        await self.execute_fire_and_forget_action(
+                            _sleeper, action_name=record.action_name, domain=record.domain,
+                            physical_id=record.physical_id, owner_session_id=record.session_id,
+                            timeout=600, durable=True, **params)
+                        return True
+
+                async def _sleeper(duration_seconds):
+                    await asyncio.sleep(30)
+
+                def _rearming_handler():
+                    h = object.__new__(_RearmingHandler)
+                    h.name = "durable_test"
+                    h.logger = logging.getLogger("test.durable")
+                    h._timeout_tasks = {}
+                    h._completion_tasks = set()
+                    h._metrics_collector = None
+                    h._notification_service = None
+                    return h
+
+                async def _teardown(env, name):
+                    rec = env.reg.get_action("kitchen", name)
+                    rec.task.cancel()
+                    await asyncio.gather(rec.task, return_exceptions=True)
+                    for _ in range(3):
+                        await asyncio.sleep(0)
+
+                # session 1: user sets the timer, then the process restarts
+                with _Env(path) as env:
+                    h = _rearming_handler()
+                    await h.execute_fire_and_forget_action(
+                        _sleeper, action_name="t1", domain="timers", physical_id="kitchen",
+                        owner_session_id="s1", timeout=600, durable=True, duration_seconds=600)
+                    await _teardown(env, "t1")
+
+                # session 2: reconcile re-arms, then the process restarts AGAIN
+                with _Env(path) as env:
+                    h = _rearming_handler()
+                    stats = await reconcile_durable_actions(
+                        env.store, {"_RearmingHandler": h}, _NotifyStub())
+                    self.assertEqual(stats["rearmed"], 1)
+                    await _teardown(env, "t1")
+
+                # session 3: the promise is still there and re-arms again
+                with _Env(path) as env:
+                    h = _rearming_handler()
+                    stats = await reconcile_durable_actions(
+                        env.store, {"_RearmingHandler": h}, _NotifyStub())
+                    self.assertEqual(stats["rearmed"], 1)
+                    rec = env.reg.get_action("kitchen", "t1")
+                    self.assertIsNotNone(rec)
+                    rec.deliberate_cancel = True   # clean up the live task
+                    rec.task.cancel()
+                    await asyncio.gather(rec.task, return_exceptions=True)
+                    for _ in range(3):
+                        await asyncio.sleep(0)
             asyncio.run(run())
 
 
