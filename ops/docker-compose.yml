@@ -14,10 +14,13 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      # The single assets root: git-owned content (synced in by update.sh) + everything
-      # the assistant writes (models download here on first boot; durable state lives in
-      # state/). Gitignored — `git pull` never touches it.
+      # The assets root: git-owned content (synced in by update.sh) + downloaded models,
+      # cache, traces. Gitignored — `git pull` never touches it. The checkout lives on
+      # /mnt/sdcard (re-obtainable data), so this all lands on the big card.
       - ../.assets:/app/assets
+      # Durable state (timer records, report spool) is the ONE precious subtree — nested
+      # mount pins it to the eMMC so it survives an SD card death (see INSTALL.md layout).
+      - /mnt/data/mqtt-voice-state:/app/assets/state
       # Runner file logs (logs/irene.log + rotated timestamps). Unmounted they would
       # accumulate in the container's writable layer — flash wear + lost on recreate.
       - ../.logs:/app/logs

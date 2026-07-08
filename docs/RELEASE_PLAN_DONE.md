@@ -3439,6 +3439,18 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       (pointer to `nginx/README.md` + the `esp32_irene_upstream: 127.0.0.1:8080` wiring seam). `docker
       compose config` + `sh -n` clean; `.logs/` gitignored. Directly de-risks ARCH-25 items (LLM tier +
       reporting live at the rack; log flash-wear).
+- [x] **BUILD-16** `[release]` [BUILD][OPS] — **DONE 2026-07-08 (filed + completed same day; user directive
+      from the live WB7 `df`: re-obtainable data → the 61 GB SD card, `/mnt/data` = runtime only). Two-disk
+      deployment layout.** The WB7 numbers made it non-optional: `/` has ~800 MB free (docker's default
+      data-root — the Irene image alone wouldn't fit unpacked), `/mnt/data` 2.3 GB free. New layout:
+      checkout at **`/mnt/sdcard/mqtt-voice-config`**, docker data-root → `/mnt/sdcard/docker` (one-time
+      controller prep in INSTALL.md, controller-wide — bridge images move too), `.assets` (models/cache/
+      traces) + `.logs` ride the checkout onto the card; the ONE precious subtree — durable state
+      (`<assets_root>/state/`: timer records, report spool — confirmed sole location, `composition.py:152`)
+      — is a **nested bind mount** `/mnt/data/mqtt-voice-state:/app/assets/state`, so an SD card death
+      loses nothing that can't be re-downloaded (recovery note added). systemd unit gains
+      `RequiresMountsFor=/mnt/sdcard /mnt/data`; update.sh mkdirs+chowns the state dir. Amends BUILD-15
+      (same files, hours later); `docker compose config` + `sh -n` clean.
 
 ### Models & Assets (ASSET)
 - [x] **ASSET-1** — Refresh stale model IDs (Anthropic→Claude 4.x, Whisper large-v3, ElevenLabs multilingual_v2, spaCy 3.8, gpt-4→gpt-4o-mini). → fc85306
