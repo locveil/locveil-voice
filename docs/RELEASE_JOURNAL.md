@@ -17,6 +17,18 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-08 — BUG-30 DONE (filed + completed same day) — log rotation ported from the bridge.**
+  The user's "are our logs rotating, or one endless file?" had the ugly answer: rename-at-startup
+  only, then a plain `FileHandler` growing without bound for the container's whole
+  `restart: unless-stopped` life, old renames never pruned — a slow disk-fill pointed at
+  `/mnt/data` (which also holds durable state and docker's data-root), made *persistent* by the
+  very logs mount BUILD-15 added. Fix = the bridge's exact scheme (`bootstrap.py::setup_logging`):
+  startup rollover into the `irene.log.<stamp>.log` family, `TimedRotatingFileHandler` at midnight
+  with 30-day retention (plus the suffix/extMatch pairing that makes backupCount actually delete),
+  and a prune sweep for the startup-renamed siblings the handler can't match. The problem-report
+  bundle's same-day log glob moved to the new family in the same change. Rotation tests rewritten
+  (7), bundle tests green, pyright clean.
+
 - **2026-07-08 — BUILD-16 DONE (filed + completed same day) — two-disk layout, converged at the live
   WB7 shell onto the bridge's REL-2 pattern.** The user's `df` opened it (`/mnt/data` 2.3 GB free,
   SD card 61 GB empty) and three iterations closed it: first a dot-dirs-on-card draft with a nested

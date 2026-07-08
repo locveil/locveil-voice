@@ -2797,8 +2797,20 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       Dockerfiles (CMD/EXPOSE), `ops/INSTALL.md`, QUICKSTART (was inconsistently 8000). 8080 chosen (user):
       browser-safe, no collision with the bridge (8000) or config-ui (3000). Verified: default boot binds
       8080; config gate 13/13; config-ui check+build green.
-
-### Tests (TEST)
+- [x] **BUG-30** `[release]` [OPS][LOGGING] — **DONE 2026-07-08 (filed + completed same day; found while
+      walking the ops story — user: "are our logs rotating, or one endless file?"). Unbounded file logging
+      fixed — the bridge's rotation scheme ported verbatim.** Before: `setup_logging` renamed the previous
+      log at startup then opened a plain `FileHandler` — one endless file for the whole (weeks-long,
+      `restart: unless-stopped`) container run, and the startup renames accumulated forever; a disk-fill
+      aimed at `/mnt/data`, which also carries durable state + docker's data-root. Now (mirror of bridge
+      `app/bootstrap.py::setup_logging`): **fresh file per startup** (`_startup_rollover` into the
+      `irene.log.<stamp>.log` sibling family; empty file reused) + **`TimedRotatingFileHandler` at
+      midnight** with `backupCount=LOG_RETENTION_DAYS=30` and the custom `suffix`/`extMatch` pair (without
+      which backupCount deletes nothing) + **`_prune_old_logs`** sweeping startup-renamed siblings past
+      retention (the handler's cleanup can't see those). The report bundle's same-day glob moved to the new
+      family (`report_bundle.py::_todays_logs`). `test_logging_rotation.py` rewritten (7 tests); bundle
+      tests 4/4; pyright 0/0. Docker's json-file caps only ever bounded stdout — the file channel was the
+      uncapped one.
 - [x] **TEST-0** (P0) — Minimal end-to-end smoke/integration harness (refactor safety net, Gate 0). **DONE
       2026-06-01** → `irene/tests/test_smoke_e2e.py` (**5 passed / 1 xfailed**, ~21s; boots the WebAPI runner once
       as a subprocess + a CLI headless check). Green flows: WebAPI boots, `привет`→`greeting.hello`, `/nlu/recognize`

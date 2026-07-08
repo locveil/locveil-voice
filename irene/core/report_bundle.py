@@ -63,8 +63,10 @@ class ReportBundleCollector:
         today = datetime.now().strftime("%Y%m%d")
         if not self.logs_dir.exists():
             return out
+        # Rotated siblings live in the `irene.log.<stamp>.log` family (BUG-30): daily
+        # rotation stamps `irene.log.YYYYMMDD.log`, startup rollover `irene.log.YYYYMMDD_HHMMSS.log`.
         candidates = [self.logs_dir / "irene.log"]
-        candidates += sorted(self.logs_dir.glob(f"irene_{today}_*.log"))
+        candidates += sorted(self.logs_dir.glob(f"irene.log.{today}*.log"))
         for path in candidates:
             if not path.is_file():
                 continue

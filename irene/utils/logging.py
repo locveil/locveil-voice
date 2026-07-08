@@ -5,9 +5,12 @@ Provides logging configuration for the entire Irene system.
 """
 
 import logging
+import re
 import sys
+import time
 from datetime import datetime
 from enum import Enum
+from logging.handlers import TimedRotatingFileHandler
 from pathlib import Path
 from typing import Optional
 
@@ -27,28 +30,48 @@ class LogLevel(str, Enum):
     CRITICAL = "CRITICAL"
 
 
-def _rotate_log_file(log_file: Path) -> None:
+# Rotation scheme (BUG-30): fresh file per startup + daily rotation + bounded retention —
+# the same logic as the sibling wb-mqtt-bridge (`app/bootstrap.py::setup_logging`).
+LOG_RETENTION_DAYS = 30
+
+
+def _startup_rollover(log_path: Path) -> None:
+    """Rename the previous run's live log aside so each startup begins a fresh file.
+
+    The rotated name stays in the same `<name>.<stamp>.log` family the daily rotation
+    uses, so the problem-report bundle's same-day glob sees both kinds of siblings.
     """
-    Rotate existing log file by adding timestamp to filename.
-    
-    Args:
-        log_file: Path to the log file to rotate
+    if not log_path.exists():
+        return
+    try:
+        if log_path.stat().st_size == 0:
+            return  # nothing worth keeping; reuse the empty file
+        stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        rotated = log_path.with_name(f"{log_path.name}.{stamp}.log")
+        log_path.rename(rotated)
+        # Log to console since file logging isn't set up yet
+        print(f"Previous log rotated to: {rotated}")
+    except OSError as e:
+        # Never block startup on a rename failure
+        print(f"Warning: could not rotate previous log {log_path}: {e}")
+
+
+def _prune_old_logs(log_path: Path, keep_days: int = LOG_RETENTION_DAYS) -> int:
+    """Delete rotated siblings (`<name>.*`) older than the retention window.
+
+    Covers the startup-renamed files, which TimedRotatingFileHandler's own
+    backupCount cleanup never matches (its extMatch only knows the daily suffix).
     """
-    if log_file.exists():
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        # Create new filename with timestamp: irene_20241220_143025.log
-        stem = log_file.stem  # 'irene'
-        suffix = log_file.suffix  # '.log'
-        rotated_name = f"{stem}_{timestamp}{suffix}"
-        rotated_path = log_file.parent / rotated_name
-        
+    cutoff = time.time() - keep_days * 86400
+    removed = 0
+    for sibling in log_path.parent.glob(log_path.name + ".*"):
         try:
-            log_file.rename(rotated_path)
-            # Log the rotation to console since file logging isn't set up yet
-            print(f"Rotated existing log file to: {rotated_path}")
-        except OSError as e:
-            # If rotation fails, just warn and continue
-            print(f"Warning: Could not rotate log file {log_file}: {e}")
+            if sibling.stat().st_mtime < cutoff:
+                sibling.unlink()
+                removed += 1
+        except OSError:
+            continue
+    return removed
 
 
 class UTF8StreamHandler(logging.StreamHandler):
@@ -109,12 +132,23 @@ def setup_logging(
         console_handler.setFormatter(formatter)
         logger.addHandler(console_handler)
     
-    # File handler (already uses UTF-8 by default in Python 3)
+    # File handler: fresh file per startup, daily rotation at midnight, bounded retention
     if log_file:
         log_file.parent.mkdir(parents=True, exist_ok=True)
-        # Rotate existing log file before creating new one
-        _rotate_log_file(log_file)
-        file_handler = logging.FileHandler(log_file, encoding='utf-8')
+        _startup_rollover(log_file)
+        _prune_old_logs(log_file)
+        file_handler = TimedRotatingFileHandler(
+            filename=str(log_file),
+            when='midnight',
+            interval=1,
+            backupCount=LOG_RETENTION_DAYS,
+            encoding='utf-8'
+        )
+        # Custom suffix for rotated files — and teach the handler's cleanup to
+        # recognize it: getFilesToDelete() filters via extMatch, whose default
+        # pattern never matches this suffix, so backupCount would delete nothing.
+        file_handler.suffix = "%Y%m%d.log"
+        file_handler.extMatch = re.compile(r"^\d{8}\.log$")
         file_handler.setFormatter(formatter)
         logger.addHandler(file_handler)
 
