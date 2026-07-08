@@ -17,6 +17,19 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-08 — QUAL-77 DONE + ARCH-39/ARCH-40 filed — the bridge's desync-repair surface is pinned;
+  voice adoption designed-for but deferred.** The bridge maintainer left a handoff note (DRV-5/SCN-11:
+  `skipped_reason` idempotence-skip marker + reserved `force` param + scenario
+  `reconcile_preview`/`force_reconcile`); all claims verified against the bridge's `contracts/openapi.json`
+  at `c32068e` and re-pinned into eval-commons (`7cfd5a7`, catalog/STAMP unchanged, suite 40/40). The
+  note's "re-pin the catalog first" worry was already satisfied by QUAL-76 the day before. Voice-side
+  analysis with the user: the cross-turn confirmation the device flow needs already exists (the QUAL-31
+  one-shot `pending_clarification` slot); the real gap is `_to_delivery_result` dropping
+  `no_op`/`skipped_reason`; the scenario flow leans on ARCH-28 durable F&F for its ~25 s executions.
+  Decision: post-release — two separate `[deferred]` design tasks filed (ARCH-39 device-level force-confirm,
+  ARCH-40 scenario force-reconcile), safety posture recorded in both (never auto-force; the confirmation
+  slot IS the human feedback channel).
+
 - **2026-07-07 — QUAL-76 DONE (filed + completed same day).** The bridge published a
   rack-verified catalog (`8159b4b0`, bridge `40f0452`): auralic learns `previous`, zappiti power
   is a toggle. Routine inward re-pin — no fixture binds either device, so only the fixtures doc's

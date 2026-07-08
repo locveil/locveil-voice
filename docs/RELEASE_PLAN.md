@@ -189,6 +189,31 @@ See `docs/review/phase1_architecture_map.md` §5.
       coverage on aarch64 (QUAL-19/20). Absorbs the boot / on-device remainders that **ARCH-24** + **BUILD-3** point here,
       and gates **Definition-of-release item #1**. User/hardware-gated — no CI surrogate. Refs:
       `torch_free_armv7_voice.md`, `esp32_satellite.md` §4.4/§12, BUILD-3, ARCH-10.
+- [ ] **ARCH-39** [MQTT][NLU] (P-post-release) `[deferred]` — **DESIGN: device-level force-confirm — the 2-turn
+      idempotence-skip escape hatch via voice.** The bridge's DRV-5 (pinned @ QUAL-77) marks idempotence-skipped
+      commands (`success: true, no_op: true, skipped_reason: "idempotence"` — nothing transmitted, belief may be
+      wrong: one-way IR power, eMotiva, Auralic/LG power_on) and reserves `params.force` to bypass the guard.
+      Voice fit (analyzed 2026-07-08): surface `no_op`/`skipped_reason` on `DeliveryResult`
+      (`irene/outputs/bridge.py` `_to_delivery_result` currently drops both), then the smart-home handler offers
+      proactively («мост считает, что он уже включён — отправить принудительно?») and arms the existing one-shot
+      `pending_clarification` session slot (QUAL-31; needs a "confirmation" kind next to "missing param") — resume
+      = re-dispatch the remembered command with `force: true`. Safety: never auto-force — the slot IS the user
+      confirmation. Bonus already free: the bridge's fix turned the old already-on-IR 503 `device_unreachable`
+      timeout into a clean no-op success. Needs NO bridge changes. Deliverable: design doc under `docs/design/`
+      + implementation follow-up task(s). Refs: bridge `ab7eb6c`, bridge `docs/design/ui_backend_contract.md`
+      ("Force re-tap"), eval-commons pin `7cfd5a7`.
+- [ ] **ARCH-40** [MQTT][NLU] (P-post-release) `[deferred]` — **DESIGN: scenario force-reconcile via voice
+      («что-то не так с киносценой»).** The bridge's SCN-11 (pinned @ QUAL-77) adds `GET
+      /scenario/{id}/reconcile_preview` (pure read: per-device believed-vs-desired comparisons, `in_sync`,
+      forced-chain `steps`, `eta_ms` — note the inversion: `in_sync: true` rows are where force matters) and
+      `POST /scenario/{id}/force_reconcile {device_id}` (server-side forced single-device plan, worst case ~25 s).
+      Voice shape to design: two new REST methods on the bridge output port, a new intent family on the existing
+      scenario support (`smart_home.py` `_handle_scenario_*`), speaking the preview diff + the device-pick turn,
+      and the multi-second execution as acknowledge-then-report — a natural ARCH-28 durable F&F with a completion
+      notice (`durable-actions` invariant applies). Same safety posture as ARCH-39: preview → user picks →
+      confirm → execute, never blanket. Deliverable: design doc under `docs/design/` + implementation follow-up
+      task(s). Refs: bridge `43c504c`, bridge `docs/design/ui_backend_contract.md` ("Scenario force-reconcile
+      dialog"), eval-commons pin `7cfd5a7`.
 
 ### Code Quality & Review (QUAL)
 

@@ -2414,6 +2414,14 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       catch:** QUAL-75's PIN.json had recorded the bridge repo HEAD in `bridge_commit` instead of mirroring
       `STAMP.bridge_commit` (the generator's commit), leaving eval-commons' `test_pin_matches_stamp` guard
       red unnoticed — convention restored, eval-commons suite 40/40 (eval-commons `14ac383`).
+- [x] **QUAL-77** `[release]` [MQTT] — **DONE 2026-07-08 (filed + completed same day). Consume the bridge's
+      DRV-5/SCN-11 desync-repair contract surface: openapi re-pin @ bridge `c32068e`** — `CanonicalActionResponse`
+      gains `skipped_reason` (idempotence-skip marker: nothing transmitted, belief may be wrong), `force` becomes
+      a reserved param bypassing idempotence guards, and two scenario endpoints land (`reconcile_preview` /
+      `force_reconcile`). Pure additions (+317 lines); catalog + STAMP byte-unchanged so `PIN.bridge_commit`
+      stays per the guard convention; eval-commons 40/40 (`7cfd5a7`). Voice-side adoption analyzed with the user
+      (bridge maintainer's handoff note) and filed as **ARCH-39** (device-level 2-turn force-confirm) +
+      **ARCH-40** (scenario force-reconcile via voice), both `[deferred]` post-release design tasks.
 
 ### Bugs (BUG)
 - [x] **BUG-1** [NLU/TIMER] (P2) `[release]` — **DONE 2026-06-28.** Spelled-out numbers didn't reach parameter
