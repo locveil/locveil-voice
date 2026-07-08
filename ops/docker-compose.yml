@@ -14,16 +14,14 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      # The assets root: git-owned content (synced in by update.sh) + downloaded models,
-      # cache, traces. Gitignored — `git pull` never touches it. The checkout lives on
-      # /mnt/sdcard (re-obtainable data), so this all lands on the big card.
-      - ../.assets:/app/assets
-      # Durable state (timer records, report spool) is the ONE precious subtree — nested
-      # mount pins it to the eMMC so it survives an SD card death (see INSTALL.md layout).
-      - /mnt/data/mqtt-voice-state:/app/assets/state
+      # The runtime tree lives on /mnt/data (the clone on /mnt/sdcard is only the
+      # delivery vehicle — same split as the sibling mqtt-bridge-config). assets/ is
+      # the assets root: git-owned content (rsynced in by update.sh) + downloaded
+      # models, cache, traces, and durable state (state/ — timers survive restarts).
+      - /mnt/data/mqtt-voice-config/assets:/app/assets
       # Runner file logs (logs/irene.log + rotated timestamps). Unmounted they would
       # accumulate in the container's writable layer — flash wear + lost on recreate.
-      - ../.logs:/app/logs
+      - /mnt/data/mqtt-voice-config/logs:/app/logs
     environment:
       # Secrets reach the container via an `ops/.env` file next to this compose file
       # (chmod 600 — see INSTALL.md "Secrets"). Compose reads .env for BOTH start

@@ -3439,18 +3439,19 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       (pointer to `nginx/README.md` + the `esp32_irene_upstream: 127.0.0.1:8080` wiring seam). `docker
       compose config` + `sh -n` clean; `.logs/` gitignored. Directly de-risks ARCH-25 items (LLM tier +
       reporting live at the rack; log flash-wear).
-- [x] **BUILD-16** `[release]` [BUILD][OPS] — **DONE 2026-07-08 (filed + completed same day; user directive
-      from the live WB7 `df`: re-obtainable data → the 61 GB SD card, `/mnt/data` = runtime only). Two-disk
-      deployment layout.** The WB7 numbers: `/mnt/data` 2.3 GB free, card empty. New layout:
-      checkout at **`/mnt/sdcard/mqtt-voice-config`**; docker data-root stays at the controller's existing
-      `/mnt/data/.docker` (user-corrected same day — an INSTALL.md draft had it moving to the card; the
-      image fits fine where it is), `.assets` (models/cache/
-      traces) + `.logs` ride the checkout onto the card; the ONE precious subtree — durable state
-      (`<assets_root>/state/`: timer records, report spool — confirmed sole location, `composition.py:152`)
-      — is a **nested bind mount** `/mnt/data/mqtt-voice-state:/app/assets/state`, so an SD card death
-      loses nothing that can't be re-downloaded (recovery note added). systemd unit gains
-      `RequiresMountsFor=/mnt/sdcard /mnt/data`; update.sh mkdirs+chowns the state dir. Amends BUILD-15
-      (same files, hours later); `docker compose config` + `sh -n` clean.
+- [x] **BUILD-16** `[release]` [BUILD][OPS] — **DONE 2026-07-08 (filed + completed same day; user-directed
+      from the live WB7 shell, converged in three steps to the bridge's REL-2 pattern). Two-disk deployment
+      layout: SD-card clone = delivery vehicle, `/mnt/data` = the runtime tree.** Final layout: clone at
+      **`/mnt/sdcard/wb-mqtt-voice`** (repo name, like the bridge's `/mnt/sdcard/wb-mqtt-bridge`); the
+      container mounts ONLY **`/mnt/data/mqtt-voice-config/{assets,logs}`** (twin of `mqtt-bridge-config`);
+      `update.sh` bridges the two — rsyncs the git-owned assets subtrees clone→runtime, mkdirs+chowns to
+      uid 1000. Durable state needs no special mount (its `<assets_root>/state/` sits inside the runtime
+      tree on `/mnt/data`); an SD card death costs only the clone + `ops/.env`. Docker data-root stays at
+      the controller's existing `/mnt/data/.docker` (user-corrected; a draft had it moving to the card).
+      systemd unit: `WorkingDirectory` on the card, `RequiresMountsFor=/mnt/sdcard /mnt/data`. Iterations
+      same-day: dot-dirs-on-card + nested state mount → user pointed at the bridge's actual sdcard-clone +
+      rsync-to-runtime split → mirrored exactly. Dead `.assets/`/`.logs/` gitignore entries removed. Amends
+      BUILD-15 (same files, hours later); `docker compose config` + `sh -n` clean.
 
 ### Models & Assets (ASSET)
 - [x] **ASSET-1** — Refresh stale model IDs (Anthropic→Claude 4.x, Whisper large-v3, ElevenLabs multilingual_v2, spaCy 3.8, gpt-4→gpt-4o-mini). → fc85306

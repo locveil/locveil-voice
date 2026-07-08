@@ -17,14 +17,16 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
-- **2026-07-08 — BUILD-16 DONE (filed + completed same day) — two-disk layout, decided at the live
-  WB7 shell.** The user's `df` settled it: `/mnt/data` 2.3 GB free, the SD card 61 GB empty. Rule
-  adopted: re-obtainable data (checkout, models, logs) → the card; precious runtime state → the
-  eMMC; docker's data-root stays at the controller's existing `/mnt/data/.docker` (user-corrected —
-  a draft had it moving to the card). The split lands as one nested bind mount:
-  `/mnt/data/mqtt-voice-state` over `/app/assets/state` (timer records + report spool — the only
-  durable subtree, verified). An SD card death now loses nothing that can't be re-downloaded, and
-  the systemd unit refuses to start with either disk unmounted (`RequiresMountsFor`). Hours-later
+- **2026-07-08 — BUILD-16 DONE (filed + completed same day) — two-disk layout, converged at the live
+  WB7 shell onto the bridge's REL-2 pattern.** The user's `df` opened it (`/mnt/data` 2.3 GB free,
+  SD card 61 GB empty) and three iterations closed it: first a dot-dirs-on-card draft with a nested
+  state mount, then a docker-data-root correction (it stays at the controller's existing
+  `/mnt/data/.docker`), and finally the user pointed at what the bridge actually does — **clone on
+  the card as delivery vehicle, the whole runtime tree on `/mnt/data`, update.sh rsyncing between
+  them** — and voice now mirrors it exactly: `/mnt/sdcard/wb-mqtt-voice` (clone + compose + `.env`)
+  → `/mnt/data/mqtt-voice-config/{assets,logs}` (the only container mounts; durable state sits
+  inside `assets/state/` naturally). An SD card death costs the clone and `.env`, nothing else. The
+  systemd unit refuses to start with either disk unmounted (`RequiresMountsFor`). Hours-later
   amendment of BUILD-15, same files.
 
 - **2026-07-08 — BUILD-15 DONE (filed + completed same day) — the ops deployment is rack-ready.**
