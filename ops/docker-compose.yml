@@ -19,10 +19,17 @@ services:
       # the assets root: git-owned content (rsynced in by update.sh) + downloaded
       # models, cache, traces, and durable state (state/ — timers survive restarts).
       - /mnt/data/mqtt-voice-config/assets:/app/assets
+      # THE REPO OWNS THE CONFIG (bridge semantics): update.sh copies the profile
+      # TOML clone -> config/irene.toml on every update; read-only in the container,
+      # so on-box edits (incl. config-ui saves) fail loudly instead of vanishing on
+      # the next update. Config changes are made in the repo and delivered by git pull.
+      - /mnt/data/mqtt-voice-config/config:/app/config:ro
       # Runner file logs (logs/irene.log + rotated timestamps). Unmounted they would
       # accumulate in the container's writable layer — flash wear + lost on recreate.
       - /mnt/data/mqtt-voice-config/logs:/app/logs
     environment:
+      # Point the runner at the delivered config (overrides the image's baked default).
+      IRENE_CONFIG_FILE: /app/config/irene.toml
       # Secrets reach the container via an `ops/.env` file next to this compose file
       # (chmod 600 — see INSTALL.md "Secrets"). Compose reads .env for BOTH start
       # paths: the systemd unit and update.sh run compose from this directory.

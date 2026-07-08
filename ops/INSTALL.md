@@ -11,16 +11,25 @@ tree the container mounts** — the same split as the sibling bridge deployment:
 ```
 /mnt/sdcard/wb-mqtt-voice/         <- this repo, cloned (compose, update.sh, .env)
 /mnt/data/mqtt-voice-config/       <- the RUNTIME tree the container mounts
+├── config/                        <- /app/config (read-only): irene.toml, delivered by
+│                                     update.sh from the clone's profile TOML
 ├── assets/                        <- /app/assets: synced git-owned content (donations,
 │                                     prompts, templates, localization) + downloaded speech
 │                                     models, cache, traces, durable state (state/)
 └── logs/                          <- /app/logs: irene.log + timestamped rotations
 ```
 
-`update.sh` bridges the two: it rsyncs the git-owned assets subtrees from the clone into the
-runtime tree (and only those — models and state are never touched), so `git pull` is how
-content updates reach the controller. Docker's data-root is already configured on the
-controller (`/mnt/data/.docker`) and stays where it is.
+`update.sh` bridges the two: it copies the profile config and rsyncs the git-owned assets
+subtrees from the clone into the runtime tree (and only those — models and state are never
+touched), so `git pull` is how config and content reach the controller. Docker's data-root is
+already configured on the controller (`/mnt/data/.docker`) and stays where it is.
+
+**The repo owns the config** (same rule as the bridge): `update.sh` overwrites
+`config/irene.toml` from the clone's profile TOML on every update, and the mount is read-only
+— edits made on the box, including config-ui saves, don't stick. Tune the config in the repo
+(edit the profile TOML, commit, `git pull` + `./update.sh` on the controller). The config-ui
+container remains useful as a browser/validator, but its save button will report an error on
+this deployment by design.
 
 ## Install
 
@@ -92,11 +101,12 @@ and run `docker compose up -d`. Return to `:latest` the same way.
 ## Variants
 
 - **aarch64 controller (WB8.5 / Pi)** — switch the image to the aarch64 build
-  (`ghcr.io/droman42/wb-mqtt-voice-aarch64`); everything else is identical. The armv7 default
-  in the compose file targets the WB7.
+  (`ghcr.io/droman42/wb-mqtt-voice-aarch64`) and run updates with
+  `CONFIG_PROFILE=embedded-aarch64 ./update.sh` (or export it) so the delivered config matches
+  the image. The armv7 defaults target the WB7.
 - **English deployment** — switch the image to the `-en` variant
-  (`ghcr.io/droman42/wb-mqtt-voice-armv7-en` / `-aarch64-en`); language is baked into the
-  image, nothing else changes.
+  (`ghcr.io/droman42/wb-mqtt-voice-armv7-en` / `-aarch64-en`) and the matching
+  `CONFIG_PROFILE=embedded-armv7-en` (resp. `-aarch64-en`); language is baked into the image.
 - **The configuration editor** — not part of the standard deployment. Bring it up on demand:
 
   ```sh

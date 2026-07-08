@@ -19,7 +19,16 @@ cd "$(dirname "$0")"
 RUNTIME_DIR="${RUNTIME_DIR:-/mnt/data/mqtt-voice-config}"
 ASSETS_DIR="$RUNTIME_DIR/assets"
 LOGS_DIR="$RUNTIME_DIR/logs"
-mkdir -p "$ASSETS_DIR" "$LOGS_DIR"
+CONFIG_DIR="$RUNTIME_DIR/config"
+# Which profile TOML this controller runs (must match the image variant):
+# embedded-armv7 (WB7, default) | embedded-aarch64 (WB8.5/Pi) | *-en variants.
+CONFIG_PROFILE="${CONFIG_PROFILE:-embedded-armv7}"
+mkdir -p "$ASSETS_DIR" "$LOGS_DIR" "$CONFIG_DIR"
+
+# THE REPO OWNS THE CONFIG (bridge semantics): delivered on every update, on-box
+# edits are overwritten — config changes are made in the repo and arrive by git pull.
+cp "../configs/$CONFIG_PROFILE.toml" "$CONFIG_DIR/irene.toml"
+echo "config delivered -> $CONFIG_DIR/irene.toml ($CONFIG_PROFILE)"
 
 for d in donations localization prompts templates web; do
     rsync -a --delete "../assets/$d/" "$ASSETS_DIR/$d/"

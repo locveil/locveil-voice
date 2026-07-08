@@ -3466,6 +3466,19 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       same-day: dot-dirs-on-card + nested state mount → user pointed at the bridge's actual sdcard-clone +
       rsync-to-runtime split → mirrored exactly. Dead `.assets/`/`.logs/` gitignore entries removed. Amends
       BUILD-15 (same files, hours later); `docker compose config` + `sh -n` clean.
+- [x] **BUILD-17** `[release]` [BUILD][OPS] — **DONE 2026-07-08 (filed + completed same day; user decision:
+      "same as bridge — repo owns the config"). Config delivery: the baked-in-image TOML becomes a
+      repo-delivered, read-only mount.** Found while answering "where does the TOML live?": the config was
+      baked at `/app/runtime-config.toml` and config-ui saves wrote into the container's writable layer —
+      silently discarded on every `update.sh` image recreate. Resolution (bridge semantics, user-chosen over
+      box-owns-config): `update.sh` copies `configs/$CONFIG_PROFILE.toml` (default `embedded-armv7`;
+      variants documented for aarch64/-en) → `/mnt/data/mqtt-voice-config/config/irene.toml` on EVERY
+      update — repo wins, on-box edits are overwritten; compose mounts it **`:ro`** at `/app/config` and
+      sets `IRENE_CONFIG_FILE=/app/config/irene.toml` (the image CMD doesn't pin `-c`, so the env override
+      lands cleanly; the baked TOML remains as the image's standalone fallback). config-ui on the controller
+      is thereby a browser/validator — its save fails loudly on the ro mount instead of silently vanishing
+      (documented in INSTALL.md). Cross-project build/install/rules harmonization filed as **BUILD-18**
+      `[deferred]` (next release).
 
 ### Models & Assets (ASSET)
 - [x] **ASSET-1** — Refresh stale model IDs (Anthropic→Claude 4.x, Whisper large-v3, ElevenLabs multilingual_v2, spaCy 3.8, gpt-4→gpt-4o-mini). → fc85306

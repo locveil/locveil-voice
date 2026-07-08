@@ -17,6 +17,16 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-08 — BUILD-17 DONE + BUILD-18 filed — the repo owns the config; harmonization deferred
+  to next release.** The last open thread from the ops walk closed with the user's call: bridge
+  semantics. The baked-in-image TOML (where config-ui saves silently died on every update) is
+  replaced by delivery: `update.sh` copies the profile TOML (`CONFIG_PROFILE`, default
+  `embedded-armv7`) into the runtime tree's `config/irene.toml` on every update, compose mounts it
+  read-only and points `IRENE_CONFIG_FILE` at it. On-box edits now fail loudly instead of vanishing
+  — config changes travel through the repo, like the bridge's. The wider observation — the two
+  repos keep hand-copying each other's ops patterns with local dialects — is now BUILD-18
+  `[deferred]`: inventory the drift and harmonize build/installation/rules next release.
+
 - **2026-07-08 — BUG-30 DONE (filed + completed same day) — log rotation ported from the bridge.**
   The user's "are our logs rotating, or one endless file?" had the ugly answer: rename-at-startup
   only, then a plain `FileHandler` growing without bound for the container's whole

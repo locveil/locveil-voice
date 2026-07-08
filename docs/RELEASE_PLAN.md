@@ -326,8 +326,17 @@ size-matched to the Russian stack; language is a per-config/deployment choice (a
       either way: public issues carry no household data, so mirroring is safe in that direction only.
       Cross-repo: any reports-repo workflow change is committed there; the bridge repo has the same
       question — file the sibling task into its ledger (uncommitted) if (a) is chosen.
-
-### Models & Assets (ASSET)
+- [ ] **BUILD-18** `[deferred]` [BUILD][OPS][PROCESS] — **Cross-project build/installation/rules
+      harmonization (voice ↔ bridge), next release** (filed 2026-07-08, user: "we will need to address
+      build/installation/rules/etc harmonization across projects in the next release"). The two repos
+      converged on the same ops patterns piecemeal — sdcard-clone + `/mnt/data/<name>-config` runtime tree,
+      repo-owns-config rsync, `ops/.env` secrets, systemd oneshot units, GHCR pull-not-build, log rotation
+      (BUG-30 ported the bridge's scheme verbatim), problem-report plumbing — but each convergence was a
+      hand-copy with local dialects (naming, `update.sh` shapes, INSTALL.md structure, retention constants,
+      CLAUDE.md invariant wording). Scope at task start: inventory the drift, decide what becomes a shared
+      convention (a common ops template? a shared doc both CLAUDE.mds cite? extracted tooling?) vs what
+      stays deliberately repo-local, and file the per-repo implementation tasks each side (bridge side
+      uncommitted, per `cross-repo-source-of-truth`).
 
 ### Documentation (DOC)
 
