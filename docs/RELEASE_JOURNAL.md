@@ -17,6 +17,20 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-08 — BUILD-19 DONE + ARCH-41 filed — the bridge's reboot lesson landed here before it
+  could hurt.** The bridge's compose cutover failed its reboot test today: their unit was rooted on
+  the SD card, which is a lazy automount — the hard mount requirement dragged the card's fsck into
+  early boot, the chain failed before the slow device enumerated, and oneshot never retries. Their
+  note ("has that service ever survived an actual reboot, or only compose restarts?") had a clean
+  answer for voice: never deployed, zero exposure — we fixed the identical flaw between image
+  publish and first install. Voice now follows their `e88aa84` rule: the clone is an update-time
+  artifact; `update.sh` deploys the compose file into the runtime tree and runs compose from there;
+  the unit references only `/mnt/data`; `.env` lives next to the deployed compose; the unit file is
+  copied (not symlinked) into `/etc/systemd/system` — our INSTALL's `ln -s` onto the card was its
+  own boot-time landmine. Their verified port map also moved our config-ui to host 3001 (bridge UI
+  owns 3000) and exposed that Plane-B nginx wants `:80` where the WB admin UI already lives —
+  filed as ARCH-41 to decide before any TLS-satellite testing at the rack.
+
 - **2026-07-08 — BUILD-17 DONE + BUILD-18 filed — the repo owns the config; harmonization deferred
   to next release.** The last open thread from the ops walk closed with the user's call: bridge
   semantics. The baked-in-image TOML (where config-ui saves silently died on every update) is

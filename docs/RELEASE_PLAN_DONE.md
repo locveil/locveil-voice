@@ -3479,6 +3479,23 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       is thereby a browser/validator — its save fails loudly on the ro mount instead of silently vanishing
       (documented in INSTALL.md). Cross-project build/install/rules harmonization filed as **BUILD-18**
       `[deferred]` (next release).
+- [x] **BUILD-19** `[release]` [BUILD][OPS] — **DONE 2026-07-08 (filed + completed same day; the bridge's
+      live reboot failure, relayed cross-repo — voice had the identical time bomb, caught BEFORE first
+      deploy). Boot must not depend on the SD card.** The bridge's reboot test failed because its unit was
+      rooted on the lazily-automounted card (`RequiresMountsFor=/mnt/sdcard` forced the card's mount +
+      `systemd-fsck` into the early boot transaction before the device enumerated; `Type=oneshot` never
+      retries) — and our unit had the exact pre-fix shape, built this morning by mirroring their layout
+      hours before their lesson. Fix (their `e88aa84` rule, adapted): **the clone is an update-time
+      artifact; everything boot needs lives in the runtime tree.** `update.sh` now DEPLOYS
+      `docker-compose.yml` into `/mnt/data/mqtt-voice-config/` and runs all compose commands from there;
+      the unit is `WorkingDirectory=/mnt/data/mqtt-voice-config` + `RequiresMountsFor=/mnt/data` only;
+      `.env` moves to the runtime tree (next to the deployed compose, so both start paths see identical
+      env); the unit is **copied** to `/etc/systemd/system`, not symlinked (a symlink onto the unmounted
+      card is unreadable to systemd at boot — our own INSTALL had `ln -s`). Bonus from their verified
+      controller facts: **config-ui host port 3000 → 3001** (the bridge UI owns 3000 on the shared WB7).
+      The compose project-name migration gotcha is moot for voice (nothing deployed yet — the fix landed
+      between image publish and first install). The nginx `:80`-vs-WB-admin-UI conflict filed as
+      **ARCH-41** `[deferred]`. `sh -n` + `docker compose config` clean.
 
 ### Models & Assets (ASSET)
 - [x] **ASSET-1** — Refresh stale model IDs (Anthropic→Claude 4.x, Whisper large-v3, ElevenLabs multilingual_v2, spaCy 3.8, gpt-4→gpt-4o-mini). → fc85306

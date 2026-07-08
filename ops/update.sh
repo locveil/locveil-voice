@@ -41,6 +41,13 @@ cp ../assets/donation_contract_v1.1.json ../assets/donation_language_v1.1.json "
 chown -R 1000:1000 "$ASSETS_DIR" "$LOGS_DIR" 2>/dev/null || true
 echo "assets synced -> $ASSETS_DIR"
 
+# Deploy the compose file into the runtime tree and run compose FROM there — boot
+# must not depend on the SD card (the bridge's reboot lesson: the card is a lazy
+# automount; a unit rooted on it dies at boot before the card enumerates). The
+# runtime tree is also where compose finds .env (user-created, never touched here).
+cp docker-compose.yml "$RUNTIME_DIR/docker-compose.yml"
+cd "$RUNTIME_DIR"
+
 docker compose pull
 docker compose up -d --remove-orphans
 docker image prune -f

@@ -1,6 +1,7 @@
 # Irene on a Wirenboard controller — deploy = pull, not build (BUILD-10, design D-5).
-# Lives in a git checkout of this repo on the controller; ./update.sh keeps the assets
-# mount in sync with the checkout and pulls fresh images. See INSTALL.md.
+# Source of truth lives in the SD-card clone; update.sh DEPLOYS this file into the
+# runtime tree (/mnt/data/mqtt-voice-config) and all compose commands run from there —
+# boot must not depend on the SD card. See INSTALL.md.
 #
 # Rollback: pin `image:` to a vYYYYMMDD-<sha> tag (see GHCR package page) and re-run
 # `docker compose up -d`. English deployment: switch the image to the `-en` variant
@@ -30,10 +31,12 @@ services:
     environment:
       # Point the runner at the delivered config (overrides the image's baked default).
       IRENE_CONFIG_FILE: /app/config/irene.toml
-      # Secrets reach the container via an `ops/.env` file next to this compose file
-      # (chmod 600 — see INSTALL.md "Secrets"). Compose reads .env for BOTH start
-      # paths: the systemd unit and update.sh run compose from this directory.
-      # Empty values are fine: the LLM tier and problem reporting degrade to off.
+      # Secrets reach the container via a `.env` file next to the DEPLOYED copy of
+      # this compose file — /mnt/data/mqtt-voice-config/.env (chmod 600, see
+      # INSTALL.md "Secrets"). update.sh deploys the compose file there and both
+      # start paths (systemd unit + update.sh) run compose from that directory, so
+      # they see identical env. Empty values are fine: the LLM tier and problem
+      # reporting degrade to off.
       DEEPSEEK_API_KEY: "${DEEPSEEK_API_KEY:-}"
       IRENE_REPORTS_TOKEN: "${IRENE_REPORTS_TOKEN:-}"
     # WB7 has 1 GB RAM shared with the bridge and system services; the ASR/TTS models are
@@ -55,7 +58,8 @@ services:
     profiles: ["ui"]
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      # Host 3001: the bridge's UI owns 3000 on the shared controller.
+      - "3001:3000"
     environment:
       # Empty = the app talks to Irene on the same host the page is served from, :8080.
       API_BASE_URL: ""
