@@ -18,6 +18,16 @@ services:
       # the assistant writes (models download here on first boot; durable state lives in
       # state/). Gitignored — `git pull` never touches it.
       - ../.assets:/app/assets
+      # Runner file logs (logs/irene.log + rotated timestamps). Unmounted they would
+      # accumulate in the container's writable layer — flash wear + lost on recreate.
+      - ../.logs:/app/logs
+    environment:
+      # Secrets reach the container via an `ops/.env` file next to this compose file
+      # (chmod 600 — see INSTALL.md "Secrets"). Compose reads .env for BOTH start
+      # paths: the systemd unit and update.sh run compose from this directory.
+      # Empty values are fine: the LLM tier and problem reporting degrade to off.
+      DEEPSEEK_API_KEY: "${DEEPSEEK_API_KEY:-}"
+      IRENE_REPORTS_TOKEN: "${IRENE_REPORTS_TOKEN:-}"
     # WB7 has 1 GB RAM shared with the bridge and system services; the ASR/TTS models are
     # the big consumers. Tune on hardware bring-up.
     mem_limit: 800m

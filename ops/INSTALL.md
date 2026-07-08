@@ -3,29 +3,34 @@
 The controller runs prebuilt images pulled from the GitHub Container Registry — it never builds
 anything. This directory is the whole deployment: a compose file, a ten-line update script, and a
 systemd unit. The pattern (and most of the muscle memory) is the same as the sibling
-`wb-mqtt-bridge` deployment.
+`wb-mqtt-bridge` deployment, including the checkout location: the repository is cloned **as**
+`/mnt/data/mqtt-voice-config` (the twin of `/mnt/data/mqtt-bridge-config`).
 
-Two things live on the controller:
+What lives on the controller:
 
-- **a git checkout of this repository** — brings the compose file, this script, and the
-  git-owned assets content (donation phrasings, prompts, templates, localization);
-- **the `.assets/` data directory** (gitignored, next to the checkout's `ops/`) — the mounted
-  assets root: the synced content above, plus everything the assistant writes: downloaded speech
-  models, cache, and durable state (timers survive restarts because their records live here).
+- **the git checkout** at `/mnt/data/mqtt-voice-config` — brings the compose file, this script,
+  and the git-owned assets content (donation phrasings, prompts, templates, localization);
+- **`.assets/`** (gitignored, in the checkout root) — the mounted assets root
+  (`/app/assets` inside the container): the synced content above, plus everything the assistant
+  writes: downloaded speech models, cache, satellite TLS credentials, and durable state (timers
+  survive restarts because their records live here);
+- **`.logs/`** (gitignored, in the checkout root) — the mounted log directory (`/app/logs`
+  inside the container): `irene.log` plus timestamped rotations. Mounted so logs neither bloat
+  the container's writable layer nor vanish on recreate.
 
 ## Install
 
 ```sh
 cd /mnt/data
-git clone https://github.com/droman42/wb-mqtt-voice.git
-cd wb-mqtt-voice/ops
-./update.sh            # syncs assets, pulls images, starts the stack
+git clone https://github.com/droman42/wb-mqtt-voice.git mqtt-voice-config
+cd mqtt-voice-config/ops
+./update.sh            # creates + syncs the data dirs, pulls images, starts the stack
 ```
 
 Then wire it to boot:
 
 ```sh
-ln -s /mnt/data/wb-mqtt-voice/ops/wb-mqtt-voice.service /etc/systemd/system/
+ln -s /mnt/data/mqtt-voice-config/ops/wb-mqtt-voice.service /etc/systemd/system/
 systemctl daemon-reload
 systemctl enable --now wb-mqtt-voice
 ```
@@ -34,17 +39,40 @@ The web API answers on port **8080** (`curl http://localhost:8080/health`). Spee
 download into `.assets/` on first boot — the first start takes a few minutes; subsequent starts
 reuse them.
 
+## Secrets
+
+Two optional cloud integrations read their keys from the container's environment; both degrade
+cleanly to "off" when the key is absent (the assistant still runs fully offline):
+
+- `DEEPSEEK_API_KEY` — the cloud LLM tier of intent recognition;
+- `IRENE_REPORTS_TOKEN` — the GitHub token that lets spoken problem reports file themselves
+  (fine-grained PAT for the private reports repo, Issues + Contents read/write).
+
+Put them in an `ops/.env` file next to the compose file — compose reads it automatically on
+both start paths (the systemd unit and `update.sh` run compose from this directory):
+
+```sh
+cat > /mnt/data/mqtt-voice-config/ops/.env <<'EOF'
+DEEPSEEK_API_KEY=sk-XXXXXXXX
+IRENE_REPORTS_TOKEN=github_pat_XXXXXXXX
+EOF
+chmod 600 /mnt/data/mqtt-voice-config/ops/.env
+```
+
+The file is gitignored; `git pull` never touches it. After adding or changing it, re-run
+`docker compose up -d` (or `./update.sh`).
+
 ## Update
 
 ```sh
-cd /mnt/data/wb-mqtt-voice
+cd /mnt/data/mqtt-voice-config
 git pull
 ./ops/update.sh
 ```
 
 `update.sh` re-syncs the git-owned assets subtrees (and **only** those — downloaded models and
-runtime state are never touched), pulls the newest images, restarts the stack, and prunes old
-image layers to keep flash usage in check.
+runtime state are never touched), fixes ownership for the container user, pulls the newest
+images, restarts the stack, and prunes old image layers to keep flash usage in check.
 
 ## Rolling back
 
@@ -59,9 +87,12 @@ and run `docker compose up -d`. Return to `:latest` the same way.
 
 ## Variants
 
+- **aarch64 controller (WB8.5 / Pi)** — switch the image to the aarch64 build
+  (`ghcr.io/droman42/wb-mqtt-voice-aarch64`); everything else is identical. The armv7 default
+  in the compose file targets the WB7.
 - **English deployment** — switch the image to the `-en` variant
-  (`ghcr.io/droman42/wb-mqtt-voice-armv7-en`); language is baked into the image, nothing else
-  changes.
+  (`ghcr.io/droman42/wb-mqtt-voice-armv7-en` / `-aarch64-en`); language is baked into the
+  image, nothing else changes.
 - **The configuration editor** — not part of the standard deployment. Bring it up on demand:
 
   ```sh
@@ -69,10 +100,22 @@ and run `docker compose up -d`. Return to `:latest` the same way.
   docker compose --profile ui down       # and away again
   ```
 
+## Satellite TLS plane (optional)
+
+Room satellites that connect over mutual TLS (`wss://`) need the fleet-provisioning plane —
+nginx + a tiny home CA serving the certificate bootstrap and the mTLS gate. It deliberately
+runs **outside** this container, directly on the controller (security-critical PKI must not
+depend on Irene being up). It is deployed separately, via ansible — see
+[`nginx/README.md`](../nginx/README.md) for the design, the operator runbook
+(`esp32-provision approve …`) and the deploy playbook. One wiring point connects the two
+planes: set `esp32_irene_upstream: 127.0.0.1:8080` in the nginx `group_vars` so `/ws/audio*`
+proxies to the container installed here. Satellites on a trusted network can skip all of this
+and connect over plain `ws://` directly to :8080.
+
 ## Recovery notes
 
 - The container is stateless: removing it (or the image) loses nothing — everything that matters
-  lives in `.assets/` and the git checkout.
+  lives in `.assets/`, `.logs/` and the git checkout.
 - A corrupted model download can be deleted from `.assets/models/…`; it re-downloads on the next
   start.
 - Memory: the compose file caps Irene at 800 MB — if the assistant is OOM-killed on a busy

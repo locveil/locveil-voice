@@ -3424,6 +3424,21 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       PROPOSAL awaiting owner review** (durable-action restart survival — plausible but triggered by
       dev-session process kills; the first item for ARCH-33's `/inbox`). Note: the design's leak-fence +
       owner-review model is what makes an auto-opened PR safe — it is reviewed, never merged by the bot.
+- [x] **BUILD-15** `[release]` [BUILD][OPS] — **DONE 2026-07-08 (filed + completed same day; user-directed
+      layout + gaps found while walking the ops story pre-ARCH-25). Controller deployment hardened:
+      bridge-twin layout, logs mount, secrets plumbing, ownership fix, doc gaps.** (1) Checkout relocated to
+      **`/mnt/data/mqtt-voice-config`** (twin of `mqtt-bridge-config`) — compose/systemd/update.sh/INSTALL.md
+      all repointed. (2) **`.logs/` mount** (`/app/logs`): every runner writes `logs/irene.log` + timestamped
+      rotations (`base.py` `_setup_logging`), previously accumulating unbounded in the container's writable
+      layer on flash. (3) **Secrets plumbing existed nowhere**: compose now passes `DEEPSEEK_API_KEY` (LLM
+      tier — QUAL-50 enabled it in deployment configs but the key could never arrive) + `IRENE_REPORTS_TOKEN`
+      (problem reporting) from a documented `ops/.env` (chmod 600, gitignored; the bridge's exact pattern).
+      (4) **uid mismatch fixed**: container runs `USER irene` (uid 1000) but update.sh runs as root on the
+      controller — first model download would have failed EACCES at the rack; update.sh now chowns both data
+      dirs. (5) INSTALL.md gains the **aarch64 variant** entry and the **satellite TLS plane** section
+      (pointer to `nginx/README.md` + the `esp32_irene_upstream: 127.0.0.1:8080` wiring seam). `docker
+      compose config` + `sh -n` clean; `.logs/` gitignored. Directly de-risks ARCH-25 items (LLM tier +
+      reporting live at the rack; log flash-wear).
 
 ### Models & Assets (ASSET)
 - [x] **ASSET-1** — Refresh stale model IDs (Anthropic→Claude 4.x, Whisper large-v3, ElevenLabs multilingual_v2, spaCy 3.8, gpt-4→gpt-4o-mini). → fc85306

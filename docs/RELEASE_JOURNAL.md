@@ -17,6 +17,17 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-08 — BUILD-15 DONE (filed + completed same day) — the ops deployment is rack-ready.**
+  Walking the install story ahead of ARCH-25 (user question: "which mounts? how do tokens reach the
+  container?") exposed that the answer was "one mount, and they don't": no logs mount (file logs
+  accumulating in the container layer on flash), no env plumbing at all for `DEEPSEEK_API_KEY` /
+  `IRENE_REPORTS_TOKEN` (the LLM tier and problem reporting could never activate on a controller
+  deploy), plus a latent uid-1000-vs-root EACCES on the bind mounts that only the rack would have
+  caught. All fixed on the bridge's proven pattern — checkout at `/mnt/data/mqtt-voice-config`
+  (user-directed twin of `mqtt-bridge-config`), `.assets`/`.logs` mounts, `ops/.env` secrets file,
+  chown in update.sh — and INSTALL.md now also covers the aarch64 image variant and points to the
+  nginx Plane-B deploy with the `esp32_irene_upstream` wiring seam. Three fewer surprises at the rack.
+
 - **2026-07-08 — QUAL-77 DONE + ARCH-39/ARCH-40 filed — the bridge's desync-repair surface is pinned;
   voice adoption designed-for but deferred.** The bridge maintainer left a handoff note (DRV-5/SCN-11:
   `skipped_reason` idempotence-skip marker + reserved `force` param + scenario

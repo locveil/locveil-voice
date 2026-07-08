@@ -129,3 +129,4 @@ eval/.env
 eval/profiles/configs/custom.env
 eval/profiles/recording.env
 .assets/
+.logs/
