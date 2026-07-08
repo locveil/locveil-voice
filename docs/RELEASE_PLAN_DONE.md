@@ -3491,11 +3491,14 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       the unit is `WorkingDirectory=/mnt/data/mqtt-voice-config` + `RequiresMountsFor=/mnt/data` only;
       `.env` moves to the runtime tree (next to the deployed compose, so both start paths see identical
       env); the unit is **copied** to `/etc/systemd/system`, not symlinked (a symlink onto the unmounted
-      card is unreadable to systemd at boot — our own INSTALL had `ln -s`). Bonus from their verified
-      controller facts: **config-ui host port 3000 → 3001** (the bridge UI owns 3000 on the shared WB7).
+      card is unreadable to systemd at boot — our own INSTALL had `ln -s`).
       The compose project-name migration gotcha is moot for voice (nothing deployed yet — the fix landed
       between image publish and first install). The nginx `:80`-vs-WB-admin-UI conflict filed as
-      **ARCH-41** `[deferred]`. `sh -n` + `docker compose config` clean.
+      **ARCH-41** `[deferred]`. `sh -n` + `docker compose config` clean. _Same-day correction (user): the
+      **`ui` service was removed from the controller compose entirely** — config-ui is NOT deployed on the
+      controller (a 3001 port remap from the first pass lived for minutes); with repo-owns-config
+      (BUILD-17) the editor runs on a workstation when wanted (`build-docker.md` "The configuration
+      editor" — whose two stale port-6000 refs from before BUG-29 were fixed in the same change)._
 
 ### Models & Assets (ASSET)
 - [x] **ASSET-1** — Refresh stale model IDs (Anthropic→Claude 4.x, Whisper large-v3, ElevenLabs multilingual_v2, spaCy 3.8, gpt-4→gpt-4o-mini). → fc85306

@@ -33,10 +33,8 @@ where it is.
 
 **The repo owns the config** (same rule as the bridge): `update.sh` overwrites
 `config/irene.toml` from the clone's profile TOML on every update, and the mount is read-only
-— edits made on the box, including config-ui saves, don't stick. Tune the config in the repo
-(edit the profile TOML, commit, `git pull` + `./update.sh` on the controller). The config-ui
-container remains useful as a browser/validator, but its save button will report an error on
-this deployment by design.
+— edits made on the box don't stick, by design. Tune the config in the repo: edit the profile
+TOML, commit, then `git pull` + `./update.sh` on the controller.
 
 ## Install
 
@@ -118,14 +116,9 @@ and run `docker compose up -d`. Return to `:latest` the same way.
 - **English deployment** — switch the image to the `-en` variant
   (`ghcr.io/droman42/wb-mqtt-voice-armv7-en` / `-aarch64-en`) and the matching
   `CONFIG_PROFILE=embedded-armv7-en` (resp. `-aarch64-en`); language is baked into the image.
-- **The configuration editor** — not part of the standard deployment. Bring it up on demand
-  (from the runtime tree):
-
-  ```sh
-  cd /mnt/data/mqtt-voice-config
-  docker compose --profile ui up -d      # serves on port 3001 (3000 is the bridge UI's)
-  docker compose --profile ui down       # and away again
-  ```
+The configuration editor (config-ui) is **not deployed on the controller** — the repo owns the
+config here, so editing happens repo-side; run config-ui on a workstation against a dev
+backend when you want the visual editor.
 
 ## Satellite TLS plane (optional)
 

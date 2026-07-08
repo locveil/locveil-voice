@@ -27,9 +27,12 @@ newest entries near the top of each dated section.
   artifact; `update.sh` deploys the compose file into the runtime tree and runs compose from there;
   the unit references only `/mnt/data`; `.env` lives next to the deployed compose; the unit file is
   copied (not symlinked) into `/etc/systemd/system` — our INSTALL's `ln -s` onto the card was its
-  own boot-time landmine. Their verified port map also moved our config-ui to host 3001 (bridge UI
-  owns 3000) and exposed that Plane-B nginx wants `:80` where the WB admin UI already lives —
-  filed as ARCH-41 to decide before any TLS-satellite testing at the rack.
+  own boot-time landmine. Their verified port map also exposed that Plane-B nginx wants `:80`
+  where the WB admin UI already lives — filed as ARCH-41 to decide before any TLS-satellite
+  testing at the rack. Same-day correction (user): the `ui` service left the controller compose
+  entirely — config-ui is not deployed on the controller at all (repo owns the config; the editor
+  runs on a workstation, per `build-docker.md`, whose stale pre-BUG-29 port-6000 refs got fixed
+  in passing).
 
 - **2026-07-08 — BUILD-17 DONE + BUILD-18 filed — the repo owns the config; harmonization deferred
   to next release.** The last open thread from the ops walk closed with the user's call: bridge

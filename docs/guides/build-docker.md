@@ -139,11 +139,11 @@ to edit donations or configuration:
 docker run --rm -p 3000:3000 ghcr.io/droman42/wb-mqtt-voice-ui:latest
 ```
 
-By default the app talks to Irene on **the same host it is served from**, port 6000. Point it elsewhere with
+By default the app talks to Irene on **the same host it is served from**, port 8080. Point it elsewhere with
 the `API_BASE_URL` environment variable:
 
 ```bash
-docker run --rm -p 3000:3000 -e API_BASE_URL=http://192.168.110.250:6000 \
+docker run --rm -p 3000:3000 -e API_BASE_URL=http://192.168.110.250:8080 \
   ghcr.io/droman42/wb-mqtt-voice-ui:latest
 ```
 

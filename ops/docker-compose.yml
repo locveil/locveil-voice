@@ -49,23 +49,6 @@ services:
         max-size: "10m"
         max-file: "3"
 
-  # The configuration editor (donation/config editing). Deliberately NOT part of the
-  # standard controller deployment (design D-4) — enable on demand:
-  #   docker compose --profile ui up -d
-  ui:
-    image: ghcr.io/droman42/wb-mqtt-voice-ui:latest
-    container_name: wb-mqtt-voice-ui
-    profiles: ["ui"]
-    restart: unless-stopped
-    ports:
-      # Host 3001: the bridge's UI owns 3000 on the shared controller.
-      - "3001:3000"
-    environment:
-      # Empty = the app talks to Irene on the same host the page is served from, :8080.
-      API_BASE_URL: ""
-    mem_limit: 64m
-    logging:
-      driver: json-file
-      options:
-        max-size: "5m"
-        max-file: "2"
+# No config-ui here: the editor is NOT deployed on the controller. The repo owns the
+# config (delivered read-only) — editing happens repo-side, with config-ui run on a
+# workstation when wanted (see docs/guides/build-docker.md, "The configuration editor").
