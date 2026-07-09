@@ -37,6 +37,10 @@ err_bridge_down: "Умный дом сейчас недоступен — мос
 err_not_sure: "Не уверена, что получилось — проверьте, пожалуйста."
 err_uncovered_room: "{room} не обслуживается этим устройством."
 err_no_group_in_room: "{room}: не нашла там {noun}."
+# BUG-38: the named room is king — we refuse rather than actuate the same-named device
+# elsewhere. Same shape as err_no_group_in_room: the room leads, so its nominative name
+# needs no case agreement («Спальня: не нашла там «Торшер».»).
+err_no_device_in_room: "{room}: не нашла там «{ref}»."
 err_nothing_capable: "Не нашла подходящего устройства."
 error_general: "Ошибка умного дома: {error}"
 read_temperature: "Сейчас {value} градусов — {name}"

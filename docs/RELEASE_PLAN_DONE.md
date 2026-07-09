@@ -2979,6 +2979,34 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       Verified live both ways: keyless boot → 200 + `inactive_providers: {llm.deepseek: …}`; a bogus configured
       provider → exit 1 naming it. pyright 0, import-linter 11/11, 1358 tests pass incl. the 6 hermetic smoke.
 
+- [x] **BUG-38** [MQTT][NLU][SAFETY] `[release]` — **DONE 2026-07-09.** A named device ignored the room the
+      user spoke, and actuated one somewhere else. **Confirmed on the WB7 before fixing** (owner authorised the
+      test): with the living-room floor lamp `off` and the bedroom holding no floor lamp at all,
+      «включи торшер в спальне» returned `success: true`, «Включила Торшер», `device_id: living_room_floor_lamp`,
+      and the living-room lamp went `on`. No satellite, no client room — plain REST. Lamp restored afterwards.
+      Cause: `_result_from_candidates` narrowed by room only under `if len(candidates) > 1`, so a uniquely-named
+      device skipped the room check entirely; and the device path never consumed the `uncovered_room` refusal the
+      resolver already produces (D-15 rule 2b), so a satellite naming a room it does not cover actuated anyway.
+      Lights had always worked only because «свет» is a *group noun*, routed to `_room_group`, which calls the
+      D-15 pass the device branch never called.
+      Fixed in the resolver, so every device-name path inherits it (power, cover, playback, `read_state`, and the
+      `scan_utterance` path «на кухне вытяжку включи» takes): the raw room word is threaded down from
+      `_resolve_single_entity` — raw, not `room_resolved`, because entity resolution walks `intent.entities` in
+      donation order and the sibling room may be unresolved when the device resolves — matched with
+      `match_catalog_room`, and the candidate set is scoped **always**, keeping `room == target` **or**
+      `room == "global"` (8 of 79 devices are whole-house aggregates the resolver already exempts; a blanket
+      filter would have broken «включи печь на кухне»). Named room holding no such device → new
+      `no_device_in_room` result → the handler speaks a **new template** `err_no_device_in_room`
+      («Спальня: не нашла там «Торшер».» / `"{room}: I couldn't find “{ref}” there."`), mirroring
+      `err_no_group_in_room`'s shape so the room's nominative name needs no case agreement. `uncovered_room` now
+      refuses on the device path too. When **no** room is spoken, rule 3 is unchanged: the client's room stays a
+      tie-break hint that may narrow an ambiguity but never contradicts the user.
+      8 regression tests in `test_catalog_resolution.py` (refusal, unique-match scoping, spoken-room-beats-client-
+      room, ambiguity resolved by room, `global` survival, unknown-room fall-through, within-room ambiguity
+      preserved for BUG-39, rule-3 unchanged). Suite 1366 pass (the lone failure is the TEST-20 flake, verified),
+      pyright 0 — it caught a real `room_id: str | None` hole in the first draft — import-linter 11/11, smoke 6/6.
+      **Needs a voice rebuild + redeploy to reach the WB7.**
+
 ### Tests (TEST)
 - [x] **TEST-0** (P0) — Minimal end-to-end smoke/integration harness (refactor safety net, Gate 0). **DONE
       2026-06-01** → `irene/tests/test_smoke_e2e.py` (**5 passed / 1 xfailed**, ~21s; boots the WebAPI runner once

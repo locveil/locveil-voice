@@ -150,6 +150,23 @@ class ContextualEntityResolver:
             self._entity_types_by_intent = self._build_entity_type_map()
         return self._entity_types_by_intent.get(intent_name, {}).get(entity_name)
 
+    def _spoken_room_word(self, intent: Intent) -> Optional[str]:
+        """The RAW room word this utterance carried, found by declared type rather than by the
+        param name (`room`), so a donation is free to call it something else.
+
+        Raw, not `room_resolved`: entity resolution walks `intent.entities` in donation order, so the
+        room may still be unresolved when the device is resolved. Matching the word against the
+        catalog at the point of use removes that ordering dependency entirely (BUG-38).
+        """
+        if self._entity_types_by_intent is None:
+            self._entity_types_by_intent = self._build_entity_type_map()
+        for param, etype in self._entity_types_by_intent.get(intent.name, {}).items():
+            if etype in (EntityType.ROOM, EntityType.LOCATION):
+                value = intent.entities.get(param)
+                if isinstance(value, str) and value.strip():
+                    return value
+        return None
+
     def _build_entity_type_map(self) -> Dict[str, Dict[str, EntityType]]:
         donations = getattr(self.asset_loader, "donations", None) or {}
         mapping: Dict[str, Dict[str, EntityType]] = {}
@@ -209,7 +226,8 @@ class ContextualEntityResolver:
         for param, etype in self._entity_types_by_intent.get(intent.name, {}).items():
             if etype is not EntityType.DEVICE or param in intent.entities:
                 continue
-            scanned = await self.device_resolver.scan_utterance(intent.raw_text, context)
+            scanned = await self.device_resolver.scan_utterance(
+                intent.raw_text, context, spoken_room=self._spoken_room_word(intent))
             if scanned is not None:
                 resolved_entities[f"{param}_resolved"] = scanned.resolved_value
                 resolved_entities[f"{param}_confidence"] = scanned.confidence
@@ -238,9 +256,12 @@ class ContextualEntityResolver:
         heuristics remain only as the fallback for GENERIC/undeclared params — existing donations
         all declare generic, so their behavior is unchanged until the smart-home donations (PR-4)
         declare device/room."""
+
         declared = self._declared_entity_type(intent.name, entity_name)
         if declared is EntityType.DEVICE:
-            return await self.device_resolver.resolve(entity_value, context), "device"
+            # D-15 rule 1 (BUG-38): the room named in the utterance scopes the device search.
+            return await self.device_resolver.resolve(
+                entity_value, context, spoken_room=self._spoken_room_word(intent)), "device"
         if declared in (EntityType.ROOM, EntityType.LOCATION):
             return await self.location_resolver.resolve(entity_value, context), "location"
         # PERSON has no resolver yet; GENERIC/undeclared falls through to the heuristics.
@@ -388,12 +409,17 @@ class DeviceEntityResolver:
             return {}
     
     
-    async def resolve(self, device_reference: str, context: UnifiedConversationContext) -> Optional[EntityResolutionResult]:
+    async def resolve(self, device_reference: str, context: UnifiedConversationContext,
+                      spoken_room: Optional[str] = None) -> Optional[EntityResolutionResult]:
         """
         Resolve device reference — against the bridge catalog when wired, else client context.
+
+        `spoken_room`: the raw room word the utterance carried, if any. It scopes the catalog search
+        (D-15 rule 1 — the named room is king, BUG-38).
         """
         if self.catalog_port is not None:
-            result = await self._resolve_from_catalog(device_reference, context)
+            result = await self._resolve_from_catalog(device_reference, context,
+                                                      spoken_room=spoken_room)
             if result is not None:
                 return result
             if self.catalog_port.catalog() is not None:
@@ -411,15 +437,23 @@ class DeviceEntityResolver:
 
     async def _resolve_from_catalog(self, device_reference: str,
                                     context: UnifiedConversationContext,
-                                    _retried: bool = False) -> Optional[EntityResolutionResult]:
-        """Resolve against the bridge catalog; ARCH-26 lazy re-pull once on a miss."""
+                                    _retried: bool = False,
+                                    spoken_room: Optional[str] = None) -> Optional[EntityResolutionResult]:
+        """Resolve against the bridge catalog; ARCH-26 lazy re-pull once on a miss.
+
+        `spoken_room` is the RAW room word from the utterance («в спальне»), when the intent carried
+        one. It is matched here rather than read from `room_resolved`, because entity resolution
+        loops over `intent.entities` in donation order — the sibling `room` may not be resolved yet
+        when `target` is (BUG-38).
+        """
         assert self.catalog_port is not None
         catalog = self.catalog_port.catalog()
         if catalog is None:
             if _retried:
                 return None
             await self.catalog_port.refresh()
-            return await self._resolve_from_catalog(device_reference, context, _retried=True)
+            return await self._resolve_from_catalog(device_reference, context, _retried=True,
+                                                    spoken_room=spoken_room)
 
         locale = context.language or "ru"
         ref_norm = _norm(device_reference)
@@ -437,23 +471,59 @@ class DeviceEntityResolver:
             fresh = await self.catalog_port.refresh()
             if fresh is None or fresh.version == catalog.version:
                 return None
-            return await self._resolve_from_catalog(device_reference, context, _retried=True)
+            return await self._resolve_from_catalog(device_reference, context, _retried=True,
+                                                    spoken_room=spoken_room)
 
         best = max(score for score, _ in scored)
         candidates = [device for score, device in scored if score == best]
         return self._result_from_candidates(candidates, best, device_reference,
-                                            catalog, locale, context)
+                                            catalog, locale, context, spoken_room)
+
+    @staticmethod
+    def _in_room(candidates: List[CatalogDevice], room_id: str) -> List[CatalogDevice]:
+        """Devices of the target room, plus the whole-house aggregates.
+
+        `global` devices (`all_lights`, `oven_power`, `heating_control`, …) are addressable from
+        anywhere — the same carve-out the covered-rooms check makes — so «включи духовку на кухне»
+        must not filter out an `oven_power` that lives in no room.
+        """
+        return [d for d in candidates if d.room == room_id or d.room == "global"]
 
     def _result_from_candidates(self, candidates: List[CatalogDevice], best: int,
                                 device_reference: str, catalog: DeviceCatalog, locale: str,
-                                context: UnifiedConversationContext) -> EntityResolutionResult:
+                                context: UnifiedConversationContext,
+                                spoken_room: Optional[str] = None) -> EntityResolutionResult:
         """Top-scored candidates → the handler-facing result (shared by the reference path and
-        the utterance scan): room-context disambiguation, then payload or ambiguity."""
-        # room-context disambiguation: «эппл» names both Apple TVs; the requesting room picks one
-        if len(candidates) > 1:
+        the utterance scan): room scoping, then payload or ambiguity.
+
+        D-15: **the room named in the utterance is king** (BUG-38). It scopes the candidate set
+        ALWAYS — including a single candidate, which is how «включи торшер в спальне» used to switch
+        on the living-room floor lamp, the only «торшер» in the house. When the named room holds none
+        of them, the answer is a refusal, not a quiet retarget to another room. Only when no room was
+        named does the client's own room apply (rule 3), and there it stays a tie-break hint: it may
+        narrow an ambiguity, never contradict the user.
+        """
+        room = match_catalog_room(spoken_room, catalog, locale) if spoken_room else None
+        if room is not None:
+            scoped = self._in_room(candidates, room.id)
+            if not scoped:
+                # named room, no such device in it → refuse; the handler speaks it (BUG-38)
+                return EntityResolutionResult(
+                    resolved_value=None,
+                    original_value=device_reference,
+                    confidence=0.0,
+                    resolution_type="no_device_in_room",
+                    metadata={"match_type": "catalog_wrong_room", "score": best,
+                              "room_id": room.id,
+                              "candidates": [d.id for d in candidates],
+                              "catalog_version": catalog.version})
+            candidates = scoped
+        elif len(candidates) > 1:
+            # D-15 rule 3: no room named → the requesting client's room breaks the tie («эппл»
+            # names both Apple TVs). A hint, not an override: an empty intersection changes nothing.
             room_id = resolve_default_room(context, catalog)
             if room_id is not None:
-                in_room = [d for d in candidates if d.room == room_id]
+                in_room = self._in_room(candidates, room_id)
                 if in_room:
                     candidates = in_room
 
@@ -480,13 +550,17 @@ class DeviceEntityResolver:
     _SCAN_WORD_RE = re.compile(r"[а-яёa-z0-9]+")
 
     async def scan_utterance(self, text: str,
-                             context: UnifiedConversationContext) -> Optional[EntityResolutionResult]:
+                             context: UnifiedConversationContext,
+                             spoken_room: Optional[str] = None) -> Optional[EntityResolutionResult]:
         """Last-resort device spotting for utterances whose word order defeated the extraction
         regexes («на кухне вытяжку включи» — the device stands BEFORE the verb, so the post-verb
         capture never fires). Scores every content word against the catalog and accepts only
         exact/stem-grade hits (≥ _STEM_MATCH_SCORE): a scan has no extraction signal around it,
         so fuzzy-grade (≥80) would false-positive on generic words. Never triggers the ARCH-26
-        re-pull — a scan miss is the normal case, not a staleness signal."""
+        re-pull — a scan miss is the normal case, not a staleness signal.
+
+        `spoken_room` scopes the result exactly as on the reference path (BUG-38) — this path is the
+        one «на кухне вытяжку включи» takes, so it needs the room every bit as much."""
         if self.catalog_port is None:
             return None
         catalog = self.catalog_port.catalog()
@@ -510,7 +584,7 @@ class DeviceEntityResolver:
         if not best_devices:
             return None
         return self._result_from_candidates(best_devices, best_score, text,
-                                            catalog, locale, context)
+                                            catalog, locale, context, spoken_room)
 
     @staticmethod
     def _device_payload(device: CatalogDevice, locale: str) -> Dict[str, Any]:

@@ -36,6 +36,8 @@ err_bridge_down: "The smart home is unavailable right now — the bridge isn't r
 err_not_sure: "I'm not sure that worked — please check."
 err_uncovered_room: "{room} is not managed by this device."
 err_no_group_in_room: "{room}: I couldn't find any {noun} there."
+# BUG-38: the named room is king — refuse rather than actuate a same-named device elsewhere.
+err_no_device_in_room: "{room}: I couldn't find “{ref}” there."
 err_nothing_capable: "I couldn't find a suitable device."
 error_general: "Smart home error: {error}"
 read_temperature: "It is {value} degrees — {name}"

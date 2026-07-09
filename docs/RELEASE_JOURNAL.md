@@ -17,6 +17,32 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-09 — BUG-38 fixed: the room the user names is king. Confirmed on hardware first.** With the owner's
+  authorisation, the bug was reproduced on the WB7 rather than argued from code: the living-room floor lamp `off`,
+  the bedroom holding no floor lamp at all, and «включи торшер в спальне» → `success: true`, «Включила Торшер»,
+  `device_id: living_room_floor_lamp`, lamp `on`. Plain REST, no satellite, no client room. Lamp restored.
+  Two holes, one root. `_result_from_candidates` narrowed by room only under `if len(candidates) > 1`, so a
+  **uniquely-named** device skipped the room check entirely — and «торшер» is unique in this house. Separately,
+  the device path never consumed the `uncovered_room` refusal the resolver already produces, so a satellite
+  naming a room it does not cover would actuate anyway (D-15 rule 2b demands speech and *no actuation*). Lights
+  had always worked only because «свет» is a group noun, routed to `_room_group`, which calls the D-15 pass that
+  the device branch never called.
+  Fixed in the resolver so every device-name path inherits it — power, cover, playback, `read_state`, and the
+  `scan_utterance` path «на кухне вытяжку включи» takes. The **raw** room word is threaded down from
+  `_resolve_single_entity`, not `room_resolved`: entity resolution walks `intent.entities` in donation order, so
+  the sibling room may still be unresolved when the device resolves; matching the word at the point of use
+  removes the ordering dependency entirely. Scoping now runs **always**, keeping `room == target` **or**
+  `room == "global"` — 8 of 79 devices are whole-house aggregates the resolver already exempts, and a blanket
+  filter would have broken «включи печь на кухне» (verified against the live golden). A named room holding no such
+  device refuses, with a new template mirroring `err_no_group_in_room`'s shape so the room's nominative name needs
+  no case agreement: «Спальня: не нашла там «Торшер».» Rule 3 is untouched — with no room spoken, the client's
+  room narrows an ambiguity but never contradicts the user.
+  Eight regression tests, all against the shapes that made this subtle: the refusal, unique-match scoping,
+  spoken-room-beats-client-room, ambiguity dissolved by room, `global` survival, unknown-room fall-through,
+  within-room ambiguity preserved (BUG-39's territory), rule 3 unchanged. pyright caught a real
+  `room_id: str | None` hole in my first draft. Suite 1366 pass — the single failure is the TEST-20 flake,
+  re-verified in isolation, not this diff. Needs a rebuild to reach the WB7.
+
 - **2026-07-09 — DRV-23/DRV-25 verified live, both directions; then «включи кондиционер в гостиной» found
   BUG-38/39.** After the bridge redeploy, voice restarted and pulled `16eee0f2f7832995` (`mirrored` gone from
   `/state`). The full cycle now runs honestly on hardware: «включи свет» → relay `1`, `state.power = 'on'`;

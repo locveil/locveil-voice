@@ -253,3 +253,73 @@ async def test_undeclared_params_keep_legacy_heuristics():
                     confidence=1.0, raw_text="включи телек", domain="device")
     resolved = await resolver.resolve_entities(intent, _ctx(room_name="Детская"))
     assert resolved["device_resolved"]["device_id"] == "children_room_tv"
+
+
+# --- D-15 rule 1: the room named in the utterance is KING (BUG-38) ---------------------------------
+#
+# Regression cover for a live wrong-room actuation: on the WB7, «включи торшер в спальне» switched on
+# the LIVING-ROOM floor lamp — the only «торшер» in the house — because the room filter ran only when
+# candidates tied (`if len(candidates) > 1`). A uniquely-named device skipped the room check entirely.
+
+
+async def test_spoken_room_refuses_when_it_has_no_such_device():
+    """«включи телевизор в спальне» — the bedroom has no TV. Refuse; never retarget elsewhere."""
+    resolver = DeviceEntityResolver(catalog_port=_service())
+    result = await resolver.resolve("телевизор", _ctx(), spoken_room="спальне")
+    assert result.resolution_type == "no_device_in_room"
+    assert result.resolved_value is None
+    assert result.metadata["room_id"] == "bedroom"
+    # the device it would have actuated before the fix is reported, for the log/trace
+    assert result.metadata["candidates"] == ["children_room_tv"]
+
+
+async def test_spoken_room_scopes_a_unique_match():
+    """Same unique device, named with its own room → resolves normally."""
+    resolver = DeviceEntityResolver(catalog_port=_service())
+    result = await resolver.resolve("телевизор", _ctx(), spoken_room="детской")
+    assert result.resolved_value["device_id"] == "children_room_tv"
+
+
+async def test_spoken_room_beats_the_clients_own_room():
+    """King: «эппл в гостиной» said from the children's room targets the LIVING-ROOM Apple TV."""
+    resolver = DeviceEntityResolver(catalog_port=_service())
+    result = await resolver.resolve("эппл", _ctx(room_name="Детская"), spoken_room="гостиной")
+    assert result.resolved_value["device_id"] == "appletv_living"
+
+
+async def test_spoken_room_resolves_what_would_otherwise_be_ambiguous():
+    resolver = DeviceEntityResolver(catalog_port=_service())
+    ambiguous = await resolver.resolve("эппл", _ctx())
+    assert ambiguous.resolution_type == "ambiguous"
+    scoped = await resolver.resolve("эппл", _ctx(), spoken_room="гостиной")
+    assert scoped.resolution_type != "ambiguous"
+    assert scoped.resolved_value["device_id"] == "appletv_living"
+
+
+async def test_global_devices_survive_the_room_filter():
+    """`all_lights` lives in no room; «весь свет в спальне» must not filter it away."""
+    resolver = DeviceEntityResolver(catalog_port=_service())
+    result = await resolver.resolve("весь свет", _ctx(), spoken_room="спальне")
+    assert result.resolved_value["device_id"] == "all_lights"
+
+
+async def test_unknown_room_word_falls_through():
+    """D-15: `r ∉ R` → it was not a room word; resolve as if none was mentioned."""
+    resolver = DeviceEntityResolver(catalog_port=_service())
+    result = await resolver.resolve("телевизор", _ctx(), spoken_room="подвале")
+    assert result.resolved_value["device_id"] == "children_room_tv"
+
+
+async def test_within_room_ambiguity_survives_room_scoping():
+    """Both sconces are «ночники» in ONE room — the room cannot split them (BUG-39 owns the prompt)."""
+    resolver = DeviceEntityResolver(catalog_port=_service())
+    result = await resolver.resolve("ночники", _ctx(), spoken_room="спальне")
+    assert result.resolution_type == "ambiguous"
+    assert set(result.metadata["candidates"]) == {"bedroom_sconce_left", "bedroom_sconce_right"}
+
+
+async def test_client_room_remains_a_tiebreak_hint_when_no_room_is_spoken():
+    """Rule 3 unchanged: with no room named, the client's room may narrow — never contradict."""
+    resolver = DeviceEntityResolver(catalog_port=_service())
+    result = await resolver.resolve("эппл", _ctx(room_name="Гостиная"))
+    assert result.resolved_value["device_id"] == "appletv_living"

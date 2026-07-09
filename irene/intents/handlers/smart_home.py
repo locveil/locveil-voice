@@ -264,6 +264,41 @@ class SmartHomeIntentHandler(IntentHandler):
 
     # --- target selection ------------------------------------------------------------------------
 
+    def _room_scope_refusal(self, intent: Intent, context: UnifiedConversationContext,
+                            catalog: DeviceCatalog, language: str) -> Optional[IntentResult]:
+        """The two ways a named room forbids the command outright — speak, actuate nothing (BUG-38).
+
+        D-15 rule 2b: the room is real but this client does not cover it. And the room-is-king
+        consequence: the named room holds no device by that name, so we refuse rather than quietly
+        actuating one somewhere else (the resolver marks this `no_device_in_room`).
+        """
+        if intent.entities.get("room_resolution_type") == "uncovered_room":
+            resolved = intent.entities.get("room_resolved") or {}
+            return IntentResult(
+                text=self._get_template("err_uncovered_room", language,
+                                        room=resolved.get("name", "")),
+                should_speak=True, success=False,
+                error="room not covered by this device")
+
+        if intent.entities.get("target_resolution_type") == "no_device_in_room":
+            meta = (intent.entities.get("_resolution_metadata") or {}).get("target") or {}
+            room_id = meta.get("room_id")
+            ref = self.get_param(intent, "target", None) or intent.raw_text
+            if not isinstance(room_id, str) or not room_id:
+                # the resolver always stamps room_id with this type; if it somehow didn't, say the
+                # honest generic thing rather than naming a room we don't have
+                return IntentResult(
+                    text=self._get_template("err_device_not_found", language, ref=str(ref)),
+                    should_speak=True, success=False,
+                    error=f"no device matching '{ref}' in the named room")
+            return IntentResult(
+                text=self._get_template("err_no_device_in_room", language,
+                                        room=self._room_spoken_name(catalog, room_id, language),
+                                        ref=str(ref)),
+                should_speak=True, success=False,
+                error=f"no device matching '{ref}' in room '{room_id}'")
+        return None
+
     def _resolved_target(self, intent: Intent) -> Tuple[Optional[Dict[str, Any]],
                                                         Optional[List[Dict[str, Any]]], bool]:
         """(device, ambiguous_candidates, resolution_failed) from the PR-3 resolver output."""
@@ -305,6 +340,13 @@ class SmartHomeIntentHandler(IntentHandler):
             return await self._room_group(intent, context, catalog, group=group,
                                           action=group_action or device_action,
                                           ok_key=ok_key_room)
+
+        # D-15 on the named-device path (BUG-38). Rule 2b: a real room this client does not cover →
+        # speak the refusal, actuate nothing. The resolver already flags it on the `room` entity; only
+        # the group branch ever consumed it, so a satellite naming an uncovered room used to actuate.
+        room_refusal = self._room_scope_refusal(intent, context, catalog, language)
+        if room_refusal is not None:
+            return room_refusal
 
         device, ambiguous, failed = self._resolved_target(intent)
         if ambiguous:
