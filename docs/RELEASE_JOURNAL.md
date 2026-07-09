@@ -17,6 +17,32 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-09 — «включи свет в кабинете» → the light came on. Text in, photons out.** BUILD-27 landed and the
+  assistant actuated real hardware for the first time: `smart_home.power_on` recognized by
+  `hybrid_keyword_matcher` (0.76), «кабинет» resolved against the freshly-pulled catalog to `cabinet_spots`, a
+  canonical `DeviceCommand` crossed the ARCH-8 boundary to the bridge, the relay closed, and the lamp in the
+  owner's office lit up. Confirmed against ground truth, not just the API's word: the retained MQTT topic
+  `/devices/wb-mr6c_51/controls/K4` reads `1`, and the owner looked.
+  Getting there needed the networking fix. `[outputs.bridge] enabled = false` in every embedded profile, so the
+  catalog was never fetched — and flipping the flag alone would have failed, because under our `ports:` mapping
+  `base_url = "http://localhost:8000"` pointed at the *container*, not the controller (verified from inside:
+  `127.0.0.1:8000` refused, gateway `172.17.0.1:8000` → 200). The bridge's compose already used
+  `network_mode: host` — it must, to reach mosquitto on `localhost:1883` — so ours was the odd one out. Voice
+  now shares the host network, the shipped config line became true as written, and the catalog loaded:
+  `version (none) -> 8159b4b0068d1c63, 79 devices / 11 rooms` — **the same catalog_version pinned in
+  eval-commons**, so voice, bridge and the test contract demonstrably agree on the device model.
+  **The command also found a bridge bug.** `GET /devices/cabinet_spots/state` returns `"power": "off"` while
+  `"mirrored": {"power": "1"}` and the relay is physically on — stable across reads, not a lag. The bridge sees
+  the raw feedback but never maps `state_topics.power` into the believed capability value. Consequence: DRV-5's
+  idempotence guard compares desired against *believed*, so «выключи свет» on a lit lamp would compare `off` vs
+  believed `off`, transmit nothing, return `skipped_reason: "idempotence"`, and leave the light on while every
+  client reports success. Filed as bridge **DRV-23** (uncommitted, `cross-repo-source-of-truth`). It is the
+  belief-may-be-wrong scenario DRV-5 documents — reproduced on a **two-way** device, where the belief should
+  never have been wrong. It also hands **ARCH-39** its first real motivating case.
+  Startup ordering, raised by the owner, is filed as **BUILD-28** `[deferred]`: three containers, two compose
+  projects, no `depends_on` — voice races the bridge for the catalog and leans on the ARCH-26 lazy refresh when
+  it loses. The permanent answer spans both repos and belongs on the commons PROD board, not here.
+
 - **2026-07-09 — REL-4: the version stops lying. `15.0.0` → `0.5.0`.** The owner's objection was exact: `15.0.0`
   claims a fifteenth major release, and there was never a first. The only tags this repo ever carried are `8.1`
   (inherited 2023 upstream history) and `v12-final`. His scheme — major `0` because the API is not frozen, minor

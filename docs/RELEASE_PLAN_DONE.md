@@ -3681,6 +3681,26 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       and Docker reports **healthy**. Also fixed the file's two stale comments: the `:6000` API fallback (8080
       since BUG-29) and "the ops/ compose ships it disabled" (the service was removed outright).
 
+- [x] **BUILD-27** [OPS][MQTT] `[release]` — **DONE 2026-07-09.** The voice container joins the host network and
+      bridge actuation is on. `[outputs.bridge] enabled = false` in every embedded profile meant the device
+      catalog was never fetched (zero bridge lines in the WB7 log), and flipping it alone would have failed:
+      under our `ports:` mapping `base_url = "http://localhost:8000"` resolved to the *container* —
+      `127.0.0.1:8000` → connection refused from inside it, gateway `172.17.0.1:8000` → HTTP 200. The bridge's
+      own compose already used `network_mode: host` (it must, to reach WB's mosquitto on `localhost:1883`); ours
+      was the odd one out. Voice now shares the host network too, so the shipped `localhost:8000` is true as
+      written, the `ports:` mapping is dropped (the runner binds `0.0.0.0:8080`, so Plane B's
+      `esp32_irene_upstream: 127.0.0.1:8080` is unaffected), and the two products stop networking differently.
+      Enabled in the four embedded profiles; standalone stays off. **Verified on the WB7 after redeploy:**
+      `NetworkMode: host`, `✅ Bridge output registered + designated for DEVICE_COMMAND`,
+      `device catalog refreshed: version (none) -> 8159b4b0068d1c63, 79 devices / 11 rooms` — the same
+      `catalog_version` pinned in `eval-commons/contracts/PIN.json`, so voice, bridge and the test contract agree
+      on the device model. Then the **first real end-to-end command on hardware**: «включи свет в кабинете» →
+      `smart_home.power_on` (hybrid_keyword_matcher, 0.76) → catalog resolves «кабинет» to `cabinet_spots` →
+      canonical `DeviceCommand` → bridge → relay → **the light physically turned on** (retained
+      `/devices/wb-mr6c_51/controls/K4` = `1`). Text in, photons out. Follow-ups filed: **BUILD-28** `[deferred]`
+      (one compose, real startup order — bound for the commons PROD board) and bridge **DRV-23** (its believed
+      `power` never tracks the state topic, so the opposite command idempotence-skips).
+
 ### Models & Assets (ASSET)
 - [x] **ASSET-1** — Refresh stale model IDs (Anthropic→Claude 4.x, Whisper large-v3, ElevenLabs multilingual_v2, spaCy 3.8, gpt-4→gpt-4o-mini). → fc85306
 - [x] **ASSET-2** (P1) — **Liveness-checked ALL model download URLs. DONE 2026-06-03.** Swept every model URL in
