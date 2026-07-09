@@ -228,6 +228,12 @@ channel logic, ever).
   `CLI flags > runner preset > config file > defaults`. `--port`, `-c`, `--enable-tts`, `--input`,
   `--output` resolve to *adapter toggles + settings in the unified config*, never to branching code. (Strictly
   more flexible: `irene-cli --also-enable web` becomes meaningful.)
+  - **The preset layer's scope is the input-set and output-set — never `[components]`.** A runner may say
+    "this deployment reads from the web and not a microphone"; it may not decide that ASR is on. Component
+    enablement is the operator's, expressed in the config file; a runner that structurally requires a
+    component *validates* and refuses to start, naming the key. (Both runners once overwrote eight of the
+    eleven `[components]` flags after the file was read, which silently ignored the operator and made their
+    own validation unreachable.)
 - **Properties bought:** (1) the double-reader bug is **structurally impossible** — console input is one
   adapter consumed by the daemon, the runner never reads stdin; (2) **identical behaviour** across entry
   points (same adapters → bus → workflow → OutputManager path); (3) many-to-many is just "enable more

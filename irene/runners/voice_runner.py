@@ -139,30 +139,34 @@ whatever [asr] default_provider selects — there is no hardcoded model.
         config.system.web_api_enabled = True
         self._resolve_web_port(config, args)
 
-        # Ensure the voice stack components are on (the ASR *provider* stays config-driven).
-        config.components.asr = True            # speech recognition (engine = [asr] default_provider)
-        config.components.audio = True          # for spoken (TTS) responses
-        config.components.intent_system = True  # for acting on recognized speech
-        config.components.text_processor = True # text-processing pipeline
-        config.components.nlu = True            # natural-language understanding
-
-        # VAD is structurally required by the streaming mic pipeline (the workflow raises if it's
-        # off), so force it on here for consistency with the components above — otherwise a VAD-off
-        # config fails deep in workflow init instead of here. (voice_trigger is left to config: the
+        # `[components]` and `[vad]` belong to the config file (BUG-35). The mic pipeline
+        # structurally needs several of them, so `_validate_runner_specific_config` refuses to start
+        # when they are off — a loud error naming the key, instead of silently flipping the
+        # operator's config and making `[components]` a lie. (voice_trigger stays config-driven: the
         # runner auto-skips the wake word when it's absent — see _start_voice_audio_workflow.)
-        config.vad.enabled = True
-
         return config
 
     async def _validate_runner_specific_config(self, config: CoreConfig, args: argparse.Namespace) -> List[str]:
         """Validate the config is coherent for a microphone voice pipeline — provider-agnostic."""
         errors = []
 
-        # ASR must be on, with a configured + enabled provider (whichever one).
+        # The components the mic pipeline structurally needs. These checks are real now: they used to
+        # run *after* _modify_config_for_runner had forced every one of them on (BUG-35).
         if not config.components.asr:
             errors.append("ASR component must be enabled (components.asr = true)")
         if not config.asr.enabled:
             errors.append("ASR component must be enabled (asr.enabled = true)")
+        if not config.components.intent_system:
+            errors.append("Intent system component must be enabled (components.intent_system = true)")
+        if not config.components.nlu:
+            errors.append("NLU component must be enabled (components.nlu = true)")
+        if not config.components.text_processor:
+            errors.append("Text processor component must be enabled (components.text_processor = true)")
+        if not config.components.audio:
+            errors.append("Audio component must be enabled (components.audio = true) — this runner speaks locally")
+        # The streaming mic workflow raises deep in init without VAD; fail here, naming the key.
+        if not config.vad.enabled:
+            errors.append("VAD must be enabled (vad.enabled = true) for the microphone pipeline")
 
         provider = config.asr.default_provider
         if not provider:

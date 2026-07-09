@@ -1,9 +1,10 @@
 """
-Voice runner — config-driven, provider-agnostic behaviour (QUAL-46).
+Voice runner — config-driven, provider-agnostic behaviour (QUAL-46, BUG-35).
 
-Exercises the two pure config methods: `_modify_config_for_runner` (forces mic-only + the voice
-stack incl. VAD, never a specific ASR provider) and `_validate_runner_specific_config` (accepts ANY
-configured+enabled ASR provider, not just vosk).
+Exercises the two pure config methods: `_modify_config_for_runner` (forces the mic-only INPUT
+topology and nothing else — `[components]`/`[vad]` belong to the config file) and
+`_validate_runner_specific_config` (accepts ANY configured+enabled ASR provider, not just vosk, and
+refuses to start when a structurally required component is off).
 """
 
 import asyncio
@@ -18,22 +19,23 @@ def _runner():
 
 
 def _config(*, asr_provider="whisper", providers=None, asr_enabled=True, components_asr=True,
-            mic=True, mic_cfg=True, sys_mic=True):
+            mic=True, mic_cfg=True, sys_mic=True, audio=True, intent_system=True,
+            text_processor=True, nlu=True, vad=True):
     if providers is None:
         providers = {asr_provider: {"enabled": True}}
     return SimpleNamespace(
         inputs=SimpleNamespace(microphone=mic, web=True, cli=True, default_input="cli",
                                microphone_config=SimpleNamespace(enabled=mic_cfg)),
         system=SimpleNamespace(microphone_enabled=sys_mic),
-        components=SimpleNamespace(asr=components_asr, audio=False, intent_system=False,
-                                   text_processor=False, nlu=False),
+        components=SimpleNamespace(asr=components_asr, audio=audio, intent_system=intent_system,
+                                   text_processor=text_processor, nlu=nlu),
         asr=SimpleNamespace(enabled=asr_enabled, default_provider=asr_provider, providers=providers),
-        vad=SimpleNamespace(enabled=False),
+        vad=SimpleNamespace(enabled=vad),
     )
 
 
 class TestModifyConfig(unittest.TestCase):
-    def test_forces_mic_primary_plus_web_and_voice_stack_incl_vad(self):
+    def test_forces_mic_primary_plus_web(self):
         cfg = _config()
         out = asyncio.run(_runner()._modify_config_for_runner(cfg, SimpleNamespace()))
         self.assertTrue(out.inputs.microphone)
@@ -42,9 +44,15 @@ class TestModifyConfig(unittest.TestCase):
         self.assertFalse(out.inputs.cli)
         self.assertEqual(out.inputs.default_input, "microphone")
         self.assertTrue(out.system.microphone_enabled)
+
+    def test_never_rewrites_components_or_vad(self):
+        """BUG-35: the preset owns the input-set, not `[components]`. Operator intent survives."""
+        cfg = _config(audio=False, intent_system=False, text_processor=False, nlu=False,
+                      components_asr=False, vad=False)
+        out = asyncio.run(_runner()._modify_config_for_runner(cfg, SimpleNamespace()))
         for comp in ("asr", "audio", "intent_system", "text_processor", "nlu"):
-            self.assertTrue(getattr(out.components, comp), comp)
-        self.assertTrue(out.vad.enabled)  # the consistency fix — no deep-init failure
+            self.assertFalse(getattr(out.components, comp), f"{comp} must not be forced on")
+        self.assertFalse(out.vad.enabled, "vad.enabled must not be forced on")
 
     def test_does_not_pin_an_asr_provider(self):
         cfg = _config(asr_provider="sherpa_onnx")
@@ -78,6 +86,16 @@ class TestValidate(unittest.TestCase):
     def test_mic_off_errors(self):
         errs = self._errors(_config(mic=False))
         self.assertTrue(any("Microphone input must be enabled" in e for e in errs))
+
+    def test_required_components_off_error_instead_of_being_forced_on(self):
+        """BUG-35: what the runner used to switch on silently now fails loudly, naming the key."""
+        for kw, needle in (({"audio": False}, "components.audio = true"),
+                           ({"intent_system": False}, "components.intent_system = true"),
+                           ({"nlu": False}, "components.nlu = true"),
+                           ({"text_processor": False}, "components.text_processor = true"),
+                           ({"vad": False}, "vad.enabled = true")):
+            errs = self._errors(_config(**kw))
+            self.assertTrue(any(needle in e for e in errs), f"{kw} should error mentioning {needle}")
 
     def test_no_vosk_specific_error_anymore(self):
         # The old runner errored unless default_provider == "vosk". Prove that's gone.

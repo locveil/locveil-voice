@@ -2886,6 +2886,32 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       numpy absent, all still work with it present; `pyright` 0 errors (annotations moved to an `NDArray = Any`
       alias, since the `no-type-checking` invariant rules out a `TYPE_CHECKING` import); import-linter 11/11;
       27 VAD/resampling tests pass.
+- [x] **BUG-35** [ARCH][CONFIG] `[release]` — **DONE 2026-07-09.** The runners overwrote the config file's
+      `[components]` block. `webapi_runner._modify_config_for_runner` assigned eight of the eleven flags
+      unconditionally (`audio = args.enable_tts`, `asr = True`, `nlu`, `intent_system`, `monitoring`,
+      `text_processor`, `tts`, `voice_trigger = False`) right after the TOML loaded (`base.py:282`), and
+      `--enable-tts` was declared `action="store_true", default=True` — a flag that **can never be False**, so
+      TTS and audio were hardcoded on by something that looked configurable. `voice_runner` forced five
+      components plus `vad.enabled` the same way. Consequences: `embedded-armv7`'s `audio = false` ("no local
+      speaker") ran the audio component anyway; a text-only web deployment could not disable ASR (paying the
+      ~38 s sherpa graph init and the model download); server-side `voice_trigger` was unreachable;
+      `[components]` was a lie in `config-master.toml` and config-ui, against `config-master-canonical` and
+      repo-owns-config (BUILD-17). Worse, **each runner's own validator was dead code** — it runs at
+      `base.py:311`, after the override had already set every value it inspects, so `intent_system`/`asr`/
+      `web_api_enabled` errors could never fire.
+      Fixed: the preset now forces only the **input topology** (its identity per `io_architecture.md`, whose
+      precedence bullet is clarified — presets own the input/output set, never `[components]`), `--enable-tts`
+      became a real tri-state (`--enable-tts` / `--no-tts`, default = honour the file), and structural
+      requirements became **live validation** that refuses to start naming the exact key (webapi: intent_system,
+      nlu; voice: asr, audio, intent_system, nlu, text_processor, vad.enabled), plus warnings for legal-but-
+      surprising choices (asr off; voice_trigger on without a local mic). `satellite_runner` deliberately
+      untouched: it forces components *off*, which is deny-by-default for a thin device. Verified against the
+      real profiles: `embedded-armv7` under webapi now reports `runner-changed components: NONE — config
+      honoured` with `audio=False`, `--no-tts` overrides the file, `standalone-x86_64` under voice validates
+      clean; disabling a required component now errors instead of being silently switched on. Safe to drop the
+      audio component on the web path — `voice_assistant.py:169` treats it as optional and the dependency
+      resolver skips deps that aren't enabled. `test_voice_runner.py` rewritten to the new contract (10 pass),
+      pyright 0, import-linter 11/11.
 
 ### Tests (TEST)
 - [x] **TEST-0** (P0) — Minimal end-to-end smoke/integration harness (refactor safety net, Gate 0). **DONE

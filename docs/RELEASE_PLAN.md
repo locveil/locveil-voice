@@ -325,18 +325,6 @@ _Apply to every remediation task below (from the 4 review docs + QUAL-25/26). So
 ### Bugs (BUG)
 _Discrete functional defects (distinct from QUAL refactors/quality work). Surfaced from any source; filed before fixing._
 
-- [ ] **BUG-35** [ARCH][CONFIG] `[release]` — **`webapi_runner` overwrites the config file's `[components]`
-      block.** `_modify_config_for_runner` (`webapi_runner.py:84`) assigns `config.components.audio =
-      args.enable_tts`, `…asr = True`, `…nlu = True`, `…intent_system = True`, `…monitoring = True`,
-      `…text_processor = True`, `…voice_trigger = False` — unconditionally, after the TOML is loaded. So
-      `embedded-armv7.toml`'s `audio = false` ("no local speaker — TTS reply rides the output seam") is ignored
-      and the audio component initializes anyway (observed on the WB7: `Component initialization order:
-      ['audio', 'llm', 'tts']`). Forcing the *input* topology (web-only, mic off) is legitimate for this runner;
-      silently overriding the operator's component enablement is not — it defeats `config-master-canonical` and
-      the repo-owns-config delivery (BUILD-17), and makes `[components]` a lie in `config-master.toml` and in
-      config-ui. Fix: keep the input forcing, drop the component overrides (or make them a documented,
-      log-emitting floor for components this runner genuinely requires). Harmless today only by luck — the
-      forced values happen to match the profile except `audio`.
 - [ ] **BUG-36** [ARCH][OPS] `[release]` — **Nine components failed to load and the runner reported success.**
       On the WB7 boot the log reads `V15 Components initialized. Profile: custom(6 components), Success: 3,
       Failed: 0` — after nine `not available (import failed)` warnings — then
@@ -374,6 +362,12 @@ _Trace-driven system testing (design `docs/design/trace_system_testing.md`, TEST
       to german" → `greeting.hello` (0.86, keyword beats verb); bare "pause" → `audio.stop` (1.00 — note the
       RU twin «поставь на паузу» routes `smart_home.playback_pause`; decide the intended EN owner before
       fixing). Consumer half unaffected: `expect` stays canonical, the bridge replays language-blind.
+- [ ] **TEST-20** [TEST] `[deferred]` — **`test_arch36_satellite.py::test_recorder_declined_and_next_utterance_finalizes`
+      is flaky (~3/8).** Fails intermittently in isolation on a clean tree (measured 2026-07-09, 3 failures in 8
+      consecutive runs; confirmed **not** caused by the BUG-35 change — reproduced with that diff stashed). A
+      timing/ordering dependency in the recorder-declined path, not a product bug as far as anyone has shown.
+      Fix the test's synchronization (or the race it is accidentally documenting — decide which at task start).
+      Until then it can red a clean CI run at random, which is corrosive: it teaches everyone to ignore failures.
 
 ### Build & CI (BUILD)
 _Real English deployment across all three Docker arches (armv7/aarch64/x86_64) + English eval. Design

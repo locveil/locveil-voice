@@ -17,6 +17,29 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-09 — BUG-35 fixed: the runners stop overwriting `[components]`; TEST-20 filed.** `webapi_runner`
+  rewrote eight of the eleven `[components]` flags immediately after the TOML loaded, and `--enable-tts` was
+  `action="store_true", default=True` — a flag that can never be False, so TTS and the audio component were
+  hardcoded on by something that looked configurable. That is why `embedded-armv7`'s `audio = false` ("no local
+  speaker") ran the audio component anyway. Only `audio` *visibly* diverged by luck: the embedded profiles happen
+  to set every other overridden flag to exactly what the runner forced. The rest of the damage was invisible —
+  no text-only deployment (ASR forced on, paying sherpa's ~38 s graph init), no server-side wake word, no way to
+  drop monitoring, and `[components]` a lie in config-master.toml and config-ui.
+  The sharpest detail: **each runner's own validator was unreachable.** It runs at `base.py:311`, *after* the
+  override at `:282` has set every value it checks — so `intent_system must be enabled` could never fire. The
+  code that would have caught a bad config was disabled by the code that made configs meaningless.
+  `io_architecture.md` sanctions `CLI flags > runner preset > config file`, but scopes the preset to an
+  input-set + output-set; component enablement was never in its remit. So: presets force only input topology,
+  `--enable-tts`/`--no-tts` is a real tri-state that defers to the file when unset, and structural requirements
+  became live validation that refuses to start naming the key. `voice_runner` got the same treatment;
+  `satellite_runner` was left alone (it forces components *off* — deny-by-default for a thin device).
+  Verified against the real profiles rather than fixtures: `embedded-armv7` under webapi now reports
+  `runner-changed components: NONE — config honoured`, `audio=False`; `--no-tts` overrides; `standalone-x86_64`
+  validates clean; each disabled requirement now errors. `test_voice_runner.py` asserted the old forcing and was
+  rewritten to the new contract. While running the suite a failure appeared, was **checked against a stashed
+  tree rather than blamed on the diff**, and turned out to be a pre-existing flake (3/8 on clean HEAD) —
+  filed as **TEST-20** `[deferred]`.
+
 - **2026-07-09 — BUG-33 + BUG-34 fixed: numpy is no longer a base dependency.** The owner chose Option B over
   shipping `libopenblas0`: rather than adding a 10 MiB system library so a broken PiWheels numpy can import on a
   board that never calls it, numpy stops being a base dependency and moves into the extras of the providers that

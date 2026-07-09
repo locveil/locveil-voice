@@ -54,8 +54,14 @@ class WebAPIRunner(WebServerMixin, BaseRunner):
     def _add_runner_arguments(self, parser: argparse.ArgumentParser) -> None:
         """Add the shared web-server args + the TTS toggle this runner honours."""
         self._add_web_server_arguments(parser)
-        parser.add_argument("--enable-tts", action="store_true", default=True,
-                            help="Enable TTS output (default: True)")
+        # Tri-state (BUG-35): unspecified = honour `[components].tts` from the config file. The old
+        # `store_true, default=True` could never be False, so TTS was hardcoded on by a flag that
+        # looked configurable. Precedence per io_architecture.md: CLI flags > config file.
+        tts = parser.add_mutually_exclusive_group()
+        tts.add_argument("--enable-tts", dest="enable_tts", action="store_true", default=None,
+                         help="Force the TTS component on, overriding [components].tts")
+        tts.add_argument("--no-tts", dest="enable_tts", action="store_false",
+                         help="Force the TTS component off, overriding [components].tts")
 
     def _get_usage_examples(self) -> str:
         return """
@@ -82,7 +88,15 @@ Port priority: command line > config file > 6000
             return False
 
     async def _modify_config_for_runner(self, config: CoreConfig, args: argparse.Namespace) -> CoreConfig:
-        """Force web-only input + resolve the port."""
+        """Force the web-only INPUT topology; leave `[components]` to the config file.
+
+        The preset's identity is an input-set + output-set (`docs/design/io_architecture.md`), and
+        that is all it may override. It used to rewrite eight of the eleven `[components]` flags
+        unconditionally — so a profile's `audio = false` ("no local speaker") silently ran the audio
+        component, a text-only deployment could not turn ASR off, and `[components]` was a lie in
+        both config-master.toml and config-ui (BUG-35). Requirements are now *validated* below
+        rather than switched on behind the operator's back.
+        """
         config.system.web_api_enabled = True
         self._resolve_web_port(config, args)
 
@@ -93,18 +107,19 @@ Port priority: command line > config file > 6000
         config.inputs.default_input = "web"
         config.system.microphone_enabled = False
 
-        config.components.tts = args.enable_tts
-        config.components.audio = args.enable_tts
-        config.components.intent_system = True
-        config.components.asr = True
-        config.components.voice_trigger = False
-        config.components.text_processor = True
-        config.components.nlu = True
-        config.components.monitoring = True
+        # CLI flags > config file: apply only when the operator actually passed --enable-tts/--no-tts.
+        if args.enable_tts is not None:
+            config.components.tts = args.enable_tts
+
         config.debug = args.debug
         return config
 
     async def _validate_runner_specific_config(self, config: CoreConfig, args: argparse.Namespace) -> List[str]:
+        """Refuse to start on an incoherent config, and say what the operator turned off.
+
+        Real checks now: this used to run *after* `_modify_config_for_runner` had forced every value
+        it inspects, so none of these errors could ever fire (BUG-35).
+        """
         errors = []
         if not config.system.web_api_enabled:
             errors.append("Web API service must be enabled (system.web_api_enabled = true)")
@@ -112,6 +127,16 @@ Port priority: command line > config file > 6000
             errors.append("Web input source must be enabled (inputs.web = true)")
         if not config.components.intent_system:
             errors.append("Intent system component must be enabled (components.intent_system = true)")
+        if not config.components.nlu:
+            errors.append("NLU component must be enabled (components.nlu = true) — the intent system needs it")
+
+        # Legal, but the operator should know what they gave up.
+        if not config.components.asr:
+            self._logger.warning("components.asr = false — the /asr endpoints and /ws/audio speech "
+                                 "recognition are unavailable; text commands still work")
+        if config.components.voice_trigger:
+            self._logger.warning("components.voice_trigger = true, but this runner has no local "
+                                 "microphone — wake-word detection belongs on the device")
         return errors
 
     def _get_configuration_example(self) -> Optional[str]:
