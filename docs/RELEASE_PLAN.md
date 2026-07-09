@@ -242,6 +242,18 @@ See `docs/review/phase1_architecture_map.md` §5.
       auto-renew over mTLS; the operator verb naming needs to distinguish *drop a pending CSR* from *revoke an
       issued cert*. Surfaced 2026-07-09 by the ARCH-25 provisioning round-trip (`probe_node`). Deliverable:
       design doc + implementation follow-up(s). Refs: `docs/design/esp32_satellite.md` D-17, `nginx/README.md`.
+- [ ] **ARCH-45** [INFER][OPS] `[deferred]` — **DESIGN: split readiness from liveness on `/health`.** `/health`
+      returns a static `{"status": "healthy", version, timestamp}` (`webapi_router.py` ~L343) — it reports the
+      process is alive and nothing more. Observed on the WB7 first boot (2026-07-09): uvicorn binds ~8 s in,
+      right after `core.start()`, while TTS runs `lazy loading: True` and the piper voice downloads for another
+      ~90 s afterwards. So the container is `healthy`, and answering 200, while it **cannot yet speak**. Docker,
+      systemd and any future orchestrator all read that as ready. Design a readiness signal: what "ready" means
+      per component (ASR model resident? TTS voice loaded? bridge reachable?), whether it is a second endpoint
+      (`/ready`, 503 until satisfied) or a status field on `/health`, and which consumers must learn it
+      (`config-ui`'s status view, the Dockerfiles' `HEALTHCHECK`, `ops/INSTALL.md`'s first-boot guidance). Note
+      the healthcheck's start-period (300s ARM / 180s x86) was sized for a download that turns out **not** to be
+      on the critical path — revisit it once readiness is real. Deliverable: design doc + implementation
+      follow-up(s).
 ### Code Quality & Review (QUAL)
 
 #### Cross-cutting systemic remediation — principles (the Gate 2 lens)
@@ -301,6 +313,14 @@ _Apply to every remediation task below (from the 4 review docs + QUAL-25/26). So
       phrases («поярче», «потемнее», «потеплее», «похолоднее», «притуши») — dedicated methods or a `delta` param.
       **Fixtures F100–F102 are already authored RED** in eval-commons `crossover_fixtures.json` (mock static state
       carries `level: 60`; deltas recorded in the fixture notes) — flipping them green completes this.
+- [ ] **QUAL-78** [OPS] `[deferred]` — **The container healthcheck spams the log with one access line per probe.**
+      Since the honest `HEALTHCHECK` landed (ARCH-25, 2026-07-09) uvicorn access-logs every probe:
+      `INFO: 127.0.0.1:… - "GET /health HTTP/1.1" 200 OK` every 30 s, forever — ~2.9k lines/day in
+      `logs/irene.log`, drowning real events and burning the rotation budget BUG-30 just installed. Filter it:
+      a `logging.Filter` on `uvicorn.access` dropping 2xx `/health` (and `/ready`, per ARCH-45), installed where
+      `web_server.py` builds the uvicorn config (`_build_uvicorn_server`, which already special-cases uvicorn's
+      logging so its loggers propagate to the root handlers). Keep non-2xx — a failing probe is exactly the
+      event worth seeing. Surfaced on the WB7 bring-up.
 
 ### Bugs (BUG)
 _Discrete functional defects (distinct from QUAL refactors/quality work). Surfaced from any source; filed before fixing._

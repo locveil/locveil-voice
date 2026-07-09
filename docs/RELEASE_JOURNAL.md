@@ -17,6 +17,25 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-09 — Irene is running on the WB7; ARCH-45 + QUAL-78 filed from the first boot.** The container came
+  up `healthy` on `v20260709-7224ff7`, secrets present, models downloading. The owner asked why the bridge logs
+  a uvicorn banner immediately and Irene does not: the runners initialize in opposite order. Irene does
+  `core.start()` **first** (`base.py:117`), then builds the FastAPI app (`_post_core_setup`, :127) and only then
+  runs `uvicorn.serve()` (`_execute_runner_logic`, :130) — the banner appeared ~8 s in. `wb-api` does the
+  inverse, booting uvicorn and initializing devices inside FastAPI's lifespan. Neither is wrong; Irene's
+  endpoints operate *on* the core, so it has nothing to serve until the core exists.
+  The first boot's timeline corrected an assumption baked into today's healthcheck: **model downloads are not on
+  the startup path.** TTS reports `lazy loading: True` and the piper voice only begins downloading at
+  `09:15:39`, after uvicorn is already answering — which is why `/health` returned 200 throughout and the
+  container went healthy in ~2 min, not the 300 s the start-period allows. That grace is generous, not
+  necessary. It also exposed that **`healthy` does not mean ready**: `/health` is a static string, so the
+  container advertises health while it cannot yet speak → **ARCH-45** `[deferred]` (design a readiness signal;
+  revisit the start-period once it exists). And the probe now access-logs a line every 30 s forever →
+  **QUAL-78** `[deferred]` (filter 2xx `/health` off `uvicorn.access`, keep failures).
+  Confirmed for the reboot test: the `.env` written after the first `update.sh` was picked up on the container's
+  recreate (both variables present inside it), and the unit's `WorkingDirectory` is the runtime tree, so compose
+  reads that same `.env` at every boot.
+
 - **2026-07-09 — BUILD-25: config-ui runs non-root, and its healthcheck could never have passed.** The owner
   noticed the UI image was the last one still building as root — not controller-deployed, but published and run
   on workstations against the assistant's API. Dropped it to the base image's `nginx` user (uid 101); nothing
