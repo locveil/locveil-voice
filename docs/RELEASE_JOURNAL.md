@@ -17,6 +17,23 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-09 — Plane B is live on the WB7; BUG-31 filed + fixed on the way in.** Installed the ESP32
+  fleet-provisioning plane (ARCH-22 Plane B, `nginx/ansible`) on the controller. Pre-flight found `:443` and
+  `:8081` free, `nginx-extras` present with `--with-http_dav_module`, no CA — but also that the playbook's
+  opening `apt: name=[nginx, openssl] state=present` was a live grenade: the box has no `nginx` metapackage, so
+  apt would have resolved it and upgraded the very nginx serving the Wirenboard admin UI (simulated: nginx-extras
+  deb11u5→u8 + openssl + five module packages). Filed **BUG-31** before touching code, replaced the apt task with
+  a probe + `assert` (also asserting the WebDAV module the CSR `PUT` needs — `nginx-light` would have failed only
+  at runtime), and the `--check` dry run promptly caught that `command` is skipped under check mode, so the probe
+  needed `check_mode: false`. Deploy then ran clean (7 changed, 0 failed). Verified: packages still deb11u5,
+  admin UI `:80` → 200, `:8081` `ca.crt` → 200 (CN=HomeVoice ESP32 CA, 10y), `:8081/` → 404, `:443` without a
+  client cert → 400, CA key `600`. Server cert issued **CN=192.168.110.250** with
+  `IP:192.168.110.250, DNS:wirenboard-AF3TQCCE, DNS:assistant.lan` — there is no LAN DNS on this network (neither
+  `wb7` nor `assistant.lan` resolves, the box calls itself `wirenboard-AF3TQCCE`), which is exactly the DNS-less
+  bootstrap case ARCH-41's dedicated port exists for. Irene's `/ws/` is proxied from `127.0.0.1:8080` behind mTLS,
+  ready for the container that isn't deployed yet. The full CSR→approve→mTLS round-trip is **left for the owner**
+  to run: agent-driven cert signing on the production CA was (correctly) refused by the permission classifier.
+
 - **2026-07-08 — BUILD-20 DONE (filed + completed same day) — the joint productization design session:
   the product is called Domovoy.** Run from `~/development` with both repos' CLAUDE.md + memory loaded,
   acting as both projects' Claude — the session the release-endgame memory anticipated. Six topics +

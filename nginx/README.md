@@ -50,8 +50,8 @@ esp32-provision status                # counts: pending vs issued
 
 1. **Flash + Stage-1** the device (WiFi creds + this controller's address). On first STA boot it generates an
    EC keypair (private key **stays on the device**), builds a CSR, and `PUT`s it to
-   `http://<host>/esp32/provision/pending/<client_id>.csr`. It then polls
-   `http://<host>/esp32/provision/cert/<client_id>.crt` (404 until you approve).
+   `http://<host>:8081/esp32/provision/pending/<client_id>.csr`. It then polls
+   `http://<host>:8081/esp32/provision/cert/<client_id>.crt` (404 until you approve).
 2. **See it arrive** — on the controller:
    ```sh
    ssh root@<controller>
@@ -118,16 +118,31 @@ mismatch it fetches the new artifact from `:443` over mTLS (esp32_satellite.md D
 
 ## Deploy
 
+**Prerequisite (the playbook checks, it does not install):** the controller must already have `openssl` and an
+nginx built `--with-http_dav_module` — a stock Wirenboard has `nginx-extras`, which qualifies. The bootstrap zone
+accepts the device's CSR over a WebDAV `PUT`, so a build without that module would pass `nginx -t` and then
+reject every submission at runtime. The playbook deliberately never touches apt: the **same nginx serves the
+Wirenboard admin UI**, and letting a package manager resolve `nginx` there pulls a version-matched upgrade of
+`nginx-extras` and restarts the admin UI mid-deploy.
+
 ```sh
 cd nginx/ansible
 cp inventory.example.ini inventory.ini          # set the controller host/ip
 cp group_vars/all.example.yml group_vars/all.yml # set server_name etc.
+ansible-playbook -i inventory.ini deploy.yml --check --diff   # dry run first
 ansible-playbook -i inventory.ini deploy.yml
 ```
+
+Both files are gitignored — they hold your deployment's addresses, not the project's.
 
 The playbook is **idempotent**: it creates the layout, installs the scripts, runs the CA init **once**
 (guarded on `ca.key`), templates the nginx site, and reloads nginx after `nginx -t`. It never overwrites an
 existing CA.
+
+**The server cert is pinned to the names you set.** With no LAN DNS, devices reach the controller by IP, so the
+IP must appear in `esp32_server_sans` — and if the controller's address later changes, re-issue the cert
+(`rm /etc/esp32-ca/server.*` then re-run the playbook; the CA itself survives, so provisioned devices keep
+their certs).
 
 Pre-flight, on the controller: `ss -tlnp | grep -E ':443 |:8081 '` — both must be free (`:80` is the WB
 admin UI on the same nginx, which is exactly why the bootstrap zone doesn't use it; override

@@ -15,13 +15,33 @@
     nginx_user: www-data
 
   tasks:
-    - name: Ensure nginx + openssl are present
-      ansible.builtin.apt:
-        name:
-          - nginx
-          - openssl
-        state: present
-        update_cache: false
+    # Assert, never install (BUG-31). The controller's nginx serves the WB admin UI, and it is
+    # `nginx-extras` without the `nginx` metapackage — so `apt: state=present` on `nginx` resolves
+    # the metapackage and drags a version-matched upgrade of nginx-extras + openssl + the module
+    # packages, restarting the admin UI. Deploying this plane must never upgrade the host's nginx.
+    - name: Probe nginx and openssl on the controller
+      ansible.builtin.command: "{{ item }}"
+      loop:
+        - nginx -V
+        - openssl version
+      register: esp32_probe
+      changed_when: false
+      failed_when: false
+      check_mode: false        # read-only probe: must run even under --check, or the assert below sees nothing
+
+    - name: Assert nginx + openssl are present, with the WebDAV module the bootstrap zone needs
+      ansible.builtin.assert:
+        that:
+          - esp32_probe.results[0].rc == 0
+          - esp32_probe.results[1].rc == 0
+          - "'--with-http_dav_module' in esp32_probe.results[0].stderr"
+        fail_msg: >-
+          This plane needs nginx (built with --with-http_dav_module, e.g. nginx-extras) and openssl,
+          already installed on the controller. The :8081 bootstrap zone accepts the device CSR over
+          WebDAV PUT, so a build without http_dav_module passes `nginx -t` and then 405s at runtime.
+          Install them yourself (`apt install nginx-extras openssl`) — this playbook deliberately does
+          not manage packages, because the same nginx serves the Wirenboard admin UI (BUG-31).
+        success_msg: "nginx (with http_dav_module) + openssl present — packages left untouched."
 
     - name: Ensure nginx is started and enabled on boot
       ansible.builtin.service:

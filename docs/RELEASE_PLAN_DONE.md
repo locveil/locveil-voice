@@ -2829,6 +2829,19 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       family (`report_bundle.py::_todays_logs`). `test_logging_rotation.py` rewritten (7 tests); bundle
       tests 4/4; pyright 0/0. Docker's json-file caps only ever bounded stdout — the file channel was the
       uncapped one.
+- [x] **BUG-31** [OPS][HW] `[release]` — **DONE 2026-07-09.** Plane-B ansible managed nginx/openssl packages and
+      would have upgraded the controller's web server mid-deploy. Found while installing the plane on wb7 for
+      ARCH-25: the box has `nginx-common` + **`nginx-extras`** (serving the WB admin UI on :80) but no `nginx`
+      metapackage, so `apt: name=[nginx, openssl] state=present` resolved it and `apt-get -s` showed a
+      version-matched cascade — nginx-extras deb11u5→u8, openssl, and five `libnginx-mod-*` — plus an nginx
+      restart. Fixed by **asserting instead of installing**: a `check_mode: false` probe of `nginx -V` /
+      `openssl version`, then an `assert` that both exist *and* that the build carries
+      **`--with-http_dav_module`** — the `:8081` bootstrap zone takes the device CSR over a WebDAV `PUT`, so
+      `nginx-light` would pass `nginx -t` and then refuse every submission. (The `check_mode: false` is
+      load-bearing: `command` is skipped under `--check`, and the assert then fires on empty results — caught by
+      dry-running the fix.) Also gitignored the operator-local `inventory.ini` / `group_vars/all.yml`, and fixed
+      the README runbook's pre-ARCH-41 portless bootstrap URLs. Deployed to wb7: packages verifiably still at
+      deb11u5, admin UI on :80 → 200, `:8081` ca.crt → 200, `:443` without a client cert → 400.
 
 ### Tests (TEST)
 - [x] **TEST-0** (P0) — Minimal end-to-end smoke/integration harness (refactor safety net, Gate 0). **DONE
