@@ -17,6 +17,18 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-09 — BUG-32: the approval CLI installed under a name nothing documents.** The owner ran the
+  bootstrap round-trip on the box: the device CSR `PUT` to `:8081` returned **201** (WebDAV path proven), and
+  then `esp32-provision list` → `команда не найдена`. The play copied all three scripts verbatim, so the CLI was
+  `esp32-provision.sh`, while the README, D-17 and the script's own `usage()` say `esp32-provision`. Approving a
+  CSR is the only way this plane is ever used, so the documented runbook was unrunnable. The operator CLI now
+  installs without the extension (the two helpers keep `.sh` — both are called by absolute path), plus a
+  `state: absent` sweep of the old name. Re-ran: `changed=2`, CA untouched under its `creates:` guard,
+  `esp32-provision list` prints the pending CSR + pubkey fingerprint. **Same root cause as BUG-31, minutes
+  apart: the playbook had never been run end-to-end against a real controller** — ARCH-22 shipped it
+  hardware-gated, and hardware gating hides exactly this class of defect. Worth remembering when BUILD-13 (Pi
+  image) and the satellite repo's own ops land.
+
 - **2026-07-09 — Plane B is live on the WB7; BUG-31 filed + fixed on the way in.** Installed the ESP32
   fleet-provisioning plane (ARCH-22 Plane B, `nginx/ansible`) on the controller. Pre-flight found `:443` and
   `:8081` free, `nginx-extras` present with `--with-http_dav_module`, no CA — but also that the playbook's

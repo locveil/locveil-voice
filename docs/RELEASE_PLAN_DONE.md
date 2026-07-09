@@ -2842,6 +2842,18 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       dry-running the fix.) Also gitignored the operator-local `inventory.ini` / `group_vars/all.yml`, and fixed
       the README runbook's pre-ARCH-41 portless bootstrap URLs. Deployed to wb7: packages verifiably still at
       deb11u5, admin UI on :80 → 200, `:8081` ca.crt → 200, `:443` without a client cert → 400.
+- [x] **BUG-32** [OPS][HW] `[release]` — **DONE 2026-07-09.** The operator CLI installed under a name nothing
+      documents. `deploy.yml` copied all three scripts verbatim, landing the approval CLI at
+      `/usr/local/bin/esp32-provision.sh`, while `nginx/README.md`, `esp32_satellite.md` D-17, and the script's
+      own `usage()` all invoke **`esp32-provision`** — so on the WB7 the documented approval runbook died at
+      `esp32-provision list` → `команда не найдена`, and approving a CSR is the *only* way this plane is ever
+      used. Fixed: the operator CLI installs without the extension; the two internal helpers keep `.sh` (both are
+      invoked by absolute path — by the play, and by `esp32-provision` calling `esp32-sign-csr.sh`); a
+      `state: absent` task removes the mis-named binary from any box that ran the old play. Re-ran on wb7:
+      `changed=2` (exactly the rename + the removal), CA init correctly no-op under its `creates:` guard,
+      `esp32-provision list` now prints the pending CSR + pubkey fingerprint. Same root cause as **BUG-31**,
+      filed minutes earlier: the playbook had never been executed end-to-end against a real controller. The
+      bootstrap zone itself is proven — a real device CSR `PUT` to `:8081` returned **201**.
 
 ### Tests (TEST)
 - [x] **TEST-0** (P0) — Minimal end-to-end smoke/integration harness (refactor safety net, Gate 0). **DONE

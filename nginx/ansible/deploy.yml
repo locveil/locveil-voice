@@ -70,17 +70,25 @@
         - { path: "{{ esp32_srv_dir }}/firmware",          owner: "root",             group: "{{ nginx_user }}", mode: "0755" }
         - { path: "{{ esp32_srv_dir }}/models",            owner: "root",             group: "{{ nginx_user }}", mode: "0755" }
 
+    # The operator CLI installs WITHOUT the .sh — it is the documented command (`esp32-provision approve
+    # <client_id>`, README + esp32_satellite.md D-17 + the script's own usage line). BUG-32. The two internal
+    # helpers keep their extension: both are invoked by absolute path (by this play, and by esp32-provision).
     - name: Install the provisioning scripts
       ansible.builtin.copy:
-        src: "files/{{ item }}"
-        dest: "/usr/local/bin/{{ item }}"
+        src: "files/{{ item.src }}"
+        dest: "/usr/local/bin/{{ item.dest }}"
         owner: root
         group: root
         mode: "0755"
       loop:
-        - esp32-ca-init.sh
-        - esp32-sign-csr.sh
-        - esp32-provision.sh
+        - { src: esp32-ca-init.sh,   dest: esp32-ca-init.sh }
+        - { src: esp32-sign-csr.sh,  dest: esp32-sign-csr.sh }
+        - { src: esp32-provision.sh, dest: esp32-provision }
+
+    - name: Remove the mis-named operator CLI left by a pre-BUG-32 deploy
+      ansible.builtin.file:
+        path: /usr/local/bin/esp32-provision.sh
+        state: absent
 
     - name: Initialise the home CA + server cert (once)
       ansible.builtin.command: /usr/local/bin/esp32-ca-init.sh
