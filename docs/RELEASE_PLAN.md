@@ -370,6 +370,35 @@ _Discrete functional defects (distinct from QUAL refactors/quality work). Surfac
       for ambiguity) may later avoid asking at all in some of these cases; this task is about the question being
       answerable when it *is* asked.
 
+- [ ] **BUG-40** [MQTT][APICONTRACT] `[release]` — **Every bridge error collapses to `internal_error`: voice never
+      unwraps FastAPI's `detail`.** Found on the WB7 (2026-07-09) while re-testing BUG-38: «выключи кондиционер в
+      гостиной» resolved correctly to `living_room_hvac`, and the user heard «Что-то пошло не так на стороне
+      моста». The bridge had answered precisely — `503`, body
+      `{"detail": {"success": false, "capability": "climate", "action": "off",
+      "error": {"code": "device_unreachable", "message": "No state echo within 500 ms"}, "no_op": false,
+      "skipped_reason": null}}`. `_to_delivery_result` (`outputs/bridge.py:188`) reads `payload["success"]`,
+      `payload["error"]`, `payload["state"]` at the **top level**, so on any non-2xx it sees `{}`, logs
+      *"bridge returned HTTP 503 without a structured error"* — while printing the structured error — and stamps
+      `internal_error`.
+      **Blast radius: the whole error taxonomy, not one message.** The bridge raises
+      `HTTPException(status_code=…, detail=resp.model_dump())` for every canonical failure
+      (`devices.py:78/91/97`): `400 param_invalid`, `404 device_not_found`, `503 device_unreachable`,
+      `500 internal`. So `smart_home.py:225-228`'s whole map — `err_capability`, `err_device_unreachable`,
+      `err_device_not_found_bridge` — is unreachable, and worse, **the `param_invalid` → one-shot clarification
+      path (QUAL-30/31, §5b, `smart_home.py:219`) can never fire**, because `field`/`reason` live inside the
+      envelope we drop. Every failure speaks `err_internal`, which is both wrong and unactionable. `echoed_value`
+      is lost the same way, and so are `no_op`/`skipped_reason` on non-2xx (ARCH-39's inputs — harmless today
+      only because idempotence skips return 200).
+      Fix: in `_to_delivery_result`, unwrap `payload["detail"]` when it is a dict carrying the canonical shape,
+      before reading `success`/`error`/`state`. Keep the "genuinely unstructured" branch for the bridge's plain
+      string details (`503 "Service not fully initialized"`, `devices.py:133`). **Why it survived:** every
+      existing test feeds a *string* detail — `test_bridge_output.py:186` `{"detail": "boom"}`, `:206`
+      `{"detail": "starting"}`, `:287` `{"detail": "rate limited"}` — i.e. only the unstructured branch. The
+      dict-wrapped canonical envelope the real bridge sends was never exercised, so the suite encodes the wrong
+      assumption and passes. Add a regression test per error code with the *wrapped* payload, and verify
+      afterwards that `param_invalid` actually arms the clarification — that path has demonstrably never run
+      against a real bridge.
+
 ### Tests (TEST)
 > **Strategy (decided 2026-06-01): do NOT keep repairing the existing suite.** Most tests were written against
 > pre-refactor code and will be invalidated by the ARCH refactors (ARCH-1..5) and the code reviews (QUAL-8/10/12/14).

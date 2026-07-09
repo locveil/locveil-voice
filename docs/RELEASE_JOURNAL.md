@@ -17,6 +17,26 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-09 — BUG-38 verified on the WB7; the retest immediately found BUG-40.** Deployed
+  `v20260709-7b3e773`. The command that switched on the wrong lamp an hour earlier now refuses:
+  «включи торшер в спальне» → `success: false`, «Спальня: не нашла там «торшер».», and
+  `living_room_floor_lamp.power` stayed `off` across the call. «выключи кондиционер в гостиной» resolved to
+  `living_room_hvac` with **no clarification** — the room did its work; «выключи кондиционер» with no room still
+  reports the three-way ambiguity rather than guessing; and the group-noun path is untouched. Four properties,
+  four commands.
+  But the resolved HVAC command spoke «Что-то пошло не так на стороне моста», and that turned out to be ours.
+  The bridge had answered precisely — `503`, `error.code = "device_unreachable"`, "No state echo within 500 ms"
+  — **nested under FastAPI's `detail`**. `_to_delivery_result` reads `success`/`error`/`state` at the top level,
+  so on any non-2xx it finds `{}`, logs *"bridge returned HTTP 503 without a structured error"* while printing
+  the structured error, and stamps `internal_error`. The bridge raises
+  `HTTPException(status_code=…, detail=resp.model_dump())` for **every** canonical failure, so the entire error
+  taxonomy is dead: `err_capability`, `err_device_unreachable`, `err_device_not_found_bridge` are unreachable,
+  and the `param_invalid` → one-shot clarification (QUAL-30/31, §5b) **can never have fired** against a real
+  bridge. Filed **BUG-40** `[release]`.
+  It survived because the tests encode the wrong assumption: every stub feeds a *string* detail
+  (`{"detail": "boom"}`), never the dict-wrapped canonical envelope the bridge actually sends. A green suite
+  proving the opposite of the truth — the same shape as this morning's `Success: 3, Failed: 0`.
+
 - **2026-07-09 — BUG-38 fixed: the room the user names is king. Confirmed on hardware first.** With the owner's
   authorisation, the bug was reproduced on the WB7 rather than argued from code: the living-room floor lamp `off`,
   the bedroom holding no floor lamp at all, and «включи торшер в спальне» → `success: true`, «Включила Торшер»,
