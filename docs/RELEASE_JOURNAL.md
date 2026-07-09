@@ -17,6 +17,34 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-09 — QUAL-80: golden re-pinned `8159b4b0…` → `16eee0f2f7832995`, and the loop closes.** The bridge
+  asked for the re-pin; both driving fixes were caused by our WB7 testing. **DRV-23** — WB-passthrough devices
+  now expose feedback at top-level `state.<field>`, exactly the read path we depend on, and the `mirrored` bucket
+  is retired. **DRV-25** — `power` becomes a *readable* field on the 39 relay-switch devices, canonical
+  `on`/`off`. That is our own «какая температура» failure and our own `state.power = 'off'` observation, returning
+  as a contract change.
+  Verified rather than trusted before pinning: the golden's own `version` is `16eee0f2f7832995`; **39 of 79**
+  devices changed, each gaining a `fields` entry on `power` (enum, wire `"1"/"0"` → canonical `"on"/"off"`, ru/en
+  labels); no devices added or removed; zero `mirrored` occurrences; `openapi.json` byte-identical, so it was not
+  re-copied and config-ui's generated types are untouched. One-way inward sync; `PIN.bridge_commit` mirrors
+  `STAMP.bridge_commit` (`9714c3c3…`), never the repo HEAD (`cc5d4b4`) — the convention QUAL-75 once broke and
+  `test_pin_matches_stamp` now guards. eval-commons `5427063`: 40/40, pin guards 10/10. Voice-side `parse_catalog`
+  reads the new shape; unit suite 1358 pass; purely additive, since `_QUANTITY_FIELDS` still searches only
+  `temperature`/`humidity`.
+  Two corrections to yesterday's record, both against us. The bridge **disproved the write-path half** of our
+  DRV-23 filing with an on→off→off repro: their idempotence guard reads `state.mirrored` directly, and
+  `skipped_reason: "idempotence"` is DRV-5's AV-driver helper, not this driver. We had inferred it from reading
+  and never executed it. And the claim that voice *needs* readable `power` was overstated: `read_state`'s
+  `quantity` is a `choice` of `temperature`/`humidity` only, QUAL-68 reads `level`/`setpoint`, and ARCH-39 reads
+  the canonical command **response** (`no_op`, `skipped_reason`), never believed state. DRV-25 gives us the field
+  anyway, which unblocks a future spoken «свет включён?» — but we did not need it, and said so.
+  **Not live yet:** the WB7 serves the old catalog until the bridge image is rebuilt and redeployed. A sensor
+  read and a switch read want re-verifying against the controller afterwards.
+  Process note: our DRV-23 filing was **erased** from the bridge's working tree — not in `HEAD`, not on disk.
+  They independently took the ID, verified, reframed and fixed it, so nothing was lost in substance. But an
+  uncommitted cross-repo artifact evaporated silently, which is BUILD-20 D-5's board-as-outbox argument with a
+  real incident behind it instead of a hypothetical.
+
 - **2026-07-09 — The bridge fixed DRV-23; sensor questions answer, and immediately expose BUG-37.** «какая
   температура в кабинете» now returns `success: true`, `room_temperature = 24.125`, «Сейчас 24.125 градусов —
   Тёплый пол». The bridge projects its mirrored fields to the top level, and voice reads `state.<field>` per the

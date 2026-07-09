@@ -2460,6 +2460,24 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       (bridge maintainer's handoff note) and filed as **ARCH-39** (device-level 2-turn force-confirm) +
       **ARCH-40** (scenario force-reconcile via voice), both `[deferred]` post-release design tasks.
 
+- [x] **QUAL-80** [MQTT][TEST] `[release]` — **DONE 2026-07-09.** Golden catalog re-pinned
+      `8159b4b0068d1c63` → **`16eee0f2f7832995`** (bridge commit `9714c3c3…`), at the bridge's request. Both
+      driving fixes came out of the WB7 bring-up: **DRV-23** — WB-passthrough devices now expose feedback at
+      top-level `state.<field>`, the read path voice depends on (`mqtt_integration.md` §5c), with the internal
+      `mirrored` bucket retired; and **DRV-25** — `power` becomes a *readable* field on the 39 relay-switch
+      devices, canonical `on`/`off`. Verified before pinning rather than trusting the request: golden's own
+      `version` is `16eee0f2f7832995`; **39 of 79** devices changed, each gaining a `fields` entry on the `power`
+      capability (enum, wire `"1"/"0"` → canonical `"on"/"off"`, ru/en labels); no devices added or removed;
+      zero `mirrored` occurrences remain; `openapi.json` byte-identical, so it was not re-copied and config-ui's
+      generated types are untouched (`config-ui-stays-functional` needs nothing). One-way inward sync per
+      `cross-repo-source-of-truth`; `PIN.bridge_commit` mirrors `STAMP.bridge_commit`, never the repo HEAD
+      (`cc5d4b4`) — the convention `test_pin_matches_stamp` guards, and which QUAL-75 once broke. Fixture stamp
+      bumped; no fixture binds capability `fields`. eval-commons `5427063`: suite 40/40, pin guards 10/10.
+      Voice side: `parse_catalog` reads the new shape (`cabinet_spots` `power` → `enum` field), unit suite 1358
+      pass, and the change is purely additive — `_QUANTITY_FIELDS` still searches only `temperature`/`humidity`.
+      **Not yet live:** the WB7 serves the old catalog until the bridge image is rebuilt and redeployed; a sensor
+      read and a switch read want re-verifying against the controller afterwards.
+
 ### Bugs (BUG)
 - [x] **BUG-1** [NLU/TIMER] (P2) `[release]` — **DONE 2026-06-28.** Spelled-out numbers didn't reach parameter
       extraction — «поставь таймер на десять минут» recognized `timer.set` but extracted no duration; «на 10 минут»
