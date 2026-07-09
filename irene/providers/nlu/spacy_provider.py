@@ -8,9 +8,17 @@ Provides more sophisticated natural language understanding than rule-based appro
 import logging
 from ...utils.text_script import detect_language_by_script
 import hashlib
-import numpy as np
 from datetime import datetime
 from typing import Dict, Any, List, Optional, Tuple
+
+# numpy ships with this provider's `nlu-spacy` extra, not with the base install (BUG-33); a hard
+# import here breaks loading the nlu package on builds that use the keyword/LLM cascade (BUG-34).
+# `is_available()` reports UNAVAILABLE when it is absent.
+try:
+    import numpy as _numpy
+except ImportError:
+    _numpy = None
+np: Any = _numpy
 
 from .base import NLUProvider
 from ...intents.models import Intent
@@ -61,7 +69,7 @@ class SpaCyNLUProvider(NLUProvider):
         # Pattern storage for semantic matching
         self.intent_patterns: Dict[str, List[str]] = {}  # intent -> example strings
         self.pattern_docs: Dict[str, List[Any]] = {}     # intent -> spaCy Doc objects
-        self.intent_centroids: Dict[str, np.ndarray] = {} # intent -> vector centroids
+        self.intent_centroids: Dict[str, Any] = {} # intent -> vector centroids
         
         # Fast matching components
         self.phrase_matcher = None
@@ -91,6 +99,9 @@ class SpaCyNLUProvider(NLUProvider):
     async def is_available(self) -> bool:
         """Check if spaCy is available and models can be loaded (patterns loaded separately during donation phase)"""
         try:
+            if np is None:
+                self._set_status(self.status.__class__.UNAVAILABLE, "numpy not installed (nlu-spacy extra)")
+                return False
             spacy = safe_import('spacy')
             if spacy is None:
                 self._set_status(self.status.__class__.UNAVAILABLE, "spaCy package not installed")

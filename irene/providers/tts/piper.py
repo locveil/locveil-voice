@@ -36,7 +36,8 @@ logger = logging.getLogger(__name__)
 
 def _float_to_pcm16(samples) -> bytes:
     """float [-1, 1] (list or array-like) -> little-endian int16 PCM, **numpy-free** (Piper runs on
-    armv7 where numpy has no wheel; sherpa's `generate()` returns a plain float list there)."""
+    armv7, where numpy is deliberately not installed — it is not a base dependency, see pyproject;
+    sherpa's `generate()` returns a plain float list there)."""
     out = array.array("h")
     out.extend(max(-32768, min(32767, int(s * 32767.0))) for s in samples)
     if sys.byteorder == "big":

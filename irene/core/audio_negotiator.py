@@ -10,7 +10,9 @@ the active VAD/wake/ASR providers for the consumers; the authoritative `[asr]`/`
 overrides a provider's preference, and an optional `[audio] canonical_*` pin overrides the derived canonical.
 """
 
+import array
 import logging
+import sys
 import time
 from typing import Optional
 
@@ -195,10 +197,22 @@ class AudioNegotiator:
 
     @staticmethod
     def _downmix_to_mono(audio_data: AudioData) -> AudioData:
-        """Average interleaved int16 channels down to mono, preserving the AudioData subtype."""
-        import numpy as np
-        arr = np.frombuffer(audio_data.data, dtype=np.int16)
-        if audio_data.channels > 1:
-            arr = arr.reshape(-1, audio_data.channels).mean(axis=1).astype(np.int16)
+        """Average interleaved int16 channels down to mono, preserving the AudioData subtype.
+
+        numpy-free (stdlib `array`): this sits on the live audio path, and numpy is not installed on
+        the armv7 image (BUG-33) — a lazy `import numpy` here would have raised on the first
+        multi-channel frame instead of at startup.
+        """
+        ch = audio_data.channels
+        arr = array.array("h")
+        arr.frombytes(audio_data.data)
+        if sys.byteorder == "big":
+            arr.byteswap()  # 'h' is native-endian; the PCM contract is little-endian
+        if ch > 1:
+            # int(x / ch), not x // ch — matches numpy's mean().astype(int16) truncation toward zero
+            mixed = array.array("h", (int(sum(arr[i:i + ch]) / ch) for i in range(0, len(arr) - ch + 1, ch)))
+            arr = mixed
+        if sys.byteorder == "big":
+            arr.byteswap()
         return type(audio_data)(data=arr.tobytes(), timestamp=audio_data.timestamp,
                                 sample_rate=audio_data.sample_rate, channels=1)

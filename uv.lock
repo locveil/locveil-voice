@@ -1372,7 +1372,6 @@ source = { editable = "." }
 dependencies = [
     { name = "aiohttp" },
     { name = "jsonschema" },
-    { name = "numpy" },
     { name = "prompt-toolkit" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
@@ -1404,6 +1403,7 @@ all = [
     { name = "httpx" },
     { name = "librosa" },
     { name = "miniaudio" },
+    { name = "numpy" },
     { name = "onnxruntime" },
     { name = "openai" },
     { name = "openai-whisper" },
@@ -1447,6 +1447,7 @@ asr-vosk = [
     { name = "vosk" },
 ]
 audio-input = [
+    { name = "numpy" },
     { name = "sounddevice" },
     { name = "soundfile" },
     { name = "vosk" },
@@ -1454,6 +1455,7 @@ audio-input = [
 audio-input-complete = [
     { name = "google-auth" },
     { name = "google-cloud-speech" },
+    { name = "numpy" },
     { name = "openai-whisper" },
     { name = "sounddevice" },
     { name = "soundfile" },
@@ -1466,20 +1468,24 @@ audio-input-complete = [
 audio-input-enhanced = [
     { name = "google-auth" },
     { name = "google-cloud-speech" },
+    { name = "numpy" },
     { name = "sounddevice" },
     { name = "soundfile" },
     { name = "vosk" },
 ]
 audio-miniaudio = [
     { name = "miniaudio" },
+    { name = "numpy" },
 ]
 audio-output = [
     { name = "librosa" },
     { name = "miniaudio" },
+    { name = "numpy" },
     { name = "sounddevice" },
     { name = "soundfile" },
 ]
 audio-sounddevice = [
+    { name = "numpy" },
     { name = "sounddevice" },
     { name = "soundfile" },
 ]
@@ -1519,11 +1525,13 @@ llm-openai = [
 nlu = [
     { name = "en-core-web-md" },
     { name = "en-core-web-sm" },
+    { name = "numpy" },
     { name = "ru-core-news-md" },
     { name = "ru-core-news-sm" },
     { name = "spacy" },
 ]
 nlu-spacy = [
+    { name = "numpy" },
     { name = "spacy" },
 ]
 text-multilingual = [
@@ -1534,6 +1542,7 @@ text-multilingual = [
 tts = [
     { name = "elevenlabs" },
     { name = "httpx" },
+    { name = "numpy" },
     { name = "pyttsx3" },
     { name = "torch", version = "2.12.1", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "platform_machine != 'armv7l' and sys_platform == 'darwin'" },
     { name = "torch", version = "2.12.1+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "platform_machine == 'armv7l' or sys_platform != 'darwin'" },
@@ -1550,11 +1559,18 @@ tts-ruaccent = [
     { name = "ruaccent", marker = "platform_machine != 'armv7l'" },
 ]
 tts-silero = [
+    { name = "numpy" },
     { name = "torch", version = "2.12.1", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "platform_machine != 'armv7l' and sys_platform == 'darwin'" },
     { name = "torch", version = "2.12.1+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "platform_machine == 'armv7l' or sys_platform != 'darwin'" },
 ]
 tts-vosk = [
     { name = "vosk-tts" },
+]
+vad-energy = [
+    { name = "numpy" },
+]
+vad-silero = [
+    { name = "numpy" },
 ]
 vad-tflite = [
     { name = "pymicro-vad", marker = "(platform_machine == 'aarch64' and sys_platform == 'linux') or (platform_machine == 'x86_64' and sys_platform == 'linux')" },
@@ -1568,6 +1584,7 @@ voice = [
     { name = "httpx" },
     { name = "librosa" },
     { name = "miniaudio" },
+    { name = "numpy" },
     { name = "onnxruntime" },
     { name = "openwakeword" },
     { name = "ovos-number-parser" },
@@ -1588,11 +1605,13 @@ voice = [
     { name = "websockets" },
 ]
 voice-trigger = [
+    { name = "numpy" },
     { name = "onnxruntime" },
     { name = "openwakeword" },
     { name = "pymicro-wakeword", marker = "platform_machine != 'armv7l'" },
 ]
 wake-onnx = [
+    { name = "numpy" },
     { name = "onnxruntime" },
     { name = "openwakeword" },
 ]
@@ -1637,7 +1656,14 @@ requires-dist = [
     { name = "librosa", marker = "extra == 'audio-output'", specifier = ">=0.10.0" },
     { name = "miniaudio", marker = "extra == 'audio-miniaudio'", specifier = ">=1.59" },
     { name = "mypy", marker = "extra == 'dev'", specifier = "==1.15.0" },
-    { name = "numpy", specifier = "<2" },
+    { name = "numpy", marker = "extra == 'audio-miniaudio'", specifier = "<2" },
+    { name = "numpy", marker = "extra == 'audio-output'", specifier = "<2" },
+    { name = "numpy", marker = "extra == 'audio-sounddevice'", specifier = "<2" },
+    { name = "numpy", marker = "extra == 'nlu-spacy'", specifier = "<2" },
+    { name = "numpy", marker = "extra == 'tts-silero'", specifier = "<2" },
+    { name = "numpy", marker = "extra == 'vad-energy'", specifier = "<2" },
+    { name = "numpy", marker = "extra == 'vad-silero'", specifier = "<2" },
+    { name = "numpy", marker = "extra == 'wake-onnx'", specifier = "<2" },
     { name = "onnxruntime", marker = "extra == 'wake-onnx'", specifier = ">=1.15.0" },
     { name = "openai", marker = "extra == 'llm-openai'", specifier = ">=1.0.0" },
     { name = "openai-whisper", marker = "extra == 'advanced-asr'", specifier = ">=20230314" },
@@ -1686,7 +1712,7 @@ requires-dist = [
     { name = "vosk-tts", marker = "extra == 'tts-vosk'", specifier = ">=0.3.0" },
     { name = "websockets", marker = "extra == 'web-api'", specifier = ">=11.0.0" },
 ]
-provides-extras = ["asr-vosk", "audio-sounddevice", "audio-input", "advanced-asr", "asr-onnx", "audio-input-enhanced", "audio-input-complete", "tts-silero", "tts-pyttsx", "tts-elevenlabs", "tts-vosk", "tts", "audio-miniaudio", "audio-output", "wake-onnx", "wake-tflite", "vad-tflite", "voice-trigger", "web-api", "cloud-asr", "llm-openai", "llm-anthropic", "llm", "nlu-spacy", "nlu", "text-multilingual", "tts-ruaccent", "dev", "voice", "api", "headless", "all"]
+provides-extras = ["asr-vosk", "audio-sounddevice", "audio-input", "advanced-asr", "asr-onnx", "audio-input-enhanced", "audio-input-complete", "tts-silero", "tts-pyttsx", "tts-elevenlabs", "tts-vosk", "tts", "audio-miniaudio", "audio-output", "wake-onnx", "wake-tflite", "vad-tflite", "vad-energy", "vad-silero", "voice-trigger", "web-api", "cloud-asr", "llm-openai", "llm-anthropic", "llm", "nlu-spacy", "nlu", "text-multilingual", "tts-ruaccent", "dev", "voice", "api", "headless", "all"]
 
 [[package]]
 name = "isort"

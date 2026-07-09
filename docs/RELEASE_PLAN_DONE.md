@@ -2854,6 +2854,38 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       `esp32-provision list` now prints the pending CSR + pubkey fingerprint. Same root cause as **BUG-31**,
       filed minutes earlier: the playbook had never been executed end-to-end against a real controller. The
       bootstrap zone itself is proven — a real device CSR `PUT` to `:8081` returned **201**.
+- [x] **BUG-33** [BUILD][HW] `[release]` — **DONE 2026-07-09.** The armv7 image had no `libopenblas.so.0`, so
+      numpy could not import and the assistant had no ASR, NLU or intents. numpy's own error is misleading; the
+      chained cause is `libopenblas.so.0: cannot open shared object file`. armv7 only: numpy there comes from
+      **PiWheels** (`Tag: cp311-cp311-linux_armv7l`), which links the *system* openblas and ships no
+      `numpy.libs/`, while PyPI's manylinux wheels bundle it (aarch64 verified unaffected). Nothing declared it —
+      `get_platform_dependencies()` is provider-scoped, and numpy was a **base** dependency owned by no provider
+      (the CR-C4 "numpy is base, don't re-list" note is what created the blind spot).
+      **Fixed by Option B (owner's call): numpy is no longer a base dependency.** It moved into the extras of the
+      providers that actually import it — `wake-onnx`, `nlu-spacy`, `audio-sounddevice`, `audio-miniaudio`,
+      `audio-output`, `tts-silero`, plus new `vad-energy` / `vad-silero` (deliberately NOT `asr-onnx`, which is
+      what armv7 installs for sherpa). `providers/vad/{energy,silero}.py` now declare them, so the dynamic build
+      picks it up: `build_analyzer --config embedded-armv7.toml` resolves to `['asr-onnx','llm-openai','web-api']`
+      with **no numpy**, and no `libopenblas0` is needed anywhere. This matches the code's own long-standing
+      intent — `asr/sherpa_onnx.py` and `tts/piper.py` were written numpy-free *for armv7* (their comments claimed
+      "armv7 has no numpy wheel", which is false and now corrected). `core/audio_negotiator._downmix_to_mono` was
+      the one unguarded numpy call site on the live audio path; rewritten with stdlib `array`, verified
+      bit-identical to the numpy version across 900 random multi-channel buffers.
+- [x] **BUG-34** [ARCH][BUILD] `[release]` — **DONE 2026-07-09.** One optional provider's missing dependency took
+      out nine components, and which survived depended on line order. `components/__init__.py` eagerly imported
+      every component; its line 8 pulled `voice_trigger_component` → `providers/voice_trigger/__init__.py` →
+      `openwakeword.py`'s module-scope `import numpy` — for a provider `embedded-armv7` **disables**. The
+      survivors (`tts`, `asr`, `llm`, `audio`, lines 4–7) lived only by already being in `sys.modules`. Fixed in
+      two layers: (1) the package `__init__`s of `components/`, `providers/{asr,audio,nlu,voice_trigger}/` now
+      import only the ABC and expose concrete classes through a PEP-562 `__getattr__` (the shape
+      `providers/vad/__init__.py` already had), so importing one component never imports the other eight; (2) the
+      three module-scope numpy imports (`utils/vad.py`, `providers/nlu/spacy_provider.py`,
+      `providers/voice_trigger/openwakeword.py`) are guarded, with `SimpleVAD.__init__` raising a message that
+      names the extra to install and the two providers reporting unavailable rather than crashing. Verified by
+      importing every component and the runner against a fake `numpy` that raises `ImportError` — all import with
+      numpy absent, all still work with it present; `pyright` 0 errors (annotations moved to an `NDArray = Any`
+      alias, since the `no-type-checking` invariant rules out a `TYPE_CHECKING` import); import-linter 11/11;
+      27 VAD/resampling tests pass.
 
 ### Tests (TEST)
 - [x] **TEST-0** (P0) — Minimal end-to-end smoke/integration harness (refactor safety net, Gate 0). **DONE

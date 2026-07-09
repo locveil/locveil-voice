@@ -9,15 +9,32 @@ Phase 5 Optimizations:
 - Caching for repeated calculations
 - Memory management for audio buffers
 - Real-time processing optimizations
+
+**Importing this module must not require numpy** (BUG-34). `VADResult` is a plain dataclass that
+`providers/vad/base.py` and `workflows/audio_processor.py` import at module scope, so a hard
+`import numpy` here would drag numpy into every image — including armv7, which is numpy-free by
+design (BUG-33). The engines below genuinely need it and raise a clear error if it is absent; their
+providers declare the dependency (`vad-energy`, `vad-silero`).
 """
+
+from __future__ import annotations  # defer annotations; numpy may be absent at import
 
 import logging
 import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Optional, List
+from typing import Any, Optional, List
 from functools import lru_cache
-import numpy as np
+
+try:
+    import numpy as _numpy
+except ImportError:  # numpy belongs to the VAD/audio extras — see pyproject
+    _numpy = None
+# `Any`, not `module | None`: the engines below are guarded by _require_numpy(), and typing this as
+# Optional would make every np.<fn> call a false positive. (A `TYPE_CHECKING` import is not an
+# option — see the `no-type-checking` invariant; the cycle-free honest form is this alias.)
+np: Any = _numpy
+NDArray = Any  # `np.ndarray` when numpy is installed; unannotatable when it is optional
 
 from .audio_data import AudioData
 # ARCH-12: dead import removed — metrics are emitted by callers, not by vad
@@ -25,8 +42,18 @@ from .audio_data import AudioData
 
 logger = logging.getLogger(__name__)
 
+
+def _require_numpy() -> None:
+    """Fail with the fix, not with an AttributeError on `None`."""
+    if np is None:
+        raise RuntimeError(
+            "This VAD engine needs numpy, which this build does not install. Install the provider's "
+            "extra (e.g. `vad-energy`, `vad-silero`) — see pyproject.toml."
+        )
+
+
 # Phase 5: Performance optimization constants
-NUMPY_DTYPE = np.float32  # Use float32 for better performance
+NUMPY_DTYPE = np.float32 if np is not None else None  # float32 for better performance
 CACHE_SIZE = 256  # LRU cache size for repeated calculations
 MAX_ENERGY_HISTORY = 100  # Maximum history for adaptive algorithms
 
@@ -56,7 +83,7 @@ def _calculate_rms_energy_cached(data_hash: int, data_length: int) -> float:
     return 0.0
 
 
-def _preprocess_audio_for_vad(audio_array: np.ndarray) -> np.ndarray:
+def _preprocess_audio_for_vad(audio_array: NDArray) -> NDArray:
     """
     Apply balanced audio preprocessing for comprehensive speech detection.
     
@@ -102,7 +129,7 @@ def _preprocess_audio_for_vad(audio_array: np.ndarray) -> np.ndarray:
     return pre_emphasized
 
 
-def _apply_dynamic_range_compression(audio_array: np.ndarray, target_rms: float = 0.15) -> np.ndarray:
+def _apply_dynamic_range_compression(audio_array: NDArray, target_rms: float = 0.15) -> NDArray:
     """
     Apply speech-aware dynamic range compression to prevent ASR clipping after VAD trigger.
     
@@ -153,7 +180,7 @@ def _apply_dynamic_range_compression(audio_array: np.ndarray, target_rms: float 
     return clipped_audio
 
 
-def _calculate_multi_band_energy(audio_array: np.ndarray) -> tuple[float, float, float]:
+def _calculate_multi_band_energy(audio_array: NDArray) -> tuple[float, float, float]:
     """
     Calculate energy in multiple frequency bands for balanced speech detection.
     
@@ -356,6 +383,7 @@ class SimpleVAD(VADEngine):
             silence_frames_required: Consecutive silence frames to confirm voice end
             enable_caching: Enable performance caching (Phase 5 optimization)
         """
+        _require_numpy()  # the engine's DSP is numpy; importing this module is not (BUG-34)
         self.threshold = threshold
         self.sensitivity = sensitivity
         self.voice_frames_required = voice_frames_required

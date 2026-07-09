@@ -12,8 +12,8 @@ Model families on one provider/runtime, selected by config `model_type`:
 Whisper-ONNX (PR-2) drops torch from 64-bit ASR images that don't otherwise need it.
 
 Design notes baked in here:
-- **numpy-free** audio conversion (stdlib `array`) — armv7 has no numpy wheel, proven on
-  the Wirenboard 7 benchmark.
+- **numpy-free** audio conversion (stdlib `array`) — the armv7 image installs no numpy (it is not a
+  base dependency; PiWheels' armv7 wheel needs a system libopenblas nothing ships — BUG-33).
 - multi-file **model packs** (encoder/decoder/joiner/tokens) resolved + first-run
   downloaded via the AssetManager into the mounted asset folder (§6).
 - a small **inference policy** (num_threads per platform, §5.2b).
@@ -284,7 +284,7 @@ class SherpaOnnxASRProvider(ASRProvider):
     def _to_float_samples(data: bytes, default_rate: int):
         """Raw 16-bit PCM (or a WAV blob) -> (float list in [-1, 1], sample_rate).
 
-        numpy-free (stdlib `array`/`wave`) so it runs on armv7 where numpy has no wheel.
+        numpy-free (stdlib `array`/`wave`) so it runs on armv7, which installs no numpy.
         """
         if not data:
             return [], default_rate

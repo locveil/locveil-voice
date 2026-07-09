@@ -80,7 +80,9 @@ class SileroVADProvider(VADProvider):
 
     @classmethod
     def get_python_dependencies(cls) -> List[str]:
-        return ["asr-onnx"]  # reuses the sherpa-onnx runtime; extra group name (build contract)
+        # asr-onnx = the sherpa-onnx runtime it reuses; vad-silero = numpy (no longer a base dep,
+        # BUG-33) — kept OUT of asr-onnx, which the numpy-free armv7 image installs for sherpa.
+        return ["asr-onnx", "vad-silero"]  # extra group names (build contract)
 
     @classmethod
     def get_platform_dependencies(cls) -> Dict[str, List[str]]:

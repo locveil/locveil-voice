@@ -24,7 +24,13 @@ dependencies = [
     "jsonschema>=4.25.0",
     "prompt-toolkit>=3.0.51",
     "aiohttp>=3.12.15",
-    "numpy<2",
+    # numpy is DELIBERATELY NOT a base dependency (BUG-33). On armv7 it resolves to a PiWheels
+    # wheel that links the *system* libopenblas — which no image installs, because nothing declares
+    # it: `get_platform_dependencies()` is provider-scoped, and a base dep has no provider. The
+    # armv7 runtime path is numpy-free by design (see providers/{asr/sherpa_onnx,tts/piper}.py), so
+    # numpy now belongs to the extras of the providers that actually import it. Each such extra
+    # carries `numpy<2` explicitly — the version floor lives in one place per consumer, and a
+    # profile that enables no numpy provider installs no numpy.
 ]
 
 [project.optional-dependencies]
@@ -36,6 +42,7 @@ asr-vosk = [
 audio-sounddevice = [
     "sounddevice>=0.5.0",
     "soundfile>=0.13.0",
+    "numpy<2",  # providers/audio/sounddevice.py converts PCM frames
 ]
 audio-input = [
     "irene-voice-assistant[asr-vosk,audio-sounddevice]"
@@ -78,6 +85,7 @@ audio-input-complete = [
 # [tool.uv.index]/[tool.uv.sources] pin below); the others are self-contained. Umbrella `tts` kept.
 tts-silero = [
     "torch>=1.13.0",
+    "numpy<2",  # utils/audio_stream.py float_to_pcm16 (piper has its own numpy-free converter)
 ]
 tts-pyttsx = [
     "pyttsx3>=2.90",
@@ -98,12 +106,13 @@ tts = [
 # Dropped audioplayer (file-only) + simpleaudio (archived, WAV-buffer-only) — neither can stream raw PCM.
 audio-miniaudio = [
     "miniaudio>=1.59",
+    "numpy<2",  # providers/audio/miniaudio.py converts PCM frames
 ]
 # Umbrella: the two output backends + librosa (resampling helper, not owned by one provider).
-# numpy dropped — it is a base dependency.
 audio-output = [
     "irene-voice-assistant[audio-sounddevice,audio-miniaudio]",
     "librosa>=0.10.0",  # For high-quality audio resampling in audio_helpers.py
+    "numpy<2",  # audio_helpers.py resample/convert paths (librosa needs it too)
 ]
 
 # Wake word detection. 64-bit only — the WB7/armv7 satellite wakes on-device (ESP32). Two provider
@@ -111,9 +120,11 @@ audio-output = [
 #   openWakeWord  → wake-onnx  (ONNX runtime, no torch)
 #   microWakeWord → wake-tflite (pymicro-wakeword: micro frontend + bundled tflite C lib; ESP32-unified)
 wake-onnx = [
-    # numpy + aiohttp are base dependencies — not re-listed here (CR-C4: avoid drifting version floors).
+    # aiohttp is a base dependency — not re-listed (CR-C4). numpy IS listed: it is no longer base
+    # (BUG-33), and providers/voice_trigger/openwakeword.py imports it.
     "openwakeword>=0.6.0",
     "onnxruntime>=1.15.0",
+    "numpy<2",
 ]
 # pymicro-wakeword ships wheels for x86_64 / aarch64 / win_amd64 / macos — NO armv7 (which is correct:
 # the WB7 wakes on-device on the ESP32, never server-side here). The marker keeps the extra installable
@@ -127,6 +138,15 @@ wake-tflite = [
 # (no Windows/macOS/armv7), so the marker scopes it there; on other targets use energy or silero VAD.
 vad-tflite = [
     "pymicro-vad>=2.0.0; sys_platform == 'linux' and (platform_machine == 'x86_64' or platform_machine == 'aarch64')",
+]
+# The two VAD engines that do their own DSP in numpy (utils/vad.py). Their own extras rather than a
+# shared one: the silero VAD reuses `asr-onnx`, and `asr-onnx` is what the armv7 image installs for
+# sherpa — folding numpy in there would put a PiWheels numpy back on the board it must never reach.
+vad-energy = [
+    "numpy<2",  # utils/vad.py SimpleVAD/AdvancedVAD signal processing
+]
+vad-silero = [
+    "numpy<2",  # utils/vad_silero.py frame conversion
 ]
 voice-trigger = [
     "irene-voice-assistant[wake-onnx,wake-tflite]",
@@ -164,6 +184,7 @@ llm = [
 # The provider returns ["nlu-spacy", <model URLs>]: derive routes the extra-name to uv, the URLs to pip-specs.
 nlu-spacy = [
     "spacy>=3.8.0",
+    "numpy<2",  # providers/nlu/spacy_provider.py + analysis/spacy_analyzer.py
 ]
 # Umbrella with all models — for the `voice` dev group (`uv sync`); the trimmed Docker build path uses
 # the provider's raw model specs instead. numpy dropped — it is a base dependency.

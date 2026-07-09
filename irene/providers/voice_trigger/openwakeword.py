@@ -6,9 +6,18 @@ Supports multiple wake words and custom models with asset management integration
 """
 
 import logging
-import numpy as np
 from typing import Dict, Any, List, Optional
 from pathlib import Path
+
+# numpy ships with this provider's `wake-onnx` extra, not with the base install (BUG-33). Import it
+# softly: this module is imported whenever the voice_trigger package is touched, including on images
+# that disable wake-word entirely (armv7 — the ESP32 wakes on-device), and a hard import there took
+# out nine components (BUG-34). `initialize()` refuses to run when it is absent.
+try:
+    import numpy as _numpy
+except ImportError:
+    _numpy = None
+np: Any = _numpy
 
 from .base import VoiceTriggerProvider
 from ...intents.models import AudioData, WakeWordResult
@@ -425,6 +434,8 @@ class OpenWakeWordProvider(VoiceTriggerProvider):
     
     async def initialize(self) -> None:
         """Initialize OpenWakeWord detection"""
+        if np is None:
+            raise RuntimeError("OpenWakeWord needs numpy — install this provider's `wake-onnx` extra")
         if not await self.is_available():
             raise RuntimeError("OpenWakeWord dependencies not available")
         

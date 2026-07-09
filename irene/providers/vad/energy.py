@@ -54,7 +54,7 @@ class EnergyVADProvider(VADProvider):
 
     @classmethod
     def get_python_dependencies(cls) -> List[str]:
-        return []  # built-in: numpy is a core dep
+        return ["vad-energy"]  # numpy: utils/vad.py does the DSP (no longer a base dep — BUG-33)
 
     @classmethod
     def get_platform_dependencies(cls) -> Dict[str, List[str]]:

@@ -17,6 +17,32 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-09 — BUG-33 + BUG-34 fixed: numpy is no longer a base dependency.** The owner chose Option B over
+  shipping `libopenblas0`: rather than adding a 10 MiB system library so a broken PiWheels numpy can import on a
+  board that never calls it, numpy stops being a base dependency and moves into the extras of the providers that
+  actually import it — `wake-onnx`, `nlu-spacy`, `audio-sounddevice`, `audio-miniaudio`, `audio-output`,
+  `tts-silero`, plus new `vad-energy` / `vad-silero`. Those last two exist precisely because the silero VAD
+  reuses `asr-onnx`, and `asr-onnx` is what the armv7 image installs for sherpa — folding numpy in there would
+  have put a PiWheels numpy straight back on the board. `providers/vad/{energy,silero}.py` declare the new
+  extras, so the **dynamic build picks it up with no new machinery**: `build_analyzer --config
+  embedded-armv7.toml` now resolves to `['asr-onnx', 'llm-openai', 'web-api']`, numpy absent, `libopenblas`
+  unnecessary anywhere. This is what the code always intended — both armv7-critical providers were written
+  numpy-free on purpose, and their comments (*"armv7 has no numpy wheel"*) were simply wrong; PiWheels ships one,
+  and that wrong belief is why nobody declared its system library.
+  BUG-34 fixed alongside, because with numpy *absent* rather than merely broken the eager imports would fail
+  harder. Two layers: the package `__init__`s of `components/` and `providers/{asr,audio,nlu,voice_trigger}/`
+  now import only their ABC and expose concrete classes via a PEP-562 `__getattr__` (the shape
+  `providers/vad/__init__.py` already had), so importing one component no longer imports the other eight; and
+  the three module-scope numpy imports are guarded, failing with the name of the extra to install instead of an
+  `AttributeError` on `None`. The one unguarded numpy call site on the live audio path,
+  `audio_negotiator._downmix_to_mono`, was rewritten with stdlib `array` and checked bit-identical to the numpy
+  version across 900 random multi-channel buffers (`int(x/ch)`, not `x//ch` — numpy truncates toward zero).
+  Verified by importing every component and the runner against a fake `numpy` that raises `ImportError`: all
+  import with numpy absent, all still work with it present. pyright 0 errors — the annotations became an
+  `NDArray = Any` alias, since `no-type-checking` rules out a `TYPE_CHECKING` import. import-linter 11/11,
+  27 VAD/resampling tests green, `uv lock` refreshed. BUG-35 (runner overwrites `[components]`) and BUG-36
+  (nine failures reported as `Success: 3, Failed: 0`) remain open — the second one is why this shipped at all.
+
 - **2026-07-09 — The WB7 assistant has no ASR: BUG-33/34/35/36 filed.** The owner noticed the piper voice
   downloaded but no ASR model ever did. It is not a config problem — the delivered `irene.toml` is read
   correctly. `libopenblas.so.0` is absent from the armv7 image, numpy cannot import, and **nine of twelve
