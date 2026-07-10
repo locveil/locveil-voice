@@ -125,7 +125,7 @@ def parse_catalog(raw: Dict[str, Any]) -> DeviceCatalog:
 class BridgeClient(OutputPort):
     """REST adapter to wb-mqtt-bridge: the designated DEVICE_COMMAND output + catalog source."""
 
-    def __init__(self, base_url: str, timeout_seconds: float = 5.0) -> None:
+    def __init__(self, base_url: str, timeout_seconds: float = 20.0) -> None:
         self._base_url = base_url.rstrip("/")
         self._timeout = aiohttp.ClientTimeout(total=timeout_seconds)
         self._session: Optional[aiohttp.ClientSession] = None

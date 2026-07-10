@@ -71,7 +71,7 @@ web_push = true                     # Browser push channel (/ws/output) for defe
 # deployed and reachable from this instance (hardware bring-up, ARCH-25).
 enabled = false
 base_url = "http://localhost:8000"  # wb-mqtt-bridge REST API
-timeout_seconds = 5.0
+timeout_seconds = 20.0
 
 # ============================================================
 # COMPONENT ENABLEMENT — everything on (full experience)

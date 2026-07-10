@@ -70,7 +70,7 @@ web_push = true                     # browser push channel (/ws/output) for defe
 # bridge to talk to — see docs/guides/smart-home.md for the whole story.
 enabled = false
 base_url = "http://localhost:8000"
-timeout_seconds = 5.0
+timeout_seconds = 20.0
 
 # ============================================================
 # COMPONENTS — the processing pipeline

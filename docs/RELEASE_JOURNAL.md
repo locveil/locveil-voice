@@ -17,6 +17,22 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-10 — TEST-21 + BUG-41: bridge v0.6.0 consumed — re-pin, and the 5 s timeout that would have
+  re-broken the AC path; v0.5.2 tagged as the retest pair for bridge v0.6.0.** The bridge cut its 0.6.0
+  release; the contract delta was version-only (`openapi.json` `0.5.0`→`0.6.0` in two places, golden
+  byte-identical, catalog still `5622ba7a1a78102a`) → re-pinned @ bridge `e965385`, eval-commons 40/40,
+  pushed (`3fd9091`). **The real find was adjacent (BUG-41):** their DRV-29 fix (accepted + implemented
+  same day — the filing was *consumed on acceptance*, not erased) holds the canonical response open up to
+  `gate.poll_timeout_ms` = **15 s** on all six MitsubishiHvac capabilities, and voice's `BridgeClient` total
+  timeout was **5 s** — sized for the retired "~500 ms echo" world. Typical AC echo is 5–7 s: voice would
+  have spoken «мост не отвечает» for working commands about half the time (the morning's clean retest was
+  luck), recreating the DRV-29 dishonesty one hop upstream. Bumped to **20 s** across the model default, the
+  client default, and all 8 configs — `update.sh` delivers config, so the WB7 gets it without an image pull.
+  Their VWB-34 (publish confirmation-timing in the contract) is the permanent home for this number; until
+  then it is pinned prose. **Versioning note (user decision):** synchronized labels ≠ equal numbers — each
+  side tags the state tested against the other's tag, and PIN.json records the pairing
+  (`bridge_version: 0.6.0`). Retest pair: **voice v0.5.2 ↔ bridge v0.6.0**.
+
 - **2026-07-10 — BUG-40 fixed: bridge errors speak with their real names; v0.5.1 tagged.** The one-level
   mismatch: on non-2xx the bridge raises `HTTPException(detail=resp.model_dump())`, so the canonical body
   arrives wrapped in FastAPI's `detail` envelope — `_to_delivery_result` read `success`/`error`/`state` at the

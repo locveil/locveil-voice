@@ -104,7 +104,7 @@ web_push = true                    # Browser push channel (/ws/output) for defer
 # from the same endpoint (startup + lazy refresh on a resolution miss).
 enabled = false                    # Enable the bridge actuation channel
 base_url = "http://localhost:8000" # Base URL of the wb-mqtt-bridge REST API (no trailing slash)
-timeout_seconds = 5.0              # Per-request HTTP timeout (covers the ~500 ms actuation echo-wait)
+timeout_seconds = 20.0             # Per-request HTTP timeout (must exceed the slowest gated echo-wait: HVAC confirms take up to ~15 s)
 
 # ============================================================
 # COMPONENTS - Processing Pipeline Components

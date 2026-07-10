@@ -3056,6 +3056,25 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       bridge). Suite 1379 pass (lone failure = the TEST-20 flake, verified passing in isolation). Shipped in
       **v0.5.1**.
 
+- [x] **BUG-41** [MQTT][CONFIG] `[release]` — **DONE 2026-07-10. Voice's 5 s HTTP timeout is shorter than the
+      bridge's now-honest slow-echo wait — every gated AC command would time out while succeeding.** Found
+      while consuming the bridge's v0.6.0 release cut (TEST-21): their DRV-29 fix makes `/devices/{id}/canonical`
+      hold the response open up to the capability's `gate.poll_timeout_ms` — **15 000 ms on all six
+      `MitsubishiHvac` capabilities** (derived from the firmware's packet rotation: ~13 s worst case, 5–7 s
+      typical) — and their ledger states plainly: *"voice's HTTP timeout must exceed 15 s."* Voice's
+      `BridgeClient` used `aiohttp.ClientTimeout(total=5.0)`; the config description still said the timeout
+      "covers the bridge's ~500 ms actuation echo-wait" — an assumption DRV-29 retired. With a 5–7 s typical
+      echo, voice would speak `BRIDGE_UNREACHABLE` («мост не отвечает») for a *working* AC command roughly half
+      the time — the same dishonest-failure class DRV-29 just fixed bridge-side, recreated one hop upstream (the
+      morning's clean «включи кондиционер в детской» retest was luck, not margin). Fix: `timeout_seconds`
+      **5.0 → 20.0** (15 s worst case + margin; sits under the workflow's `command_timeout_seconds = 30`) in the
+      `BridgeOutputConfig` default, the `BridgeClient` constructor default, and all 8 configs carrying
+      `[outputs.bridge]` (master, example, 4 embedded, 2 standalone) — config is delivered by `update.sh`, so
+      the deployed WB7 gets the value without waiting for an image pull. One test updated (asserted the old
+      default). Suite 1379 pass (lone failure = the TEST-20 flake). config-ui untouched: the schema shape is
+      unchanged, only the default moved. Shipped in **v0.5.2**. Successor concern → bridge **VWB-34** (publish
+      confirmation-timing in the contract so this number stops being out-of-band folklore).
+
 ### Tests (TEST)
 - [x] **TEST-0** (P0) — Minimal end-to-end smoke/integration harness (refactor safety net, Gate 0). **DONE
       2026-06-01** → `irene/tests/test_smoke_e2e.py` (**5 passed / 1 xfailed**, ~21s; boots the WebAPI runner once
@@ -3343,6 +3362,14 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
         audio/bridge); audio→canonical later (recorded RU fixtures, WS-suite pattern). The full suite turns
         EXECUTABLE at ARCH-8 PR-4 + the QUAL-35 T1 donation baseline. ~~Gated on TEST-17~~ (pinned 2026-07-05).
         Design §14.
+
+- [x] **TEST-21** [EVAL][MQTT] `[release]` — **DONE 2026-07-10. Re-pin @ bridge v0.6.0 release cut** (the
+      TEST-17 inward sync, filed-and-done same day off the bridge's release tag). Bridge commit `e965385`
+      (HEAD at pin `46584f0`), bridge version **0.6.0**. The delta was version-only: `openapi.json` changed in
+      exactly two places (`0.5.0` → `0.6.0`), `catalog.golden.json` **byte-identical**, catalog version
+      unchanged (`5622ba7a1a78102a`) — so no fixture or code impact. PIN.json updated (bridge_commit mirrors
+      STAMP.bridge_commit per the TEST-17 rule); eval-commons suite 40/40; eval-commons `3fd9091` pushed.
+      This pin records the release pairing: **voice v0.5.2 ↔ bridge v0.6.0**.
 
 ### Internationalization (I18N)
 - [x] **I18N-1** [DESIGN] (P3) `[deferred]` — **DONE 2026-07-01 (design; no code).** Real English deployment design →

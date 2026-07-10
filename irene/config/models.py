@@ -157,8 +157,10 @@ class BridgeOutputConfig(BaseModel):
     enabled: bool = Field(default=False, description="Enable the smart-home bridge output (wb-mqtt-bridge)")
     base_url: str = Field(default="http://localhost:8000",
                           description="Base URL of the wb-mqtt-bridge REST API (no trailing slash)")
-    timeout_seconds: float = Field(default=5.0, gt=0,
-                                   description="Per-request HTTP timeout — covers the bridge's ~500 ms actuation echo-wait with margin")
+    timeout_seconds: float = Field(default=20.0, gt=0,
+                                   description="Per-request HTTP timeout — must exceed the bridge's slowest "
+                                               "gated actuation echo-wait (Mitsubishi HVAC confirms take up to "
+                                               "~15 s; relays echo in ~500 ms)")
 
 
 class OutputConfig(BaseModel):

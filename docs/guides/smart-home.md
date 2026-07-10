@@ -59,7 +59,7 @@ the config UI under **Output Channels**):
 [outputs.bridge]
 enabled = true
 base_url = "http://localhost:8000"   # your wb-mqtt-bridge REST endpoint
-timeout_seconds = 5.0
+timeout_seconds = 20.0               # patient enough for devices that confirm slowly (air conditioners)
 ```
 
 That's the whole setup: the catalog pull, the room vocabulary, and the device commands

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.5.2 — pairs with bridge 0.6.0 *(2026-07-10)*
+
+The companion [wb-mqtt-bridge](https://github.com/droman42/wb-mqtt-bridge) cut its 0.6.0 release,
+which holds slow-confirming devices' responses open until the device really answers (air
+conditioners take several seconds). This release raises the voice side's patience to match — a
+command that succeeds after a slow confirmation is now spoken as the success it is, not a timeout.
+Tested against bridge 0.6.0.
+
 ## 0.5.1 — first hardware feedback *(2026-07-10)*
 
 Fixes and contract updates from the first days of live operation on the Wirenboard 7 controller,

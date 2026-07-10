@@ -303,7 +303,8 @@ def test_bridge_config_defaults():
     cfg = BridgeOutputConfig()
     assert cfg.enabled is False
     assert cfg.base_url == "http://localhost:8000"
-    assert cfg.timeout_seconds == 5.0
+    # BUG-41: must exceed the bridge's slowest gated echo-wait (HVAC confirms up to ~15 s)
+    assert cfg.timeout_seconds == 20.0
 
 
 async def test_get_device_options_success_and_failure():
