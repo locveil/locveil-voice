@@ -327,6 +327,27 @@ _Apply to every remediation task below (from the 4 review docs + QUAL-25/26). So
       `eval-commons/providers/ws_audio_provider.py`, which documents the field. Nothing currently *consumes* the
       value, which is why this is deferrable rather than urgent. Interim alternative if the break is unwelcome:
       add `recognition_confidence` alongside — purely additive, but it leaves the misleading field in place.
+- [ ] **QUAL-82** [MQTT][NLU] `[deferred]` — **FEATURE: voice control for the AC louvers (`vane`/`widevane`) —
+      gated on the VWB-33 language-ownership convention.** DRV-28 (consumed as QUAL-81) gave the three
+      MitsubishiHvac ACs `vane.set{value}` (auto, качание, положение 1–5) and `widevane.set{value}` (качание,
+      крайне влево…крайне вправо, разделено); voice deliberately exposes neither — the old `climate.set_vane`
+      never had a voice consumer either (`git log -S set_vane` over `irene/` is empty), so QUAL-81 preserved
+      exact feature parity and invented nothing.
+      **The plumbing is an afternoon by design** — QUAL-81's binding table means
+      `_CHOICE_BINDINGS["vane"] = (("vane", "set", "value"),)`, one donation method riding `_hvac_choice`
+      (label matching, clarification, delivery all generalize), templates, tests. **The linguistics is the
+      work**, and it is the actual scope:
+      (1) **the noun collision** — the natural Russian word for the louver, «жалюзи», is already a `cover`-group
+      surface (the cabinet rollers), so «поверни жалюзи» would fight the depth-doctrine group routing; the
+      capability needs a chosen spoken noun («шторка»? «обдув»?) and it must not poison cover routing;
+      (2) **two utterance shapes** — vane is positional («положение три»: a number into a choice param),
+      widevane is directional and verb-led («направь обдув влево», unlike mode's noun-led «кондиционер на
+      охлаждение») — new T1 patterns plus intent names the LLM tier can classify into;
+      (3) **ownership** — the catalog carries the value labels; whether the capability noun and verb patterns
+      live catalog-side or donation-side is exactly what the bridge's **VWB-33** design decides, and this
+      feature is its first real test case — building before the convention exists risks building what it then
+      forbids. Also honest-UX: mode/fan are daily speech; vane is a set-once remote-in-hand tweak — no demand
+      recorded yet. Ref: QUAL-81 (binding table), `docs/design/mqtt_integration.md` §14, bridge VWB-33.
 
 ### Bugs (BUG)
 _Discrete functional defects (distinct from QUAL refactors/quality work). Surfaced from any source; filed before fixing._
