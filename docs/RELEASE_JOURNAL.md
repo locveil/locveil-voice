@@ -17,6 +17,15 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-10 — Bridge's echo-window fix (DRV-29 arc) verified on hardware: the AC command now reports an
+  honest success.** The bridge side reported the fix implemented and redeployed; retest «включи кондиционер в
+  детской» → `success: true`, «Включила Кондиционер», and the `device_command_echo` in the response carries the
+  **confirmed** post-echo state (`power: on`, `mode: cool`, `setpoint: 20.0`, `room_temperature: 25.0`,
+  `reachable: true`) — the bridge waited out the Mitsubishi's slow (~7 s) confirm cycle instead of 503-ing at
+  500 ms. This closes the loop on yesterday's finding that every AC command reported failure while succeeding;
+  the DRV-29 verdict/ledger flip is the bridge's own bookkeeping. Remaining DRV-28 smoke item unchanged: a mode
+  change («кондиционер в детской на охлаждение» → `mode.set {value: cool}`) has still never been voice-tested.
+
 - **2026-07-10 — First DRV-28 smoke on the WB7: the new dialect works end-to-end; the error the user heard was
   a timing artifact — bridge DRV-29 filed.** Both sides turned out to be redeployed already (voice and bridge
   each hold catalog `5622ba7a1a78102a`). «выключи кондиционер в детской» → voice resolved the room, picked the
