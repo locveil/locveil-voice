@@ -189,6 +189,41 @@ async def test_unstructured_failure_becomes_internal_error():
     assert not dr.delivered and dr.error_code == "internal_error"
 
 
+# BUG-40: on non-2xx the real bridge raises HTTPException(detail=resp.model_dump()), so the
+# canonical body arrives one level down in FastAPI's `detail` envelope — the adapter must unwrap.
+
+def _wrapped_error(code: str, message: str, **extra) -> dict:
+    return {"detail": {"success": False, "capability": "power", "action": "on",
+                       "error": {"code": code, "message": message, **extra},
+                       "no_op": False, "skipped_reason": None}}
+
+
+@pytest.mark.parametrize("status,code", [
+    (400, "param_invalid"),
+    (400, "capability_not_supported"),
+    (404, "device_not_found"),
+    (503, "device_unreachable"),
+    (500, "internal_error"),
+])
+async def test_wrapped_canonical_error_unwraps_fastapi_detail(status, code):
+    bridge = StubBridge((status, _wrapped_error(code, "nope")))
+    cmd = DeviceCommand(device_id="x", capability="power", action="on")
+    dr = await bridge.deliver(_command_result(cmd), _CTX, OutputModality.DEVICE_COMMAND)
+    assert not dr.delivered
+    assert dr.error_code == code
+    assert "nope" in (dr.detail or "")
+
+
+async def test_wrapped_param_invalid_carries_field_and_reason():
+    bridge = StubBridge((400, _wrapped_error("param_invalid", "out of range",
+                                             field="value", reason="out_of_range")))
+    cmd = DeviceCommand(device_id="children_room_hvac", capability="temperature",
+                        action="set", params={"value": 42})
+    dr = await bridge.deliver(_command_result(cmd), _CTX, OutputModality.DEVICE_COMMAND)
+    assert not dr.delivered and dr.error_code == "param_invalid"
+    assert "field=value" in dr.detail and "reason=out_of_range" in dr.detail
+
+
 async def test_transport_failure_is_spoken_not_raised():
     bridge = StubBridge(aiohttp.ClientConnectionError("refused"))
     cmd = DeviceCommand(device_id="x", capability="power", action="on")

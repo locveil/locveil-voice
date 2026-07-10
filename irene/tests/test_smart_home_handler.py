@@ -432,6 +432,21 @@ async def test_bridge_error_code_becomes_speech(loader):
     assert "не отвечает" in result.text
 
 
+async def test_bridge_param_invalid_arms_clarification(loader):
+    # BUG-40 acceptance: the bridge's param_invalid (field+reason riding detail, §5b) must reach
+    # the one-shot clarify path — before the fix it collapsed to internal_error and never fired.
+    def rejects_param(command):
+        return DeliveryResult(output_name=OUTPUT_TYPE, modality=OutputModality.DEVICE_COMMAND,
+                              delivered=False, error_code="param_invalid",
+                              detail="out of range [field=value, reason=out_of_range]")
+    h = await Harness(loader, responder=rejects_param).start()
+    result, captured = await h.run("set_setpoint", "поставь кондей на 22 градуса",
+                                   {"target": "кондей", "temp": 22}, room="Спальня")
+    assert captured and captured[0]["kind"] == "actuate"
+    assert result.success  # a clarification is a successful conversational turn (QUAL-30)
+    assert result.metadata.get("clarification") is True
+
+
 async def test_no_designated_output_speaks_degraded(loader):
     h = Harness(loader)  # NOT started: no designated DEVICE_COMMAND output (bridge disabled)
     result, _ = await h.run("power_on", "включи телек", {"target": "телек"}, room="Детская")

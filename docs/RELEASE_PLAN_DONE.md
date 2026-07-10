@@ -3036,6 +3036,26 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       pyright 0 — it caught a real `room_id: str | None` hole in the first draft — import-linter 11/11, smoke 6/6.
       **Needs a voice rebuild + redeploy to reach the WB7.**
 
+- [x] **BUG-40** [MQTT][APICONTRACT] `[release]` — **DONE 2026-07-10.** Every bridge error collapsed to
+      `internal_error`: voice never unwrapped FastAPI's `detail`. Found on the WB7 (2026-07-09) while re-testing
+      BUG-38 («выключи кондиционер в гостиной» → the bridge answered a precise `503 device_unreachable`, the user
+      heard «Что-то пошло не так на стороне моста»), and hit again on both 2026-07-10 AC smokes. The bridge raises
+      `HTTPException(status_code=…, detail=resp.model_dump())` for every canonical failure, so on non-2xx the
+      canonical body arrives one level down in FastAPI's `detail` envelope — while `_to_delivery_result`
+      (`outputs/bridge.py`) read `success`/`error`/`state` at the **top level**, saw `{}`, and stamped
+      `internal_error`. Blast radius was the whole taxonomy: the handler's template map (`err_device_unreachable`,
+      `err_device_not_found_bridge`, `err_capability`…) was unreachable, and the `param_invalid` → one-shot
+      clarification path (QUAL-30/31, §5b) could never fire because `field`/`reason` lived inside the dropped
+      envelope. **Why it survived:** every existing test fed a *string* detail — only the unstructured branch was
+      ever exercised.
+      Fixed by unwrapping `payload["detail"]` when it is a dict, before the existing field reads; a string
+      `detail` stays on the genuinely-unstructured branch (`503 "Service not fully initialized"`). Regression
+      tests: wrapped-envelope payloads for 5 canonical codes + a wrapped `param_invalid` carrying `field`/`reason`
+      (`test_bridge_output.py`), and a handler-level test that a bridge-side `param_invalid` **arms the one-shot
+      clarification** (`test_smart_home_handler.py` — that path had demonstrably never run against a real
+      bridge). Suite 1379 pass (lone failure = the TEST-20 flake, verified passing in isolation). Shipped in
+      **v0.5.1**.
+
 ### Tests (TEST)
 - [x] **TEST-0** (P0) — Minimal end-to-end smoke/integration harness (refactor safety net, Gate 0). **DONE
       2026-06-01** → `irene/tests/test_smoke_e2e.py` (**5 passed / 1 xfailed**, ~21s; boots the WebAPI runner once

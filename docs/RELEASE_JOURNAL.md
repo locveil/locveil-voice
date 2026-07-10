@@ -17,6 +17,19 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-10 — BUG-40 fixed: bridge errors speak with their real names; v0.5.1 tagged.** The one-level
+  mismatch: on non-2xx the bridge raises `HTTPException(detail=resp.model_dump())`, so the canonical body
+  arrives wrapped in FastAPI's `detail` envelope — `_to_delivery_result` read `success`/`error`/`state` at the
+  top level, saw `{}`, and stamped `internal_error` for **every** failure (the whole handler template map dead,
+  the `param_invalid` → clarification path never once fired against a real bridge). Fix: unwrap `detail` when it
+  is a dict; a string `detail` keeps the genuinely-unstructured branch. Tests that encode the *wire* shape now:
+  wrapped payloads for 5 canonical codes, wrapped `param_invalid` with `field`/`reason`, and a handler-level
+  test proving `param_invalid` arms the one-shot clarify (QUAL-30/31). Suite 1379 pass (lone failure = the
+  TEST-20 flake, passes in isolation). With BUG-40 done the `[release]` queue is empty again → **v0.5.1**
+  (patch axis: bug fixes + consuming the bridge's DRV-28 contract; voice's own outward contracts unchanged,
+  `ARCH_GENERATION` still 5). CHANGELOG gains the 0.5.1 section and 0.5.0 loses its stale *(unreleased)* marker.
+  WB7 image build dispatched from the tagged commit.
+
 - **2026-07-10 — Bridge's echo-window fix (DRV-29 arc) verified on hardware: the AC command now reports an
   honest success.** The bridge side reported the fix implemented and redeployed; retest «включи кондиционер в
   детской» → `success: true`, «Включила Кондиционер», and the `device_command_echo` in the response carries the

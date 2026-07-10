@@ -188,6 +188,12 @@ class BridgeClient(OutputPort):
     def _to_delivery_result(command: Any, status: int,
                             payload: Dict[str, Any]) -> DeliveryResult:
         """Map a canonical response (either address form, §5b/VWB-23) to the rich DeliveryResult."""
+        # On non-2xx the bridge raises HTTPException(detail=resp.model_dump()), so FastAPI wraps
+        # the canonical body one level down in `detail` (BUG-40). A *string* detail stays as-is —
+        # that's the genuinely unstructured branch (e.g. 503 "Service not fully initialized").
+        detail_body = payload.get("detail")
+        if isinstance(detail_body, dict):
+            payload = detail_body
         success = bool(payload.get("success"))
         error = payload.get("error") or {}
         error_code = error.get("code")

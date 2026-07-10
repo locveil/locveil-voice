@@ -19,8 +19,8 @@ upstream history) and `v12-final`. Under semver:
 1.0.0 belongs to the rename, under a package name with its own version namespace.
 """
 
-__version__ = "0.5.0"
-__version_info__ = (0, 5, 0)
+__version__ = "0.5.1"
+__version_info__ = (0, 5, 1)
 
 # The architecture generation this codebase implements — the "V15 components" of the old logs.
 # Deliberately NOT derived from __version__: it counts redesigns, not releases. It happens to equal

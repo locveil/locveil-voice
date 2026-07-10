@@ -1,6 +1,24 @@
 # Changelog
 
-## 0.5.0 — the revival release *(unreleased)*
+## 0.5.1 — first hardware feedback *(2026-07-10)*
+
+Fixes and contract updates from the first days of live operation on the Wirenboard 7 controller,
+alongside the companion bridge.
+
+- **The room you name wins.** Commanding a device «в детской» from another room now acts in the
+  children's room — or honestly refuses when nothing there matches — instead of silently acting on
+  the same-named device where you stand.
+- **Bridge errors speak with their real names.** Failures reported by the smart-home bridge
+  (device unreachable, unknown device, rejected value…) now reach their specific spoken messages;
+  previously every one collapsed into a generic "something went wrong". A rejected value now asks
+  a clarifying question instead of failing.
+- **Air-conditioner control updated to the bridge's new HVAC vocabulary** (power, mode, fan and
+  setpoint as first-class capabilities), while staying compatible with installations that still
+  serve the previous one — upgrade order between voice and bridge does not matter.
+- **The controller deployment joins the host network**, so voice and bridge talk directly on the
+  same box out of the box.
+
+## 0.5.0 — the revival release *(2026-07-09)*
 
 The first release of the revived Irene: a ground-up modernization of the
 [janvarev/Irene-Voice-Assistant](https://github.com/janvarev/Irene-Voice-Assistant) lineage,
