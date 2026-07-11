@@ -3,7 +3,7 @@
   "info": {
     "title": "Irene Voice Assistant API",
     "description": "Modern async voice assistant API with WebSocket support",
-    "version": "0.5.0"
+    "version": "0.5.2"
   },
   "paths": {
     "/": {
@@ -5703,26 +5703,26 @@
           "enabled": {
             "type": "boolean",
             "title": "Enabled",
-            "description": "Enable the smart-home bridge output (wb-mqtt-bridge)",
+            "description": "Enable the smart-home bridge output (locveil-bridge)",
             "default": false
           },
           "base_url": {
             "type": "string",
             "title": "Base Url",
-            "description": "Base URL of the wb-mqtt-bridge REST API (no trailing slash)",
+            "description": "Base URL of the locveil-bridge REST API (no trailing slash)",
             "default": "http://localhost:8000"
           },
           "timeout_seconds": {
             "type": "number",
             "exclusiveMinimum": 0.0,
             "title": "Timeout Seconds",
-            "description": "Per-request HTTP timeout — covers the bridge's ~500 ms actuation echo-wait with margin",
-            "default": 5.0
+            "description": "Per-request HTTP timeout — must exceed the bridge's slowest gated actuation echo-wait (Mitsubishi HVAC confirms take up to ~15 s; relays echo in ~500 ms)",
+            "default": 20.0
           }
         },
         "type": "object",
         "title": "BridgeOutputConfig",
-        "description": "The wb-mqtt-bridge actuation channel (ARCH-8) — the designated DEVICE_COMMAND output.\n\nWhen enabled, the composition registers the `BridgeClient` output adapter and designates it\nfor the `device_command` modality; smart-home intents actuate through it and the device\ncatalog is pulled from the same endpoint (`GET /system/catalog`, lazy refresh per ARCH-26)."
+        "description": "The locveil-bridge actuation channel (ARCH-8) — the designated DEVICE_COMMAND output.\n\nWhen enabled, the composition registers the `BridgeClient` output adapter and designates it\nfor the `device_command` modality; smart-home intents actuate through it and the device\ncatalog is pulled from the same endpoint (`GET /system/catalog`, lazy refresh per ARCH-26)."
       },
       "CLIInputConfig": {
         "properties": {
@@ -6624,7 +6624,7 @@
             "type": "string",
             "title": "Version",
             "description": "Version",
-            "default": "0.5.0"
+            "default": "0.5.2"
           },
           "debug": {
             "type": "boolean",

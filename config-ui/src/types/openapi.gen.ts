@@ -3039,7 +3039,7 @@ export interface components {
         };
         /**
          * BridgeOutputConfig
-         * @description The wb-mqtt-bridge actuation channel (ARCH-8) — the designated DEVICE_COMMAND output.
+         * @description The locveil-bridge actuation channel (ARCH-8) — the designated DEVICE_COMMAND output.
          *
          *     When enabled, the composition registers the `BridgeClient` output adapter and designates it
          *     for the `device_command` modality; smart-home intents actuate through it and the device
@@ -3048,20 +3048,20 @@ export interface components {
         BridgeOutputConfig: {
             /**
              * Enabled
-             * @description Enable the smart-home bridge output (wb-mqtt-bridge)
+             * @description Enable the smart-home bridge output (locveil-bridge)
              * @default false
              */
             enabled: boolean;
             /**
              * Base Url
-             * @description Base URL of the wb-mqtt-bridge REST API (no trailing slash)
+             * @description Base URL of the locveil-bridge REST API (no trailing slash)
              * @default http://localhost:8000
              */
             base_url: string;
             /**
              * Timeout Seconds
-             * @description Per-request HTTP timeout — covers the bridge's ~500 ms actuation echo-wait with margin
-             * @default 5
+             * @description Per-request HTTP timeout — must exceed the bridge's slowest gated actuation echo-wait (Mitsubishi HVAC confirms take up to ~15 s; relays echo in ~500 ms)
+             * @default 20
              */
             timeout_seconds: number;
         };
@@ -3719,7 +3719,7 @@ export interface components {
             /**
              * Version
              * @description Version
-             * @default 0.5.0
+             * @default 0.5.2
              */
             version: string;
             /**

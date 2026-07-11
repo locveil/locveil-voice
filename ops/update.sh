@@ -1,10 +1,10 @@
 #!/bin/sh
 # Update Irene on the controller (BUILD-10, design D-5). Run after `git pull`:
-#   cd /mnt/sdcard/wb-mqtt-voice && git pull && ./ops/update.sh
+#   cd /mnt/sdcard/locveil-voice && git pull && ./ops/update.sh
 #
 # The clone (on the SD card) is the delivery vehicle; the containers mount the
-# runtime tree at /mnt/data/mqtt-voice-config (same split as the sibling
-# mqtt-bridge-config). This script bridges the two:
+# runtime tree at /mnt/data/locveil-voice-config (same split as the sibling
+# locveil-bridge-config). This script bridges the two:
 #
 # 1. Sync the GIT-OWNED assets content (donations/localization/prompts/templates/web +
 #    the donation contract schemas) from the clone into the runtime assets tree.
@@ -16,7 +16,7 @@
 set -eu
 cd "$(dirname "$0")"
 
-RUNTIME_DIR="${RUNTIME_DIR:-/mnt/data/mqtt-voice-config}"
+RUNTIME_DIR="${RUNTIME_DIR:-/mnt/data/locveil-voice-config}"
 ASSETS_DIR="$RUNTIME_DIR/assets"
 LOGS_DIR="$RUNTIME_DIR/logs"
 CONFIG_DIR="$RUNTIME_DIR/config"

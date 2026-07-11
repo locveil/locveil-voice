@@ -154,9 +154,9 @@ class BridgeOutputConfig(BaseModel):
     When enabled, the composition registers the `BridgeClient` output adapter and designates it
     for the `device_command` modality; smart-home intents actuate through it and the device
     catalog is pulled from the same endpoint (`GET /system/catalog`, lazy refresh per ARCH-26)."""
-    enabled: bool = Field(default=False, description="Enable the smart-home bridge output (wb-mqtt-bridge)")
+    enabled: bool = Field(default=False, description="Enable the smart-home bridge output (locveil-bridge)")
     base_url: str = Field(default="http://localhost:8000",
-                          description="Base URL of the wb-mqtt-bridge REST API (no trailing slash)")
+                          description="Base URL of the locveil-bridge REST API (no trailing slash)")
     timeout_seconds: float = Field(default=20.0, gt=0,
                                    description="Per-request HTTP timeout — must exceed the bridge's slowest "
                                                "gated actuation echo-wait (Mitsubishi HVAC confirms take up to "

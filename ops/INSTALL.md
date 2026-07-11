@@ -3,14 +3,14 @@
 The controller runs prebuilt images pulled from the GitHub Container Registry — it never builds
 anything. This directory is the whole deployment: a compose file, a short update script, and a
 systemd unit. The pattern (and most of the muscle memory) is the same as the sibling
-`wb-mqtt-bridge` deployment.
+`locveil-bridge` deployment.
 
 **Disk layout: the clone on the SD card is the delivery vehicle; `/mnt/data` holds the runtime
 tree the container mounts** — the same split as the sibling bridge deployment:
 
 ```
-/mnt/sdcard/wb-mqtt-voice/         <- this repo, cloned — touched ONLY by update.sh runs
-/mnt/data/mqtt-voice-config/       <- the RUNTIME tree: everything boot needs
+/mnt/sdcard/locveil-voice/         <- this repo, cloned — touched ONLY by update.sh runs
+/mnt/data/locveil-voice-config/       <- the RUNTIME tree: everything boot needs
 ├── docker-compose.yml             <- deployed here by update.sh (cp from the clone's ops/)
 ├── .env                           <- secrets (user-created; update.sh never touches it)
 ├── config/                        <- /app/config (read-only): irene.toml, delivered by
@@ -40,8 +40,8 @@ TOML, commit, then `git pull` + `./update.sh` on the controller.
 
 ```sh
 cd /mnt/sdcard
-git clone https://github.com/droman42/wb-mqtt-voice.git
-cd wb-mqtt-voice/ops
+git clone https://github.com/locveil/locveil-voice.git
+cd locveil-voice/ops
 ./update.sh            # creates + syncs the runtime tree, pulls images, starts the stack
 ```
 
@@ -49,9 +49,9 @@ Then wire it to boot — **copy** the unit, don't symlink it (a symlink onto the
 card would be unreadable to systemd at boot):
 
 ```sh
-cp /mnt/sdcard/wb-mqtt-voice/ops/wb-mqtt-voice.service /etc/systemd/system/
+cp /mnt/sdcard/locveil-voice/ops/locveil-voice.service /etc/systemd/system/
 systemctl daemon-reload
-systemctl enable --now wb-mqtt-voice
+systemctl enable --now locveil-voice
 ```
 
 (Re-copy after a `git pull` if the unit file changed.)
@@ -69,7 +69,7 @@ a mapping — so nothing else may already be listening there.
 While that download runs, `docker compose ps` shows the container as **`health: starting`** —
 its healthcheck polls `/health` and is given five minutes of grace before it starts reporting
 `unhealthy`. On a slow link the first boot can outlast that; nothing restarts the container, so
-just keep watching (`docker logs -f wb-mqtt-voice`) until the models land and it flips to
+just keep watching (`docker logs -f locveil-voice`) until the models land and it flips to
 `healthy`. A container stuck `unhealthy` long after the models finished means the API never
 bound — check the logs rather than the network.
 
@@ -87,11 +87,11 @@ compose reads it automatically on both start paths (the systemd unit and `update
 compose from that directory):
 
 ```sh
-cat > /mnt/data/mqtt-voice-config/.env <<'EOF'
+cat > /mnt/data/locveil-voice-config/.env <<'EOF'
 DEEPSEEK_API_KEY=sk-XXXXXXXX
 IRENE_REPORTS_TOKEN=github_pat_XXXXXXXX
 EOF
-chmod 600 /mnt/data/mqtt-voice-config/.env
+chmod 600 /mnt/data/locveil-voice-config/.env
 ```
 
 `update.sh` never touches this file. After adding or changing it, re-run `./update.sh` (or
@@ -100,7 +100,7 @@ chmod 600 /mnt/data/mqtt-voice-config/.env
 ## Update
 
 ```sh
-cd /mnt/sdcard/wb-mqtt-voice
+cd /mnt/sdcard/locveil-voice
 git pull
 ./ops/update.sh
 ```
@@ -115,7 +115,7 @@ Every published image also carries an immutable `vYYYYMMDD-<sha>` tag (see the p
 GHCR). Pin it in the **clone's** `ops/docker-compose.yml`:
 
 ```yaml
-    image: ghcr.io/locveil/wb-mqtt-voice-armv7:v20260702-abc1234
+    image: ghcr.io/locveil/locveil-voice-armv7:v20260702-abc1234
 ```
 
 then run `./ops/update.sh`. Return to `:latest` the same way.
@@ -124,25 +124,25 @@ Two rules make this work, and breaking either fails quietly rather than loudly:
 
 - **Edit the clone's copy, never the deployed one.** `update.sh` copies `ops/docker-compose.yml`
   into the runtime tree on every run, so a pin written straight into
-  `/mnt/data/mqtt-voice-config/docker-compose.yml` is silently reverted to `:latest` at the next
+  `/mnt/data/locveil-voice-config/docker-compose.yml` is silently reverted to `:latest` at the next
   update. (Pinning leaves the clone dirty — commit it, or `git stash` before the next pull.)
 - **Never run `docker compose` from the clone.** Compose names the project after the directory it
   runs in, so `docker compose up -d` inside `ops/` starts a *second* stack called `ops` beside the
   real one — and it finds no `.env` there, so that stack comes up with empty API keys. Run compose
-  only from `/mnt/data/mqtt-voice-config`, which is exactly what `update.sh` and the systemd unit
+  only from `/mnt/data/locveil-voice-config`, which is exactly what `update.sh` and the systemd unit
   do.
 
 ## Variants
 
 The controller **remembers its profile**: pass `CONFIG_PROFILE` once and `update.sh` records it in
-`/mnt/data/mqtt-voice-config/config-profile`, so every later plain `./ops/update.sh` reuses it. An
+`/mnt/data/locveil-voice-config/config-profile`, so every later plain `./ops/update.sh` reuses it. An
 unknown name aborts instead of delivering the wrong config.
 
 - **aarch64 controller (WB8.5 / Pi)** — pin the aarch64 image
-  (`ghcr.io/locveil/wb-mqtt-voice-aarch64`) in the clone's `ops/docker-compose.yml`, then run
+  (`ghcr.io/locveil/locveil-voice-aarch64`) in the clone's `ops/docker-compose.yml`, then run
   `CONFIG_PROFILE=embedded-aarch64 ./ops/update.sh` once. The armv7 defaults target the WB7.
 - **English deployment** — same shape, with the `-en` image variant
-  (`ghcr.io/locveil/wb-mqtt-voice-armv7-en` / `-aarch64-en`) and the matching
+  (`ghcr.io/locveil/locveil-voice-armv7-en` / `-aarch64-en`) and the matching
   `CONFIG_PROFILE=embedded-armv7-en` (resp. `-aarch64-en`); language is baked into the image.
 
 The image and the profile must agree: the profile names the models the image actually ships.
@@ -172,6 +172,6 @@ and connect over plain `ws://` directly to :8080.
   restore updates: re-clone and re-run `./update.sh`; secrets (`.env`) and the whole runtime
   tree are on `/mnt/data`, untouched.
 - A corrupted model download can be deleted from
-  `/mnt/data/mqtt-voice-config/assets/models/…`; it re-downloads on the next start.
+  `/mnt/data/locveil-voice-config/assets/models/…`; it re-downloads on the next start.
 - Memory: the compose file caps Irene at 800 MB — if the assistant is OOM-killed on a busy
   controller, check `docker stats` and tune the cap (the ASR/TTS models are the big consumers).

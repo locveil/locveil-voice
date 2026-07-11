@@ -1,16 +1,16 @@
 # Irene on a Wirenboard controller — deploy = pull, not build (BUILD-10, design D-5).
 # Source of truth lives in the SD-card clone; update.sh DEPLOYS this file into the
-# runtime tree (/mnt/data/mqtt-voice-config) and all compose commands run from there —
+# runtime tree (/mnt/data/locveil-voice-config) and all compose commands run from there —
 # boot must not depend on the SD card. See INSTALL.md.
 #
 # Rollback: pin `image:` to a vYYYYMMDD-<sha> tag (see GHCR package page) and re-run
 # `docker compose up -d`. English deployment: switch the image to the `-en` variant
-# (ghcr.io/locveil/wb-mqtt-voice-armv7-en) — the language is baked into the image.
+# (ghcr.io/locveil/locveil-voice-armv7-en) — the language is baked into the image.
 
 services:
   irene:
-    image: ghcr.io/locveil/wb-mqtt-voice-armv7:latest
-    container_name: wb-mqtt-voice
+    image: ghcr.io/locveil/locveil-voice-armv7:latest
+    container_name: locveil-voice
     restart: unless-stopped
     # Host network, matching the sibling bridge (which needs it to reach WB's mosquitto on
     # localhost:1883). Under a `ports:` mapping our container's `localhost` is the CONTAINER, so
@@ -22,23 +22,23 @@ services:
     network_mode: host
     volumes:
       # The runtime tree lives on /mnt/data (the clone on /mnt/sdcard is only the
-      # delivery vehicle — same split as the sibling mqtt-bridge-config). assets/ is
+      # delivery vehicle — same split as the sibling locveil-bridge-config). assets/ is
       # the assets root: git-owned content (rsynced in by update.sh) + downloaded
       # models, cache, traces, and durable state (state/ — timers survive restarts).
-      - /mnt/data/mqtt-voice-config/assets:/app/assets
+      - /mnt/data/locveil-voice-config/assets:/app/assets
       # THE REPO OWNS THE CONFIG (bridge semantics): update.sh copies the profile
       # TOML clone -> config/irene.toml on every update; read-only in the container,
       # so on-box edits (incl. config-ui saves) fail loudly instead of vanishing on
       # the next update. Config changes are made in the repo and delivered by git pull.
-      - /mnt/data/mqtt-voice-config/config:/app/config:ro
+      - /mnt/data/locveil-voice-config/config:/app/config:ro
       # Runner file logs (logs/irene.log + rotated timestamps). Unmounted they would
       # accumulate in the container's writable layer — flash wear + lost on recreate.
-      - /mnt/data/mqtt-voice-config/logs:/app/logs
+      - /mnt/data/locveil-voice-config/logs:/app/logs
     environment:
       # Point the runner at the delivered config (overrides the image's baked default).
       IRENE_CONFIG_FILE: /app/config/irene.toml
       # Secrets reach the container via a `.env` file next to the DEPLOYED copy of
-      # this compose file — /mnt/data/mqtt-voice-config/.env (chmod 600, see
+      # this compose file — /mnt/data/locveil-voice-config/.env (chmod 600, see
       # INSTALL.md "Secrets"). update.sh deploys the compose file there and both
       # start paths (systemd unit + update.sh) run compose from that directory, so
       # they see identical env. Empty values are fine: the LLM tier and problem

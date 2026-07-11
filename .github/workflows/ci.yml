@@ -8,7 +8,7 @@
 #               multi-arch config-ui image — each publish job `needs:` its green health job,
 #               so an image can never be published from a red tree.
 #
-# Naming (D-2): RU images keep the unsuffixed names (wb-mqtt-voice-armv7 …); EN adds `-en`.
+# Naming (D-2): RU images keep the unsuffixed names (locveil-voice-armv7 …); EN adds `-en`.
 # Guards (D-6): a published image FAILS the run if /app/assets is non-empty (models must
 # never be baked) and its size is reported + checked against a per-target budget.
 #
@@ -39,7 +39,7 @@ on:
         type: boolean
         default: true
       build_ui:
-        description: "Publish the config-ui image (wb-mqtt-voice-ui, multi-arch)"
+        description: "Publish the config-ui image (locveil-voice-ui, multi-arch)"
         type: boolean
         default: true
 
@@ -194,11 +194,11 @@ jobs:
 
           TARGETS = {
               "armv7":      {"dockerfile": "docker/Dockerfile.armv7",   "platform": "linux/arm/v7",
-                             "profile": "embedded-armv7",   "image": "wb-mqtt-voice-armv7"},
+                             "profile": "embedded-armv7",   "image": "locveil-voice-armv7"},
               "aarch64":    {"dockerfile": "docker/Dockerfile.aarch64", "platform": "linux/arm64",
-                             "profile": "embedded-aarch64", "image": "wb-mqtt-voice-aarch64"},
+                             "profile": "embedded-aarch64", "image": "locveil-voice-aarch64"},
               "standalone": {"dockerfile": "docker/Dockerfile.x86_64",  "platform": "linux/amd64",
-                             "profile": "standalone-x86_64", "image": "wb-mqtt-voice-standalone"},
+                             "profile": "standalone-x86_64", "image": "locveil-voice-standalone"},
           }
           # D-6 size budgets (bytes, uncompressed) — set from the FIRST real publish
           # (BUILD-11, 2026-07-06): armv7 248 MB, aarch64 718 MB, standalone 2.86 GB.
@@ -318,7 +318,7 @@ jobs:
       - id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository_owner }}/wb-mqtt-voice-ui
+          images: ghcr.io/${{ github.repository_owner }}/locveil-voice-ui
           tags: |
             type=raw,value=latest
             type=sha,format=short

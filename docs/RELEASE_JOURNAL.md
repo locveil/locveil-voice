@@ -17,6 +17,18 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-11 — BUILD-29: deployment identity renamed — nothing on the controller will say wb-mqtt
+  after the migration script runs.** Second act of the rename day (owner call: complete the re-pointing
+  down to the metal before continuing). Images (`locveil-voice-*`, `locveil-voice-ui`), container, systemd
+  unit (`locveil-voice.service`), runtime tree (`/mnt/data/locveil-voice-config`), clone path, INSTALL flow
+  — all renamed repo-side in one pass, coordinated with the bridge's OPS-21. The two API-visible bridge-name
+  description strings updated with the full contract chain regenerated (openapi 7-line delta — REL-4 had
+  already absorbed the BUILD-26 drift; config-ui types regen + check + build green). New
+  `ops/migrate-to-locveil.sh` executes the controller cutover in one run (old unit out → tree mv with
+  models/state/.env intact → update.sh under the new identity → new unit in → old images dropped);
+  sequencing: CI publish + package-visibility flip FIRST, then the script on the WB7. Full pytest surfaced
+  a pre-existing order-dependent flake (satellite recorder test; identical on the pre-change tree) → BUG-42.
+
 - **2026-07-11 — BUILD-21: the repo is `locveil-voice` now — commons bootstrap consumed, eval re-pointed,
   name sweep, container user + GHCR namespace.** The owner locked the product name **Locveil** (superseding
   BUILD-20's "Domovoy"), claimed the `locveil` GitHub org, and transferred/renamed all three repos + local

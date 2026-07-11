@@ -391,6 +391,13 @@ _Discrete functional defects (distinct from QUAL refactors/quality work). Surfac
       for ambiguity) may later avoid asking at all in some of these cases; this task is about the question being
       answerable when it *is* asked.
 
+- [ ] **BUG-42** [TEST] `[deferred]` — **Order-dependent flake:
+      `test_arch36_satellite.py::test_recorder_declined_and_next_utterance_finalizes` fails in the full
+      suite, passes in isolation** (its file also passes alone, 14/14). Reproduced identically on
+      2026-07-11 pre- and post-BUILD-29 trees (1 failed / 1379 passed both times), so it is
+      cross-file state leakage (another test's residue), not a recent regression. Diagnose with
+      `pytest -p no:randomly`-style bisection or `--lf`-adjacent ordering; fix the leaking fixture
+      or isolate the recorder state.
 ### Tests (TEST)
 > **Strategy (decided 2026-06-01): do NOT keep repairing the existing suite.** Most tests were written against
 > pre-refactor code and will be invalidated by the ARCH refactors (ARCH-1..5) and the code reviews (QUAL-8/10/12/14).
@@ -494,8 +501,9 @@ size-matched to the Russian stack; language is a per-config/deployment choice (a
       from git and generate it during the build. Pairs with `config-ui-stays-functional`, which assumes the
       schema the UI is built against is the schema the backend serves.
 - [ ] **BUILD-28** [OPS][PROCESS] `[deferred]` — **One compose file for the controller, with a real startup
-      order.** Three containers run on the WB7 today — `wb-mqtt-bridge`, `wb-mqtt-ui`, `wb-mqtt-voice` — from
-      **two** compose projects (`mqtt-bridge-config`, `mqtt-voice-config`), each with its own systemd unit, no
+      order.** Three containers run on the WB7 today — `locveil-bridge`, `locveil-bridge-ui`, `locveil-voice`
+      (post-BUILD-29 names) — from **two** compose projects (`locveil-bridge-config`, `locveil-voice-config`),
+      each with its own systemd unit, no
       `depends_on` between them and no ordering guarantee. Voice pulls the bridge's catalog at startup, so today
       it simply races and relies on the ARCH-26 lazy refresh to paper over losing (BUILD-27). Owner's framing
       (2026-07-09): the permanent answer is a single compose file managing all three, with the startup sequence
@@ -503,18 +511,6 @@ size-matched to the Russian stack; language is a per-config/deployment choice (a
       board** (D-4/D-5), seeded when BUILD-21 lands, not decided unilaterally here. Scope for that design: which
       repo owns the unified compose, health-gated `depends_on` vs. tolerant clients, whether the units collapse
       into one, and how `update.sh` stays per-repo when the compose is not. Related: BUILD-18 (ops conformance).
-- [ ] **BUILD-29** [OPS][BUILD] `[deferred]` — **Deployment-identity rename to Locveil** (BUILD-21 residue;
-      owner-gated — every item touches the live WB7 deployment or a published surface). BUILD-21's sweep
-      deliberately kept the pre-rename runtime identifiers: image basenames (`wb-mqtt-voice-{armv7,aarch64,
-      standalone}[-en]`, `wb-mqtt-voice-ui` — ci.yml matrix + build-docker.md), `container_name: wb-mqtt-voice`
-      + the `mqtt-voice-config` compose project, the systemd unit `ops/wb-mqtt-voice.service`, the controller
-      clone at `/mnt/sdcard/wb-mqtt-voice` (update.sh header + INSTALL.md flow, incl. its clone URL/dir), the
-      `/mnt/data/*` runtime trees, and the two runtime `Field(description=…)` strings naming wb-mqtt-bridge
-      (`irene/config/models.py:157,159` — API-visible, pairs with the BUILD-26 openapi regen). Rename them
-      coherently in ONE pass with a controller migration plan (rename the SD-card clone, re-enable the unit
-      under the new name, re-pull images under new basenames) — coordinate with the bridge's mirror rename and
-      BUILD-28's single-compose design (same deployment surface; possibly the same session). Until then the
-      GHCR namespace is already `ghcr.io/locveil/*` (BUILD-21) with old basenames — a deliberate mixed state.
 ### Documentation (DOC)
 
 ### UI / config-ui (UI)

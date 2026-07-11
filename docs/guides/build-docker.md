@@ -7,10 +7,10 @@ original, unsuffixed names; English variants add an `-en` suffix:
 
 | Image | Architecture | Role |
 |---|---|---|
-| `wb-mqtt-voice-standalone` / `-standalone-en` | x86_64 | Full local voice box — mic → wake-word → ASR → intent → TTS → playback. |
-| `wb-mqtt-voice-aarch64` / `-aarch64-en` | aarch64 (WB8.5 / Pi) | Satellite server — ASR + intent + TTS for ESP32 satellites; no local mic. |
-| `wb-mqtt-voice-armv7` / `-armv7-en` | armv7 (WB7) | Satellite server, smaller models; no local mic. |
-| `wb-mqtt-voice-ui` | multi-arch (one manifest) | The configuration editor as a static site (see below). |
+| `locveil-voice-standalone` / `-standalone-en` | x86_64 | Full local voice box — mic → wake-word → ASR → intent → TTS → playback. |
+| `locveil-voice-aarch64` / `-aarch64-en` | aarch64 (WB8.5 / Pi) | Satellite server — ASR + intent + TTS for ESP32 satellites; no local mic. |
+| `locveil-voice-armv7` / `-armv7-en` | armv7 (WB7) | Satellite server, smaller models; no local mic. |
+| `locveil-voice-ui` | multi-arch (one manifest) | The configuration editor as a static site (see below). |
 
 On the satellites the ESP32 owns the microphone, voice activity detection, wake-word, and playback; the
 container only does recognition and speech synthesis and streams the reply back over the web API. The
@@ -22,9 +22,9 @@ Each image is published to the GitHub Container Registry and tagged `latest`, `s
 `v<date>-<sha>` (pin the date tag to roll back):
 
 ```bash
-docker pull ghcr.io/locveil/wb-mqtt-voice-standalone:latest      # Russian
-docker pull ghcr.io/locveil/wb-mqtt-voice-armv7-en:latest        # English
-docker pull ghcr.io/locveil/wb-mqtt-voice-ui:latest              # configuration editor
+docker pull ghcr.io/locveil/locveil-voice-standalone:latest      # Russian
+docker pull ghcr.io/locveil/locveil-voice-armv7-en:latest        # English
+docker pull ghcr.io/locveil/locveil-voice-ui:latest              # configuration editor
 ```
 
 Publishing is a deliberate act, not a side effect of pushing code: every push runs the fast health checks,
@@ -76,7 +76,7 @@ first boot downloads the speech models.
 ```bash
 docker run --rm -p 6000:6000 \
   -v ./assets:/app/assets \
-  ghcr.io/locveil/wb-mqtt-voice-aarch64:latest
+  ghcr.io/locveil/locveil-voice-aarch64:latest
 ```
 
 **Standalone** (x86_64) — drives the local microphone and speaker, so it needs the host sound devices:
@@ -85,7 +85,7 @@ docker run --rm -p 6000:6000 \
 docker run --rm -p 6000:6000 \
   --device /dev/snd \
   -v ./assets:/app/assets \
-  ghcr.io/locveil/wb-mqtt-voice-standalone:latest
+  ghcr.io/locveil/locveil-voice-standalone:latest
 ```
 
 Both serve the full web API on 6000 alongside their primary input.
@@ -100,7 +100,7 @@ ad-hoc compose elsewhere:
 ```yaml
 services:
   irene:
-    image: ghcr.io/locveil/wb-mqtt-voice-aarch64:latest
+    image: ghcr.io/locveil/locveil-voice-aarch64:latest
     ports: ["6000:6000"]
     volumes: ["./assets:/app/assets"]
     restart: unless-stopped
@@ -134,13 +134,13 @@ uv run python -m irene.tools.build_analyzer --list-profiles
 
 ## The configuration editor image
 
-The donation/configuration editor ships as `wb-mqtt-voice-ui`: a small nginx container serving the built
+The donation/configuration editor ships as `locveil-voice-ui`: a small nginx container serving the built
 static app on **port 3000**, published as a single multi-arch manifest (the same tag runs on x86_64, aarch64,
 and armv7). It is not part of the standard controller deployment — run it wherever convenient when you need
 to edit donations or configuration:
 
 ```bash
-docker run --rm -p 3000:3000 ghcr.io/locveil/wb-mqtt-voice-ui:latest
+docker run --rm -p 3000:3000 ghcr.io/locveil/locveil-voice-ui:latest
 ```
 
 By default the app talks to Irene on **the same host it is served from**, port 8080. Point it elsewhere with
@@ -148,7 +148,7 @@ the `API_BASE_URL` environment variable:
 
 ```bash
 docker run --rm -p 3000:3000 -e API_BASE_URL=http://192.168.110.250:8080 \
-  ghcr.io/locveil/wb-mqtt-voice-ui:latest
+  ghcr.io/locveil/locveil-voice-ui:latest
 ```
 
 ## How the image is built

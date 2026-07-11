@@ -3841,6 +3841,23 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       (one compose, real startup order — bound for the commons PROD board) and bridge **DRV-23** (its believed
       `power` never tracks the state topic, so the opposite command idempotence-skips).
 
+- [x] **BUILD-29** [OPS][BUILD] `[deferred]` — **DONE 2026-07-11 (repo side; controller migration = owner
+      script run). Deployment-identity rename to Locveil** (BUILD-21 residue; coordinated with bridge OPS-21,
+      same session). Everything renamed in one pass: image basenames → `locveil-voice-{armv7,aarch64,
+      standalone}[-en]` + `locveil-voice-ui` (ci.yml matrix + build-docker.md), `container_name:
+      locveil-voice`, runtime tree `/mnt/data/mqtt-voice-config` → `/mnt/data/locveil-voice-config`
+      (compose volumes, update.sh RUNTIME_DIR, INSTALL.md layout), systemd unit `ops/wb-mqtt-voice.service`
+      → `ops/locveil-voice.service` (git mv + content), clone path `/mnt/sdcard/locveil-voice` + clone URL,
+      and the two API-visible `Field(description=…)` strings (`irene/config/models.py` → "locveil-bridge")
+      with the full generated-contract chain per `config-ui-stays-functional`: `dump_openapi.py` regen
+      (7-line delta — the BUILD-26 241-line drift was already regenerated at REL-4), `gen:api-types`,
+      `npm run check` + `build` green. **NEW `ops/migrate-to-locveil.sh`**: one-time controller migration
+      (retire old unit → down old stack from old tree → mv runtime tree with models/state/.env intact →
+      `update.sh` under the new identity → install+enable new unit → drop old-name images); `sh -n` +
+      `docker compose config` clean. Gates: pytest 1379 passed / 1 pre-existing order-dependent flake
+      (reproduced on the pre-change tree, filed BUG-42), `make cli` 5/5, check_scope green. Sequencing:
+      CI publish must create + owner must make PUBLIC the new GHCR packages before the migration script
+      runs on the WB7.
 ### Models & Assets (ASSET)
 - [x] **ASSET-1** — Refresh stale model IDs (Anthropic→Claude 4.x, Whisper large-v3, ElevenLabs multilingual_v2, spaCy 3.8, gpt-4→gpt-4o-mini). → fc85306
 - [x] **ASSET-2** (P1) — **Liveness-checked ALL model download URLs. DONE 2026-06-03.** Swept every model URL in
