@@ -240,6 +240,16 @@ latin_to_cyrillic = true
 symbol_replacement = true
 
 # ============================================================
+# PROBLEM REPORTING — «сообщи о проблеме»
+# ============================================================
+# Enabled on all deployment profiles: filing goes live once the delivery
+# token (env IRENE_REPORTS_TOKEN — see ops/INSTALL.md) is present;
+# without it the intent answers honestly that reporting isn't set up.
+[reports]
+enabled = true
+repo = "locveil/locveil-reports"         # PRIVATE triage home (bundles carry logs/config)
+
+# ============================================================
 # INTENT SYSTEM (essential)
 # ============================================================
 [intent_system]

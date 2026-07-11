@@ -43,9 +43,13 @@ most a few reports per hour — if you hit it, Irene asks for a little patience.
 
 ## Setting it up
 
-Reporting is off by default (Irene will say so honestly if asked to report). To enable it you
-need a **private** GitHub repository to receive the reports and a fine-grained personal access
-token scoped to *that repository only*, with Issues and Contents write permission.
+The deployment profiles that ship with the Docker images come with reporting already switched
+on, pointed at the maintainers' private reports repository — there the only missing piece is
+the delivery token (see the install guide's Secrets section); until it's provided, Irene says
+honestly that reporting isn't set up. In any other configuration reporting is off by default.
+To point it at your own inbox instead, you need a **private** GitHub repository to receive the
+reports and a fine-grained personal access token scoped to *that repository only*, with Issues
+and Contents write permission.
 
 ```toml
 [reports]

@@ -1,6 +1,6 @@
 """GitHub client for the problem-report sink (ARCH-32, design §5-6).
 
-Talks to the PRIVATE reports repo (design D-1 — `wb-user-reports`): commits the support bundle
+Talks to the PRIVATE reports repo (design D-1 — `locveil/locveil-reports`): commits the support bundle
 via the contents API and opens the ticket via the issues API. Deliberately not an OutputPort —
 this is an outbound service client (the BridgeClient precedent), owned by the ReportService.
 

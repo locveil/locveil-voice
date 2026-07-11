@@ -10,7 +10,9 @@ or any identity at all (a user registry is a later release).
 
 ## 1. Agreed decisions
 
-- **D-1 — Backend topology: a private triage home.** One private repo, **`wb-user-reports`**,
+- **D-1 — Backend topology: a private triage home.** One private repo, **`wb-user-reports`**
+  _(renamed/moved to **`locveil/locveil-reports`** 2026-07-11 with the Locveil productization;
+  the old name redirects — mentions of `wb-user-reports` below refer to the same repo)_,
   holds BOTH the tickets (GitHub issues) and the raw bundles. The Claude triage workflow lives in
   this repo — not in the public code repos. Rationale: both code repos are public, and bundles
   narrate the household (rooms, devices, daily rhythms, free-form speech); redacting free-form

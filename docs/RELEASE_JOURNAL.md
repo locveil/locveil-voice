@@ -20,6 +20,26 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-11 — BUILD-31: problem reporting switched ON in all six deployment profiles; reports repo
+  references follow the rename to `locveil/locveil-reports`.** User question ("why don't the docker configs
+  have a reports section?") uncovered a structural sync miss from ARCH-31: the `[reports]` section went into
+  master + example, but the six deployment configs only got the `report` *handler* — so the Pydantic default
+  (`enabled=false, repo=""`) applied, and BUILD-15's `IRENE_REPORTS_TOKEN` plumbing could never activate
+  anything (the token arrived; the config gate in `setup_problem_reporting` never opened, and
+  `ops/INSTALL.md` misleadingly implied the token alone sufficed). All six profiles now carry
+  `[reports] enabled=true, repo="locveil/locveil-reports"` — activation is exactly token-presence, matching
+  what INSTALL.md promises (its Secrets section now says so explicitly). The rename discovery: the reports
+  repo didn't just change name, it **moved to the `locveil` org** (`droman42/wb-user-reports` →
+  `locveil/locveil-reports`, verified via `gh` redirect; `droman42/locveil-reports` is a 404) — references
+  updated in CLAUDE.md (`problem-report-inbox`), the `/inbox` skill, master's `repo` example comment,
+  `github_report.py` docstring, and a rename note on design D-1 (historical mentions left frozen).
+  **Operational flag for the owner:** fine-grained PATs are minted per resource owner — a PAT created under
+  `droman42` for the old repo does NOT reach an org-owned repo; the device token in the WB7 `.env` (and the
+  `REPORTS_CROSS_REPO_TOKEN` secret, if PAT-based) must be re-minted under the `locveil` org or reports will
+  spool/fail silently. `[satellite]`'s absence from the profiles was checked and confirmed intentional
+  (controller ≠ room node). All 14 configs parse with the expected reports state; config gates + report
+  tests green.
+
 - **2026-07-11 — BUILD-23: CLAUDE.md joins the shared-block regime (HK-2/PROD-5) — second board delegation
   consumed, same day.** Narrowed at intake exactly as the delegation pre-specified (the "separate drift-guard
   script" wording was dead; scope-guard's `claudemd` hash rule from `scope-v3` is the drift guard — the

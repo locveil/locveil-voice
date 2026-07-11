@@ -1661,6 +1661,25 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       before the local script was deleted. **Found a real scope-v1 bug on the first rotation attempt** —
       `rotate_journal` exploded section bodies char-per-line (tuple double-indexing); hit concurrently by
       bridge OPS-22, fixed commons-side as `scope-v2` (`09a9025`), which this task pins.
+- [x] **BUILD-31** `[deferred]` [OPS][CONFIG] — **DONE 2026-07-11 (filed + completed same day; user-directed).
+      Problem reporting enabled in all six deployment profiles + reports-repo rename adopted.** Root cause
+      (found at intake, user question): ARCH-31 added `[reports]` to master/example and the `report` handler
+      to all six docker configs, but never the **section** — profiles fell back to the Pydantic default
+      (`enabled=false, repo=""`), so BUILD-15's token plumbing could never activate reporting on a controller
+      (`setup_problem_reporting` returns early; INSTALL.md's "token lets reports file themselves" was false).
+      All six profiles (`embedded-{armv7,aarch64}{,-en}`, `standalone-x86_64{,-en}`) now carry
+      `[reports] enabled=true, repo="locveil/locveil-reports"` — the token is the only activation switch,
+      degrading to the honest off state without it. Rename adopted repo-wide: the reports repo moved
+      `droman42/wb-user-reports` → **`locveil/locveil-reports`** (org move, verified via `gh` — old name
+      redirects, `droman42/locveil-reports` is 404); updated CLAUDE.md `problem-report-inbox`, `/inbox` skill
+      (all `gh` commands), master `repo` example comment, `github_report.py` docstring, design D-1 rename
+      note (frozen mentions annotated, not rewritten). User-facing docs per `user-facing-docs-are-done`:
+      `docs/guides/problem-reporting.md` (profiles ship enabled; token completes it; own-repo path kept) +
+      `ops/INSTALL.md` Secrets (org-minted PAT requirement + re-mint warning after owner moves).
+      `[satellite]` absence from profiles confirmed intentional at intake (controller ≠ room node) — not
+      touched. **Owner follow-up (operational, not code): re-mint the device PAT under the `locveil` org** —
+      a `droman42`-owned fine-grained PAT cannot reach the org repo. Verified: 14/14 configs parse with
+      expected reports state, master completeness/alignment + arch gates 18/18, report tests 25/25.
 ### Models & Assets (ASSET)
 ### Documentation (DOC)
 - [x] **DOC-5b** (P2) — DONE 2026-06-08: regenerated `guides/DONATION_FILE_SPECIFICATION.md` for the v1.1

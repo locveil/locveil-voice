@@ -79,8 +79,12 @@ Two optional cloud integrations read their keys from the container's environment
 cleanly to "off" when the key is absent (the assistant still runs fully offline):
 
 - `DEEPSEEK_API_KEY` — the cloud LLM tier of intent recognition;
-- `IRENE_REPORTS_TOKEN` — the GitHub token that lets spoken problem reports file themselves
-  (fine-grained PAT for the private reports repo, Issues + Contents read/write).
+- `IRENE_REPORTS_TOKEN` — the GitHub token that lets spoken problem reports file themselves.
+  The deployment profiles ship with reporting enabled and pointed at the private
+  `locveil/locveil-reports` repo, so the token is the only missing piece: a fine-grained PAT
+  minted for the **locveil** organization, scoped to that repo only, Issues + Contents
+  read/write. (A PAT minted for a personal account can't reach an org-owned repo — if reports
+  stop filing after a repo move, re-mint the token under the new owner.)
 
 Put them in a `.env` file in the **runtime tree**, next to the deployed compose file —
 compose reads it automatically on both start paths (the systemd unit and `update.sh` run
