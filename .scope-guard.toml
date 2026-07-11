@@ -1,4 +1,4 @@
-# scope-guard config for locveil-voice (BUILD-30; vendored scripts/scope_guard.py at scope-v2).
+# scope-guard config for locveil-voice (BUILD-30; vendored scripts/scope_guard.py at scope-v3 per BUILD-23).
 # Normative convention: ../locveil-commons/process/ledger-discipline.md (HK-1 / PROD-13).
 # Behavior changes happen in locveil-commons, never here — re-pin to move.
 
@@ -30,3 +30,12 @@ low_water = 1000
 hard_ceiling = 2000
 completion_crosscheck = false            # predates the journal — would flag history
 archive_pointer = true
+
+[claude]
+file = "CLAUDE.md"
+[[claude.blocks]]
+name = "shared-invariants"
+sha256 = "8e295e7009a43ece59693cdf7876189c145d29694291ca2c07bbc88e8dddb214"
+[[claude.blocks]]
+name = "cross-repo-board"
+sha256 = "61769abd18b82a60c2024d419f90196a01856c8dd3b0db815c3480b033e9629d"

@@ -8,8 +8,9 @@ but these rules apply to any task). **Single source of truth** (relocated here f
 — names survive adding/removing/reordering, so references never break.
 
 - **`work-on-main`** — Work on `main`; branch only when explicitly asked.
-- **`config-master-canonical`** — `configs/config-master.toml` is the canonical config reference (a release-time
-  `config-example.toml` is a later story).
+- **`config-master-file`** — `configs/config-master.toml` is the canonical config reference (a release-time
+  `config-example.toml` is a later story). _Renamed from `config-master-canonical` 2026-07-11 (HK-2: the bridge's
+  same-named rule renamed apart as `config-master-tree`); frozen archives keep the old slug._
 - **`hexagonal-architecture`** — Architecture target = Hexagonal; dependencies point inward (domain → application →
   ports → adapters). Don't add backwards/cross-layer imports (enforced by the import-linter contracts).
 - **`config-ui-stays-functional`** — `config-ui` is a first-class consumer of backend contracts. Any task that changes
@@ -38,10 +39,11 @@ but these rules apply to any task). **Single source of truth** (relocated here f
     changed **there not here** (this repo carries only eval YAML + the thin `eval/Makefile`; see *Testing &
     evaluation*). This repo *does* write to `locveil-commons` (it co-develops the framework and owns the contract pin
     above) — the asymmetry with the bridge, which only reads it.
-  - **Cross-repo task filings arrive uncommitted, either direction.** When voice-side work spawns a sibling task (e.g.
-    the bridge emitting the artifact), file it into that repo's ledger **but leave it uncommitted** for its maintainer
-    to verify against live code + accept; symmetrically, a filing that lands **here** from a sibling is verified before
-    accepting (`task-start-reconciliation`) and then needs its own ID (`every-task-in-the-ledger`).
+  - **Cross-repo work travels two ways** (the pre-board uncommitted-filing mechanism is retired): a cross-repo
+    *initiative* goes through the **board** (`cross-repo-board` block below — delegation text committed in the PROD
+    entry, local ID written back); a direct *operational* filing (a bug report against the bridge, a contract
+    request) stays repo-to-repo — and any filing that lands here is verified per `task-start-reconciliation` and
+    gets its own local ID before work starts.
   - The contract's *content* (schemas/endpoints/task pairing) lives in `docs/design/mqtt_integration.md` §14 + the
     `voice-bridge-catalog-contract` memory — **referenced, not duplicated here** (avoid drift). Pairs with
     `../locveil-bridge/CLAUDE.md`'s same-named invariant (the other direction).
@@ -51,64 +53,18 @@ but these rules apply to any task). **Single source of truth** (relocated here f
   - **At task COMPLETION:** flip status in the ledger and add a dated entry to `RELEASE_JOURNAL.md` — **in the same
     change.** Do **not** re-edit a review doc's status (frozen evidence with a one-time `→ tracked as <ID>` pointer);
     the only reason to edit a review doc is if a *finding itself* is wrong/obsolete (annotate, don't flip status).
-- **`single-task-ledger`** — The ledger is the only source of scope + status. Every release task has **exactly one ID**;
-  review/design docs may *surface findings* but **a finding is not scope until it has a ledger ID**. Each task is tagged
-  **`[release]`** or **`[deferred]`**; release is blocked until every `[release]` task is `[x]`. The guard is
-  **scope-guard** (`scripts/scope_guard.py` + `.scope-guard.toml` — the commons-owned tool vendored at a pinned
-  `scope-vX` tag per `../locveil-commons/process/ledger-discipline.md`; BUILD-30 cutover, currently `scope-v2`).
-  It runs pre-commit (committed `hooks/` + `core.hooksPath`) and as the CI `ledger-guard` job; run it manually at
-  each gate. **Never edit the vendored file** — behavior changes land in locveil-commons and arrive by re-pin.
-  - **The ledger spans two files:** active `docs/RELEASE_PLAN.md` (open + paused/partial) + frozen
-    `docs/RELEASE_PLAN_DONE.md` (completed `[x]`, by workstream). One ledger — every ID in exactly one file; on
-    completion a task **moves** active → done (same change as the journal entry). **A task lives in the
-    workstream section matching its ID prefix, entries sorted ascending by ID within the section** (a BUILD
-    task never sits under ARCH, even when filed from another task's completion; a completed task is INSERTED
-    at its sorted position, not appended) — scope-guard fails on stranded `[x]` entries in the active
-    file, on prefix/section mismatches, on out-of-order IDs (in either file), and on a task row missing its
-    `[release]`/`[deferred]` tag.
-  - **The DONE ledger rotates too:** when it exceeds its watermark (`.scope-guard.toml` `[ledger]`, hard-fail at the
-    ceiling), `scripts/scope_guard.py --config .scope-guard.toml --rotate done` freezes the lowest-numbered completed
-    entries per section into `docs/archive/ledger/` — **rotated IDs stay resolvable** (the guard scans the archive
-    dir, so old IDs never orphan). Rotation runs only via explicit `--rotate`, in its own commit; hooks/CI never
-    mutate the tree.
-- **`every-task-in-the-ledger`** — No work happens without a ledger entry, **regardless of where the task came from**
-  — a chat request, a GitHub issue, a code-review finding, a TODO spotted mid-task. The first action on any new piece
-  of work is to file it: give it an ID and a `[release]`/`[deferred]` tag *before* starting. External sources merely
-  *surface* work; it is not scope until it lives in the ledger (the intake door that `single-task-ledger` guards).
-  - **Carve-out — routine dependency housekeeping:** a lockfile-only dependency bump that does **not** change
-    `pyproject.toml` / `config-ui/package.json` intent (e.g. `npm audit fix`, a `uv lock` refresh, a Dependabot lock
-    refresh) does **not** need its own ledger ID. It still gets a `one-active-journal` line on completion, and any bump
-    that *is* a deliberate version decision (a new dep, a major upgrade, a pin change) is a normal task and **does**
-    need an ID.
-- **`design-then-implement`** — A task that **adds a feature or redesigns** an existing one is a **design task**: its
-  deliverable is a **design document** — a new file under `docs/design/`, or an edit to the existing design for a
-  redesign — referenced from the ledger entry and listed in the ledger's review/design index. Completing it means *the
-  design is done and recorded*, **not** that code shipped. On completion, **file the implementation follow-up task(s)**
-  in the ledger (they then flow through normal task discipline). Keep design and implementation as separate tasks — so
-  the design is reviewable before any code is built.
-- **`review-then-remediate`** — A **review** — requested in chat (name what to review) or run via the `/code-review`
-  skill — is itself a **review task** in the ledger. Its deliverable is a **review document** (frozen evidence under
-  `docs/review/`, carrying the one-time `→ tracked as <ID>` pointers per `read-at-start-record-at-completion`). On
-  completion, **file new ledger tasks** for the findings worth acting on — a finding isn't scope until it has an ID
-  (`single-task-ledger`). Mirrors `design-then-implement`: the review produces the document; the fixes are fresh tasks.
-- **`one-active-journal`** — `docs/RELEASE_JOURNAL.md` is the only **active** chronological log (the single place new
-  entries are appended). No competing live logs anywhere else. Entries reference task IDs but never assert status.
-  - **Archival is allowed:** older entries are **frozen** into dated files under `docs/archive/journal/`
-    (append-only, never re-edited, greppable, **outside the default-read path**). Only the active journal is read at
-    task start; an archive is consulted when a `task-start-reconciliation` grep points to it. Leave a pointer at the
-    top of the active journal to the newest archive.
-  - **When to rotate:** scope-guard warns at the journal high-water and hard-fails at the ceiling
-    (`.scope-guard.toml` `[journal]`: high 1500 / low 1000 / ceiling 2000 lines). Rotate via
-    `scripts/scope_guard.py --config .scope-guard.toml --rotate journal` — it freezes the **oldest whole dated
-    sections** (never split a day) into a new `docs/archive/journal/` file until under low-water and updates the
-    header pointer, deterministically, in its own commit. Never rotate by hand.
-- **`task-start-reconciliation`** — no stale, redundant, or mis-scoped work. Before starting **any** task, reconcile it
-  against current reality — not just the ledger/review doc (`read-at-start-record-at-completion`), but also
-  `RELEASE_JOURNAL.md` (what actually landed) **and the code itself** (does the problem still exist where the task
-  assumes?). Classify: (a) **valid** → proceed; (b) **partially addressed** → narrow; (c) **already addressed** →
-  close obsolete; (d) **scope drifted** → redefine. **For (b)/(c)/(d): STOP and consult the user** before doing the
-  work or editing the ledger. _Pairs with `read-at-start-record-at-completion`: that one loads the context; this one
-  verifies the task is still the right task._
+- **`ledger-dialect`** — voice's instantiation of the shared ledger triad (pinned `shared-invariants` block below;
+  mechanics: `../locveil-commons/process/ledger-discipline.md`): active `docs/RELEASE_PLAN.md` + frozen
+  `docs/RELEASE_PLAN_DONE.md` (workstream sections by ID prefix, IDs ascending; every task tagged `[release]` or
+  `[deferred]` — release is blocked until every `[release]` task is `[x]`) + journal `docs/RELEASE_JOURNAL.md`
+  (entries reference IDs, never assert status); rotation archives under `docs/archive/`. Guard: vendored
+  `scripts/scope_guard.py` + `.scope-guard.toml` (BUILD-30 cutover) — **never edit the vendored file**; re-pin.
+  - Design deliverables live under `docs/design/`, review deliverables (frozen evidence) under `docs/review/`;
+    both are listed in the ledger's review/design index, and fixes/implementations are filed as fresh tasks.
+  - **Carve-out:** a lockfile-only dependency bump that doesn't change `pyproject.toml` / `config-ui/package.json`
+    intent needs no ledger ID (journal line only); a deliberate version decision is a normal task and does.
+  - **At intake** (per `task-start-reconciliation`): a task found narrowed, already-addressed, or scope-drifted
+    means **STOP and consult the owner** before doing the work or editing the ledger.
 - **`no-type-checking`** — No `if TYPE_CHECKING:` import guards. Imports are honest: if a type can be imported at
   runtime, import it at module top and annotate with the real symbol. A `TYPE_CHECKING` block is a band-aid for an
   import cycle, and a cycle is an architecture smell (dependencies not pointing inward — `hexagonal-architecture`). The
@@ -139,11 +95,50 @@ but these rules apply to any task). **Single source of truth** (relocated here f
   `/inbox`. Never auto-enter the review; the owner decides when. (Skill: `.claude/skills/inbox/`. A `gh` failure —
   no network, no auth — is silently skipped; this check must never block or noise up a normal session.)
 
+## Shared process (pinned blocks — `../locveil-commons/process/claude-md.md`; edit the sources in `process/claude-blocks/`, then re-pin)
+
+<!-- locveil:begin shared-invariants scope-v3 -->
+**Locveil shared process invariants** — digest; normative source: `../locveil-commons/process/`
+(`ledger-discipline.md`, `claude-md.md`). On disagreement the process files win. Never edit
+this block in place — edit in commons, then re-pin (`process/claude-md.md` §3).
+
+- **ledger triad** — active ledger + DONE ledger + one rotating journal; completion MOVES
+  the entry to DONE and journals it in the same change; rotation only via an explicit
+  `scope_guard.py --rotate` in its own commit; watermarks + mechanics:
+  `process/ledger-discipline.md`.
+- **every-task-in-the-ledger** — no work without a ledger ID; a doc finding becomes scope
+  only when a ledger task declares it.
+- **task-start-reconciliation** — before executing any task, verify its claims against repo
+  reality; narrow or redefine at intake rather than executing stale text.
+- **design-then-implement** — non-trivial changes get a reviewed design doc before code.
+- **review-then-remediate** — review findings become ledger tasks before they get fixed.
+- **Enforcement** — vendored `scope_guard.py` at a pinned `scope-vX` tag + committed
+  pre-commit hook + path-gated `ledger-guard` CI job; hooks and CI run `--check` only.
+<!-- locveil:end shared-invariants -->
+
+<!-- locveil:begin cross-repo-board scope-v3 -->
+**Locveil cross-repo: the board.** The repos are SIBLINGS on disk — `../locveil-commons`
+(umbrella: board, `process/`, shared packages), `../locveil-voice`, `../locveil-bridge`.
+Cross-repo initiatives live at `../locveil-commons/board/BOARD.md` (`PROD-N`; council
+topics `HK-N`; completed entries in `BOARD_DONE.md`). Delegations arrive as board-as-outbox
+text committed inside a PROD entry: pull it, verify per `task-start-reconciliation`, file
+it under a LOCAL task ID, execute locally, then write that ID back into the board entry.
+The board never asserts a delegated task's status — this repo's ledger owns it. Direct
+operational filings between product repos (bug reports, contract requests) stay
+repo-to-repo and don't need the board. Cross-repo design sessions and the council run FROM
+locveil-commons (convention: `../locveil-commons/process/council.md`); decisions land on
+the board, never in chat.
+<!-- locveil:end cross-repo-board -->
+
 **Legend — historical numbers → names.** Frozen journal/ledger archives and review docs reference these invariants by
 their old number (numbering retired 2026-06-27). Resolve here:
-`#1`→`work-on-main` · `#2`→`config-master-canonical` · `#3`→`hexagonal-architecture` · `#4`→`config-ui-stays-functional`
-· `#5`→`read-at-start-record-at-completion` · `#6`→`single-task-ledger` · `#7`→`one-active-journal`
-· `#8`→`task-start-reconciliation` · `#9`→`no-type-checking` · `#10`→`user-facing-docs-are-done`.
+`#1`→`work-on-main` · `#2`→`config-master-file` (was `config-master-canonical`, renamed 2026-07-11) ·
+`#3`→`hexagonal-architecture` · `#4`→`config-ui-stays-functional` · `#5`→`read-at-start-record-at-completion`
+· `#6`→`single-task-ledger` · `#7`→`one-active-journal` · `#8`→`task-start-reconciliation`
+· `#9`→`no-type-checking` · `#10`→`user-facing-docs-are-done`. The names `single-task-ledger` /
+`one-active-journal` now resolve to the **ledger triad** (`shared-invariants` block + `ledger-dialect`);
+`every-task-in-the-ledger`, `task-start-reconciliation`, `design-then-implement`, `review-then-remediate`
+live in the pinned block above (normative: `../locveil-commons/process/`).
 
 ## Testing & evaluation
 

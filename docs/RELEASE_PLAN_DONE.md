@@ -1630,6 +1630,21 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
 
 ### Internationalization (I18N)
 ### Build & CI (BUILD)
+- [x] **BUILD-23** `[deferred]` [PROCESS] — **DONE 2026-07-11 (narrowed at intake per the PROD-5 delegation:
+      the "separate drift-guard script" wording was dead — scope-guard's `claudemd` hash rule IS the drift
+      guard, shipped in `scope-v3`).** Shared CLAUDE.md blocks — voice-side adoption (HK-2/PROD-5, normative
+      `../locveil-commons/process/claude-md.md`). Inserted both pinned digest blocks (`shared-invariants`,
+      `cross-repo-board`) between `locveil:begin/end` markers at `scope-v3`; deleted the six long-form shared
+      invariants they replace (`single-task-ledger`, `one-active-journal`, `every-task-in-the-ledger`,
+      `design-then-implement`, `review-then-remediate`, `task-start-reconciliation` — voice specifics kept as
+      the compact `ledger-dialect` bullet; CLAUDE.md 165→160 lines, hard no-growth criterion met). Re-pinned
+      scope-guard at `scope-v3` (1.1.0) + `[claude]` hash section in `.scope-guard.toml` (hashes match
+      `--hash-blocks`; tamper test fails correctly, restore passes). Rewrote the retired pre-board
+      uncommitted-intake bullet in `cross-repo-source-of-truth` (board-as-outbox vs direct operational
+      filings). Renamed `config-master-canonical` → **`config-master-file`** (CLAUDE.md + legend row +
+      `docs/design/multilingual_deployment.md`; frozen archives untouched; bridge renames apart as
+      `config-master-tree`). CI paths-filter gained `CLAUDE.md` per the HK-2 convention. BUILD-22 gained the
+      dependency: instantiate `process/new-repo-template/`, never freehand.
 - [x] **BUILD-30** `[release]` [PROCESS][CI] — **DONE 2026-07-11.** Scope-guard cutover — the commons ledger
       guard consumed at the pinned tag **`scope-v2`** (PROD-13 / HK-1 delegation, board entry
       `../locveil-commons/board/BOARD.md`; normative convention `../locveil-commons/process/ledger-discipline.md`).

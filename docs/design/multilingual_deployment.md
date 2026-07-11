@@ -208,7 +208,7 @@ plus the top-level/workflow `default_language`.
   (already wired, §2a); TTS → **`silero_v3` `v3_en`** (torch parity; `silero_v4` has no English). `default_provider="silero_v3"`,
   `[tts.providers.silero_v3] model_id="v3_en"`, an `en_*` `default_speaker`, `put_accent=false`/`put_yo=false`.
 
-`config-master.toml` stays the canonical reference; these are deployment variants (`config-master-canonical`).
+`config-master.toml` stays the canonical reference; these are deployment variants (`config-master-file`, renamed from `config-master-canonical`).
 
 **Symmetry — the RU configs are now explicitly RU-only.** Previously the three Russian configs set only the legacy
 `language = "ru"` with `auto_detect_language = true`, so `default_language` fell to the schema default and

@@ -478,13 +478,10 @@ size-matched to the Russian stack; language is a per-config/deployment choice (a
       (`ws-protocol-doc-canonical` — satellite PINS it by version), `irene/satellite/`, client
       registry/provisioning/CSR code, nginx Plane-B ansible glue, frozen review/archive docs. Re-home
       ARCH-22's remaining design intent into the new repo's ledger at task start (reconcile: parts are
-      superseded by ARCH-35/python-satellite). Ref: `docs/design/productization.md` D-6.
-- [ ] **BUILD-23** `[deferred]` [PROCESS] — **Shared CLAUDE.md invariant blocks + drift guard — voice-side
-      adoption** (BUILD-20 D-12). Once the normative blocks exist in `locveil-commons/process/`: fence the
-      shared invariants in this repo's CLAUDE.md between markers, keep per-repo invariants
-      (`ws-protocol-doc-canonical`, `durable-actions`, …) outside, adopt the drift-guard script into the
-      gate list beside scope-guard, and take the same-slug renames (`config-master-canonical` splits
-      — design §2). Bridge intake: OPS-16. Gated on BUILD-21 + the commons PROD task authoring the blocks.
+      superseded by ARCH-35/python-satellite). Ref: `docs/design/productization.md` D-6. **Dependency added
+      by BUILD-23 (HK-2/PROD-5): the new repo is instantiated from `../locveil-commons/process/new-repo-template/`
+      (CLAUDE.md skeleton with the pinned blocks, starter `.scope-guard.toml`, hook, `ledger-guard` CI,
+      ledger/journal shapes) — never freehanded; discipline is seeded, not retrofitted.**
 - [ ] **BUILD-24** `[deferred]` [COMMONS][TEST] — **Scripted contract re-pin + staleness gate — voice
       side** (BUILD-20 D-11). Replace the hand-copy re-pin with `make repin CONTRACT=vN` (fetch from the
       bridge's `contract-vN` tag, write `locveil-commons/contracts/STAMP.json`/`PIN.json`) + a gate check

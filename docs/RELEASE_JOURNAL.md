@@ -20,6 +20,20 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-11 — BUILD-23: CLAUDE.md joins the shared-block regime (HK-2/PROD-5) — second board delegation
+  consumed, same day.** Narrowed at intake exactly as the delegation pre-specified (the "separate drift-guard
+  script" wording was dead; scope-guard's `claudemd` hash rule from `scope-v3` is the drift guard — the
+  narrowing was owner-approved at the HK-2 council, so no fresh consult was needed). Both pinned digest blocks
+  (`shared-invariants`, `cross-repo-board`) now sit in CLAUDE.md between `locveil:begin/end` markers,
+  byte-identical to `../locveil-commons/process/claude-blocks/` at `scope-v3`; the six long-form shared
+  invariants they replace came out, with voice specifics condensed into the new `ledger-dialect` bullet —
+  CLAUDE.md net-shrank 165→160 lines (HK-2's hard criterion). Scope-guard re-pinned `scope-v2`→`scope-v3`
+  (1.1.0), `[claude]` hash section added, hashes verified against `--hash-blocks`, tamper test red/green.
+  The stale pre-board "filings arrive uncommitted" bullet in `cross-repo-source-of-truth` was rewritten
+  (board-as-outbox vs direct operational filings); `config-master-canonical` renamed to `config-master-file`
+  (legend row records it; the bridge takes `config-master-tree`); CI `ledger` paths-filter gained `CLAUDE.md`;
+  BUILD-22 now must instantiate `process/new-repo-template/` rather than freehand the satellite repo.
+
 - **2026-07-11 — BUILD-30: ledger discipline now guarded by the commons scope-guard (`scope-v2`) — first
   board-as-outbox delegation consumed.** Pulled the PROD-13/HK-1 delegation from the commons board, verified
   every claim against the live tree (both advertised pre-existing findings were real: the DONE I18N section sat
