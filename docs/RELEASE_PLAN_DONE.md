@@ -1630,6 +1630,22 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
 
 ### Internationalization (I18N)
 ### Build & CI (BUILD)
+- [x] **BUILD-30** `[release]` [PROCESS][CI] — **DONE 2026-07-11.** Scope-guard cutover — the commons ledger
+      guard consumed at the pinned tag **`scope-v2`** (PROD-13 / HK-1 delegation, board entry
+      `../locveil-commons/board/BOARD.md`; normative convention `../locveil-commons/process/ledger-discipline.md`).
+      Replaced `scripts/check_scope.py` with the commons-owned, config-driven `scope_guard.py` (regime 2 —
+      behavior changes in commons only, moves by re-pin): vendored `scripts/scope_guard.py` + authored
+      `.scope-guard.toml` (from the commons starter, verified against this tree); retired the local checker and
+      re-pointed the CI `ledger-guard` job + `ledger` paths-filter (`.github/workflows/ci.yml`); committed
+      `hooks/pre-commit` + one-time `core.hooksPath hooks` running `--check`; invariant text updated
+      (`single-task-ledger`, `one-active-journal` in CLAUDE.md; RELEASE_PLAN.md gate wording; the two design
+      docs naming the old checker) in the same change; DONE-ledger rotation adopted + the overdue journal
+      rotation run via `--rotate` in its own commit (journal 1510→708, DONE 4273→1930, verified lossless);
+      required-task-tags rule ON. Fixed the two pre-existing findings invisible to the old checker: unsorted
+      DONE I18N section, DONE ledger over the 4000-line hard ceiling. Cutover proof held: vendored tool green
+      before the local script was deleted. **Found a real scope-v1 bug on the first rotation attempt** —
+      `rotate_journal` exploded section bodies char-per-line (tuple double-indexing); hit concurrently by
+      bridge OPS-22, fixed commons-side as `scope-v2` (`09a9025`), which this task pins.
 ### Models & Assets (ASSET)
 ### Documentation (DOC)
 - [x] **DOC-5b** (P2) — DONE 2026-06-08: regenerated `guides/DONATION_FILE_SPECIFICATION.md` for the v1.1

@@ -512,19 +512,8 @@ size-matched to the Russian stack; language is a per-config/deployment choice (a
       board** (D-4/D-5), seeded when BUILD-21 lands, not decided unilaterally here. Scope for that design: which
       repo owns the unified compose, health-gated `depends_on` vs. tolerant clients, whether the units collapse
       into one, and how `update.sh` stays per-repo when the compose is not. Related: BUILD-18 (ops conformance).
-- [ ] **BUILD-30** `[release]` [PROCESS][CI] — **Scope-guard cutover — consume the commons ledger guard at
-      `scope-v2`** (PROD-13 / HK-1 delegation, board entry `../locveil-commons/board/BOARD.md`; normative
-      convention `../locveil-commons/process/ledger-discipline.md`). Replace `scripts/check_scope.py` with the
-      commons-owned, config-driven `scope_guard.py`, vendored at the pinned tag (regime 2 — behavior changes in
-      commons only, moves by re-pin): (1) vendor `scripts/scope_guard.py` + author `.scope-guard.toml`; (2) retire
-      the local checker and re-point the CI `ledger-guard` job + `ledger` paths-filter; (3) committed `hooks/` +
-      `core.hooksPath` running the check pre-commit; (4) invariant text updates (`single-task-ledger`,
-      `one-active-journal`, gate wording here) in the same change; (5) DONE-ledger rotation adopted + the overdue
-      journal rotation, via `--rotate` in its own commit; (6) required-task-tags rule ON. Pre-existing findings
-      the cutover fixes (invisible to the old checker): unsorted DONE I18N section, DONE ledger over the
-      4000-line hard ceiling. Cutover proof: vendored tool green before the local script is deleted.
-      Delegation originally named `scope-v1`; its journal rotation corrupted archives (char-per-line) — hit
-      here and by bridge OPS-22 concurrently, fixed commons-side as `scope-v2` (the pin this task consumes).
+
+### Documentation (DOC)
 
 ### UI / config-ui (UI)
 React/Vite donation+config editor. Front-end feature/UX work (the BUILD-4 build gate stays under Build & CI).

@@ -82,7 +82,8 @@ jobs:
               - '.github/workflows/ci.yml'
             ledger:
               - 'docs/**'
-              - 'scripts/check_scope.py'
+              - 'scripts/scope_guard.py'
+              - '.scope-guard.toml'
               - '.github/workflows/ci.yml'
 
   # ------------------------------------------------------------------ #
@@ -94,8 +95,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Scope drift guard (check_scope.py)
-        run: python3 scripts/check_scope.py
+      - name: Ledger discipline guard (scope-guard, vendored at scope-v2)
+        run: python3 scripts/scope_guard.py --config .scope-guard.toml --check
 
   # ------------------------------------------------------------------ #
   # Backend health — shared py-dev-gates trio + the voice-specific      #

@@ -53,15 +53,24 @@ but these rules apply to any task). **Single source of truth** (relocated here f
     the only reason to edit a review doc is if a *finding itself* is wrong/obsolete (annotate, don't flip status).
 - **`single-task-ledger`** — The ledger is the only source of scope + status. Every release task has **exactly one ID**;
   review/design docs may *surface findings* but **a finding is not scope until it has a ledger ID**. Each task is tagged
-  **`[release]`** or **`[deferred]`**; release is blocked until every `[release]` task is `[x]`. Run
-  `scripts/check_scope.py` at each gate (flags orphan findings, dead evidence links, contradictory status markers).
+  **`[release]`** or **`[deferred]`**; release is blocked until every `[release]` task is `[x]`. The guard is
+  **scope-guard** (`scripts/scope_guard.py` + `.scope-guard.toml` — the commons-owned tool vendored at a pinned
+  `scope-vX` tag per `../locveil-commons/process/ledger-discipline.md`; BUILD-30 cutover, currently `scope-v2`).
+  It runs pre-commit (committed `hooks/` + `core.hooksPath`) and as the CI `ledger-guard` job; run it manually at
+  each gate. **Never edit the vendored file** — behavior changes land in locveil-commons and arrive by re-pin.
   - **The ledger spans two files:** active `docs/RELEASE_PLAN.md` (open + paused/partial) + frozen
     `docs/RELEASE_PLAN_DONE.md` (completed `[x]`, by workstream). One ledger — every ID in exactly one file; on
     completion a task **moves** active → done (same change as the journal entry). **A task lives in the
     workstream section matching its ID prefix, entries sorted ascending by ID within the section** (a BUILD
     task never sits under ARCH, even when filed from another task's completion; a completed task is INSERTED
-    at its sorted position, not appended) — `check_scope.py` fails on stranded `[x]` entries in the active
-    file, on prefix/section mismatches, and on out-of-order IDs, in either file.
+    at its sorted position, not appended) — scope-guard fails on stranded `[x]` entries in the active
+    file, on prefix/section mismatches, on out-of-order IDs (in either file), and on a task row missing its
+    `[release]`/`[deferred]` tag.
+  - **The DONE ledger rotates too:** when it exceeds its watermark (`.scope-guard.toml` `[ledger]`, hard-fail at the
+    ceiling), `scripts/scope_guard.py --config .scope-guard.toml --rotate done` freezes the lowest-numbered completed
+    entries per section into `docs/archive/ledger/` — **rotated IDs stay resolvable** (the guard scans the archive
+    dir, so old IDs never orphan). Rotation runs only via explicit `--rotate`, in its own commit; hooks/CI never
+    mutate the tree.
 - **`every-task-in-the-ledger`** — No work happens without a ledger entry, **regardless of where the task came from**
   — a chat request, a GitHub issue, a code-review finding, a TODO spotted mid-task. The first action on any new piece
   of work is to file it: give it an ID and a `[release]`/`[deferred]` tag *before* starting. External sources merely
@@ -88,10 +97,11 @@ but these rules apply to any task). **Single source of truth** (relocated here f
     (append-only, never re-edited, greppable, **outside the default-read path**). Only the active journal is read at
     task start; an archive is consulted when a `task-start-reconciliation` grep points to it. Leave a pointer at the
     top of the active journal to the newest archive.
-  - **When to rotate (checked at each gate, alongside `scripts/check_scope.py`):** if the active journal exceeds
-    **~1500 lines / ~40k tokens** (high-water), freeze the **oldest whole dated sections** (never split a day) into
-    the newest `docs/archive/journal/` file until it is back under **~1000 lines / ~25k tokens** (low-water), then
-    update the pointer. Same trigger discipline as task-moves, but periodic rather than per-event.
+  - **When to rotate:** scope-guard warns at the journal high-water and hard-fails at the ceiling
+    (`.scope-guard.toml` `[journal]`: high 1500 / low 1000 / ceiling 2000 lines). Rotate via
+    `scripts/scope_guard.py --config .scope-guard.toml --rotate journal` — it freezes the **oldest whole dated
+    sections** (never split a day) into a new `docs/archive/journal/` file until under low-water and updates the
+    header pointer, deterministically, in its own commit. Never rotate by hand.
 - **`task-start-reconciliation`** — no stale, redundant, or mis-scoped work. Before starting **any** task, reconcile it
   against current reality — not just the ledger/review doc (`read-at-start-record-at-completion`), but also
   `RELEASE_JOURNAL.md` (what actually landed) **and the code itself** (does the problem still exist where the task

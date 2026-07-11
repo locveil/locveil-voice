@@ -1,0 +1,4 @@
+#!/bin/sh
+# Locveil pre-commit hook (../locveil-commons/process/ledger-discipline.md §4): scope-guard
+# check only — hooks never mutate the tree. Install once:  git config core.hooksPath hooks
+exec python3 scripts/scope_guard.py --config .scope-guard.toml --check

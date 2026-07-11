@@ -8,15 +8,34 @@ newest entries near the top of each dated section.
   [`RELEASE_PLAN.md`](./RELEASE_PLAN.md); findings/rationale live in `docs/review/*` + `docs/design/*`.
 - Entries reference task IDs (e.g. `QUAL-27`) but never assert their status — check the ledger for that.
 - **Older entries are frozen in archives** (`one-active-journal`), newest first:
+  [`docs/archive/journal/2026-07-04_2026-07-06.md`](archive/journal/2026-07-04_2026-07-06.md)
+  (2026-07-04 … 2026-07-06),
   [`docs/archive/journal/2026-06-23_to_2026-07-02.md`](archive/journal/2026-06-23_to_2026-07-02.md)
   (2026-06-23 … 2026-07-02),
   [`docs/archive/journal/2026-06-15_to_2026-06-22.md`](archive/journal/2026-06-15_to_2026-06-22.md)
   (2026-06-15 … 2026-06-22), [`docs/archive/journal/pre-2026-06-15.md`](archive/journal/pre-2026-06-15.md)
-  (2026-05-31 … 2026-06-14). This file keeps **2026-07-04 onward**; grep an archive when reconciliation needs older history.
+  (2026-05-31 … 2026-06-14). This file keeps **2026-07-07 onward**; grep an archive when reconciliation needs older history.
 
 ---
 
 ## Action journal
+
+- **2026-07-11 — BUILD-30: ledger discipline now guarded by the commons scope-guard (`scope-v2`) — first
+  board-as-outbox delegation consumed.** Pulled the PROD-13/HK-1 delegation from the commons board, verified
+  every claim against the live tree (both advertised pre-existing findings were real: the DONE I18N section sat
+  in 1,2,8,3,7,4,5,6 order — invisible to the old checker's regex — and the DONE ledger was over the new
+  4000-line hard ceiling), filed it as BUILD-30 and wrote the ID back to the board. Cutover: vendored
+  `scripts/scope_guard.py` + `.scope-guard.toml`, retired `scripts/check_scope.py`, re-pointed the CI
+  `ledger-guard` job and paths-filter, committed `hooks/pre-commit` (+ one-time `git config core.hooksPath
+  hooks`), updated the `single-task-ledger`/`one-active-journal` invariant text and the gate wording. Both
+  rotations ran via `--rotate` in their own commit: journal 1510→708 (2026-07-04..06 frozen), DONE ledger
+  4273→1930 (125 entries frozen to `docs/archive/ledger/`), verified lossless by line-multiset diff. **The
+  first rotation attempt found a real bug in scope-v1:** `rotate_journal` wrote archives char-per-line and
+  silently truncated the kept journal (tuple double-indexing after unpacking) — the bridge session hit the
+  identical bug minutes earlier during its OPS-22 rotation and landed the fix as `scope-v2` (commons `09a9025`);
+  this repo's corrupted first-pass commits were rebuilt (nothing had been pushed). Regime 2 worked as designed:
+  the bug was fixed once, commons-side, and consumed by re-pin. Pre-existing, unchanged: the
+  `docs/design/satellite_tracing.md` unindexed-review warning (warn-only, predates the cutover).
 
 - **2026-07-11 — BUILD-29 controller cutover CONFIRMED on hardware.** Owner made the new GHCR packages
   public (org policy first blocked the Public option — fixed at org Settings → Packages → allow public
