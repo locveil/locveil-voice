@@ -13,7 +13,7 @@
 #   TTS = piper (direct, espeak-ng stress)  — RUAccent/vosk_tts are 64-bit-only (the armv7 ORT wall)
 #   NLU = keyword → llm cascade  (no spaCy — no armv7 wheel; LLM classifier recovers fuzzy commands)
 #
-# Baked default config for the armv7 image. Co-hosted with wb-mqtt-bridge + wb-mqtt-ui on a 4-core
+# Baked default config for the armv7 image. Co-hosted with locveil-bridge + wb-mqtt-ui on a 4-core
 # Cortex-A7 / ~712 MB free — hence num_threads=2 and lean providers.
 #
 # BUILD-TIME LEAN-DOWN (once the system is stable and traces are no longer needed): set
@@ -67,12 +67,12 @@ console = true                      # Console (terminal) text output (CLI channe
 web_push = true                     # Browser push channel (/ws/output) for deferred results
 
 [outputs.bridge]
-# Smart-home actuation via wb-mqtt-bridge (ARCH-8). ON: the bridge runs on this controller
+# Smart-home actuation via locveil-bridge (ARCH-8). ON: the bridge runs on this controller
 # (BUILD-27). `localhost` is correct because the container shares the host network, exactly as
 # the bridge's own container does — see ops/docker-compose.yml. A failed startup catalog pull is
 # non-fatal; the lazy refresh retries on the first device-resolution miss.
 enabled = true
-base_url = "http://localhost:8000"  # wb-mqtt-bridge REST API
+base_url = "http://localhost:8000"  # locveil-bridge REST API
 timeout_seconds = 20.0
 
 # ============================================================
@@ -105,7 +105,7 @@ model = "vosk-model-small-ru"      # small int8 pack (~27 MB) — the big model 
 model_type = "vosk-transducer"
 default_language = "ru"
 sample_rate = 16000
-num_threads = 2                    # leave 2 of the 4 A7 cores for the co-hosted wb-mqtt-bridge/ui
+num_threads = 2                    # leave 2 of the 4 A7 cores for the co-hosted locveil-bridge/ui
 decoding_method = "greedy_search"
 preload_models = true              # pay the ~38 s graph-init at boot, off the first-utterance path
 

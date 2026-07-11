@@ -69,7 +69,7 @@ Assembled by a new `ReportBundleCollector` (core service):
 | today's log | `logs/irene.log` + same-day rotated files | gzipped (~10:1); text logs are single-digit MB |
 | config | the loaded config file, **redaction pass** (§4) | |
 | metadata | version, git commit, config profile, platform/arch, **pinned catalog version**, ASR/TTS/NLU providers, session language, room/client id, timestamp, `smart_home_involved` + `bridge_evidence` status (ARCH-34) | catalog version instantly tells the bridge lens whether the contract is stale |
-| bridge evidence (ARCH-34) | `GET /reports/evidence` on the bridge (contract v1.4, B-11), fetched at filing time whenever `[outputs.bridge]` is wired | the bridge's own redacted `EvidenceEnvelope` (dispatch ring, MQTT window, live states, state diffs — the contract the bridge owns, pinned in eval-commons) under `bridge/evidence.json`; any fetch failure is filed verbatim as `bridge/unavailable.json` — **unreachable IS evidence**, never fatal; 429 (the endpoint's gzip rate guard) handled the same way. Not gated on a smart-home heuristic — over-attaching into the same private repo is free |
+| bridge evidence (ARCH-34) | `GET /reports/evidence` on the bridge (contract v1.4, B-11), fetched at filing time whenever `[outputs.bridge]` is wired | the bridge's own redacted `EvidenceEnvelope` (dispatch ring, MQTT window, live states, state diffs — the contract the bridge owns, pinned in locveil-commons) under `bridge/evidence.json`; any fetch failure is filed verbatim as `bridge/unavailable.json` — **unreachable IS evidence**, never fatal; 429 (the endpoint's gzip rate guard) handled the same way. Not gated on a smart-home heuristic — over-attaching into the same private repo is free |
 
 **§4 Redaction:** applied to config AND log excerpts before packaging: values of any key matching
 `*_API_KEY|token|password|secret|credential` (BUG-20 family), `Authorization:` headers, and
@@ -109,7 +109,7 @@ One filing = one issue + one bundle commit in `wb-user-reports`:
 - **7.1 Trigger**: Actions workflow on `issues: opened, labeled` + `issue_comment: created`
   (owner replies re-trigger analysis), running the Claude code action under the owner's
   subscription OAuth (repo secret). The Claude GitHub App is installed on `wb-user-reports`,
-  `wb-mqtt-voice`, `wb-mqtt-bridge`.
+  `locveil-voice`, `locveil-bridge`.
 - **D-11 — Model policy: one model, the strongest generally available (`claude-fable-5`), for the
   whole run — triage AND code work.** Rationale: report volume is household-scale (a handful per
   week at worst), so there is nothing to optimize by tiering models — while the code path performs
@@ -145,7 +145,7 @@ One filing = one issue + one bundle commit in `wb-user-reports`:
 
 ## 8. The owner's review loop (local Claude, both code repos)
 
-- New user-invocable skill **`/inbox`** in `wb-mqtt-voice` and `wb-mqtt-bridge`: lists (a) open
+- New user-invocable skill **`/inbox`** in `locveil-voice` and `locveil-bridge`: lists (a) open
   fix PRs on that repo, (b) `needs-owner` tickets in `wb-user-reports` for that repo's lens — then
   walks them ONE BY ONE interactively (approve/revise the drafted reply, review the PR diff,
   merge/close decisions stay with the owner).

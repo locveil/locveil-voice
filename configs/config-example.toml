@@ -66,7 +66,7 @@ console_prefix = "📝 "
 web_push = true                     # browser push channel (/ws/output) for deferred results
 
 [outputs.bridge]
-# Smart-home control through wb-mqtt-bridge. Leave disabled until you have a
+# Smart-home control through locveil-bridge. Leave disabled until you have a
 # bridge to talk to — see docs/guides/smart-home.md for the whole story.
 enabled = false
 base_url = "http://localhost:8000"

@@ -228,13 +228,13 @@ dev = [
     "pytest-asyncio>=0.21.0",
     "pytest-cov>=5.0.0",  # TEST-7: coverage measurement is a mandatory part of the suite rewrite
     # The runtime CPython here is built WITHOUT the stdlib `_sqlite3` extension, which coverage.py
-    # requires. Mirror wb-mqtt-bridge: ship pysqlite3-binary and alias it onto `sqlite3` (see the
+    # requires. Mirror locveil-bridge: ship pysqlite3-binary and alias it onto `sqlite3` (see the
     # root conftest.py). Self-contained — bundles its own SQLite, no system dependency.
     "pysqlite3-binary>=0.5.0",
     "black>=22.0.0",
     "isort>=5.0.0",
     "flake8>=4.0.0",
-    "mypy==1.15.0",  # Pinned to match wb-mqtt-bridge version
+    "mypy==1.15.0",  # Pinned to match locveil-bridge version
     "pyright==1.1.410",  # QUAL-4: pinned — the standard-mode gate; diagnostics vary by version
     "import-linter>=2.0",  # ARCH-5: enforce the hexagon import contracts
     # QUAL-32 / Invariant #9: the no-TYPE_CHECKING AST gate, now upstream (extracted from this repo).
@@ -641,7 +641,7 @@ forbidden_modules = [
 ]
 
 [tool.mypy]
-# Basic settings - detailed configuration in mypy.ini (matching wb-mqtt-bridge)
+# Basic settings - detailed configuration in mypy.ini (matching locveil-bridge)
 python_version = "3.11"
 
 # [tool.pyright] removed (QUAL-4): pyrightconfig.json is the single source of truth

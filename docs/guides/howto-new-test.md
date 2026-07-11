@@ -1,7 +1,7 @@
 # Adding a test
 
 Tests are **declarative YAML** — you describe a case (an input and what to assert) and a shared runner executes
-it. There's no test code to write here: the providers, scorers and the judge all live in the shared `eval-commons`
+it. There's no test code to write here: the providers, scorers and the judge all live in the shared `locveil-commons`
 package; this repo carries only the cases. Pick the surface that matches what you're checking, write a few lines of
 YAML, and run it with `make`.
 
@@ -60,7 +60,7 @@ Transcript accuracy (word error rate, scored by `jiwer`):
     wer_threshold: 0.15
   assert:
     - type: python
-      value: file://../../eval-commons/eval_commons/assertions/wer_scorer.py
+      value: file://../../locveil-commons/eval/eval_commons/assertions/wer_scorer.py
 ```
 
 Intent recognition (the reply is JSON, so assert on a field):

@@ -3785,6 +3785,24 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       `docs/design/productization.md` (D-1..D-12 + drift inventory + commons seed backlog) + sibling
       `../wb-mqtt-bridge/docs/design/productization_bridge.md` (uncommitted, intake). Follow-ups filed:
       BUILD-21/22/23/24, ARCH-42/43, BUILD-18 narrowed; bridge intake VWB-29, CORE-7, OPS-14/15/16.
+- [x] **BUILD-21** `[deferred]` [COMMONS][PROCESS] — **DONE 2026-07-11. Commons bootstrap: name lock + rename +
+      restructure + re-point** (BUILD-20 D-1/D-2/D-3). (1) Sweep ran 2026-07-08 under "Domovoy"; owner
+      superseded and LOCKED **Locveil** 2026-07-11 (`locveil.com`/`.ru` registered, GitHub org `locveil`
+      claimed; record: `../locveil-commons/docs/design/locveil_domain_registration.md`). (2) OWNER: all three
+      repos transferred+renamed under the org (`locveil/locveil-{commons,voice,bridge}`, redirects live) +
+      local dir renames. (3)+(4) Commons side landed as `locveil-commons@52126da`: D-2 layout (eval framework →
+      `eval/`, distribution `locveil-eval`, import package unchanged `eval_commons`), PROD board
+      (`board/BOARD.md` PROD-1..11 from the seed backlog) + `board/JOURNAL.md` + umbrella CLAUDE.md/README,
+      decision record migrated (pointer left at `docs/design/productization.md` here). (5) Voice re-point
+      (this change): eval/ refs → `../../locveil-commons/eval` (contracts at `../../locveil-commons/contracts`),
+      name sweep of operative docs/comments (history — journal/DONE/archives/reviews/CHANGELOG — and live
+      deployment identifiers untouched → BUILD-29), `domovoy`→`locveil` container user in the three backend
+      Dockerfiles (uid 1000 unchanged; takes effect at next image publish), GHCR namespace cutover in pull
+      refs/docs to `ghcr.io/locveil/*` (CI already publishes via `github.repository_owner`; **owner must run
+      one CI publish before the next controller `update.sh`**, old `ghcr.io/droman42/*` images stay pullable),
+      `.venv` rebuilt (dir rename had broken every console-script shebang) + sqlite shim re-run. Gates:
+      `make cli` 5/5, `make device-auto` tier-1 48/48, touched-file pytest 83/83. Bridge-side re-point arrives
+      via the commons board (PROD-2 — the first board-as-outbox delegation, D-5).
 - [x] **BUILD-25** [UI][SEC] `[release]` — **DONE 2026-07-09.** config-ui image ran as root: the runtime stage
       was a bare `FROM nginx:alpine` with no `USER`, the posture the backend images deliberately reject. Not
       deployed on the controller, but published to GHCR and run on workstations against the assistant's API.

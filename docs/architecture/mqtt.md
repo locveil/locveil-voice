@@ -5,7 +5,7 @@
 
 ## The decision in one line
 
-Irene does not own device knowledge or MQTT conventions. A companion service, **`wb-mqtt-bridge`**, is the
+Irene does not own device knowledge or MQTT conventions. A companion service, **`locveil-bridge`**, is the
 single authority on what devices exist and how to talk to them. Irene recognises a command, resolves it to
 **one canonical `DeviceCommand`**, and hands it over; the bridge translates that into the right native MQTT.
 Irene stays blind to wb-rules versus Home Assistant versus anything else.
@@ -36,7 +36,7 @@ simply another output adapter, a request/response one.
 The canonical vocabulary is small and device-shaped — `power`, `brightness`, `color`, `cover`, `climate`,
 `sensor`, plus an AV set. Irene speaks only that; the bridge owns the mapping to native gear, so the same
 Irene works whether it runs **on a Wirenboard controller** or as a **standalone box**. Either way it pairs
-with `wb-mqtt-bridge` identically: canonical commands out, a catalog pull in.
+with `locveil-bridge` identically: canonical commands out, a catalog pull in.
 
 One consequence worth noting: "выключи свет везде" isn't Irene looping over lights — it's one command to a
 single aggregate device the bridge models. Irene never fans out; the controller does.

@@ -1,5 +1,5 @@
-# eval/ — run wb-mqtt-voice system & CLI tests across two external axes.
-# Design: ../../eval-commons/ARCHITECTURE.md (memory: test-run-axes).
+# eval/ — run locveil-voice system & CLI tests across two external axes.
+# Design: ../../locveil-commons/eval/ARCHITECTURE.md (memory: test-run-axes).
 #
 #   make cli                                  # CLI contract tests — no service/key/fixtures (fastest)
 #   make ws     TARGET=local                  # WS-audio system tests against a locally-running Irene
@@ -71,18 +71,18 @@ help:
 	@echo "TARGET=$(TARGET)  CONFIG=$(CONFIG)  EVAL_LANG=$(EVAL_LANG)  ->  WS_AUDIO_URL=$(WS_AUDIO_URL)"
 
 setup:                        ## install the shared providers into the project venv (uv)
-	uv pip install --python $(PROMPTFOO_PYTHON) -e ../../eval-commons
+	uv pip install --python $(PROMPTFOO_PYTHON) -e ../../locveil-commons/eval
 
 setup-record:                 ## add the fixture recorder + mic deps (sounddevice, soxr) to the venv
-	uv pip install --python $(PROMPTFOO_PYTHON) -e '../../eval-commons[record]'
+	uv pip install --python $(PROMPTFOO_PYTHON) -e '../../locveil-commons/eval[record]'
 
 cli:                          ## CLI contract tests (argparse console scripts) — no service needed
 	$(PROMPTFOO) eval -c cli.promptfooconfig.yaml
 
 # TEST-18 Slice B — producer contract tests: utterance → captured canonical DeviceCommand,
-# asserted against the PINNED crossover fixtures (../../eval-commons/contracts/). The SUT must
+# asserted against the PINNED crossover fixtures (../../locveil-commons/contracts/). The SUT must
 # point [outputs.bridge] at the mock bridge; `device-auto` wires everything for one local run.
-FIXTURES_JSON := ../../eval-commons/contracts/crossover_fixtures.json
+FIXTURES_JSON := ../../locveil-commons/contracts/crossover_fixtures.json
 MOCK_BRIDGE_PORT ?= 8010
 
 device-tests:                 ## regenerate device.tests.yaml from the pinned crossover fixtures
@@ -115,7 +115,7 @@ endif
 
 device-auto: device-tests device-sut-config  ## one-shot local run: mock bridge + SUT up → suite → teardown
 	@pkill -f "[e]val_commons.mock_bridge" 2>/dev/null; sleep 0.5; true  # stale mock on the port = stale golden served silently ([e] keeps pkill from matching THIS shell)
-	@$(PROMPTFOO_PYTHON) -m eval_commons.mock_bridge --catalog ../../eval-commons/contracts/catalog.golden.json --port $(MOCK_BRIDGE_PORT) & MOCK=$$!; \
+	@$(PROMPTFOO_PYTHON) -m eval_commons.mock_bridge --catalog ../../locveil-commons/contracts/catalog.golden.json --port $(MOCK_BRIDGE_PORT) & MOCK=$$!; \
 	( cd .. && .venv/bin/irene-webapi -c $(DEVICE_SUT_CONFIG) --port 6000 >/tmp/irene-device-eval.log 2>&1 ) & SUT=$$!; \
 	echo ">> waiting for $(HEALTH_URL) ..."; \
 	for i in $$(seq 1 60); do curl -sf "$(HEALTH_URL)" >/dev/null 2>&1 && break; sleep 1; done; \

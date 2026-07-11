@@ -2,5 +2,5 @@
 blank_issues_enabled: false
 contact_links:
   - name: Setup & usage (README)
-    url: https://github.com/droman42/wb-mqtt-voice/blob/main/README.md
+    url: https://github.com/locveil/locveil-voice/blob/main/README.md
     about: Installation, the uv extras, runners, and config profiles are documented here — check before filing.

@@ -2,7 +2,7 @@
 
 **Status:** DESIGN AGREED · 2026-06-27 (D-1..D-14 resolved; implementation pending — TEST-12/13/14) · **Lands in:**
 `eval/` (YAML + Makefile) + one small SUT enabler; **reuses** the
-existing `eval-commons` `cli_provider` (no new shared code for the core surface). **Builds on:** ARCH-19 trace
+existing `locveil-commons` `cli_provider` (no new shared code for the core surface). **Builds on:** ARCH-19 trace
 record/replay (shipped), the `eval/` harness (`cli`/`ws`/`ux` surfaces), the voice-fixture recorder (TEST-9), and
 versioned fixtures (TEST-10).
 
@@ -33,7 +33,7 @@ judged), so trace cases inherit it.
 ## 2. Decisions
 
 - **D-1 — Offline golden-trace replay is a new eval surface, driven by the existing `cli_provider`.** A golden-trace
-  case is a CLI-contract case pointing at the replay tool — **zero new `eval-commons` code**:
+  case is a CLI-contract case pointing at the replay tool — **zero new `locveil-commons` code**:
   ```yaml
   - description: regression — «поставь таймер на десять минут» still sets the timer
     metadata: { kind: trace-system }
@@ -69,7 +69,7 @@ judged), so trace cases inherit it.
 - **D-9 — Trace↔WAV unification (phase 2).** A golden trace carries its audio (base64), so a small extractor derives
   the WS WAV fixture from a trace → **record once, test twice** (offline replay *and* the live WS suite). The trace is
   the canonical input; the WAV is derived. Implemented as a flag on the replay tool / a small `irene` tool (it decodes
-  Irene's own trace format, so it stays in this repo, not `eval-commons`).
+  Irene's own trace format, so it stays in this repo, not `locveil-commons`).
 - **D-10 — Both input kinds are versioned test inputs.** WS WAVs committed (TEST-10); golden traces committed (JSON).
 - **D-11 — Recording a golden trace is a curated step.** Run a known-good interaction with `--trace`, review, commit
   the JSON. Curate which traces are `trace-system` (deterministic, exit-code) vs `trace-ux` (LLM, judged) — a human
@@ -101,7 +101,7 @@ Per `design-then-implement`, these are filed in the ledger on completion of this
   "golden-trace regression" surface to `docs/guides/howto-new-test.md`. Pure YAML + Makefile + the curated trace.
 - **S2 — Failure-trace capture for the live WS suite** (TEST-13): `make ws TRACE=1`; the **SUT enabler** (echo
   `request_id` in `/ws/audio` metadata when tracing, D-6); the harness keep-on-failure post-step (a generic
-  `eval-commons` helper, D-13); plus `--record-out`-on-mismatch for the offline tier (D-7).
+  `locveil-commons` helper, D-13); plus `--record-out`-on-mismatch for the offline tier (D-7).
 - **S3 — Trace↔WAV unification** (TEST-14, deferred / phase 2): a `--extract-wav` path so one golden trace yields the
   WS fixture (D-9).
 
@@ -123,9 +123,9 @@ irene-replay-trace -t traces/failures/<case>.json --listen --step   # debug a fa
   environment, not just on a dev box). Gating before that would make the release gate flaky; but `trace-system` is the
   cheapest deterministic regression signal available, so it *should* gate once proven — hence a trigger, not a
   permanent exclusion. Promotion = retag the relevant cases/task `[release]` and add the suite to the CI gate.
-- **D-13 — The keep-on-failure post-step lives in `eval-commons`** — a small, project-agnostic helper invoked from the
-  thin Makefile `ws` target, **not** a per-project bash step. It's reusable (wb-mqtt-bridge will want failure-trace
-  capture too) and it honors the harness rule (execution/glue logic lives in `eval-commons`; projects carry YAML + a
+- **D-13 — The keep-on-failure post-step lives in `locveil-commons`** — a small, project-agnostic helper invoked from the
+  thin Makefile `ws` target, **not** a per-project bash step. It's reusable (locveil-bridge will want failure-trace
+  capture too) and it honors the harness rule (execution/glue logic lives in `locveil-commons`; projects carry YAML + a
   thin Makefile). Its contract is fully generic: read promptfoo's results JSON → for each failing test read
   `metadata.request_id` (D-6) → copy `<traces_dir>/<request_id>.json` into `failures/`. No Irene-specifics, so the
   bridge reuses it unchanged.

@@ -1,5 +1,5 @@
 # System tests: the shipped streaming-ASR endpoint /ws/audio (ARCH-10, irene/runners/webapi_router.py).
-# PURE YAML — all execution logic lives in ../../eval-commons. Run via the Makefile so the axes and the
+# PURE YAML — all execution logic lives in ../../locveil-commons/eval. Run via the Makefile so the axes and the
 # project venv are wired for you:
 #
 #   make ws  TARGET=local  CONFIG=embedded-armv7      # Russian suite (EVAL_LANG=ru derived)
@@ -11,14 +11,14 @@
 # filter the Makefile applies). Cases are duplicated per language and tagged `language`; a run selects
 # one. Keep the two languages' cases in lockstep (same scenarios).
 
-description: wb-mqtt-voice — streaming ASR + conversational UX over /ws/audio (ru + en)
+description: locveil-voice — streaming ASR + conversational UX over /ws/audio (ru + en)
 
 # The rendered prompt handed to the provider is just the audio fixture path for each case.
 prompts:
   - '{{audio}}'
 
 providers:
-  - id: file://../../eval-commons/eval_commons/providers/ws_audio_provider.py
+  - id: file://../../locveil-commons/eval/eval_commons/providers/ws_audio_provider.py
     label: ws-audio
     config:
       ws_url: "{{ env.WS_AUDIO_URL | default('ws://localhost:6000/ws/audio') }}"
@@ -33,7 +33,7 @@ providers:
 defaultTest:
   options:
     provider:
-      file://../../eval-commons/shared/deepseek-judge.yaml
+      file://../../locveil-commons/eval/shared/deepseek-judge.yaml
 
 tests:
   # ═══════════════════════════ RUSSIAN (language: ru) ═══════════════════════════
@@ -46,7 +46,7 @@ tests:
       wer_threshold: 0.15
     assert:
       - type: python
-        value: file://../../eval-commons/eval_commons/assertions/wer_scorer.py
+        value: file://../../locveil-commons/eval/eval_commons/assertions/wer_scorer.py
 
   # ── 2. Intent recognition (deterministic, parse the full-JSON output) ──────────
   - description: RU Intent — timer set is recognized
@@ -58,7 +58,7 @@ tests:
       - type: javascript
         value: JSON.parse(output).intent_name === 'timer.set' && JSON.parse(output).success === true
 
-  # ── 3. Conversational UX (DeepSeek judge; calibrated shared rubric — eval-commons examples/ru-ux-calibration) ──
+  # ── 3. Conversational UX (DeepSeek judge; calibrated shared rubric — locveil-eval examples/ru-ux-calibration) ──
   - description: RU UX — assistant confirms the timer in natural Russian
     metadata: { kind: ux, language: ru }
     vars:
@@ -67,7 +67,7 @@ tests:
       - type: llm-rubric
         transform: JSON.parse(output).response_text
         # TEST-16: the CALIBRATED shared rubric — single source, no inline drift.
-        value: "file://../../eval-commons/shared/rubrics/ru/confirms_action_ru.txt"
+        value: "file://../../locveil-commons/eval/shared/rubrics/ru/confirms_action_ru.txt"
 
   # ── 4. Graceful-failure UX (unreachable device) ────────────────────────────────
   - description: RU UX — polite, human-readable failure when a device is unreachable
@@ -81,7 +81,7 @@ tests:
       - type: llm-rubric
         transform: JSON.parse(output).response_text
         # TEST-16: the CALIBRATED shared rubric — single source, no inline drift.
-        value: "file://../../eval-commons/shared/rubrics/ru/graceful_failure_ru.txt"
+        value: "file://../../locveil-commons/eval/shared/rubrics/ru/graceful_failure_ru.txt"
 
   # ═══════════════════════════ ENGLISH (language: en) ═══════════════════════════
   # Same four scenarios, English audio/reference/rubric. Fixtures pending recording (fixtures/en/*).
@@ -94,7 +94,7 @@ tests:
       wer_threshold: 0.15
     assert:
       - type: python
-        value: file://../../eval-commons/eval_commons/assertions/wer_scorer.py
+        value: file://../../locveil-commons/eval/eval_commons/assertions/wer_scorer.py
 
   # ── 2. Intent recognition (intent names are language-agnostic → same timer.set) ─
   - description: EN Intent — timer set is recognized
@@ -115,7 +115,7 @@ tests:
       - type: llm-rubric
         transform: JSON.parse(output).response_text
         # TEST-16: the CALIBRATED shared rubric — single source, no inline drift.
-        value: "file://../../eval-commons/shared/rubrics/en/confirms_action_en.txt"
+        value: "file://../../locveil-commons/eval/shared/rubrics/en/confirms_action_en.txt"
 
   # ── 4. Graceful-failure UX ──────────────────────────────────────────────────────
   - description: EN UX — polite, human-readable failure when a device is unreachable
@@ -127,4 +127,4 @@ tests:
       - type: llm-rubric
         transform: JSON.parse(output).response_text
         # TEST-16: the CALIBRATED shared rubric — single source, no inline drift.
-        value: "file://../../eval-commons/shared/rubrics/en/graceful_failure_en.txt"
+        value: "file://../../locveil-commons/eval/shared/rubrics/en/graceful_failure_en.txt"

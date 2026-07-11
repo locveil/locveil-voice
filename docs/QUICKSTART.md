@@ -3,7 +3,7 @@
 How to install, run, and exercise Irene. Aimed at a tester doing a first pass; no models or cloud
 keys are required for the basic text flows.
 
-> **Run from the repository root** (`wb-mqtt-voice/`). All paths below are relative to it.
+> **Run from the repository root** (`locveil-voice/`). All paths below are relative to it.
 
 ---
 
@@ -121,14 +121,14 @@ npm run dev          # opens a Vite dev server (printed URL, usually http://loca
 - WebAPI endpoints: `/health`, `/status`, `/execute/command`, `/docs`.
 - config-ui: browse + edit config sections (incl. the **Output Channels** `[outputs]` section), donation/prompt editors, language switch.
 - **Smart-home commands** («включи свет», «закрой шторы») — but only with a running
-  [wb-mqtt-bridge](guides/smart-home.md) and `[outputs.bridge]` enabled. Without one, the honest
+  [locveil-bridge](guides/smart-home.md) and `[outputs.bridge]` enabled. Without one, the honest
   spoken answer is «умный дом не подключён» — that reply is correct behavior, not a bug.
 
 **NOT in this build (don't file these as bugs):**
 - **ESP32 voice satellite** and the wake-word path.
 - **Voice/ASR** end-to-end unless you deliberately enable `asr`/`tts`/`audio` in `[components]` + install models.
 
-**Docker images** are published to GHCR (`ghcr.io/droman42/wb-mqtt-voice-*`); running from an image
+**Docker images** are published to GHCR (`ghcr.io/locveil/locveil-voice-*`); running from an image
 instead of a checkout is covered by [`ops/INSTALL.md`](../ops/INSTALL.md) (controller deployment).
 
 ## 6. Tests & coverage
@@ -139,7 +139,7 @@ uv run --extra dev python -m pytest irene/tests/
 ```
 
 **Coverage needs a one-time sqlite shim.** Coverage (`pytest --cov`) keeps its data in a SQLite file,
-but the CPython this project runs on (the same build `wb-mqtt-bridge` uses) is compiled **without** the
+but the CPython this project runs on (the same build `locveil-bridge` uses) is compiled **without** the
 stdlib `_sqlite3` module — so `coverage.py` can't start and you'd see `No module named '_sqlite3'`. We
 ship `pysqlite3-binary` and a tiny installer that aliases it onto `sqlite3` at interpreter startup. Run
 it **once after `uv sync`** — a sync rewrites the venv, so re-run it whenever you (re)create the venv:

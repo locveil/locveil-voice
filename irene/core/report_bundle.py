@@ -106,7 +106,7 @@ class ReportBundleCollector:
 
         `bridge_evidence` (ARCH-34) is the status record from `BridgeClient.fetch_report_evidence`
         — filed verbatim under `bridge/` in the tarball. An `attached` record contributes the raw
-        `EvidenceEnvelope` (the bridge-owned contract, pinned in eval-commons); any other status
+        `EvidenceEnvelope` (the bridge-owned contract, pinned in locveil-eval); any other status
         is itself evidence (`bridge/unavailable.json`)."""
         report_id = uuid.uuid4().hex[:12]
         registry = get_client_registry()

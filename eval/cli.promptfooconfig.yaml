@@ -9,13 +9,13 @@
 # return_mode: full → output is JSON {stdout, stderr, exit_code, duration_ms}, so each test
 # asserts on whatever field it needs.
 
-description: wb-mqtt-voice — CLI contract tests (argparse console scripts; no service/key needed)
+description: locveil-voice — CLI contract tests (argparse console scripts; no service/key needed)
 
 prompts:
   - '{{cmd}}'
 
 providers:
-  - id: file://../../eval-commons/eval_commons/providers/cli_provider.py
+  - id: file://../../locveil-commons/eval/eval_commons/providers/cli_provider.py
     label: cli
     config:
       cwd: ..                 # run the project's console scripts from the repo root

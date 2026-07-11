@@ -99,11 +99,11 @@ console_prefix = "📝 "              # Prefix for console output lines
 web_push = true                    # Browser push channel (/ws/output) for deferred results
 
 [outputs.bridge]
-# Smart-home actuation via wb-mqtt-bridge (ARCH-8). When enabled, the composition registers the
+# Smart-home actuation via locveil-bridge (ARCH-8). When enabled, the composition registers the
 # BridgeClient REST adapter as the designated device_command output and pulls the device catalog
 # from the same endpoint (startup + lazy refresh on a resolution miss).
 enabled = false                    # Enable the bridge actuation channel
-base_url = "http://localhost:8000" # Base URL of the wb-mqtt-bridge REST API (no trailing slash)
+base_url = "http://localhost:8000" # Base URL of the locveil-bridge REST API (no trailing slash)
 timeout_seconds = 20.0             # Per-request HTTP timeout (must exceed the slowest gated echo-wait: HVAC confirms take up to ~15 s)
 
 # ============================================================

@@ -47,7 +47,7 @@ follows the existing BaseRunner pattern (cli/webapi/voice precedent; not gated o
 
 The maintained protocol reference is **`docs/guides/websocket-api.md`** (the
 `ws-protocol-doc-canonical` invariant); this section holds the design rationale and defers to
-it. The ESP32 firmware implements the same protocol. The client core is ADAPTED from eval-commons' `ws_audio_provider` (proven against
+it. The ESP32 firmware implements the same protocol. The client core is ADAPTED from locveil-commons' `ws_audio_provider` (proven against
 local + wb7); the runner takes no runtime dependency on the test framework.
 
 ```

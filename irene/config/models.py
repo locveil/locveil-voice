@@ -149,7 +149,7 @@ class InputConfig(BaseModel):
 # ============================================================
 
 class BridgeOutputConfig(BaseModel):
-    """The wb-mqtt-bridge actuation channel (ARCH-8) — the designated DEVICE_COMMAND output.
+    """The locveil-bridge actuation channel (ARCH-8) — the designated DEVICE_COMMAND output.
 
     When enabled, the composition registers the `BridgeClient` output adapter and designates it
     for the `device_command` modality; smart-home intents actuate through it and the device

@@ -1,7 +1,7 @@
 """The in-memory device catalog — the shared *world* commands resolve against (ARCH-8 PR-1).
 
 Typed mirror of the bridge's `GET /system/catalog` response (`CatalogResponse`,
-pinned in `eval-commons/contracts/` — contract v1.1 + VWB-23 room-scoped group
+pinned in `locveil-commons/contracts/` — contract v1.1 + VWB-23 room-scoped group
 addressing). The NLU/`DeviceEntityResolver` consume this model to turn spoken
 surfaces into canonical commands: device/room `names`+`aliases` per locale, the
 capability `group` overlay the noun lexicon binds to («свет» → the capabilities

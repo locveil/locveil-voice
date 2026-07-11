@@ -2,7 +2,7 @@
 
 **Status:** design AGREED 2026-07-02 (interactive session; all decisions user-confirmed). Implementation → **ARCH-28**.
 **Evidence base:** `docs/review/faf_durable_execution_review.md` (QUAL-56) — the F&F subsystem scores zero on every
-durable-execution axis by design; `wb-mqtt-bridge` comparative analysis (patterns + pitfalls). Store-correctness
+durable-execution axis by design; `locveil-bridge` comparative analysis (patterns + pitfalls). Store-correctness
 prerequisites already landed as **BUG-19**.
 **Scope statement (user):** timers are the only consumer needing durability *today*, but future intent handlers
 (smart-home arc — ARCH-8 device actions and beyond) **will require it** — so this is a platform substrate with

@@ -91,7 +91,7 @@ Living findings behind the tasks (`read-at-start-record-at-completion`). `[x]` =
 | `docs/design/esp32_satellite.md` (DRAFT 2026-06-14) | **consolidated** ESP32 voice-satellite design — supersedes `ws_esp32_transport.md`, folds `esp32_wakeword_review.md` + `onnx §10/11` + ARCH-21; D-1..D-18 (device shape, wire protocol in+reply, micro stack, models/push, identity/multi-room, provisioning/CSR/OTA); backend plan §12 | ARCH-22 |
 | `docs/design/torch_free_armv7_voice.md` `[x]` (2026-06-15; research/analysis, no code) | torch-free inference for the armv7 voice stack — canonical three-image matrix (§5): torch contained to the x86_64 standalone image; both ARM satellites (armv7 WB7 + aarch64 WB8/Pi) are torch-free sherpa-onnx; Whisper→sherpa-Whisper, Silero TTS→Piper/RUAccent seams | ARCH-24 ✓ |
 | `docs/design/multilingual_deployment.md` `[x]` (2026-07-01; design, no code) | real English deployment across all 3 Docker arches + English eval — slim cross-arch model set size-matched to Russian (armv7 EN ASR spike zipformer-en-20M vs moonshine-tiny-en; EN Piper amy; whisper multilingual on 64-bit); one-bulk-per-language eval; auto-detect NOT wired to ASR/TTS so language is a per-config choice | I18N-1 ✓ → I18N-2..6 |
-| `docs/design/productization.md` `[x]` (AGREED 2026-07-08, joint session, both repos) | BUILD-20 — the Domovoy umbrella: product name (D-1), ONE commons repo = eval-commons renamed `domovoy-commons` with three ownership regimes (D-2/D-3), PROD-board cross-repo idea discipline + board-as-outbox (D-4/D-5), `domovoy-satellite` third product repo + ESP32 estate relocation (D-6/D-7), rule-of-two extractions loader+logging (D-8), two-apps-shared-kit config UI (D-9), ledgers kept over trackers (D-10), semver components + calver suite manifests + contract tagging/scripted re-pin (D-11), normative ops spec + CLAUDE.md invariant blocks/drift guard + landing page + report-policy spec (D-12), drift inventory (§2), commons seed backlog (§3) | BUILD-20 ✓ → BUILD-21/22/23/24, ARCH-42/43, BUILD-18 (narrowed); bridge intake VWB-29, CORE-7, OPS-14/15/16 |
+| `../locveil-commons/docs/design/productization.md` `[x]` (AGREED 2026-07-08, joint session, both repos; MIGRATED to the commons 2026-07-11 per D-2 — local file is a pointer; name executed as **Locveil**) | BUILD-20 — the productization umbrella (written as "Domovoy"): product name (D-1), ONE commons repo = eval-commons renamed `locveil-commons` with three ownership regimes (D-2/D-3), PROD-board cross-repo idea discipline + board-as-outbox (D-4/D-5), `locveil-satellite` third product repo + ESP32 estate relocation (D-6/D-7), rule-of-two extractions loader+logging (D-8), two-apps-shared-kit config UI (D-9), ledgers kept over trackers (D-10), semver components + calver suite manifests + contract tagging/scripted re-pin (D-11), normative ops spec + CLAUDE.md invariant blocks/drift guard + landing page + report-policy spec (D-12), drift inventory (§2), commons seed backlog (§3) | BUILD-20 ✓ → BUILD-21/22/23/24, ARCH-42/43, BUILD-18 (narrowed); bridge intake VWB-29, CORE-7, OPS-14/15/16 |
 | `config-ui/docs/donation_editor_ux.md` | human-friendly donations editor design | UI-1/2/3 |
 | `docs/review/test7_triage.md` (2026-06-15) | TEST-7 Phase-B worklist — 82-failure triage (delete/rewrite/fix) + risk-ranked coverage tiers + fix-code suspects | TEST-7 ✓ |
 | `docs/review/api_result_contract_review.md` `[x]` (2026-06-27) | API execution-result response-contract consistency — 5 findings (reply field name, 3-way intent split, divergent metadata under one model, confidence placement, live `None` internal misread); root cause = no shared serializer | QUAL-54 ✓, QUAL-55 |
@@ -190,7 +190,7 @@ See `docs/review/phase1_architecture_map.md` §5.
       confirmation. Bonus already free: the bridge's fix turned the old already-on-IR 503 `device_unreachable`
       timeout into a clean no-op success. Needs NO bridge changes. Deliverable: design doc under `docs/design/`
       + implementation follow-up task(s). Refs: bridge `ab7eb6c`, bridge `docs/design/ui_backend_contract.md`
-      ("Force re-tap"), eval-commons pin `7cfd5a7`.
+      ("Force re-tap"), locveil-commons pin `7cfd5a7`.
 - [ ] **ARCH-40** [MQTT][NLU] (P-post-release) `[deferred]` — **DESIGN: scenario force-reconcile via voice
       («что-то не так с киносценой»).** The bridge's SCN-11 (pinned @ QUAL-77) adds `GET
       /scenario/{id}/reconcile_preview` (pure read: per-device believed-vs-desired comparisons, `in_sync`,
@@ -202,16 +202,16 @@ See `docs/review/phase1_architecture_map.md` §5.
       notice (`durable-actions` invariant applies). Same safety posture as ARCH-39: preview → user picks →
       confirm → execute, never blanket. Deliverable: design doc under `docs/design/` + implementation follow-up
       task(s). Refs: bridge `43c504c`, bridge `docs/design/ui_backend_contract.md` ("Scenario force-reconcile
-      dialog"), eval-commons pin `7cfd5a7`.
+      dialog"), locveil-commons pin `7cfd5a7`.
 - [ ] **ARCH-42** `[deferred]` [COMMONS][PROCESS] — **DESIGN: extract the dynamic code loader to
-      `domovoy-commons/packages/core-py`** (BUILD-20 D-8; voice becomes consumer #1, bridge #2 — ownership
+      `locveil-commons/packages/core-py`** (BUILD-20 D-8; voice becomes consumer #1, bridge #2 — ownership
       flips to the commons on extraction). Design first (`design-then-implement`): inventory what the loader
       actually is today (entry-point discovery, provider/plugin instantiation, the `provider_namespace_map`
       seams), decide the package's public surface so BOTH products can consume it (bridge wants it for
       driver/module loading — their intake CORE-7), then file the voice-side migration implementation task.
       Gated on BUILD-21 (the package home must exist). Ref: `docs/design/productization.md` D-3/D-8.
 - [ ] **ARCH-43** `[deferred]` [COMMONS][PROCESS] — **DESIGN: extract the logging scheme to
-      `domovoy-commons/packages/core-py`** (BUILD-20 D-8). The startup-rollover + midnight
+      `locveil-commons/packages/core-py`** (BUILD-20 D-8). The startup-rollover + midnight
       TimedRotatingFileHandler + retention-prune family exists twice by hand-copy (bridge OPS-12 → voice
       BUG-30 "ported verbatim") — the exact drift pattern the productization design retires. Design the
       shared package surface (rollover naming family, retention constants, prune sweep, report-bundle
@@ -299,7 +299,7 @@ _Apply to every remediation task below (from the 4 review docs + QUAL-25/26). So
       value — honest v1 UX. The build: read the device's current level/setpoint through the EXISTING state-read
       path, apply a step (fixtures assume ±10 % brightness / ±1 °C), emit the absolute `set`; add the donation
       phrases («поярче», «потемнее», «потеплее», «похолоднее», «притуши») — dedicated methods or a `delta` param.
-      **Fixtures F100–F102 are already authored RED** in eval-commons `crossover_fixtures.json` (mock static state
+      **Fixtures F100–F102 are already authored RED** in locveil-commons `crossover_fixtures.json` (mock static state
       carries `level: 60`; deltas recorded in the fixture notes) — flipping them green completes this.
 - [ ] **QUAL-78** [OPS] `[deferred]` — **The container healthcheck spams the log with one access line per probe.**
       Since the honest `HEALTHCHECK` landed (ARCH-25, 2026-07-09) uvicorn access-logs every probe:
@@ -324,7 +324,7 @@ _Apply to every remediation task below (from the 4 review docs + QUAL-25/26). So
       orchestrator holds the `Intent` when it builds the result. **Contract change across three surfaces** —
       the REST response (`openapi.json` → config-ui's generated types), the WS response frame
       (`docs/guides/websocket-api.md`, which `ws-protocol-doc-canonical` makes authoritative), and
-      `eval-commons/providers/ws_audio_provider.py`, which documents the field. Nothing currently *consumes* the
+      `locveil-commons/eval/eval_commons/providers/ws_audio_provider.py`, which documents the field. Nothing currently *consumes* the
       value, which is why this is deferrable rather than urgent. Interim alternative if the break is unwelcome:
       add `recognition_confidence` alongside — purely additive, but it leaves the misleading field in place.
 - [ ] **QUAL-82** [MQTT][NLU] `[deferred]` — **FEATURE: voice control for the AC louvers (`vane`/`widevane`) —
@@ -457,19 +457,9 @@ size-matched to the Russian stack; language is a per-config/deployment choice (a
       stays deliberately repo-local, and file the per-repo implementation tasks each side (bridge side
       uncommitted, per `cross-repo-source-of-truth`). **Design landed 2026-07-08 (BUILD-20,
       `docs/design/productization.md` D-12): the shared convention = a normative ops spec in
-      `domovoy-commons/process/` + per-repo conformance; the drift inventory is recorded there (§2). This
+      `locveil-commons/process/` + per-repo conformance; the drift inventory is recorded there (§2). This
       task NARROWS to the voice-side conformance pass once that spec exists (gated on BUILD-21).**
-- [ ] **BUILD-21** `[deferred]` [COMMONS][PROCESS] — **domovoy-commons bootstrap: availability sweep +
-      rename + restructure** (BUILD-20 D-1/D-2/D-3; voice co-develops eval-commons, so this is a voice
-      task; the `gh` rename itself is an OWNER ACTION). (1) Name availability sweep (GitHub/PyPI/domain)
-      → lock "Domovoy"; (2) rename `eval-commons` → `domovoy-commons` (GitHub keeps redirects);
-      (3) restructure to the D-2 layout (`board/`, `process/`, `packages/core-py/`, `site/`; `eval/` +
-      `contracts/` as today) with per-package prefixed tags; (4) bootstrap the PROD board + commons
-      CLAUDE.md (cross-repo sessions run THERE from now on — D-4/D-5 board-as-outbox) and transplant the
-      seed backlog (design §3); (5) re-point this repo's `eval/` refs (`file://` paths, `pip install -e`,
-      eval/README, CLAUDE.md Testing section). Bridge side re-points its own refs at intake of the same
-      change. Ref: `docs/design/productization.md`.
-- [ ] **BUILD-22** `[deferred]` [SATELLITE][PROCESS] — **domovoy-satellite bootstrap + ESP32 estate
+- [ ] **BUILD-22** `[deferred]` [SATELLITE][PROCESS] — **locveil-satellite bootstrap + ESP32 estate
       relocation out of this repo** (BUILD-20 D-6/D-7; repo creation = OWNER ACTION, sibling working copy
       per the repos-are-siblings rule). Create the third product repo (own CLAUDE.md in the invariant
       family + `HW-GATED` marker, ledger, journal; scope: SKIDL/KiCad PCB + ESP-IDF firmware + enclosure).
@@ -482,14 +472,14 @@ size-matched to the Russian stack; language is a per-config/deployment choice (a
       ARCH-22's remaining design intent into the new repo's ledger at task start (reconcile: parts are
       superseded by ARCH-35/python-satellite). Ref: `docs/design/productization.md` D-6.
 - [ ] **BUILD-23** `[deferred]` [PROCESS] — **Shared CLAUDE.md invariant blocks + drift guard — voice-side
-      adoption** (BUILD-20 D-12). Once the normative blocks exist in `domovoy-commons/process/`: fence the
+      adoption** (BUILD-20 D-12). Once the normative blocks exist in `locveil-commons/process/`: fence the
       shared invariants in this repo's CLAUDE.md between markers, keep per-repo invariants
       (`ws-protocol-doc-canonical`, `durable-actions`, …) outside, adopt the drift-guard script into the
       gate list beside `check_scope.py`, and take the same-slug renames (`config-master-canonical` splits
       — design §2). Bridge intake: OPS-16. Gated on BUILD-21 + the commons PROD task authoring the blocks.
 - [ ] **BUILD-24** `[deferred]` [COMMONS][TEST] — **Scripted contract re-pin + staleness gate — voice
       side** (BUILD-20 D-11). Replace the hand-copy re-pin with `make repin CONTRACT=vN` (fetch from the
-      bridge's `contract-vN` tag, write `eval-commons/contracts/STAMP.json`/`PIN.json`) + a gate check
+      bridge's `contract-vN` tag, write `locveil-commons/contracts/STAMP.json`/`PIN.json`) + a gate check
       that goes red when the pin trails the newest bridge contract tag — staleness becomes a machine
       failure, not a memory note. Pairs with bridge intake VWB-29 (they tag + attach artifacts; gated on
       it). Ref: `docs/design/productization.md` D-11.
@@ -513,6 +503,18 @@ size-matched to the Russian stack; language is a per-config/deployment choice (a
       board** (D-4/D-5), seeded when BUILD-21 lands, not decided unilaterally here. Scope for that design: which
       repo owns the unified compose, health-gated `depends_on` vs. tolerant clients, whether the units collapse
       into one, and how `update.sh` stays per-repo when the compose is not. Related: BUILD-18 (ops conformance).
+- [ ] **BUILD-29** [OPS][BUILD] `[deferred]` — **Deployment-identity rename to Locveil** (BUILD-21 residue;
+      owner-gated — every item touches the live WB7 deployment or a published surface). BUILD-21's sweep
+      deliberately kept the pre-rename runtime identifiers: image basenames (`wb-mqtt-voice-{armv7,aarch64,
+      standalone}[-en]`, `wb-mqtt-voice-ui` — ci.yml matrix + build-docker.md), `container_name: wb-mqtt-voice`
+      + the `mqtt-voice-config` compose project, the systemd unit `ops/wb-mqtt-voice.service`, the controller
+      clone at `/mnt/sdcard/wb-mqtt-voice` (update.sh header + INSTALL.md flow, incl. its clone URL/dir), the
+      `/mnt/data/*` runtime trees, and the two runtime `Field(description=…)` strings naming wb-mqtt-bridge
+      (`irene/config/models.py:157,159` — API-visible, pairs with the BUILD-26 openapi regen). Rename them
+      coherently in ONE pass with a controller migration plan (rename the SD-card clone, re-enable the unit
+      under the new name, re-pull images under new basenames) — coordinate with the bridge's mirror rename and
+      BUILD-28's single-compose design (same deployment surface; possibly the same session). Until then the
+      GHCR namespace is already `ghcr.io/locveil/*` (BUILD-21) with old basenames — a deliberate mixed state.
 ### Documentation (DOC)
 
 ### UI / config-ui (UI)

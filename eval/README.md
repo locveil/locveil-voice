@@ -1,7 +1,7 @@
-# eval/ — declarative system, CLI & UX tests for wb-mqtt-voice
+# eval/ — declarative system, CLI & UX tests for locveil-voice
 
-Pure-YAML test cases. All execution logic lives in the shared **`eval-commons`** package
-(sibling repo: `../../eval-commons`) — see its `ARCHITECTURE.md`. This directory carries only
+Pure-YAML test cases. All execution logic lives in the shared **`locveil-eval`** package
+(sibling repo: `../../locveil-commons/eval`) — see its `ARCHITECTURE.md`. This directory carries only
 YAML + a thin Makefile (deployment glue, no test logic).
 
 > **Writing a new test?** Start with the recipe: **[How to add a test](../docs/guides/howto-new-test.md)**
@@ -52,10 +52,10 @@ config runs the English set) unless overridden, e.g. `EVAL_LANG=en` for a remote
 npm install -g promptfoo
 
 # 2. Shared providers/assertions into the project venv (uv-managed; already present here)
-make setup                       # = uv pip install --python ../.venv/bin/python -e ../../eval-commons
+make setup                       # = uv pip install --python ../.venv/bin/python -e ../../locveil-commons/eval
 
 # 3. Env for the UX judge only
-cp ../../eval-commons/examples/.env.example .env   # set DEEPSEEK_API_KEY
+cp ../../locveil-commons/eval/examples/.env.example .env   # set DEEPSEEK_API_KEY
 export $(grep -v '^#' .env | xargs)
 ```
 
@@ -111,9 +111,9 @@ irene-replay-trace -t traces/<id>.json --extract-wav fixtures/<case>.wav   # 16 
 
 These are non-obvious and have already caused (and cost) bugs — keep them in mind:
 
-- **Provider/assertion code lives in `../../eval-commons`, NOT here.** This dir is pure YAML +
+- **Provider/assertion code lives in `../../locveil-commons/eval`, NOT here.** This dir is pure YAML +
   the Makefile. To change *how* a test runs (a provider, the WER scorer, the judge), edit the
-  sibling `eval-commons` repo — don't add Python here, and don't look for it here.
+  `eval/` package in the sibling `locveil-commons` repo — don't add Python here, and don't look for it here.
 - **promptfoo env substitution is `{{env.VAR}}` (Nunjucks, resolved at config-load time) — NOT
   `${VAR}`.** `${VAR}` is passed through literally and fails silently. The endpoint must always
   come from `{{env.WS_AUDIO_URL}}` (set by the target profile), never hard-coded.
@@ -142,7 +142,7 @@ These are non-obvious and have already caused (and cost) bugs — keep them in m
   reply. Confirmed live: `«поставь таймер на десять минут»` → WER 0.
 - **DeepSeek-as-judge on Russian is CALIBRATED** (2026-07-02): a 20-case human-labeled set
   (native speaker) measured 16/16 agreement, Cohen's κ = 1.0 in-sample against the shipped shared
-  rubrics — see eval-commons `examples/ru-ux-calibration/` for the set, method and caveats.
+  rubrics — see locveil-eval `examples/ru-ux-calibration/` for the set, method and caveats.
   Russian UX pass/fail is CI-trustworthy; re-run the calibration set after **any** rubric edit
   (a past fix silently regressed a neighboring criterion), and note the English rubrics carry the
   same structure but are uncalibrated. The live UX cases reference the shared rubric files
@@ -154,7 +154,7 @@ These are non-obvious and have already caused (and cost) bugs — keep them in m
   avoids assumptions about promptfoo's external-test-file path resolution until verified live.
 - **Future surfaces (smart-home / bridge, ARCH-26 §14):** the boundary is the canonical `DeviceCommand`,
   so the contract is tested from both sides against shared `{utterance → canonical}` fixtures + a committed
-  golden bridge catalog (all in `eval-commons`), no live bridge needed. A new `device_command` capture
+  golden bridge catalog (all in `locveil-eval`), no live bridge needed. A new `device_command` capture
   provider drives an utterance and returns Irene's emitted command for assertion (Irene = producer;
   the bridge repo runs the consumer half). Full end-to-end against a running bridge (REST via promptfoo's
   `https` provider) is a later, separate surface. Tracked as TEST-17 (contract bundle) + TEST-18 (provider).

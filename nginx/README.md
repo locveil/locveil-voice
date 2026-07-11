@@ -3,7 +3,7 @@
 The device-fleet / provisioning plane for the ESP32 voice satellites (ARCH-22, design
 `docs/design/esp32_satellite.md`). It is **deliberately separate from Irene** — it runs as
 **nginx + openssl + a few scripts** directly on the Wirenboard controller (WB7), **not** in the Irene
-or wb-mqtt-bridge container. Rationale: it's security-critical PKI + static serving, it must not depend
+or locveil-bridge container. Rationale: it's security-critical PKI + static serving, it must not depend
 on Irene being up, and the WB7 is tiny (~1 GB RAM / 2 GB disk, armv7) — another service is the wrong
 weight.
 

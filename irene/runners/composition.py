@@ -71,7 +71,7 @@ def build_core(config: CoreConfig, config_path: Optional[Path] = None) -> AsyncV
 
 
 async def setup_bridge_output(core: AsyncVACore) -> None:
-    """Register + designate the wb-mqtt-bridge actuation output when configured (ARCH-8 PR-2).
+    """Register + designate the locveil-bridge actuation output when configured (ARCH-8 PR-2).
 
     Called by the base runner after `core.start()` — runner-agnostic (every profile gets the
     DEVICE_COMMAND channel from the same `[outputs.bridge]` config). Also wires the catalog:

@@ -1,4 +1,4 @@
-# wb-mqtt-voice — agent notes
+# locveil-voice — agent notes
 
 ## Development process — invariants (apply to EVERY task)
 
@@ -24,19 +24,19 @@ but these rules apply to any task). **Single source of truth** (relocated here f
   WebSocket wire protocol** (`/ws/audio`, `/ws/audio/reply`, `/ws/output`, `/ws/observe`) — a hand-written
   reference, deliberately not generated tooling. Any change to a WS endpoint or message shape (the
   `webapi_router` WS endpoints, `irene/satellite/`) **updates that document in the same change** — it is what
-  clients are built against (the satellite runner, the future ESP32 firmware, eval-commons'
+  clients are built against (the satellite runner, the future ESP32 firmware, locveil-commons'
   `ws_audio_provider`). Design docs hold rationale and **defer to it** (e.g. `python_satellite.md` §3 points
-  there); never duplicate frame tables elsewhere. Sibling rule: `../eval-commons/CLAUDE.md` names this
+  there); never duplicate frame tables elsewhere. Sibling rule: `../locveil-commons/CLAUDE.md` names this
   document as the protocol truth its providers implement.
 - **`cross-repo-source-of-truth`** — for any artifact **shared with a sibling repo**, know which side *owns* it and
   don't write across the boundary the wrong way.
-  - **The Irene↔bridge catalog / canonical-command contract is owned by `../wb-mqtt-bridge`** (its generator / source
-    of truth). This repo is a **consumer**: it **pins its own copy** into `eval-commons/contracts/` — a one-way
+  - **The Irene↔bridge catalog / canonical-command contract is owned by `../locveil-bridge`** (its generator / source
+    of truth). This repo is a **consumer**: it **pins its own copy** into `locveil-commons/contracts/` — a one-way
     *inward*, version-stamped sync from the bridge's committed artifacts (TEST-17) — and never hand-edits that copy,
     treats it as source, or writes into the bridge repo (re-pin when the bridge's artifact moves).
-  - **`../eval-commons` is the shared test framework** — test *execution logic* (providers/scorers/judge) lives there,
+  - **`../locveil-commons/eval` is the shared test framework** — test *execution logic* (providers/scorers/judge) lives there,
     changed **there not here** (this repo carries only eval YAML + the thin `eval/Makefile`; see *Testing &
-    evaluation*). This repo *does* write to `eval-commons` (it co-develops the framework and owns the contract pin
+    evaluation*). This repo *does* write to `locveil-commons` (it co-develops the framework and owns the contract pin
     above) — the asymmetry with the bridge, which only reads it.
   - **Cross-repo task filings arrive uncommitted, either direction.** When voice-side work spawns a sibling task (e.g.
     the bridge emitting the artifact), file it into that repo's ledger **but leave it uncommitted** for its maintainer
@@ -44,7 +44,7 @@ but these rules apply to any task). **Single source of truth** (relocated here f
     accepting (`task-start-reconciliation`) and then needs its own ID (`every-task-in-the-ledger`).
   - The contract's *content* (schemas/endpoints/task pairing) lives in `docs/design/mqtt_integration.md` §14 + the
     `voice-bridge-catalog-contract` memory — **referenced, not duplicated here** (avoid drift). Pairs with
-    `../wb-mqtt-bridge/CLAUDE.md`'s same-named invariant (the other direction).
+    `../locveil-bridge/CLAUDE.md`'s same-named invariant (the other direction).
 - **`read-at-start-record-at-completion`** — AFFIRMATIVE & NON-NEGOTIABLE until release.
   - **At task START:** read **not only the ledger item but also its related review doc(s)** (per the ledger's index)
     — the ledger item is a spine entry; the review doc holds the evidence, file:line refs, detail.
@@ -142,7 +142,7 @@ Declarative tests (CLI contracts, streaming-ASR system tests, Russian UX judging
 
 Key things it establishes (don't rediscover the hard way):
 - All test *execution logic* (providers, scorers, judge) lives in the sibling repo
-  **`../eval-commons`** — this repo carries only YAML + a thin `eval/Makefile`. Change behavior
+  **`../locveil-commons/eval`** — this repo carries only YAML + a thin `eval/Makefile`. Change behavior
   there, not here.
 - Run tests via `make` from `eval/` (it wires the `uv` venv + global `promptfoo`), e.g.
   `make cli` (no prerequisites), `make ws TARGET=local|wb7`, `make ux`.

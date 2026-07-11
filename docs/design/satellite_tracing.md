@@ -45,7 +45,7 @@ request policy, retention) and ARCH-35/36 (the satellite + the §3/§4 wire cont
   always-on model), so a device-side trace there is just the remote trace; v1 keeps `--trace`
   meaningful in `single` mode and notes the limitation. Reply audio is attached when it
   arrives before the next utterance (or shutdown) — no timers, deterministic.
-- **T-6 — eval-commons: no change required.** `wants_trace` defaults to `false`, so the
+- **T-6 — locveil-commons: no change required.** `wants_trace` defaults to `false`, so the
   existing `ws_audio_provider` register produces today's behavior byte-for-byte, and the
   voice WS protocol is not part of the bridge contract pin. Optional later enhancement:
   the eval provider requests traces to enrich failure diagnostics.

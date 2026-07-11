@@ -1,4 +1,4 @@
-"""BridgeClient — the wb-mqtt-bridge REST adapter (ARCH-8 PR-2).
+"""BridgeClient — the locveil-bridge REST adapter (ARCH-8 PR-2).
 
 The ONLY module that knows the bridge exists (`mqtt_integration.md` §4). Lives with the other
 output adapters (all OutputPorts in one home — user decision 2026-07-05, superseding §13.1's
@@ -123,7 +123,7 @@ def parse_catalog(raw: Dict[str, Any]) -> DeviceCatalog:
 # --- the adapter ----------------------------------------------------------------------------------
 
 class BridgeClient(OutputPort):
-    """REST adapter to wb-mqtt-bridge: the designated DEVICE_COMMAND output + catalog source."""
+    """REST adapter to locveil-bridge: the designated DEVICE_COMMAND output + catalog source."""
 
     def __init__(self, base_url: str, timeout_seconds: float = 20.0) -> None:
         self._base_url = base_url.rstrip("/")

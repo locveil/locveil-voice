@@ -2,7 +2,7 @@
 
 Irene can control a Wirenboard-based smart home by voice — lights, curtains, climate,
 brightness, media pause, whole-house scenarios — and answer sensor questions like
-«какая температура в спальне?». She does it through **wb-mqtt-bridge**, a companion
+«какая температура в спальне?». She does it through **locveil-bridge**, a companion
 service that knows every device in the house; Irene itself never talks MQTT and never
 hardcodes a device list.
 
@@ -58,7 +58,7 @@ the config UI under **Output Channels**):
 ```toml
 [outputs.bridge]
 enabled = true
-base_url = "http://localhost:8000"   # your wb-mqtt-bridge REST endpoint
+base_url = "http://localhost:8000"   # your locveil-bridge REST endpoint
 timeout_seconds = 20.0               # patient enough for devices that confirm slowly (air conditioners)
 ```
 

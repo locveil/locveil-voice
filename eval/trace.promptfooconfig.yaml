@@ -5,19 +5,19 @@
 #   make replay        # the deterministic trace-system tier
 #   make replay-judge  # the trace-ux tier (LLM replies graded by DeepSeek)
 #
-# Reuses the shared cli_provider (no new eval-commons code): a golden-trace case is just a console
+# Reuses the shared cli_provider (no new locveil-eval code): a golden-trace case is just a console
 # invocation of irene-replay-trace whose exit code is the verdict — 0 = matched the oracle, 2 = drift.
 # Replay builds the real pipeline (models must be present), so this is kept SEPARATE from `make cli`
 # (which brags zero prerequisites). The replay tool normalizes volatile fields (timestamps) before
 # diffing, so a deterministic handler stays a stable green golden.
 
-description: wb-mqtt-voice — golden-trace regression (offline replay of recorded traces)
+description: locveil-voice — golden-trace regression (offline replay of recorded traces)
 
 prompts:
   - '{{cmd}}'
 
 providers:
-  - id: file://../../eval-commons/eval_commons/providers/cli_provider.py
+  - id: file://../../locveil-commons/eval/eval_commons/providers/cli_provider.py
     label: replay
     config:
       cwd: ..                 # run irene-replay-trace from the repo root

@@ -91,7 +91,7 @@ sherpa/openWakeWord paths "NO torch").
 | Disk | **`/mnt/data` = 4.7 GB, 2.3 GB free** (docker root = `/mnt/data/.docker`); rootfs `/` has only ~785 MB free **but images + models live on `/mnt/data`** | disk is **NOT** the constraint (my earlier "784 MB" cited the wrong partition); vosk_tts/Whisper-small are barred by **RAM**, not disk |
 | glibc | **2.31** | newer `sherpa-onnx-core` needs ≥2.35 → **stays pinned at `sherpa-onnx==1.10.46`** (matches pyproject) |
 | Python | **3.9** | wheels must be cp39 |
-| Deployment | **dockerized** — Irene runs as a container alongside `wb-mqtt-bridge` + `wb-mqtt-ui` (Irene's own `config-ui` is **NOT** deployed on WB7) | armv7 images already on GHCR (`ghcr.io/droman42/*`, linux/armv7) |
+| Deployment | **dockerized** — Irene runs as a container alongside `locveil-bridge` + `wb-mqtt-ui` (Irene's own `config-ui` is **NOT** deployed on WB7) | armv7 images already on GHCR (`ghcr.io/droman42/*`, linux/armv7) |
 
 > **Topology (corrected 2026-06-15):** the **ESP32 satellites** own mic capture, **VAD**, **wake-word/voice-trigger**, and
 > audio **playback**. WB7's Irene is the **back half only** — it receives a gated, segmented utterance, runs
@@ -123,7 +123,7 @@ espeak-data 12), runtime ≈ **~280–350 MB RAM**; prefer **lazy TTS load** ove
 
 | Container | Disk | RAM (est.) |
 |---|---|---|
-| wb-mqtt-bridge | ~155 MB | ~120–200 MB |
+| locveil-bridge | ~155 MB | ~120–200 MB |
 | wb-mqtt-ui | ~40 MB | ~10–20 MB (nginx static) |
 | Irene (backend; no config-ui) | ~120–180 MB img + ~114 MB models | ~280–350 MB |
 | **Total** | **~430–490 MB of 2.3 GB free** | **~410–570 MB of 712 MB** (+256 MB swap) |
@@ -187,7 +187,7 @@ verification; standalone needs nothing new.
    WB7's Irene is the back half — ASR/NLU/intent/TTS, `skip_wake_word=True`, **no** server VAD, mic, speaker, or
    `config-ui`. It evolves today's headless `embedded-armv7.toml` (which returns text only) by turning **TTS synthesis
    on** + wiring the ESP32 reply-channel transport — *not* by adding local mic/playback. Runs **dockerized** beside
-   `wb-mqtt-bridge` + `wb-mqtt-ui`.
+   `locveil-bridge` + `wb-mqtt-ui`.
 
 ## 7. Work threads (for ARCH-24 when scheduled)
 

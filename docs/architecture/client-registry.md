@@ -30,7 +30,7 @@ spoken reply is conformed down to what it can actually play), and its **firmware
 controller knows when to push an update). What it does **not** carry is the smart-home devices in the room —
 a satellite is a pure voice terminal that knows nothing about lights or switches.
 
-**Device knowledge lives with the bridge.** Irene pulls a device/room catalogue from `wb-mqtt-bridge` — the
+**Device knowledge lives with the bridge.** Irene pulls a device/room catalogue from `locveil-bridge` — the
 single device authority (see [MQTT](mqtt.md)) — and *that* is what NLU resolves "the kitchen light" against.
 (A registration can technically still carry a `ClientDevice` list; it's a holdover from the early handshake,
 not the catalogue.) Registrations themselves are queryable — `get_client`, `get_clients_by_room`,

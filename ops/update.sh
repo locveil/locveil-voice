@@ -54,7 +54,7 @@ for d in donations localization prompts templates web; do
 done
 cp ../assets/donation_contract_v1.1.json ../assets/donation_language_v1.1.json "$ASSETS_DIR/"
 
-# The container runs non-root as uid 1000 (`USER domovoy` in the Dockerfiles); on the
+# The container runs non-root as uid 1000 (`USER locveil` in the Dockerfiles); on the
 # controller this script runs as root, so the mounted tree must be handed to that uid or the
 # first model download / log write fails with EACCES. The uid is the contract — the name
 # exists only inside the container, and uid 1000 is unassigned on a stock Wirenboard.

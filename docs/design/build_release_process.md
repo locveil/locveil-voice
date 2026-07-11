@@ -3,7 +3,7 @@
 **Status:** design AGREED 2026-07-02 (interactive session; four decisions user-confirmed). Implementation →
 **BUILD-9** (CI/publish workflow) + **BUILD-10** (`ops/` deploy story).
 **Requirement source:** the BUILD-8 ledger entry (add English image builds; "additional asks" gathered at task
-start) + the user's directive to **organize this repo's build the way `../wb-mqtt-bridge` organizes its** +
+start) + the user's directive to **organize this repo's build the way `../locveil-bridge` organizes its** +
 one hard requirement: **model files must never be baked into images** (§6 audit + guards).
 **Evidence base:** two comparative maps (this repo's build machinery; the bridge's) — summarized in §1;
 `docs/guides/build-docker.md` / `build-system.md` remain the operator/concept guides and are updated by the
@@ -42,9 +42,9 @@ minimal dependency set, and per-target buildx GHA caching (`scope=<target>`; the
 ### D-2 — The matrix and naming: RU unsuffixed, EN suffixed
 Dispatch inputs: **`targets`** (armv7 / aarch64 / standalone; default all) × **`languages`** (ru / en; default
 both) + **`build_ui`** (bool, D-4) → a build matrix (≤6 backend images/run). Naming (user decision):
-- **RU keeps today's names** — `wb-mqtt-voice-armv7|aarch64|standalone` (existing deployments' `:latest`
+- **RU keeps today's names** — `locveil-voice-armv7|aarch64|standalone` (existing deployments' `:latest`
   keeps meaning what it meant).
-- **EN adds a name suffix** — `wb-mqtt-voice-armv7-en` etc.; `CONFIG_PROFILE` maps to the existing `*-en`
+- **EN adds a name suffix** — `locveil-voice-armv7-en` etc.; `CONFIG_PROFILE` maps to the existing `*-en`
   profiles. Six GHCR packages; each new one needs the known one-time public-visibility flip (documented).
 Tag triple unchanged per package. Rejected: language-in-tag (ambiguous `latest`), rename-all-to-`-ru` (breaks
 every existing reference for symmetry's sake).
@@ -58,7 +58,7 @@ git-tag releases (a ceremony neither repo has; **version→tag coupling recorded
 currently hand-bump versions that are never stamped into images, and fixing that is a joint decision for later).
 
 ### D-4 — config-ui ships as a bridge-style nginx image — but not to the controller (yet)
-A seventh package **`wb-mqtt-voice-ui`**: `nginx:alpine` serving the built `dist/`, **one multi-arch
+A seventh package **`locveil-voice-ui`**: `nginx:alpine` serving the built `dist/`, **one multi-arch
 manifest** (amd64+arm64+armv7 — static files are arch-independent, so this adds no matrix burden). Built on
 the `build_ui` dispatch toggle, `needs: frontend-health`.
 _Amended at implementation (BUILD-9): **no nginx proxy** — the bridge's `/api` proxy doesn't map onto Irene
@@ -82,7 +82,7 @@ New **`ops/`** directory, bridge pattern adapted:
   **Never touches** the runtime-owned subtrees (`models/`, `cache/`, `state/`, `traces/`, `credentials/`) —
   the same config-as-code / state-as-data split the bridge enforces with `.state/`. This **replaces the
   per-build GHA assets artifact** and its manual download (today's weakest link).
-- **`wb-mqtt-voice.service`** — systemd oneshot (`docker compose up -d` / `down`), after docker+network.
+- **`locveil-voice.service`** — systemd oneshot (`docker compose up -d` / `down`), after docker+network.
 - **`ops/INSTALL.md`** — WB install/update/rollback walkthrough in the bridge's `INSTALL.md` style.
 Deploy loop on the controller = `git pull` (assets + ops) → `./ops/update.sh` (images). The voice repo is
 checked out on the controller exactly as the bridge repo already is.

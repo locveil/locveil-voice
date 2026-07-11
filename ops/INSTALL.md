@@ -115,7 +115,7 @@ Every published image also carries an immutable `vYYYYMMDD-<sha>` tag (see the p
 GHCR). Pin it in the **clone's** `ops/docker-compose.yml`:
 
 ```yaml
-    image: ghcr.io/droman42/wb-mqtt-voice-armv7:v20260702-abc1234
+    image: ghcr.io/locveil/wb-mqtt-voice-armv7:v20260702-abc1234
 ```
 
 then run `./ops/update.sh`. Return to `:latest` the same way.
@@ -139,10 +139,10 @@ The controller **remembers its profile**: pass `CONFIG_PROFILE` once and `update
 unknown name aborts instead of delivering the wrong config.
 
 - **aarch64 controller (WB8.5 / Pi)** — pin the aarch64 image
-  (`ghcr.io/droman42/wb-mqtt-voice-aarch64`) in the clone's `ops/docker-compose.yml`, then run
+  (`ghcr.io/locveil/wb-mqtt-voice-aarch64`) in the clone's `ops/docker-compose.yml`, then run
   `CONFIG_PROFILE=embedded-aarch64 ./ops/update.sh` once. The armv7 defaults target the WB7.
 - **English deployment** — same shape, with the `-en` image variant
-  (`ghcr.io/droman42/wb-mqtt-voice-armv7-en` / `-aarch64-en`) and the matching
+  (`ghcr.io/locveil/wb-mqtt-voice-armv7-en` / `-aarch64-en`) and the matching
   `CONFIG_PROFILE=embedded-armv7-en` (resp. `-aarch64-en`); language is baked into the image.
 
 The image and the profile must agree: the profile names the models the image actually ships.

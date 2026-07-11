@@ -4,7 +4,7 @@
 # Debian (glibc), NOT Alpine (musl): sherpa-onnx ships a glibc-only armv7 wheel and pip has no armv7
 # onnxruntime wheel (ARCH-9), so musl cannot run the ONNX ASR path. The build analyzer installs only
 # what the config profile needs (so this ONE recipe builds either the RU or the EN image via
-# CONFIG_PROFILE). Follows the wb-mqtt-bridge pattern: a self-contained /opt/venv copied whole into the
+# CONFIG_PROFILE). Follows the locveil-bridge pattern: a self-contained /opt/venv copied whole into the
 # runtime, PiWheels for prebuilt ARM wheels, and a LEAN cleanup pass.
 #
 # BUG-14 — running sherpa-onnx >=1.12 on the Wirenboard 7 (armv7) needs TWO fixes, both here:
@@ -131,8 +131,8 @@ RUN python /tmp/verify_components.py /app/runtime-config.toml && rm -f /tmp/veri
 # The NAME tracks the product (provisional — it changes with the final name decision); the
 # UID is what actually crosses the container boundary, so ops/update.sh chowns the bind-mounted
 # runtime tree to 1000 and the two must stay in step.
-RUN useradd -m -u 1000 domovoy && mkdir -p /app/assets && chown -R domovoy:domovoy /app
-USER domovoy
+RUN useradd -m -u 1000 locveil && mkdir -p /app/assets && chown -R locveil:locveil /app
+USER locveil
 
 # Probe the service, not the interpreter: `import irene` passes while the API is unbound, the
 # config is broken, or the runner is dead. start-period covers the first boot, which downloads
@@ -151,5 +151,5 @@ ENV MALLOC_TRIM_THRESHOLD_=100000 MALLOC_TOP_PAD_=65536
 # Satellite server: the back-half (ASR→NLU→intent→TTS) over the WS transport for the ESP32.
 CMD ["python", "-O", "-m", "irene.runners.webapi_runner", "--host", "0.0.0.0", "--port", "8080"]
 
-# Web API / ESP32 transport port (8000 is taken by wb-mqtt-bridge)
+# Web API / ESP32 transport port (8000 is taken by locveil-bridge)
 EXPOSE 8080

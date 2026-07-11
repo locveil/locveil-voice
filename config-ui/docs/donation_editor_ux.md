@@ -215,7 +215,7 @@ messages — not the donation content.
 
 A Russian author editing the English phrasing with a Russian UI must be a normal, supported case.
 
-**Mechanism — harmonize with the bridge (UI-6 stack-alignment):** `../wb-mqtt-bridge/ui` already uses
+**Mechanism — harmonize with the bridge (UI-6 stack-alignment):** `../locveil-bridge/ui` already uses
 **`react-i18next`** (`i18next ^23` / `react-i18next ^13`); config-ui has none. Adopt the same: a `react-i18next`
 setup with `en` + `ru` resource bundles and a language switcher. All persona-facing strings — *especially the §3.2
 card labels and help text, which carry the whole "no-jargon" promise* — are authored as **i18n keys from day one**,

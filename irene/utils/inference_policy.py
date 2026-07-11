@@ -21,7 +21,7 @@ class InferencePolicy:
     """Platform-aware CPU budget for an onnxruntime session.
 
     armv7 stays conservative (2 threads) so it doesn't oversubscribe the 4 Cortex-A7 cores while
-    wb-mqtt-bridge runs on the same box; 64-bit uses up to 4.
+    locveil-bridge runs on the same box; 64-bit uses up to 4.
     """
 
     num_threads: int

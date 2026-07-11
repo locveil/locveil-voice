@@ -2,7 +2,7 @@
 
 **Status:** design AGREED 2026-06-06. The Irene-side design and the cross-project bridge contract are
 both reconciled — see
-[`voice_integration_contract_draft.md`](../../../wb-mqtt-bridge/docs/design/voice_integration_contract_draft.md)
+[`voice_integration_contract_draft.md`](../../../locveil-bridge/docs/design/voice_integration_contract_draft.md)
 (status AGREED 2026-06-06) in the sister repo for the definitive bridge shape. **ARCH-8 is
 unblocked**; implementation sliced in §10.
 >
@@ -18,7 +18,7 @@ unblocked**; implementation sliced in §10.
 > no-MQTT). **(2)** A committed **development contract artifact** (the bridge's openapi `CatalogResponse` +
 > action-request schema, a curated golden catalog + a real WB7 dump) and a **bidirectional contract-testing
 > seam** around the canonical `DeviceCommand` — see the new **§14**. Follow-ups: TEST-17 / TEST-18
-> (voice + eval-commons), VWB-15 / VWB-16 (bridge).
+> (voice + locveil-commons), VWB-15 / VWB-16 (bridge).
 
 > Supersedes `docs/archive/intent_mqtt.md` (the v13-era "MQTT intent handler with runtime method
 > generation" design — explicitly rejected, see §2).
@@ -36,14 +36,14 @@ unblocked**; implementation sliced in §10.
 ## 1. The decision in one line
 
 **Irene does not own smart-home device knowledge or MQTT conventions.** The sister project
-**`wb-mqtt-bridge` is the single device authority**; Irene is a pure voice front-end that (a) pulls a
+**`locveil-bridge` is the single device authority**; Irene is a pure voice front-end that (a) pulls a
 device/room/capability **catalog** from the bridge on startup and (b) sends **canonical device
 commands** to the bridge, which translates them to native commands and the right MQTT/transport
 convention. Irene speaks one small canonical vocabulary end-to-end and is blind to wb-rules vs Home
 Assistant vs anything else.
 
 ```
-  utterance ──▶ Irene (NLU + resolution) ──canonical DeviceCommand──▶ wb-mqtt-bridge ──▶ {native WB | AV | HA later}
+  utterance ──▶ Irene (NLU + resolution) ──canonical DeviceCommand──▶ locveil-bridge ──▶ {native WB | AV | HA later}
                      ▲                                                      │
                      └────────────── catalog pull (devices/rooms/caps) ◀────┘
 ```
@@ -53,17 +53,17 @@ Assistant vs anything else.
 The real deployment is one Wirenboard 7 controller that is **both the MQTT broker and the home**.
 Everything lives on its broker under the WB convention `/devices/{dev}/controls/{ctrl}`:
 
-- **Native WB gear** (managed by `wb-mqtt-serial` + `wb-rules`, *not* in wb-mqtt-bridge today): lights
+- **Native WB gear** (managed by `wb-mqtt-serial` + `wb-rules`, *not* in locveil-bridge today): lights
   & dimmers (`wb-mr6c`, `wb-mdm3`, `wb-mrgbw-d`), curtains (`dooya`), HVAC, per-room multi-sensors
   (`wb-msw-v3`), metering, leak. Control names are hardware-technical; there is no device-type
   taxonomy, capability model, or room mapping in the raw topic tree.
-- **wb-mqtt-bridge's virtual devices** (AV gear with no native WB support): TVs, Apple TVs, eMotiva —
+- **locveil-bridge's virtual devices** (AV gear with no native WB support): TVs, Apple TVs, eMotiva —
   published onto the *same* broker, but *with* rich capability maps + param schemas + rooms.
 
 Two rejected alternatives:
 
 - **Irene → raw broker directly.** Irene would re-implement the device/capability/room model
-  wb-mqtt-bridge already has, only for the native half, against a semantically poor topic tree, with a
+  locveil-bridge already has, only for the native half, against a semantically poor topic tree, with a
   large hand-authored overlay. Two fidelity levels, duplicated modeling, Irene shaped to one vendor.
 - **The archived `intent_mqtt.md` design** (fat `MQTTDynamicHandler` owning an MQTT client + HA
   discovery + **runtime Python method generation** inside an intent handler). This fuses domain +
@@ -71,7 +71,7 @@ Two rejected alternatives:
   QUAL-era "generate it at runtime" anti-pattern. Dropped entirely.
 
 The chosen split puts device knowledge and convention-handling in the project **built** for it
-(wb-mqtt-bridge is a hexagonal device-control bridge with capability maps), and keeps Irene a thin,
+(locveil-bridge is a hexagonal device-control bridge with capability maps), and keeps Irene a thin,
 convention-agnostic voice layer. The agnosticism boundary moves to the correct place: **the bridge
 owns conventions; Irene owns voice.**
 
@@ -358,11 +358,11 @@ for v1).
 
 - **Irene side:** ARCH-7 (this design) → ARCH-8 (implement, §10) + QUAL-35 (device NLU + handlers).
   **ARCH-26** (2026-07-01) settled the refresh mechanism (lazy) + the contract artifact/testing seam (§14),
-  filing **TEST-17** (the eval-commons contract bundle — openapi pin + golden catalog + real WB7 dump +
+  filing **TEST-17** (the locveil-commons contract bundle — openapi pin + golden catalog + real WB7 dump +
   canonical `DeviceCommand` schema + `{utterance → canonical}` crossover fixtures + drift check) and
-  **TEST-18** (the eval-commons `device_command` capture provider + Irene producer contract tests).
-- **Bridge side:** tracked in `wb-mqtt-bridge/docs/action_plan.md`; the requirements are drafted in
-  `wb-mqtt-bridge/docs/design/voice_integration_contract_draft.md` for the bridge session. ARCH-8 is blocked
+  **TEST-18** (the locveil-commons `device_command` capture provider + Irene producer contract tests).
+- **Bridge side:** tracked in `locveil-bridge/docs/action_plan.md`; the requirements are drafted in
+  `locveil-bridge/docs/design/voice_integration_contract_draft.md` for the bridge session. ARCH-8 is blocked
   on that work. **ARCH-26 adds VWB-15** (emit the contract artifact — pin the openapi `CatalogResponse` +
   action-request schema, generate the golden catalog + a `catalog dump` export, CI drift-check + version
   stamp) **and VWB-16** (consumer contract test — crafted canonical `DeviceCommand` → native/echo, against
@@ -433,7 +433,7 @@ utterance ─▶ [Irene: (ASR?) → NLU → resolver(catalog) → device handler
  crafted canonical DeviceCommand ─▶ [Bridge: canonical → native → MQTT/echo] ─▶ DeliveryResult
 ```
 
-**14.2 The contract artifact (like `openapi.json`) — canonical home: `eval-commons`.** A committed bundle both
+**14.2 The contract artifact (like `openapi.json`) — canonical home: `locveil-commons`.** A committed bundle both
 repos pin:
 - **Schema** — the bridge's FastAPI **`/openapi.json`**, which already carries **both** `CatalogResponse` (the
   catalog) **and** the canonical action-request body under `components/schemas` — no bespoke schema to maintain.
@@ -447,21 +447,21 @@ repos pin:
   command emits the sample), kept honest by a **CI drift check + version stamp** so Irene knows which bridge
   build it's coded against. (Bridge work = **VWB-15**.)
 - **Publish boundary — no cross-repo writes.** The bridge commits its reference artifacts **in the bridge
-  repo** and does **not** write into eval-commons; the **voice/eval side pins a copy into
-  `eval-commons/contracts/`** (TEST-17), a one-way sync with a version stamp naming the bridge commit. Both
-  repos' tests read the eval-commons copy. So the bridge's "publish target" is its own repo, not eval-commons.
+  repo** and does **not** write into locveil-commons; the **voice/eval side pins a copy into
+  `locveil-commons/contracts/`** (TEST-17), a one-way sync with a version stamp naming the bridge commit. Both
+  repos' tests read the locveil-commons copy. So the bridge's "publish target" is its own repo, not locveil-commons.
 
 **14.3 Bidirectional contract tests around shared `{utterance → expected canonical command}` fixtures.**
 - **Irene = producer test:** given `(utterance, golden-catalog)`, assert Irene emits the expected canonical
   command — captured by the **capturing bridge `OutputPort`** (this *is* PR-1's fake bridge), validated against
-  the openapi schema. A new **eval-commons `device_command` provider** drives an utterance and returns the
+  the openapi schema. A new **locveil-commons `device_command` provider** drives an utterance and returns the
   emitted `DeviceCommand` JSON for promptfoo to assert; **text-input first** (isolates NLU→resolver→handler,
   deterministic, no audio/bridge), audio→canonical later.
 - **Bridge = consumer test:** given a **crafted** canonical command from the same fixtures, assert the right
   native action / echo — the utterance is irrelevant to it. (Bridge work = **VWB-16**.)
 - Because both resolve against the same golden catalog, device-ids/capabilities cannot drift apart.
 
-**14.4 Follow-ups.** **TEST-17** — the eval-commons bundle (schema pin + golden catalog + real dump + canonical
+**14.4 Follow-ups.** **TEST-17** — the locveil-commons bundle (schema pin + golden catalog + real dump + canonical
 schema + crossover fixtures + drift check); can land as soon as VWB-15 emits the schema+sample. **TEST-18** — the
 `device_command` capture provider + Irene producer tests; lands with ARCH-8 PR-1 (which supplies `DeviceCommand`
 + the capturing output) and TEST-17. Bridge side: **VWB-15** (emit artifact) + **VWB-16** (consumer test).

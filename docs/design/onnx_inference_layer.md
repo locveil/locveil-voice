@@ -90,8 +90,8 @@ The key target is a **Wirenboard 7.2 (A40i)** controller. Measured via SSH + a c
 
 - **Platform:** `armv7l` (Allwinner sun8i, **quad Cortex-A7 ~1 GHz**, NEON/VFPv4), **Debian 11 / glibc 2.31**
   (NOT Alpine/musl), host Python 3.9, Docker (overlay2, data-root on `/mnt/data`). **~375 MB RAM available**
-  (shared with the wb-mqtt-bridge container), 256 MB swap.
-- **Deployment is containerized** like wb-mqtt-bridge → `arm32v7/python:3.11-slim-bullseye`, buildx `linux/arm/v7`,
+  (shared with the locveil-bridge container), 256 MB swap.
+- **Deployment is containerized** like locveil-bridge → `arm32v7/python:3.11-slim-bullseye`, buildx `linux/arm/v7`,
   GHCR. **The image carries Python 3.11**, so the host's 3.9 is irrelevant.
 
 **Hands-on benchmark** (`arm32v7/python:3.11-slim`, `pip install sherpa-onnx==1.10.46`, `vosk-model-small-ru`):
@@ -128,7 +128,7 @@ MODEL DISK : 26.7 MB int8   |   LOAD: 38.2 s
    linux.alpine`). **Proven on the WB7:** on Alpine/musl, sherpa-onnx's compiled native module is absent →
    `import sherpa_onnx` fails (`No module named 'sherpa_onnx.lib._sherpa_onnx'`); its bundled onnxruntime is glibc-built
    and there is no musllinux build. On **Debian/glibc** (`arm32v7/python:3.11-slim-bullseye`) it installs and transcribes
-   (the §4 benchmark). So `Dockerfile.armv7` must **switch Alpine→Debian** (matching wb-mqtt-bridge's armv7 image). The
+   (the §4 benchmark). So `Dockerfile.armv7` must **switch Alpine→Debian** (matching locveil-bridge's armv7 image). The
    armv7 Docker build was **never tested yet**, so this is a clean change. Consequences in §7.1/§9.
 
 ---
@@ -269,7 +269,7 @@ nothing on an unsupported target and the provider/engine reports unavailable.
 
 - **`Dockerfile.armv7` — rewrite Alpine→Debian (required, user-approved; never tested yet):**
   - **Base:** all three stages (analyzer/builder/runtime) `python:3.11-alpine` → **`arm32v7/python:3.11-slim-bullseye`**
-    (glibc — matches wb-mqtt-bridge). This is what makes sherpa-onnx work (§4.7).
+    (glibc — matches locveil-bridge). This is what makes sherpa-onnx work (§4.7).
   - **System packages:** `apk add` → **`apt-get install`**; analyzer call `--platform linux.alpine` → **`linux.ubuntu`**;
     extract `system_packages['ubuntu']` instead of `['alpine']`. The sherpa provider's `get_platform_dependencies`
     already declares both keys, so the Debian base just selects **`libasound2`** (the `linux.ubuntu` value).

@@ -38,7 +38,7 @@ make record EVAL_LANG=en          # English — record the fixtures/en/* set
 make record EVAL_LANG=en FIXTURE=timer_10min   # just one
 ```
 
-The recorder (eval-commons' `eval-fixture-record`) shows the line to read, records from
+The recorder (locveil-eval' `eval-fixture-record`) shows the line to read, records from
 the configured mic, lets you re-take, and writes a conformant **16 kHz / mono / PCM16** WAV —
 validated on save against the same check the `/ws/audio` provider applies.
 

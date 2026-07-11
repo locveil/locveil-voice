@@ -1,5 +1,5 @@
-# GENERATED from crossover_fixtures.json (catalog acc1e18beb3f204a) — do not edit.
-# Regenerate: python -m eval_commons.fixtures_to_tests ../../eval-commons/contracts/crossover_fixtures.json
+# GENERATED from crossover_fixtures.json (catalog 5622ba7a1a78102a) — do not edit.
+# Regenerate: python -m eval_commons.fixtures_to_tests ../../locveil-commons/contracts/crossover_fixtures.json
 - description: "F01 (t1, actuate): включи телек"
   vars:
     utterance: "включи телек"
@@ -157,7 +157,7 @@
   vars:
     utterance: "поставь двадцать два градуса"
     room: "bedroom"
-    expect: {"kind": "clarify", "capability": "climate", "candidates": ["bedroom_heating", "bedroom_hvac"]}
+    expect: {"kind": "clarify", "candidates": ["bedroom_heating", "bedroom_hvac"], "capability": ["climate", "temperature"]}
   metadata:
     fixture: F21
     tier: "1"
@@ -184,7 +184,7 @@
   vars:
     utterance: "какая температура в спальне"
     room: ""
-    expect: {"kind": "read", "any_of": [{"device_id": "bedroom_hvac", "capability": "climate", "field": "room_temperature"}, {"device_id": "bedroom_heating", "capability": "climate", "field": "room_temperature"}]}
+    expect: {"kind": "read", "any_of": [{"device_id": "bedroom_hvac", "capability": "temperature", "field": "room_temperature"}, {"device_id": "bedroom_heating", "capability": "climate", "field": "room_temperature"}]}
   metadata:
     fixture: F32
     tier: "1"
@@ -382,7 +382,7 @@
   vars:
     utterance: "кондиционер на охлаждение"
     room: "bedroom"
-    expect: {"kind": "actuate", "device_id": "bedroom_hvac", "capability": "climate", "action": "set_mode", "params": {"mode": "cool"}}
+    expect: {"kind": "actuate", "device_id": "bedroom_hvac", "capability": "mode", "action": "set", "params": {"value": "cool"}}
   metadata:
     fixture: F80
     tier: "1"
@@ -391,7 +391,7 @@
   vars:
     utterance: "вентилятор на скорость 2"
     room: "bedroom"
-    expect: {"kind": "actuate", "device_id": "bedroom_hvac", "capability": "climate", "action": "set_fan", "params": {"fan": "speed_2"}}
+    expect: {"kind": "actuate", "device_id": "bedroom_hvac", "capability": "fan", "action": "set", "params": {"value": "speed_2"}}
   metadata:
     fixture: F81
     tier: "1"
@@ -454,7 +454,7 @@
   vars:
     utterance: "поставь в спальне кондиционер на двадцать два градуса"
     room: "bedroom"
-    expect: {"kind": "actuate", "device_id": "bedroom_hvac", "capability": "climate", "action": "set_setpoint", "params": {"temp": 22}}
+    expect: {"kind": "actuate", "device_id": "bedroom_hvac", "capability": "temperature", "action": "set", "params": {"value": 22}}
   metadata:
     fixture: F96
     tier: "1"

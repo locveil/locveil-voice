@@ -1,6 +1,6 @@
 # BUILD-9 (design D-4): config-ui as a bridge-style static nginx image.
 # ONE multi-arch manifest (amd64+arm64+armv7) — the dist is arch-independent, only the
-# nginx base differs per platform. Published as ghcr.io/droman42/wb-mqtt-voice-ui; NOT
+# nginx base differs per platform. Published as ghcr.io/locveil/wb-mqtt-voice-ui; NOT
 # deployed to the controller (the repo owns the config there — run this on a workstation).
 #
 # No proxy stage: Irene's API has no /api prefix and serves permissive CORS, so the

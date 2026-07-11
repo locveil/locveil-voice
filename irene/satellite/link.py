@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 BACKOFF_INITIAL_S = 1.0
 BACKOFF_MAX_S = 30.0
 
-# Uplink frame size: ~32 ms of 16 kHz mono PCM16 — matches the eval-commons provider the
+# Uplink frame size: ~32 ms of 16 kHz mono PCM16 — matches the locveil-eval provider the
 # protocol was proven with (frame size, not wall-clock pacing; the server just accumulates).
 FRAME_MS = 32
 

@@ -3,7 +3,7 @@
 # ============================================================
 # Debian build for Wirenboard 8.5 / Raspberry Pi (aarch64) satellite-servers. Same back-half role as
 # armv7, but 4 GB + no ORT wall let it run the bigger torch-free models (Whisper-small + Piper+RUAccent
-# + spaCy). torch is deliberately NOT used (footprint + A53 latency). Follows the wb-mqtt-bridge pattern
+# + spaCy). torch is deliberately NOT used (footprint + A53 latency). Follows the locveil-bridge pattern
 # (self-contained /opt/venv, PiWheels, LEAN). Assets + models are mounted at IRENE_ASSETS_ROOT.
 #
 # NOTE: build/boot verified under BUILD-3 on real hardware (buildx + linux/arm64).
@@ -98,8 +98,8 @@ RUN python /tmp/verify_components.py /app/runtime-config.toml && rm -f /tmp/veri
 # The NAME tracks the product (provisional — it changes with the final name decision); the
 # UID is what actually crosses the container boundary, so ops/update.sh chowns the bind-mounted
 # runtime tree to 1000 and the two must stay in step.
-RUN useradd -m -u 1000 domovoy && mkdir -p /app/assets && chown -R domovoy:domovoy /app
-USER domovoy
+RUN useradd -m -u 1000 locveil && mkdir -p /app/assets && chown -R locveil:locveil /app
+USER locveil
 
 # Probe the service, not the interpreter: `import irene` passes while the API is unbound, the
 # config is broken, or the runner is dead. start-period covers the first boot, which downloads

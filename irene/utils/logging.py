@@ -31,7 +31,7 @@ class LogLevel(str, Enum):
 
 
 # Rotation scheme (BUG-30): fresh file per startup + daily rotation + bounded retention —
-# the same logic as the sibling wb-mqtt-bridge (`app/bootstrap.py::setup_logging`).
+# the same logic as the sibling locveil-bridge (`app/bootstrap.py::setup_logging`).
 LOG_RETENTION_DAYS = 30
 
 

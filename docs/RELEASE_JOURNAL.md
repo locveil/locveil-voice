@@ -17,6 +17,24 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-11 — BUILD-21: the repo is `locveil-voice` now — commons bootstrap consumed, eval re-pointed,
+  name sweep, container user + GHCR namespace.** The owner locked the product name **Locveil** (superseding
+  BUILD-20's "Domovoy"), claimed the `locveil` GitHub org, and transferred/renamed all three repos + local
+  dirs; the commons side of BUILD-21 landed as `locveil-commons@52126da` (D-2 layout with the eval framework
+  under `eval/`, the PROD board live, the decision record migrated there — a pointer remains at
+  `docs/design/productization.md`). This change is the voice tail: every `eval/` ref re-pointed to
+  `../../locveil-commons/eval` (contracts at `../../locveil-commons/contracts`); operative docs/comments swept
+  to the new names (history and live deployment identifiers deliberately untouched — the runtime rename is
+  filed as BUILD-29); `useradd domovoy` → `locveil` in the three backend Dockerfiles (uid 1000 unchanged —
+  lands at the next image publish); GHCR pull refs/docs cut over to `ghcr.io/locveil/*` (CI already publishes
+  by `github.repository_owner`; **one CI publish must run before the next controller `update.sh`**, else the
+  compose pull 404s — old `droman42/*` images remain pullable). Found along the way: the dir rename had
+  bricked the `.venv` (absolute shebangs in every console script — the eval suite errored with
+  `FileNotFoundError: irene-config-validate`); rebuilt with `uv sync --all-extras` + the sqlite shim, then
+  `make setup` re-installed `locveil-eval` (the renamed distribution) from the new path. Gates: `make cli`
+  5/5, `make device-auto` tier-1 48/48, pytest on touched files 83/83, `check_scope.py` green. The bridge's
+  mirror re-point is delegated on the commons board (PROD-2) — its first board-as-outbox pull; its `.venv`
+  will be bricked the same way.
 - **2026-07-10 — TEST-21 + BUG-41: bridge v0.6.0 consumed — re-pin, and the 5 s timeout that would have
   re-broken the AC path; v0.5.2 tagged as the retest pair for bridge v0.6.0.** The bridge cut its 0.6.0
   release; the contract delta was version-only (`openapi.json` `0.5.0`→`0.6.0` in two places, golden

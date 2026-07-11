@@ -5,11 +5,11 @@
 #
 # Rollback: pin `image:` to a vYYYYMMDD-<sha> tag (see GHCR package page) and re-run
 # `docker compose up -d`. English deployment: switch the image to the `-en` variant
-# (ghcr.io/droman42/wb-mqtt-voice-armv7-en) — the language is baked into the image.
+# (ghcr.io/locveil/wb-mqtt-voice-armv7-en) — the language is baked into the image.
 
 services:
   irene:
-    image: ghcr.io/droman42/wb-mqtt-voice-armv7:latest
+    image: ghcr.io/locveil/wb-mqtt-voice-armv7:latest
     container_name: wb-mqtt-voice
     restart: unless-stopped
     # Host network, matching the sibling bridge (which needs it to reach WB's mosquitto on

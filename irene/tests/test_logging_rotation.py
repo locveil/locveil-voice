@@ -1,6 +1,6 @@
 """
 Log rotation (BUG-30) — fresh file per startup + daily rotation + bounded retention,
-mirroring the sibling wb-mqtt-bridge scheme.
+mirroring the sibling locveil-bridge scheme.
 """
 
 import logging

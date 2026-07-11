@@ -1,6 +1,6 @@
 """Interpreter-startup shim: make `sqlite3` resolvable on a CPython built without it.
 
-The CPython used here (3.11.4 at /usr/local/bin, shared with the sister project wb-mqtt-bridge) is
+The CPython used here (3.11.4 at /usr/local/bin, shared with the sister project locveil-bridge) is
 compiled WITHOUT the stdlib `_sqlite3` extension. `coverage.py` imports `sqlite3` at module load
 (when the pytest-cov plugin is registered, before any conftest runs), so the alias MUST be in place
 at interpreter startup — which is what `sitecustomize` gives us (Python imports it during site init,

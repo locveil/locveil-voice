@@ -22,9 +22,9 @@ Each image is published to the GitHub Container Registry and tagged `latest`, `s
 `v<date>-<sha>` (pin the date tag to roll back):
 
 ```bash
-docker pull ghcr.io/droman42/wb-mqtt-voice-standalone:latest      # Russian
-docker pull ghcr.io/droman42/wb-mqtt-voice-armv7-en:latest        # English
-docker pull ghcr.io/droman42/wb-mqtt-voice-ui:latest              # configuration editor
+docker pull ghcr.io/locveil/wb-mqtt-voice-standalone:latest      # Russian
+docker pull ghcr.io/locveil/wb-mqtt-voice-armv7-en:latest        # English
+docker pull ghcr.io/locveil/wb-mqtt-voice-ui:latest              # configuration editor
 ```
 
 Publishing is a deliberate act, not a side effect of pushing code: every push runs the fast health checks,
@@ -76,7 +76,7 @@ first boot downloads the speech models.
 ```bash
 docker run --rm -p 6000:6000 \
   -v ./assets:/app/assets \
-  ghcr.io/droman42/wb-mqtt-voice-aarch64:latest
+  ghcr.io/locveil/wb-mqtt-voice-aarch64:latest
 ```
 
 **Standalone** (x86_64) — drives the local microphone and speaker, so it needs the host sound devices:
@@ -85,7 +85,7 @@ docker run --rm -p 6000:6000 \
 docker run --rm -p 6000:6000 \
   --device /dev/snd \
   -v ./assets:/app/assets \
-  ghcr.io/droman42/wb-mqtt-voice-standalone:latest
+  ghcr.io/locveil/wb-mqtt-voice-standalone:latest
 ```
 
 Both serve the full web API on 6000 alongside their primary input.
@@ -100,7 +100,7 @@ ad-hoc compose elsewhere:
 ```yaml
 services:
   irene:
-    image: ghcr.io/droman42/wb-mqtt-voice-aarch64:latest
+    image: ghcr.io/locveil/wb-mqtt-voice-aarch64:latest
     ports: ["6000:6000"]
     volumes: ["./assets:/app/assets"]
     restart: unless-stopped
@@ -140,7 +140,7 @@ and armv7). It is not part of the standard controller deployment — run it wher
 to edit donations or configuration:
 
 ```bash
-docker run --rm -p 3000:3000 ghcr.io/droman42/wb-mqtt-voice-ui:latest
+docker run --rm -p 3000:3000 ghcr.io/locveil/wb-mqtt-voice-ui:latest
 ```
 
 By default the app talks to Irene on **the same host it is served from**, port 8080. Point it elsewhere with
@@ -148,7 +148,7 @@ the `API_BASE_URL` environment variable:
 
 ```bash
 docker run --rm -p 3000:3000 -e API_BASE_URL=http://192.168.110.250:8080 \
-  ghcr.io/droman42/wb-mqtt-voice-ui:latest
+  ghcr.io/locveil/wb-mqtt-voice-ui:latest
 ```
 
 ## How the image is built

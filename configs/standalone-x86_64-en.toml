@@ -73,10 +73,10 @@ console = true                      # Console (terminal) text output (CLI channe
 web_push = true                     # Browser push channel (/ws/output) for deferred results
 
 [outputs.bridge]
-# Smart-home actuation via wb-mqtt-bridge (ARCH-8). Flip on when the bridge is
+# Smart-home actuation via locveil-bridge (ARCH-8). Flip on when the bridge is
 # deployed and reachable from this instance (hardware bring-up, ARCH-25).
 enabled = false
-base_url = "http://localhost:8000"  # wb-mqtt-bridge REST API
+base_url = "http://localhost:8000"  # locveil-bridge REST API
 timeout_seconds = 20.0
 
 # ============================================================

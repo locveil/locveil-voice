@@ -2,7 +2,7 @@
 §5b error mapping, and the composition wiring (`setup_bridge_output`).
 
 Adapter-level tests stub the one transport seam (`_request_json`) — the REST
-contract shapes come from the pinned artifacts in `eval-commons/contracts/`.
+contract shapes come from the pinned artifacts in `locveil-commons/contracts/`.
 """
 
 from types import SimpleNamespace

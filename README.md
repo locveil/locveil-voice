@@ -7,7 +7,7 @@ Russian-first, English supported. Version 0.5.0 · Python 3.11+ · MIT.
 
 > **Status — pre-release, under active development.** The architecture is settled and the core works
 > (CLI and web API, intent handling, timers, smart-home control through
-> [wb-mqtt-bridge](docs/guides/smart-home.md), Python satellite room nodes, the browser config UI),
+> [locveil-bridge](docs/guides/smart-home.md), Python satellite room nodes, the browser config UI),
 > and Docker images publish to GHCR. The ESP32 firmware satellite and on-device deployment await
 > hardware bring-up.
 >
@@ -22,7 +22,7 @@ Russian-first, English supported. Version 0.5.0 · Python 3.11+ · MIT.
   handles the hard ones — both driven by declarative *donation* files instead of hardcoded phrasing.
 - **Ships only what you use.** Components and providers are discovered via entry-points and loaded
   only when configured, so a deployment stays as small as its config.
-- **Smart-home ready.** A small canonical command vocabulary pairs with `wb-mqtt-bridge` to drive
+- **Smart-home ready.** A small canonical command vocabulary pairs with `locveil-bridge` to drive
   Wirenboard and other gear — Irene stays device-agnostic; the bridge owns the hardware.
 - **Reports its own bugs.** Say «сообщи о проблеме», describe it in your own words, and Irene files
   a ticket with the logs and context a developer needs — privately, offline-tolerant, no account.
@@ -42,7 +42,7 @@ Russian-first, English supported. Version 0.5.0 · Python 3.11+ · MIT.
   - **[NLU](docs/architecture/nlu.md)** — donation-driven recognition; the cheap keyword matcher
     versus spaCy (and what spaCy actually is).
   - **[MQTT integration](docs/architecture/mqtt.md)** *(planned)* — canonical device commands and
-    the `wb-mqtt-bridge` pairing.
+    the `locveil-bridge` pairing.
   - **[ESP32 voice satellite](docs/architecture/esp32.md)** *(planned)* — streaming-audio room nodes
     and how they fit the whole picture.
 - **[Asset management](docs/guides/asset-management.md)** — the models and caches, and how they're
@@ -57,7 +57,7 @@ Russian-first, English supported. Version 0.5.0 · Python 3.11+ · MIT.
 - **[Satellite room nodes](docs/guides/satellite.md)** — a laptop or Pi with a mic as a room node:
   local wake word, understanding on the controller, optional mutual-TLS enrollment.
 - **[Smart-home control](docs/guides/smart-home.md)** — voice control of a Wirenboard home through
-  wb-mqtt-bridge: rooms, devices, scenarios, and sensor questions.
+  locveil-bridge: rooms, devices, scenarios, and sensor questions.
 - **[Tracing & replay](docs/guides/tracing.md)** — record a request to a self-contained file, then listen
   to it or replay it through the pipeline to debug and tune.
 - **[Changelog](CHANGELOG.md)** — what each release brings.
