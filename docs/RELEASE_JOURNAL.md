@@ -20,6 +20,11 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-12 — index housekeeping: `satellite_tracing.md` row added.** The ARCH-37 design doc (AGREED
+  2026-07-07) was never indexed — both its tasks (ARCH-37/38) closed same-day and are already archived,
+  so the omission was cosmetic, but it kept scope-guard warning UNINDEXED on every commit. Row added to
+  the design index; the guard is warning-free again. Mechanical fix, no scope change — no ledger task.
+
 - **2026-07-12 — `cross-repo-board` block re-pinned @ scope-v4 (PROD-15 close follow-through).** The
   shared block now names `../locveil-satellite` as the fourth sibling; block text between the markers +
   the `.scope-guard.toml` hash updated from the commons source per the `process/claude-md.md` §3 flow
