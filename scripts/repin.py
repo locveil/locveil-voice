@@ -62,7 +62,8 @@ FAMILIES = {
     "esp32-site": {
         "owner_repo": "locveil-satellite",
         "owner_dir": REPO_ROOT / "../locveil-satellite",
-        "files": ["provisioning/ansible/templates/esp32-site.conf.j2"],
+        "files": ["provisioning/ansible/templates/esp32-site.conf.j2",
+                  "contracts/esp32-site/STAMP.json"],
         "dests": [
             {"path": REPO_ROOT / "contracts/pins/esp32-site",
              "conformance": "irene/tests/test_arch36_tls_e2e.py"},

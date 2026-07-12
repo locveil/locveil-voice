@@ -1,0 +1,9 @@
+{
+  "contract": "esp32-site",
+  "version": "1",
+  "tag": "esp32-site-v1",
+  "date": "2026-07-12",
+  "owner_repo": "locveil-satellite",
+  "artifact": "provisioning/ansible/templates/esp32-site.conf.j2",
+  "note": "First tag stamps the Plane-B nginx site template as already shipped and consumed (voice pinned it pre-tag @ 37dcac5, byte-identical to this tag — its PIN.json fills version/tag at its next re-pin). v1 is the two-server-block shape: :8081 public provisioning bootstrap (ca.crt, CSR PUT + cert poll), :443 mTLS operational zone (/esp32/firmware/, /esp32/models/, optional /ws/ reverse proxy passing X-Client-Cert-DN)."
+}

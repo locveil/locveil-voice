@@ -20,6 +20,15 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-12 — esp32-site pin upgraded to the stamped form (`esp32-site-v1`) — mechanical re-pin,
+  no ledger task (the block re-pin carve-out spirit).** The satellite's OPS-3 cut tagged the Plane-B
+  template surface, so voice's pre-tag artifact-copy pin filled in exactly what its own PIN.json
+  anticipated: `version`/`tag` now `1`/`esp32-site-v1`, the owner's STAMP carried verbatim, template
+  bytes unchanged (same sha256 the pre-tag pin held — the satellite tagged byte-identical, as its tag
+  message promised). `repin.py`'s esp32-site family gained the owner STAMP file; one `make repin
+  CONTRACT=esp32-site` did the rest, and the untagged-family branch of `repin-check` retires from use.
+  TLS e2e green from the pinned template, contract-guard 0 warnings, all pins current at owner tags.
+
 - **2026-07-12 — BUILD-34 executed (same-day): the catalog contract now fails fast, locally.** The
   owner's completeness ruling closed the corner flagged in HK-5: voice consumes the catalog REST API at
   runtime yet had no push-time schema check — conformance lived only in the release-cadence cross-suite.
