@@ -41,6 +41,10 @@ but these rules apply to any task). **Single source of truth** (relocated here f
     it at `contracts/pins/report-protocol/` (one-way inward sync — never hand-edit; re-pin on a vN bump, see
     the pin folder's README) and validates the collector's emitted surface against the pin in
     `irene/tests/test_report_protocol_conformance.py`.
+  - **Contract layout/coherence is guarded by the vendored `scripts/contract_guard.py`** (commons
+    `packages/contract-guard/`, pinned `contract-guard-v1`, BUILD-33) — same consumption model as the
+    scope guard: **never edit the vendored file**, re-pin to move. Registry + per-pin mechanics:
+    `contracts/README.md`; convention: `../locveil-commons/process/contracts.md`.
   - **`../locveil-commons/eval` is the shared test framework** — test *execution logic* (providers/scorers/judge) lives there,
     changed **there not here** (this repo carries only eval YAML + the thin `eval/Makefile`; see *Testing &
     evaluation*). This repo *does* write to `locveil-commons` (it co-develops the framework and owns the contract pin

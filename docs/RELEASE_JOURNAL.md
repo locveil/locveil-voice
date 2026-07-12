@@ -20,6 +20,14 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-12 — BUILD-33 executed: contract-guard v1 vendored, both enforcement rails live.** The
+  commons coherence checker rides the same consumption model the scope guard proved: a single stdlib
+  file vendored byte-exact at its pinned tag (`contract-guard-v1`, verified against the tag before
+  copying), never edited locally, moved only by re-pin. The pre-commit hook now runs both guards in
+  sequence, and CI gained a `contracts` paths-filter plus a path-gated `contract-guard` job shaped
+  like `ledger-guard` — a contract-surface commit pays for the check it earns, nothing else does.
+  With BUILD-32's tree already strict, the guard is green at zero warnings from its first commit.
+
 - **2026-07-12 — BUILD-32 executed (same-day): voice `contracts/` now wears the org shape.** The two
   consumed pins moved under `contracts/pins/<name>/` — report-protocol carries the owner's STAMP verbatim
   plus a strict `PIN.json` (sha256 file map, conformance pointer, tag `report-protocol-v1`); esp32-site

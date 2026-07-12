@@ -1756,6 +1756,16 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       pointers, two docstrings. Verified: contract-guard v1 green with ZERO warnings, report-protocol
       conformance 11/11, hermetic TLS e2e passes from the new template path, `make device-tests`
       regenerates byte-identically (header path aside).
+- [x] **BUILD-33** `[release]` [PROCESS][CI] — **DONE 2026-07-12 (filed + completed same day; PROD-16
+      delegation).** Contract-guard v1 vendored per the BUILD-30 scope-guard consumption model:
+      `scripts/contract_guard.py` taken byte-exact from commons tag **`contract-guard-v1`** (tag verified ==
+      commons working tree before vendoring; NEVER edit — re-pin to move, pin recorded in
+      `contracts/README.md`). Wired: `hooks/pre-commit` now runs scope-guard then contract-guard (both
+      `--check` only, hooks never mutate); CI gained a `contracts` paths-filter
+      (`contracts/**`, `scripts/contract_guard.py`, the workflow itself) + a path-gated `contract-guard`
+      job mirroring `ledger-guard`. CLAUDE.md `cross-repo-source-of-truth` teaches the vendored-file rule.
+      Coherence layer only — scope-guard stays ledger-only. Verified: hook runs both guards green
+      (contract-guard 0 warnings on the BUILD-32 tree).
 ### Models & Assets (ASSET)
 ### Documentation (DOC)
 - [x] **DOC-5b** (P2) — DONE 2026-06-08: regenerated `guides/DONATION_FILE_SPECIFICATION.md` for the v1.1

@@ -62,6 +62,7 @@ jobs:
       backend: ${{ steps.filter.outputs.backend }}
       ui: ${{ steps.filter.outputs.ui }}
       ledger: ${{ steps.filter.outputs.ledger }}
+      contracts: ${{ steps.filter.outputs.contracts }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -86,6 +87,10 @@ jobs:
               - 'scripts/scope_guard.py'
               - '.scope-guard.toml'
               - '.github/workflows/ci.yml'
+            contracts:
+              - 'contracts/**'
+              - 'scripts/contract_guard.py'
+              - '.github/workflows/ci.yml'
 
   # ------------------------------------------------------------------ #
   # Ledger guard — single-task-ledger discipline, enforced in CI.       #
@@ -98,6 +103,19 @@ jobs:
       - uses: actions/checkout@v4
       - name: Ledger discipline guard (scope-guard, vendored at scope-v3)
         run: python3 scripts/scope_guard.py --config .scope-guard.toml --check
+
+  # ------------------------------------------------------------------ #
+  # Contract guard — layer-1 contract coherence (layout, registry,      #
+  # STAMP/PIN shape, pin hashes). process/contracts.md §4.              #
+  # ------------------------------------------------------------------ #
+  contract-guard:
+    needs: changes
+    if: needs.changes.outputs.contracts == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Contract coherence guard (contract-guard, vendored at contract-guard-v1)
+        run: python3 scripts/contract_guard.py --check
 
   # ------------------------------------------------------------------ #
   # Backend health — shared py-dev-gates trio + the voice-specific      #

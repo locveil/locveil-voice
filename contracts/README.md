@@ -25,3 +25,9 @@ _The Irene↔bridge catalog/command contract is pinned into
 `../locveil-commons/contracts/pins/{catalog,crossover-fixtures}/` (TEST-17 — the shared
 eval framework consumes it there, voice stamps its PIN.json); this directory holds only
 pins that this repo's own code/tests validate against._
+
+Guards: layer 1 is the vendored `scripts/contract_guard.py` (commons
+`packages/contract-guard/`, pinned at tag **`contract-guard-v1`** — never edit the
+vendored file, re-pin to move; runs in `hooks/pre-commit` and the path-gated
+`contract-guard` CI job, `--check` only); layer 2 is the per-pin conformance tests
+listed above.

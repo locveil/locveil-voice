@@ -502,12 +502,6 @@ size-matched to the Russian stack; language is a per-config/deployment choice (a
       board** (D-4/D-5), seeded when BUILD-21 lands, not decided unilaterally here. Scope for that design: which
       repo owns the unified compose, health-gated `depends_on` vs. tolerant clients, whether the units collapse
       into one, and how `update.sh` stays per-repo when the compose is not. Related: BUILD-18 (ops conformance).
-- [ ] **BUILD-33** `[release]` [PROCESS][CI] — **Vendor contract-guard v1** (filed 2026-07-12 at PROD-16
-      intake). Commons `packages/contract-guard/contract_guard.py` is tagged **`contract-guard-v1`** —
-      vendor it per the BUILD-30 scope-guard consumption model (pinned tag, NEVER edit the vendored file,
-      re-pin to move), wire into the pre-commit hook + a path-gated `contract-guard` CI job (`--check`
-      only). Coherence layer only — layout/STAMP/PIN validity; scope-guard stays ledger-only. Depends on
-      BUILD-32's layout being in place.
 
 ### Documentation (DOC)
 
