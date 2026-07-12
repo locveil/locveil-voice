@@ -20,6 +20,17 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-12 — PROD-17 intake: the user-docs convention lands in the voice ledger.** The HK-6 council
+  (two rounds, all three keepers) decided the org docs convention — normative
+  `../locveil-commons/process/user-docs.md` + the manifest schema; commons shipped scope-guard 1.2.0
+  (`scope-v5`, the docs-verdict presence rule) and the template seeds. Voice's delegation reconciled —
+  every stale-doc claim verified against the tree (the port-6000 quartet and the WS example line are
+  real: all images serve 8080; the QUICKSTART "ESP32 satellite controllers" label is wrong — WB7/WB8
+  are Wirenboard controllers; the HF wake-word link is live, checked by today's wake-pack re-pin;
+  `satellite.md` indeed lacks a provisioning pointer). Filed: DOC-11 `[release]` (the live fixes),
+  DOC-12 `[release]` (manifest + coherence test + CONTRIBUTING links), BUILD-35 `[release]` (dialect
+  rewrite + `scope-v5` re-pin with `docs_verdict_since`). IDs written back to the board.
+
 - **2026-07-12 — esp32-site pin upgraded to the stamped form (`esp32-site-v1`) — mechanical re-pin,
   no ledger task (the block re-pin carve-out spirit).** The satellite's OPS-3 cut tagged the Plane-B
   template surface, so voice's pre-tag artifact-copy pin filled in exactly what its own PIN.json

@@ -468,8 +468,35 @@ size-matched to the Russian stack; language is a per-config/deployment choice (a
       board** (D-4/D-5), seeded when BUILD-21 lands, not decided unilaterally here. Scope for that design: which
       repo owns the unified compose, health-gated `depends_on` vs. tolerant clients, whether the units collapse
       into one, and how `update.sh` stays per-repo when the compose is not. Related: BUILD-18 (ops conformance).
+- [ ] **BUILD-35** `[release]` [PROCESS][CI] — **Docs-convention dialect + scope-guard re-pin @
+      `scope-v5`** (filed 2026-07-12 at PROD-17 intake). Re-pin vendored `scripts/scope_guard.py` at
+      commons tag `scope-v5` (1.2.0 — the docs-verdict presence rule on completion entries);
+      `.scope-guard.toml` gains `docs_verdict_since = "2026-07-12"` + the re-pinned `shared-invariants`
+      block (new digest line names the docs-verdict rule) with its new sha256; CLAUDE.md
+      `user-facing-docs-are-done` invariant rewritten as the voice dialect of
+      `../locveil-commons/process/user-docs.md` — the manifest is the scope authority (`ops/INSTALL.md`
+      enters scope via its manifest node), completion entries carry the docs-verdict line.
 
 ### Documentation (DOC)
+
+- [ ] **DOC-11** `[release]` [DOC] — **Live stale-doc fixes from the HK-6 audit** (filed 2026-07-12 at
+      PROD-17 intake; all five claims verified at intake). (a) `docs/guides/build-docker.md` port-6000
+      quartet (lines 77/85/91/104) → 8080 — every Dockerfile CMD/EXPOSEs 8080 and `ops/INSTALL.md`
+      teaches 8080; (b) `docs/guides/websocket-api.md` `ws://localhost:6000/ws/audio` example line →
+      8080; (c) one pointer sentence in `docs/guides/satellite.md` to the satellite repo's provisioning
+      runbook (`locveil-satellite` `provisioning/README.md`); (d) voice-trigger HF link — VERIFIED LIVE
+      at intake (the wake-pack re-pin fetched from that exact repo today), no change needed; (e)
+      `docs/QUICKSTART.md` "ESP32 satellite controllers (WB7 / WB8)" mislabel — WB7/WB8 are the
+      Wirenboard controllers the embedded profiles run ON, not ESP32 satellites.
+- [ ] **DOC-12** `[release]` [DOC][PROCESS] — **The docs manifest + coherence test + CONTRIBUTING
+      links** (filed 2026-07-12 at PROD-17 intake; normative: `../locveil-commons/process/user-docs.md`
+      §4 + `process/user-docs/manifest.schema.json`). Author `docs/manifest.json` (roots, ≤10 repo-owned
+      surface→glob map, one node per user-facing doc incl. diagrams + CONTRIBUTING.md; the
+      ws-protocol/DONATION_FILE_SPECIFICATION canonical-reference carve-outs where they apply);
+      `contracts/docs-manifest/` STAMP (`docs-manifest-v1`, bumped only on schema reshape) + pointer
+      README + registry row (INTERNAL); the per-repo coherence test on the drift-guard pattern in the
+      normal suite (schema-valid, node↔tree bijection under the roots, covers-surfaces exist, floor);
+      CONTRIBUTING.md gains the contracts-registry + eval links and its manifest node.
 
 ### UI / config-ui (UI)
 React/Vite donation+config editor. Front-end feature/UX work (the BUILD-4 build gate stays under Build & CI).
