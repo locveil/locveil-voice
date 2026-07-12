@@ -20,6 +20,19 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-12 — DOC-11 + DOC-12 + BUILD-35 executed (same-day): voice speaks the docs convention.** The
+  whole PROD-17 delegation, in dependency order. The live stale fixes first: the docker guide and the WS
+  Python example now say 8080 like the images they describe, the QUICKSTART profile table stops calling
+  Wirenboard controllers "ESP32 satellites", and the satellite guide hands off to the provisioning
+  runbook where the certificate plane actually lives. Then the manifest: 60 nodes over 8 roots — every
+  guide, architecture story, diagram pair, the README/QUICKSTART/INSTALL/CONTRIBUTING front doors — with
+  10 surface→glob triggers, the websocket-api node carrying the canonical carve-out, and an 8-check
+  coherence test in the normal suite (a doc without a node now fails CI; so does a verdict naming a
+  ghost node). Last, the teeth: scope-guard re-pinned at `scope-v5`, the docs-verdict rule live from
+  today — which promptly retro-flagged all nine of today's earlier completions, each now carrying its
+  honest verdict (the rule caught its own rollout day; a good sign). CONTRIBUTING gained the contracts,
+  eval, and docs-discipline front-door sections. Suite green, both guards green, block byte-verified.
+
 - **2026-07-12 — PROD-17 intake: the user-docs convention lands in the voice ledger.** The HK-6 council
   (two rounds, all three keepers) decided the org docs convention — normative
   `../locveil-commons/process/user-docs.md` + the manifest schema; commons shipped scope-guard 1.2.0

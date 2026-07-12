@@ -84,7 +84,9 @@ refuses a connection whose certificate doesn't match the claimed `client_id`, so
 certificate issued to the kitchen can never register as the bedroom.
 
 Certificates and keys live under the assets folder (`credentials/satellite/`) — they are never
-part of the configuration file and never belong in version control.
+part of the configuration file and never belong in version control. Setting up the
+controller's side of this certificate plane (the nginx gate, the approval tooling) is covered
+by the [locveil-satellite provisioning runbook](https://github.com/locveil/locveil-satellite/blob/main/provisioning/README.md).
 
 ## Tracing an utterance end to end
 

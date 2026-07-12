@@ -46,7 +46,7 @@ The shipped configs:
 | `configs/config-example.toml` | **first run** — curated text-only starter, works out of the box |
 | `configs/config-master.toml` | the documented reference (every option) — lift sections from it |
 | `configs/full.toml` | everything enabled (heavy) |
-| `configs/embedded-armv7.toml` / `configs/embedded-aarch64.toml` | ESP32 satellite controllers (WB7 / WB8) |
+| `configs/embedded-armv7.toml` / `configs/embedded-aarch64.toml` | Wirenboard controllers (WB7 / WB8) — the home-automation box the satellites talk to |
 | `configs/standalone-x86_64.toml` | a standalone x86 voice box |
 
 > The **`[components]`** flags are what actually load a component (a sub-section's `enabled = true`

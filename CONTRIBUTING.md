@@ -29,6 +29,29 @@ Before touching the core, check whether what you want is one of these — each i
 If you aren't sure where a change belongs, the [architecture overview](docs/architecture/overview.md) maps
 the pieces.
 
+## Contracts and pinned copies
+
+Anything this repo shares with a sibling — the wire protocol, the bridge's device catalog, the
+problem-report format — is a **contract** with a version stamp and a registry:
+[`contracts/README.md`](contracts/README.md) indexes what this repo owns and what it consumes.
+The consumed copies under `contracts/pins/` are verbatim, hash-sealed snapshots of another
+repo's artifacts: **never edit them by hand** — they move only through `make -C eval repin`,
+followed by the conformance test each pin names.
+
+## Tests and evaluation
+
+Unit and conformance tests live in `irene/tests/` and run with `uv run pytest`. The
+declarative system suites (CLI contracts, streaming-ASR, device commands, judged UX) live in
+[`eval/`](eval/README.md) — read that README before touching anything test-related; the
+execution logic deliberately lives in a sibling repo, and `eval/` here carries only the YAML.
+
+## Documentation is part of done
+
+Every user-facing document is registered in [`docs/manifest.json`](docs/manifest.json) — if
+your change alters behavior a registered doc describes, update the doc in the same change
+(diagrams too: edit the `.dot` source and regenerate the image). A new user-facing doc needs
+a manifest node in the same commit — the test suite fails otherwise.
+
 ## Coding rules
 
 These aren't style preferences — each is enforced by a CI gate (below):

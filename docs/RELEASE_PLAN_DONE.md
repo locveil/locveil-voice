@@ -16,12 +16,14 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       amendment noted inline). No voice-side remainder: the design doc moved with it, the `ESP32/` draft tree was
       deleted (2026-07-08 verdict), and the wire protocol the firmware builds against stays here as
       `docs/guides/websocket-api.md` (pinned by the satellite repo).
+      docs: none — export-close bookkeeping; the doc moves rode BUILD-22 (retro-verdict, BUILD-35 cutover).
 - [x] **ARCH-44** [HW][SEC] `[deferred]` — **✓ EXPORT-CLOSED 2026-07-12 (BUILD-22/PROD-15) → `../locveil-satellite`
       DES-5.** The device-certificate lifecycle design (revocation + renewal — `esp32-provision revoke` only drops
       pending CSRs; issued certs trusted 825 days with no `ssl_crl` and no renewal path; surfaced by the ARCH-25
       provisioning round-trip 2026-07-09) travels with the Plane-B provisioning tree, which moved to satellite
       `provisioning/` in the same change — re-filed there as **DES-5** with the finding text intact. Voice keeps
       only the tether: the pinned `contracts/esp32-site.conf.j2` copy that `test_arch36_tls_e2e.py` renders.
+      docs: none — export-close bookkeeping; the doc moves rode BUILD-22 (retro-verdict, BUILD-35 cutover).
 - [x] **ARCH-46** `[release]` [PROCESS][FEEDBACK] — **✓ DONE 2026-07-11 (same-day intake→completion). PROD-14/HK-3
       voice delegation: reports re-point residue + `report-protocol-v1` consumption.** The voice half of the board
       delegation (`../locveil-commons/board/BOARD.md` PROD-14 Phase 2; normative spec:
@@ -65,6 +67,7 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       The registry/config-ui staleness flag FILED SEPARATELY as ARCH-48 (decision point exercised).
       Verified: new conformance 4/4, WS+satellite suites 28/28, full suite 1395 passed/7 skipped,
       pyright 0 on touched files, import contracts 11/11, contract-guard 0 warnings.
+      docs: guides/websocket-api
 ### Code Quality & Review (QUAL)
 - [x] **QUAL-5** (P2) — **✓ DONE 2026-06-06.** Cruft cleanup. **Reconciled (Invariant #8): counts fell during QUAL-4's
       import churn** (F401 360→237, star-imports 62→5+57 F405, F841 22→15). **Cleared the verifiable cruft to ZERO:**
@@ -1706,6 +1709,7 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       satellite DES-5, both export-closed above. STAYED here (reconfirmed): `websocket-api.md`
       (`ws-protocol-doc-canonical`), `irene/satellite/` + the Python satellite docs, client registry/CSR code,
       frozen reviews/archives. Sibling: ARCH-47 (WS version stamp / wake-pack pin surface) remains open.
+      docs: readme, install, arch/esp32, guides/satellite (retro-verdict, BUILD-35 cutover)
 - [x] **BUILD-23** `[deferred]` [PROCESS] — **DONE 2026-07-11 (narrowed at intake per the PROD-5 delegation:
       the "separate drift-guard script" wording was dead — scope-guard's `claudemd` hash rule IS the drift
       guard, shipped in `scope-v3`).** Shared CLAUDE.md blocks — voice-side adoption (HK-2/PROD-5, normative
@@ -1738,6 +1742,7 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       crossover-fixtures pin still pending its own task), commons pin README re-pin flow rewritten to
       the scripted path (commons `08eabe0`). Verified: commons eval suite 40/40, `repin-check` green
       across all three families, pyright 0.
+      docs: eval/readme
 - [x] **BUILD-26** [BUILD][UI] `[deferred]` — **DONE 2026-07-12 (PROD-16 delegation — the convention's
       repo-internal instance).** `config-ui/openapi.json` (found stale during REL-4: four config-section
       schemas never re-dumped; that instance was fixed then — this task shipped the missing MECHANISM).
@@ -1751,6 +1756,7 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       Reconciled at start: current dump == committed (NO drift today). `config-ui-stays-functional`:
       `gen:api-types` re-run (types already current), `npm run check` + `npm run build` green.
       Contract-guard 0 warnings with the third owned surface registered.
+      docs: none — repo-internal generated-contract guard; no manifest doc describes the schema artifact.
 - [x] **BUILD-30** `[release]` [PROCESS][CI] — **DONE 2026-07-11.** Scope-guard cutover — the commons ledger
       guard consumed at the pinned tag **`scope-v2`** (PROD-13 / HK-1 delegation, board entry
       `../locveil-commons/board/BOARD.md`; normative convention `../locveil-commons/process/ledger-discipline.md`).
@@ -1804,6 +1810,7 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       pointers, two docstrings. Verified: contract-guard v1 green with ZERO warnings, report-protocol
       conformance 11/11, hermetic TLS e2e passes from the new template path, `make device-tests`
       regenerates byte-identically (header path aside).
+      docs: none — contracts layout + tooling paths; the touched files are process-internal, not manifest docs.
 - [x] **BUILD-33** `[release]` [PROCESS][CI] — **DONE 2026-07-12 (filed + completed same day; PROD-16
       delegation).** Contract-guard v1 vendored per the BUILD-30 scope-guard consumption model:
       `scripts/contract_guard.py` taken byte-exact from commons tag **`contract-guard-v1`** (tag verified ==
@@ -1814,6 +1821,7 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       job mirroring `ledger-guard`. CLAUDE.md `cross-repo-source-of-truth` teaches the vendored-file rule.
       Coherence layer only — scope-guard stays ledger-only. Verified: hook runs both guards green
       (contract-guard 0 warnings on the BUILD-32 tree).
+      docs: none — enforcement tooling only (hook + CI job); no user-facing behavior changed.
 - [x] **BUILD-34** `[release]` [PROCESS][TEST] — **DONE 2026-07-12 (filed + completed same day; PROD-16
       follow-up delegation — the completeness ruling's first instance, owner decision).** The LOCAL
       complete catalog pin, closing voice's push-time schema-conformance gap (voice consumes the catalog
@@ -1834,12 +1842,53 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       `cross-repo-source-of-truth` bullet now teaches the two-copies-move-together rule, eval/README
       updated. contract-guard picked the pin up with zero changes (0 warnings). Verified: new test 5/5,
       full suite 1401 passed / 7 skipped, pyright 0, repin idempotent (commons copy byte-stable).
+      docs: eval/readme
+- [x] **BUILD-35** `[release]` [PROCESS][CI] — **DONE 2026-07-12 (filed + completed same day; PROD-17
+      delegation).** Docs-convention dialect + scope-guard re-pin. Vendored `scripts/scope_guard.py`
+      re-pinned at commons tag **`scope-v5`** (1.2.0 — the docs-verdict presence/syntax rule on
+      completion entries); `.scope-guard.toml` gained `docs_verdict_since = "2026-07-12"` + the
+      `shared-invariants` block re-pinned (byte-verified against the commons source; new digest line
+      carries the docs-verdict invariant) with its recomputed sha256. CLAUDE.md
+      `user-facing-docs-are-done` rewritten as the voice dialect of
+      `../locveil-commons/process/user-docs.md`: `docs/manifest.json` is the scope authority,
+      `ops/INSTALL.md` + `eval/README.md` enter scope via their nodes, completions carry the verdict
+      line. The cutover retro-flagged NINE same-day completions (ARCH-23/44/47,
+      BUILD-22/24/26/32/33/34) — each annotated with its honest retro-verdict in this change (real node
+      updates: `guides/websocket-api` for ARCH-47, `eval/readme` for BUILD-24/34, BUILD-22's four; the
+      rest `none` with cause). Verified: scope-guard 1.2.0 green, both hooks green, manifest coherence
+      8/8 incl. the verdict-ids-resolve check against these very lines.
+      docs: none — process dialect + enforcement re-pin; no manifest doc's content changed.
 ### Models & Assets (ASSET)
 ### Documentation (DOC)
 - [x] **DOC-5b** (P2) — DONE 2026-06-08: regenerated `guides/DONATION_FILE_SPECIFICATION.md` for the v1.1
       two-part model (language-neutral `contract.json` + per-language `<lang>.json`), with full field reference
       from `donation_contract_v1.1.json` (method/param schema, type + entity_type enums) and the cross-language
       validation rule. Old single-file/v1.0 body + drift banner replaced.
+- [x] **DOC-11** `[release]` [DOC] — **DONE 2026-07-12 (filed + completed same day; PROD-17 delegation,
+      the HK-6 live stale fixes — all five claims verified at intake).** (a) `build-docker.md` port-6000
+      quartet → 8080 (run commands ×2, prose, compose snippet — every Dockerfile serves 8080); (b)
+      `websocket-api.md` Python example `ws://localhost:6000` → 8080; (c) `guides/satellite.md` gained
+      the pointer sentence to the locveil-satellite provisioning runbook (placed in "Securing the
+      connection" — the section that hands off to the controller-side plane); (d) voice-trigger HF link
+      VERIFIED live (today's wake-pack re-pin fetched from that exact repo) — no change; (e) QUICKSTART
+      profile table mislabel fixed: `embedded-*` are Wirenboard controllers (WB7/WB8), not "ESP32
+      satellite controllers". Post-fix sweep: zero `:6000` references remain across the user-facing tree.
+      docs: guides/build-docker, guides/websocket-api, guides/satellite, quickstart
+- [x] **DOC-12** `[release]` [DOC][PROCESS] — **DONE 2026-07-12 (filed + completed same day; PROD-17
+      delegation).** The docs manifest + its guards. `docs/manifest.json` authored: 8 roots (incl.
+      `ops/INSTALL.md` and `eval/README.md`), 10 repo-owned surfaces with glob triggers, **60 nodes** —
+      every guide/architecture doc, QUICKSTART, README, CONTRIBUTING, INSTALL, the arch/esp32 MOVED
+      tombstone (status banner), and all 29 diagram `.dot`+render pairs as one-unit diagram nodes;
+      `guides/websocket-api` carries the canonical{invariant,stamp,guard} carve-out
+      (`ws-protocol-doc-canonical` / `contracts/ws-protocol/STAMP.json` / the version-triple test).
+      `contracts/docs-manifest/` STAMP (`docs-manifest-v1` — version tracks the commons SCHEMA
+      generation, never node churn) + pointer README + registry row (INTERNAL), tag created. Coherence
+      test `irene/tests/test_docs_manifest.py` (8 checks): commons-schema validation (skips without the
+      sibling — CI-hermetic), id/path uniqueness, node paths exist, root-tree bijection (a doc without a
+      node fails), diagram pairs complete, covers⊆surfaces, floor classes populated, DONE-ledger verdict
+      node-ids resolve. CONTRIBUTING.md gained the contracts-registry, tests-and-eval, and
+      documentation-is-part-of-done sections. Manifest schema-valid (strict — no `$comment` allowed).
+      docs: contributing
 
 ### UI / config-ui (UI)
 - [x] **UI-1** [DEDITOR] (P2) — **DONE 2026-06-06.** Designed the human-friendly donation/pattern authoring model →

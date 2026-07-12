@@ -90,15 +90,19 @@ but these rules apply to any task). **Single source of truth** (relocated here f
   launch — invisible to stop/listing, dies silently on restart. Full contract: `docs/design/durable_actions.md`
   §3 (design) + `docs/guides/howto-new-intent.md` (authoring prose). The substrate persists to
   `<assets_root>/state/` — asset-managed and volume-mounted, **never** the deletable `cache/`.
-- **`user-facing-docs-are-done`** — The user-facing docs — `docs/architecture/*`, `docs/guides/*`,
-  `docs/QUICKSTART.md`, and top-level `README*` — are narrative explanations for a reader who does **not** know the
-  codebase or the release plan. **A non-root `README*`** (e.g. `eval/README.md`) is also in scope, **but only when the
-  task touches code in that README's directory/subsystem** (the local README documents the local code; don't audit
-  every README on every task). For **every** task, before completion check whether the change alters behavior any
-  in-scope doc describes; if so, update them **in the same change**, matching the document's voice — **no internal tracking language** (task IDs, ledger/journal refs, gate
-  counts, file:line, raw internal symbols/config keys) unless the doc already teaches them as user-facing names.
-  **Diagrams are docs too:** update the source (`docs/images/*.dot`) and regenerate the image in the existing visual
-  style. _Pairs with `config-ui-stays-functional` (the user-facing **app**; this is the user-facing **docs**)._
+- **`user-facing-docs-are-done`** — voice's dialect of the org docs convention (normative:
+  `../locveil-commons/process/user-docs.md`; shared digest in the pinned block below). **The scope authority is
+  `docs/manifest.json`** — every user-facing doc is a manifest node (roots: `README*`, `CONTRIBUTING.md`,
+  `docs/QUICKSTART.md`, `docs/guides/`, `docs/architecture/`, `docs/images/`, **`ops/INSTALL.md`**), coherence-tested
+  by `irene/tests/test_docs_manifest.py`; a new doc gets its node in the same commit. A non-root `README*` (e.g.
+  `eval/README.md`) stays in scope when the task touches that subsystem. For **every** task, before completion:
+  does the change alter behavior a manifest node describes? Record the answer as the **docs-verdict line in the
+  DONE-ledger entry** (`docs: <node-ids>` / `docs: none — <why>`; enforced by scope-guard from
+  `docs_verdict_since`); staleness you cause is fixed in the same change, staleness you discover is filed against
+  the next release gate. Docs are narrative for a reader who does **not** know the codebase — **no internal
+  tracking language** (task IDs, ledger refs, gate counts, file:line, raw internal symbols) unless the doc already
+  teaches them as user-facing names. **Diagrams are docs too:** a `.dot` source and its render are one unit —
+  update both. _Pairs with `config-ui-stays-functional` (the user-facing **app**; this is the user-facing **docs**)._
 
 - **`problem-report-inbox`** — problem reports (ARCH-30) land as tickets in the private
   `locveil/locveil-reports` repo (renamed/moved from `droman42/wb-user-reports` 2026-07-11; old name redirects);
@@ -111,10 +115,10 @@ but these rules apply to any task). **Single source of truth** (relocated here f
 
 ## Shared process (pinned blocks — `../locveil-commons/process/claude-md.md`; edit the sources in `process/claude-blocks/`, then re-pin)
 
-<!-- locveil:begin shared-invariants scope-v3 -->
+<!-- locveil:begin shared-invariants scope-v5 -->
 **Locveil shared process invariants** — digest; normative source: `../locveil-commons/process/`
-(`ledger-discipline.md`, `claude-md.md`). On disagreement the process files win. Never edit
-this block in place — edit in commons, then re-pin (`process/claude-md.md` §3).
+(`ledger-discipline.md`, `claude-md.md`, `user-docs.md`). On disagreement the process files
+win. Never edit this block in place — edit in commons, then re-pin (`process/claude-md.md` §3).
 
 - **ledger triad** — active ledger + DONE ledger + one rotating journal; completion MOVES
   the entry to DONE and journals it in the same change; rotation only via an explicit
@@ -126,6 +130,10 @@ this block in place — edit in commons, then re-pin (`process/claude-md.md` §3
   reality; narrow or redefine at intake rather than executing stale text.
 - **design-then-implement** — non-trivial changes get a reviewed design doc before code.
 - **review-then-remediate** — review findings become ledger tasks before they get fixed.
+- **user-facing-docs-are-done** — every completion entry records a docs verdict
+  (`docs: <node-ids>` or `docs: none — <why>`) against the repo's `docs/manifest.json`;
+  caused staleness is fixed in the same change, discovered staleness is filed against the
+  next release gate; scope + manifest schema + style: `process/user-docs.md`.
 - **Enforcement** — vendored `scope_guard.py` at a pinned `scope-vX` tag + committed
   pre-commit hook + path-gated `ledger-guard` CI job; hooks and CI run `--check` only.
 <!-- locveil:end shared-invariants -->

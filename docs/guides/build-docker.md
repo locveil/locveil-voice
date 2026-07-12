@@ -74,7 +74,7 @@ first boot downloads the speech models.
 **Satellite server** (aarch64 / armv7) — recognition + synthesis over the web API, no audio device needed:
 
 ```bash
-docker run --rm -p 6000:6000 \
+docker run --rm -p 8080:8080 \
   -v ./assets:/app/assets \
   ghcr.io/locveil/locveil-voice-aarch64:latest
 ```
@@ -82,13 +82,13 @@ docker run --rm -p 6000:6000 \
 **Standalone** (x86_64) — drives the local microphone and speaker, so it needs the host sound devices:
 
 ```bash
-docker run --rm -p 6000:6000 \
+docker run --rm -p 8080:8080 \
   --device /dev/snd \
   -v ./assets:/app/assets \
   ghcr.io/locveil/locveil-voice-standalone:latest
 ```
 
-Both serve the full web API on 6000 alongside their primary input.
+Both serve the full web API on 8080 alongside their primary input.
 
 ## Compose and controller deployment
 
@@ -101,7 +101,7 @@ ad-hoc compose elsewhere:
 services:
   irene:
     image: ghcr.io/locveil/locveil-voice-aarch64:latest
-    ports: ["6000:6000"]
+    ports: ["8080:8080"]
     volumes: ["./assets:/app/assets"]
     restart: unless-stopped
 ```

@@ -188,7 +188,7 @@ A minimal batch-mode exchange, start to finish:
 import asyncio, json, wave, websockets
 
 async def say(wav_path: str):
-    async with websockets.connect("ws://localhost:6000/ws/audio") as ws:
+    async with websockets.connect("ws://localhost:8080/ws/audio") as ws:
         await ws.send(json.dumps({"type": "register", "client_id": "probe",
                                   "room_name": "Тест", "sample_rate": 16000}))
         print(json.loads(await ws.recv()))          # {"type": "registered", ...}
