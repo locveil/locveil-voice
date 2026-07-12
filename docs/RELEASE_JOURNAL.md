@@ -20,6 +20,12 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-12 — `cross-repo-board` block re-pinned @ scope-v4 (PROD-15 close follow-through).** The
+  shared block now names `../locveil-satellite` as the fourth sibling; block text between the markers +
+  the `.scope-guard.toml` hash updated from the commons source per the `process/claude-md.md` §3 flow
+  (mechanical re-pin, no other content change — no ledger task, same spirit as the lockfile carve-out).
+  PROD-15 itself closed on the board the same day.
+
 - **2026-07-12 — BUILD-22 executed: locveil-satellite lives, the ESP32 estate left this repo.** Three
   commits across two repos. Satellite `121f3d0`: template instantiation @ scope-v3 (shared-block hashes
   byte-identical to ours), repo-local LAW per HK-4, born backlog seeded — the first commit passed its own
