@@ -20,6 +20,17 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-12 — BUILD-24 executed: re-pins are a script, staleness is a gate — and the first real
+  re-pin already ran.** The bridge cut `catalog-v1.5` today (VWB-29), which opened this task's gate the
+  same day it was picked up. `scripts/repin.py` knows every consumed family (catalog, report-protocol,
+  esp32-site — owner, artifact paths, destination, conformance test) and does the whole hand-copy ritual
+  in one command: fetch the owner's committed artifacts at the newest family tag, write verbatim copies,
+  stamp a strict `PIN.json` the vendored contract-guard hash-verifies on every commit. `make repin` /
+  `make repin-check` wrap it from `eval/`; the check is a release-time gate by design — an owner tagging
+  a new version never breaks voice's CI, it goes red only when we ask at release. The catalog pin in
+  commons is now strict (golden byte-identical at v1.5, openapi/STAMP refreshed, legacy warnings cleared
+  down to the one co-owned fixtures pin), commons suite 40/40, all three families report current.
+
 - **2026-07-12 — ARCH-47 executed: the wire protocol and the wake pack now know their own versions.**
   The convention's first voice-owned surfaces. The WS protocol's version lives as a triple — the
   "Protocol version: 1" header in `websocket-api.md`, the served `WS_PROTOCOL_VERSION` constant (now in

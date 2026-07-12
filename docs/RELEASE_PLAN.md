@@ -457,16 +457,6 @@ size-matched to the Russian stack; language is a per-config/deployment choice (a
       `docs/design/productization.md` D-12): the shared convention = a normative ops spec in
       `locveil-commons/process/` + per-repo conformance; the drift inventory is recorded there (§2). This
       task NARROWS to the voice-side conformance pass once that spec exists (gated on BUILD-21).**
-- [ ] **BUILD-24** `[deferred]` [COMMONS][TEST] — **Scripted contract re-pin + staleness gate — voice
-      side** (BUILD-20 D-11; **rescoped 2026-07-12 at PROD-16 intake — born against the FINAL bridge
-      layout**, normative: `../locveil-commons/process/contracts.md`). A GENERALIZED `make repin
-      CONTRACT=<family>` — fetch from the owner repo's family-named tag (first real target: bridge
-      `catalog-v1.5` out of its `contracts/catalog/`), write the artifact copy + `PIN.json` under
-      `../locveil-commons/contracts/pins/catalog/` — plus a staleness check that runs at RELEASE time
-      (pin trails the owner's newest family tag ⇒ red). Staleness = release-time re-pin flow + runtime
-      version-reporting, NEVER a cross-repo push gate (convention §5). Pairs with bridge VWB-29 (rescoped
-      owner-side cut; gated on its `catalog-v1.5` tag existing). The stale flat-layout eval paths re-point
-      with BUILD-32, not here. Ref: `docs/design/productization.md` D-11.
 - [ ] **BUILD-26** [BUILD][UI] `[deferred]` — **`config-ui/openapi.json` is a committed generated artifact that
       nothing regenerates.** Found during REL-4 (2026-07-09): re-running `scripts/dump_openapi.py` produced 241
       inserted lines — four schemas (`BridgeOutputConfig`, `ReportsConfig`, `SatelliteConfig`,

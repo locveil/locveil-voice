@@ -1721,6 +1721,23 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       `docs/design/multilingual_deployment.md`; frozen archives untouched; bridge renames apart as
       `config-master-tree`). CI paths-filter gained `CLAUDE.md` per the HK-2 convention. BUILD-22 gained the
       dependency: instantiate `process/new-repo-template/`, never freehand.
+- [x] **BUILD-24** `[deferred]` [COMMONS][TEST] — **DONE 2026-07-12 (PROD-16 delegation; BUILD-20 D-11 /
+      PROD-7).** Scripted contract re-pin + release-time staleness gate, born against the final bridge
+      layout. **`scripts/repin.py`** — a generalized, family-registry-driven tool (catalog /
+      report-protocol / esp32-site: owner repo, committed artifact paths, pin destination, conformance
+      pointer): `repin <family> [--tag]` fetches the owner's committed artifacts at the newest (or given)
+      family tag via `git show`, writes verbatim copies + a STRICT `PIN.json` (core fields, `files`
+      sha256 map, conformance pointer, mirrored owner-STAMP extras — commons `test_pin_matches_stamp`
+      asserts `bridge_commit`/`catalog_version`); `--check` is the staleness gate (pinned tag vs owner's
+      newest family tag; untagged families compare pinned bytes vs owner `main`) — RELEASE-TIME only,
+      never a cross-repo push gate (convention §5). Make surface: `make repin CONTRACT=… [TAG=…]` +
+      `make repin-check` in `eval/Makefile`; `eval/README.md` documents the flow. **First real run
+      executed:** catalog re-pinned at the bridge's fresh **`catalog-v1.5`** (VWB-29 landed bridge-side
+      today — the gate opened) → golden byte-identical, openapi/STAMP refreshed, commons catalog
+      `PIN.json` upgraded legacy→strict (contract-guard warnings 3→1, only the co-owned
+      crossover-fixtures pin still pending its own task), commons pin README re-pin flow rewritten to
+      the scripted path (commons `08eabe0`). Verified: commons eval suite 40/40, `repin-check` green
+      across all three families, pyright 0.
 - [x] **BUILD-30** `[release]` [PROCESS][CI] — **DONE 2026-07-11.** Scope-guard cutover — the commons ledger
       guard consumed at the pinned tag **`scope-v2`** (PROD-13 / HK-1 delegation, board entry
       `../locveil-commons/board/BOARD.md`; normative convention `../locveil-commons/process/ledger-discipline.md`).

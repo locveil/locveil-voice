@@ -8,6 +8,8 @@
 #   make serve  CONFIG=embedded-armv7                 # bring Irene up LOCALLY with a chosen config (foreground)
 #   make compare CONFIGS="embedded-armv7 standalone"    # run the WS suite against each config (LOCAL bring-up loop)
 #   make view                                  # open the promptfoo results UI
+#   make repin CONTRACT=catalog [TAG=catalog-v1.6]   # re-pin a consumed contract from its owner's tag
+#   make repin-check                           # release-time staleness gate (red = a pin trails its owner)
 #
 # Two axes, both EXTERNAL to the test YAML:
 #   TARGET — where the SUT is     → profiles/targets/<TARGET>.env  (WS_AUDIO_URL, HEALTH_URL, MQTT_*)
@@ -87,6 +89,14 @@ MOCK_BRIDGE_PORT ?= 8010
 
 device-tests:                 ## regenerate device.tests.yaml from the pinned crossover fixtures
 	$(PROMPTFOO_PYTHON) -m eval_commons.fixtures_to_tests $(FIXTURES_JSON) > device.tests.yaml
+
+# BUILD-24 — scripted re-pin of consumed contracts (contracts.md §5: staleness is a
+# release-time gate + runtime version-reporting, NEVER a cross-repo push gate).
+repin:                        ## re-pin a consumed contract (CONTRACT=catalog|report-protocol|esp32-site [TAG=…])
+	python3 ../scripts/repin.py $(CONTRACT) $(if $(TAG),--tag $(TAG))
+
+repin-check:                  ## release-time staleness gate: red when any pin trails its owner
+	python3 ../scripts/repin.py --check
 
 # -j 1: cases share per-room SUT sessions (room_alias → one session per room), so parallel
 # runs interleave turns of the same conversation — inherent cross-talk, not a flake.

@@ -80,7 +80,15 @@ make ux  TARGET=local CONFIG=embedded-armv7-en   # only the DeepSeek-judged UX c
 make serve CONFIG=embedded-armv7                 # bring Irene up locally with a config (foreground)
 make compare CONFIGS="embedded-armv7 standalone" # WER/UX comparison across configs (local bring-up loop)
 make view                                        # results UI
+make repin CONTRACT=catalog                      # re-pin a consumed contract from its owner's newest family tag
+make repin-check                                 # release-time staleness gate: red when a pin trails its owner
 ```
+
+The device suite asserts against **pinned** contract copies (the bridge catalog + the
+crossover fixtures, held in `../../locveil-commons/contracts/pins/`). `make repin` /
+`make repin-check` (backed by `../scripts/repin.py`) are how those pins move: a re-pin is
+a deliberate act followed by the conformance tests, and staleness is checked at release
+time — an owner tagging a new contract version never breaks this repo's CI on its own.
 
 For model comparison, `make compare` writes `results-ws-<target>-<config>.json` per config so you
 can diff WER side by side. Keep the `reference:` fixed; expect WER to differ per model — that's the
