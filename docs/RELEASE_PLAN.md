@@ -236,6 +236,11 @@ See `docs/review/phase1_architecture_map.md` §5.
       Wire-protocol change ⇒ `websocket-api.md` updated in the same change (`ws-protocol-doc-canonical`).
       Refs: PROD-15 (`../locveil-commons/board/BOARD.md`), `esp32_satellite.md` (in the satellite repo
       after BUILD-22 moves it), `docs/design/wakeword_models.md` (ASSET-5 pack format).
+      **GATED 2026-07-12 (owner): executes with the contracts council, not standalone** — the version-stamp
+      mechanics belong to the general cross-repo contracts convention the next council round will decide
+      (board **HK-5** parked seed). Do not pick up before that decision lands; the satellite's interim
+      commit-pin (`../locveil-satellite/contracts/README.md`) is adequate until then, and its FW phase —
+      the first real consumer — is itself gated behind satellite DES-3.
 ### Code Quality & Review (QUAL)
 
 #### Cross-cutting systemic remediation — principles (the Gate 2 lens)

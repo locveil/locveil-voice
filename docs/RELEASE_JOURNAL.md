@@ -20,6 +20,12 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-12 — ARCH-47 gated on the contracts council (owner decision).** The version-stamp work is
+  better decided once, for all the contract surfaces (five dialects across the repos), than invented here
+  ad hoc — ARCH-47 now carries a GATED note (do not pick up standalone) and rides board **HK-5**, the
+  parked contracts-in-general council seed. No urgency lost: the satellite's interim commit-pin holds,
+  and its FW phase (the first real consumer) is gated behind satellite DES-3 anyway.
+
 - **2026-07-12 — index housekeeping: `satellite_tracing.md` row added.** The ARCH-37 design doc (AGREED
   2026-07-07) was never indexed — both its tasks (ARCH-37/38) closed same-day and are already archived,
   so the omission was cosmetic, but it kept scope-guard warning UNINDEXED on every commit. Row added to
