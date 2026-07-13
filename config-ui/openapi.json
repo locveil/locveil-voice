@@ -11306,7 +11306,7 @@
             "type": "string",
             "title": "Token Env",
             "description": "Env var holding a fine-grained PAT scoped to the reports repo only (issues + contents write)",
-            "default": "IRENE_REPORTS_TOKEN"
+            "default": "LOCVEIL_VOICE_REPORTS_TOKEN"
           },
           "rate_limit_per_hour": {
             "type": "integer",

@@ -9,7 +9,7 @@
 
 # Root directories for all models, cache, and credentials
 # These will be used by all providers unless overridden
-IRENE_ASSETS_ROOT=/data
+LOCVEIL_VOICE_ASSETS_ROOT=/data
 
 # ============================================================
 # API CREDENTIALS - Cloud Service Authentication
@@ -42,22 +42,22 @@ GOOGLE_CLOUD_PROJECT_ID=your_google_project_id
 # ============================================================
 
 # Basic application settings
-IRENE_DEBUG=false
-IRENE_LOG_LEVEL=INFO
-IRENE_NAME=Irene
-# IRENE_VERSION is informational; leave it to the package (currently 0.5.0) rather than pinning it here.
-IRENE_LANGUAGE=en-US
-IRENE_TIMEZONE=UTC
+LOCVEIL_VOICE_DEBUG=false
+LOCVEIL_VOICE_LOG_LEVEL=INFO
+LOCVEIL_VOICE_NAME=Irene
+# LOCVEIL_VOICE_VERSION is informational; leave it to the package (currently 0.5.0) rather than pinning it here.
+LOCVEIL_VOICE_LANGUAGE=en-US
+LOCVEIL_VOICE_TIMEZONE=UTC
 
 # System directories (legacy - prefer asset management above)
-IRENE_DATA_DIRECTORY=./data
-IRENE_LOG_DIRECTORY=./logs
-IRENE_CACHE_DIRECTORY=./cache
+LOCVEIL_VOICE_DATA_DIRECTORY=./data
+LOCVEIL_VOICE_LOG_DIRECTORY=./logs
+LOCVEIL_VOICE_CACHE_DIRECTORY=./cache
 
 # Performance settings
-IRENE_MAX_CONCURRENT_COMMANDS=10
-IRENE_COMMAND_TIMEOUT_SECONDS=30.0
-IRENE_CONTEXT_TIMEOUT_MINUTES=30
+LOCVEIL_VOICE_MAX_CONCURRENT_COMMANDS=10
+LOCVEIL_VOICE_COMMAND_TIMEOUT_SECONDS=30.0
+LOCVEIL_VOICE_CONTEXT_TIMEOUT_MINUTES=30
 
 # ============================================================
 # COMPONENT CONFIGURATION
@@ -69,38 +69,38 @@ IRENE_CONTEXT_TIMEOUT_MINUTES=30
 # must not force a partial component set. (Older copies crashed at startup: they enabled TTS but
 # used the WRONG field `AUDIO_OUTPUT`, leaving Audio off → "TTS component requires Audio component".)
 # Field names must match the schema (AUDIO, not AUDIO_OUTPUT); if you enable TTS, also enable AUDIO.
-# IRENE_COMPONENTS__TTS=true
-# IRENE_COMPONENTS__AUDIO=true          # required whenever TTS is enabled
-# IRENE_COMPONENTS__ASR=true
-# IRENE_COMPONENTS__LLM=true
-# IRENE_COMPONENTS__NLU=true
-# IRENE_COMPONENTS__TEXT_PROCESSOR=true
-# IRENE_COMPONENTS__INTENT_SYSTEM=true
+# LOCVEIL_VOICE_COMPONENTS__TTS=true
+# LOCVEIL_VOICE_COMPONENTS__AUDIO=true          # required whenever TTS is enabled
+# LOCVEIL_VOICE_COMPONENTS__ASR=true
+# LOCVEIL_VOICE_COMPONENTS__LLM=true
+# LOCVEIL_VOICE_COMPONENTS__NLU=true
+# LOCVEIL_VOICE_COMPONENTS__TEXT_PROCESSOR=true
+# LOCVEIL_VOICE_COMPONENTS__INTENT_SYSTEM=true
 # Web API is a SYSTEM capability, not a component:
-# IRENE_SYSTEM__WEB_API_ENABLED=true
+# LOCVEIL_VOICE_SYSTEM__WEB_API_ENABLED=true
 
-# (The legacy IRENE_PLUGINS__* block was removed here — the plugin system was retired in ARCH-13.)
+# (The legacy LOCVEIL_VOICE_PLUGINS__* block was removed here — the plugin system was retired in ARCH-13.)
 
 # ============================================================
 # SECURITY CONFIGURATION
 # ============================================================
 
 # API authentication
-IRENE_SECURITY__ENABLE_AUTHENTICATION=false
-IRENE_SECURITY__API_KEYS=key1,key2,key3
-IRENE_SECURITY__ALLOWED_HOSTS=localhost,127.0.0.1
-IRENE_SECURITY__CORS_ORIGINS=*
+LOCVEIL_VOICE_SECURITY__ENABLE_AUTHENTICATION=false
+LOCVEIL_VOICE_SECURITY__API_KEYS=key1,key2,key3
+LOCVEIL_VOICE_SECURITY__ALLOWED_HOSTS=localhost,127.0.0.1
+LOCVEIL_VOICE_SECURITY__CORS_ORIGINS=*
 
 # ============================================================
 # METRICS AND MONITORING
 # ============================================================
 
 # Enable metrics collection
-IRENE_ENABLE_METRICS=false
-IRENE_METRICS_PORT=9090
+LOCVEIL_VOICE_ENABLE_METRICS=false
+LOCVEIL_VOICE_METRICS_PORT=9090
 
 # Enable performance profiling (development only)
-IRENE_ENABLE_PROFILING=false
+LOCVEIL_VOICE_ENABLE_PROFILING=false
 
 # ============================================================
 # DOCKER DEPLOYMENT EXAMPLE
@@ -126,27 +126,27 @@ IRENE_ENABLE_PROFILING=false
 # ============================================================
 
 # If you need different paths for specific providers, uncomment:
-# IRENE_WHISPER_MODELS_DIR=${IRENE_ASSETS_ROOT}/models/whisper
-# IRENE_SILERO_MODELS_DIR=${IRENE_ASSETS_ROOT}/models/silero  
-# IRENE_VOSK_MODELS_DIR=${IRENE_ASSETS_ROOT}/models/vosk
+# LOCVEIL_VOICE_WHISPER_MODELS_DIR=${LOCVEIL_VOICE_ASSETS_ROOT}/models/whisper
+# LOCVEIL_VOICE_SILERO_MODELS_DIR=${LOCVEIL_VOICE_ASSETS_ROOT}/models/silero  
+# LOCVEIL_VOICE_VOSK_MODELS_DIR=${LOCVEIL_VOICE_ASSETS_ROOT}/models/vosk
 
 # Legacy provider configurations (deprecated - use asset management above)
 # These are maintained for backwards compatibility but will show warnings
-# IRENE_PROVIDERS__ASR__WHISPER__DOWNLOAD_ROOT=
-# IRENE_PROVIDERS__ASR__VOSK__MODEL_PATHS=
-# IRENE_PROVIDERS__TTS__SILERO_V3__MODEL_PATH=
-# IRENE_PROVIDERS__LLM__OPENAI__API_KEY_ENV=
-# IRENE_PROVIDERS__ASR__GOOGLE_CLOUD__CREDENTIALS_PATH=
+# LOCVEIL_VOICE_PROVIDERS__ASR__WHISPER__DOWNLOAD_ROOT=
+# LOCVEIL_VOICE_PROVIDERS__ASR__VOSK__MODEL_PATHS=
+# LOCVEIL_VOICE_PROVIDERS__TTS__SILERO_V3__MODEL_PATH=
+# LOCVEIL_VOICE_PROVIDERS__LLM__OPENAI__API_KEY_ENV=
+# LOCVEIL_VOICE_PROVIDERS__ASR__GOOGLE_CLOUD__CREDENTIALS_PATH=
 
 # ============================================================
 # DEVELOPMENT SETTINGS
 # ============================================================
 
 # Development mode settings
-# IRENE_DEVELOPMENT_MODE=true
-# IRENE_AUTO_RELOAD=true
-# IRENE_VERBOSE_LOGGING=true
+# LOCVEIL_VOICE_DEVELOPMENT_MODE=true
+# LOCVEIL_VOICE_AUTO_RELOAD=true
+# LOCVEIL_VOICE_VERBOSE_LOGGING=true
 
 # Testing settings  
-# IRENE_TEST_MODE=true
-# IRENE_MOCK_PROVIDERS=true 
+# LOCVEIL_VOICE_TEST_MODE=true
+# LOCVEIL_VOICE_MOCK_PROVIDERS=true 

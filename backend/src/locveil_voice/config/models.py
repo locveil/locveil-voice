@@ -507,7 +507,7 @@ class ReportsConfig(BaseModel):
                                      description="Verbatim-capture window after «опишите проблему» (design D-5)")
     # Delivery (ARCH-32): a PRIVATE GitHub repo receiving the ticket + the support bundle (design D-1).
     repo: str = Field(default="", description="Reports repo, 'owner/name' — MUST be private (bundles carry logs/config)")
-    token_env: str = Field(default="IRENE_REPORTS_TOKEN",
+    token_env: str = Field(default="LOCVEIL_VOICE_REPORTS_TOKEN",
                            description="Env var holding a fine-grained PAT scoped to the reports repo only (issues + contents write)")
     rate_limit_per_hour: int = Field(default=3, ge=1, description="Max reports filed per hour (design D-7)")
     rate_limit_per_day: int = Field(default=10, ge=1, description="Max reports filed per day (design D-7)")
@@ -972,7 +972,7 @@ class IntentSystemConfig(BaseModel):
 class AssetConfig(BaseModel):
     """Comprehensive asset management configuration"""
     assets_root: Path = Field(
-        default_factory=lambda: Path(os.getenv("IRENE_ASSETS_ROOT", "~/.cache/irene")).expanduser(),
+        default_factory=lambda: Path(os.getenv("LOCVEIL_VOICE_ASSETS_ROOT", "~/.cache/irene")).expanduser(),
         description="Root directory for all assets (models, cache, credentials)"
     )
     
@@ -1388,7 +1388,7 @@ class CoreConfig(BaseSettings):
     context_timeout_minutes: int = Field(default=30, ge=1, description="Context timeout in minutes")
     
     model_config = {
-        "env_prefix": "IRENE_",
+        "env_prefix": "LOCVEIL_VOICE_",
         "env_nested_delimiter": "__",
         "case_sensitive": False,
     }

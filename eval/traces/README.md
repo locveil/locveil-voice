@@ -11,7 +11,7 @@ timer's `started_at`) before diffing, so a deterministic handler stays a stable 
 
 **Partitioned by language** (`traces/<lang>/`), like the fixtures — a run selects a language via
 `EVAL_LANG`, and the replay case resolves `traces/{{env.EVAL_LANG}}/<name>.json` under the run's config
-(`{{env.IRENE_CONFIG_FILE}}`, the deployment the golden represents).
+(`{{env.LOCVEIL_VOICE_CONFIG_FILE}}`, the deployment the golden represents).
 
 | Trace (per `<lang>/`) | Input | Tier |
 |---|---|---|
@@ -36,13 +36,13 @@ Tracing is enabled per-run with `--set` (no need to edit a config file). Record 
 
 ```bash
 # 1. bring a SUT up with tracing on, writing traces into the LANGUAGE subdir (en shown; use the -en config):
-irene-webapi --config configs/embedded-armv7-en.toml \
+locveil-voice-webapi --config config/embedded-armv7-en.toml \
   --set trace.enabled=true --set "trace.traces_dir=$PWD/eval/traces/en"
 # 2. drive the interaction (text shown here; audio works the same once a fixture exists):
 curl -s -X POST localhost:6000/execute/command -H 'Content-Type: application/json' \
   -d '{"command":"set a timer for ten minutes"}'
 # 3. rename <request-id>.json to something meaningful, confirm it replays green, commit it:
-irene-replay-trace -t eval/traces/en/<name>.json --config configs/embedded-armv7-en.toml   # expect exit 0
+locveil-voice-replay-trace -t eval/traces/en/<name>.json --config config/embedded-armv7-en.toml   # expect exit 0
 ```
 
 **Tiering (curate deliberately):** put a trace in `trace-system` only when its path is deterministic

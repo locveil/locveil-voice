@@ -7289,7 +7289,7 @@ export interface components {
             /**
              * Token Env
              * @description Env var holding a fine-grained PAT scoped to the reports repo only (issues + contents write)
-             * @default IRENE_REPORTS_TOKEN
+             * @default LOCVEIL_VOICE_REPORTS_TOKEN
              */
             token_env: string;
             /**

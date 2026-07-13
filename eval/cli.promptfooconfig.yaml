@@ -1,4 +1,4 @@
-# CLI contract tests: the argparse console scripts (irene-config-validate, ...).
+# CLI contract tests: the argparse console scripts (locveil-voice-config-validate, ...).
 # This surface needs NO running service, NO audio fixtures, and NO API key — it's the
 # fastest path to a green run and the everyday CI gate.
 #
@@ -26,25 +26,25 @@ tests:
   # ── Config matrix: every shipped config validates clean (exit 0). ──────────────
   #   Identical assertion, many configs — the static counterpart to the WS config matrix.
   - description: validate config — embedded-armv7.toml
-    vars: { cmd: "irene-config-validate --config-file config/embedded-armv7.toml --ci-mode" }
+    vars: { cmd: "locveil-voice-config-validate --config-file config/embedded-armv7.toml --ci-mode" }
     assert: [{ type: javascript, value: "JSON.parse(output).exit_code === 0" }]
 
   - description: validate config — standalone-x86_64.toml
-    vars: { cmd: "irene-config-validate --config-file config/standalone-x86_64.toml --ci-mode" }
+    vars: { cmd: "locveil-voice-config-validate --config-file config/standalone-x86_64.toml --ci-mode" }
     assert: [{ type: javascript, value: "JSON.parse(output).exit_code === 0" }]
 
   - description: validate config — embedded-armv7.toml (the WB7 profile)
-    vars: { cmd: "irene-config-validate --config-file config/embedded-armv7.toml --ci-mode" }
+    vars: { cmd: "locveil-voice-config-validate --config-file config/embedded-armv7.toml --ci-mode" }
     assert: [{ type: javascript, value: "JSON.parse(output).exit_code === 0" }]
 
   - description: validate config — embedded-aarch64.toml
-    vars: { cmd: "irene-config-validate --config-file config/embedded-aarch64.toml --ci-mode" }
+    vars: { cmd: "locveil-voice-config-validate --config-file config/embedded-aarch64.toml --ci-mode" }
     assert: [{ type: javascript, value: "JSON.parse(output).exit_code === 0" }]
 
   # ── Failure contract: a missing file exits non-zero and reports the reason. ──
-  #   irene-config-validate writes its report (incl. errors) to stdout, exit 1 on invalid.
+  #   locveil-voice-config-validate writes its report (incl. errors) to stdout, exit 1 on invalid.
   - description: failure contract — missing config exits non-zero and reports "not found"
-    vars: { cmd: "irene-config-validate --config-file does-not-exist.toml" }
+    vars: { cmd: "locveil-voice-config-validate --config-file does-not-exist.toml" }
     assert:
       - { type: javascript, value: "JSON.parse(output).exit_code !== 0" }
       - { type: javascript, value: "/not found/i.test(JSON.parse(output).stdout)" }

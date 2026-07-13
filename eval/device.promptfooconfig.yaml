@@ -8,7 +8,7 @@
 #   make device-auto           # one command: mock bridge + SUT up, suite, teardown
 #
 # The SUT must run with [outputs.bridge] pointed at the mock bridge
-# (IRENE_OUTPUTS__BRIDGE__ENABLED=true, IRENE_OUTPUTS__BRIDGE__BASE_URL=http://localhost:8010) —
+# (LOCVEIL_VOICE_OUTPUTS__BRIDGE__ENABLED=true, LOCVEIL_VOICE_OUTPUTS__BRIDGE__BASE_URL=http://localhost:8010) —
 # the mock serves the PINNED golden catalog and records every canonical POST for assertion.
 #
 # Test-first status: read-kind fixtures stay red until ARCH-8 PR-5; some tier-2 fixtures

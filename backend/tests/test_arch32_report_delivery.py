@@ -50,7 +50,7 @@ def test_ring_clips_long_text():
 def test_redaction_strips_secret_shapes_keeps_household():
     text = (
         'DEEPSEEK_API_KEY=sk-abc123\n'
-        'token_env = "IRENE_REPORTS_TOKEN"\n'
+        'token_env = "LOCVEIL_VOICE_REPORTS_TOKEN"\n'
         'my_password: hunter2\n'
         'Authorization: Bearer ghp_secret\n'
         'room = "Спальня"\n'

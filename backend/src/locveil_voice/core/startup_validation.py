@@ -15,7 +15,7 @@ dependency that fails to import is not mistaken for a missing provider.
 Default behavior: log a clear ERROR per unresolved name and continue (non-fatal,
 so a shipped config that still carries a known-bad name — e.g. the `console` LLM
 fallback pending QUAL-15 — boots with the problem made loud). Set
-``IRENE_STARTUP_STRICT=1`` to raise instead; intended for CI / the TEST-0 smoke
+``LOCVEIL_VOICE_STARTUP_STRICT=1`` to raise instead; intended for CI / the TEST-0 smoke
 harness once the known offenders (QUAL-11/13/15) are fixed.
 """
 
@@ -105,7 +105,7 @@ def validate_provider_configuration(config: Any) -> List[str]:
 
 
 def run_startup_validation(config: Any) -> List[str]:
-    """Validate + log. Honors ``IRENE_STARTUP_STRICT`` (raise on any issue)."""
+    """Validate + log. Honors ``LOCVEIL_VOICE_STARTUP_STRICT`` (raise on any issue)."""
     try:
         issues = validate_provider_configuration(config)
     except Exception as e:  # never let the guard itself break boot
@@ -119,7 +119,7 @@ def run_startup_validation(config: Any) -> List[str]:
             f"[startup-validation] {len(issues)} configured provider name(s) do not resolve to a "
             f"registered entry-point (QUAL-23). Fix the config or implement the provider."
         )
-        if os.getenv("IRENE_STARTUP_STRICT", "").lower() in ("1", "true", "yes"):
+        if os.getenv("LOCVEIL_VOICE_STARTUP_STRICT", "").lower() in ("1", "true", "yes"):
             raise RuntimeError(
                 f"Startup validation failed: {len(issues)} unresolved provider name(s) — see logs above."
             )

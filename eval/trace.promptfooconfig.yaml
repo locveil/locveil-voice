@@ -6,7 +6,7 @@
 #   make replay-judge  # the trace-ux tier (LLM replies graded by DeepSeek)
 #
 # Reuses the shared cli_provider (no new locveil-eval code): a golden-trace case is just a console
-# invocation of irene-replay-trace whose exit code is the verdict — 0 = matched the oracle, 2 = drift.
+# invocation of locveil-voice-replay-trace whose exit code is the verdict — 0 = matched the oracle, 2 = drift.
 # Replay builds the real pipeline (models must be present), so this is kept SEPARATE from `make cli`
 # (which brags zero prerequisites). The replay tool normalizes volatile fields (timestamps) before
 # diffing, so a deterministic handler stays a stable green golden.
@@ -20,18 +20,18 @@ providers:
   - id: file://../../locveil-commons/eval/eval_commons/providers/cli_provider.py
     label: replay
     config:
-      cwd: ..                 # run irene-replay-trace from the repo root
+      cwd: ..                 # run locveil-voice-replay-trace from the repo root
       return_mode: full       # JSON {stdout, stderr, exit_code, duration_ms}
       timeout_s: 180          # replay builds the full pipeline (~15s)
 
 tests:
   # ── trace-system tier: deterministic (ASR / cheap NLU / rule-handlers) → assert exit 0. ──────
   # Golden path + config are language-partitioned (I18N-5): traces/{{env.EVAL_LANG}}/… replayed under
-  # the run's config ({{env.IRENE_CONFIG_FILE}}, the deployment the golden represents — D-4 CONFIG axis).
+  # the run's config ({{env.LOCVEIL_VOICE_CONFIG_FILE}}, the deployment the golden represents — D-4 CONFIG axis).
   - description: RU golden — «поставь таймер на 10 минут» still sets the timer
     metadata: { kind: trace-system, language: ru }
     vars:
-      cmd: "irene-replay-trace -t eval/traces/{{env.EVAL_LANG}}/timer_set_10min.json --config {{env.IRENE_CONFIG_FILE}}"
+      cmd: "locveil-voice-replay-trace -t eval/traces/{{env.EVAL_LANG}}/timer_set_10min.json --config {{env.LOCVEIL_VOICE_CONFIG_FILE}}"
     assert:
       - { type: javascript, value: "JSON.parse(output).exit_code === 0" }   # 0 = matched the oracle
 
@@ -41,7 +41,7 @@ tests:
   - description: EN golden — "set a timer for ten minutes" still sets the timer
     metadata: { kind: trace-system, language: en }
     vars:
-      cmd: "irene-replay-trace -t eval/traces/{{env.EVAL_LANG}}/timer_set_10min.json --config {{env.IRENE_CONFIG_FILE}}"
+      cmd: "locveil-voice-replay-trace -t eval/traces/{{env.EVAL_LANG}}/timer_set_10min.json --config {{env.LOCVEIL_VOICE_CONFIG_FILE}}"
     assert:
       - { type: javascript, value: "JSON.parse(output).exit_code === 0" }
 

@@ -37,16 +37,16 @@ if [ -z "${CONFIG_PROFILE:-}" ]; then
     fi
 fi
 # Validate BEFORE recording, or a typo would persist and break every later run.
-[ -f "../configs/$CONFIG_PROFILE.toml" ] || {
-    echo "error: unknown CONFIG_PROFILE '$CONFIG_PROFILE' (no configs/$CONFIG_PROFILE.toml)" >&2
-    echo "       expected one of: $(cd ../configs && echo embedded-*.toml | sed 's/\.toml//g')" >&2
+[ -f "../config/$CONFIG_PROFILE.toml" ] || {
+    echo "error: unknown CONFIG_PROFILE '$CONFIG_PROFILE' (no config/$CONFIG_PROFILE.toml)" >&2
+    echo "       expected one of: $(cd ../config && echo embedded-*.toml | sed 's/\.toml//g')" >&2
     exit 2
 }
 printf '%s\n' "$CONFIG_PROFILE" > "$PROFILE_FILE"
 
 # THE REPO OWNS THE CONFIG (bridge semantics): delivered on every update, on-box
 # edits are overwritten — config changes are made in the repo and arrive by git pull.
-cp "../configs/$CONFIG_PROFILE.toml" "$CONFIG_DIR/irene.toml"
+cp "../config/$CONFIG_PROFILE.toml" "$CONFIG_DIR/irene.toml"
 echo "config delivered -> $CONFIG_DIR/irene.toml ($CONFIG_PROFILE)"
 
 for d in donations localization prompts templates web; do

@@ -36,7 +36,7 @@ services:
       - /mnt/data/locveil-voice-config/logs:/app/logs
     environment:
       # Point the runner at the delivered config (overrides the image's baked default).
-      IRENE_CONFIG_FILE: /app/config/irene.toml
+      LOCVEIL_VOICE_CONFIG_FILE: /app/config/irene.toml
       # Secrets reach the container via a `.env` file next to the DEPLOYED copy of
       # this compose file — /mnt/data/locveil-voice-config/.env (chmod 600, see
       # INSTALL.md "Secrets"). update.sh deploys the compose file there and both
@@ -44,7 +44,7 @@ services:
       # they see identical env. Empty values are fine: the LLM tier and problem
       # reporting degrade to off.
       DEEPSEEK_API_KEY: "${DEEPSEEK_API_KEY:-}"
-      IRENE_REPORTS_TOKEN: "${IRENE_REPORTS_TOKEN:-}"
+      LOCVEIL_VOICE_REPORTS_TOKEN: "${LOCVEIL_VOICE_REPORTS_TOKEN:-}"
     # WB7 has 1 GB RAM shared with the bridge and system services; the ASR/TTS models are
     # the big consumers. Tune on hardware bring-up.
     mem_limit: 800m

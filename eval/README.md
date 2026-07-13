@@ -17,7 +17,7 @@ eval/
   trace.promptfooconfig.yaml   # offline golden-trace regression (per-language)
   profiles/
     targets/{local,wb7}.env    # WHERE the SUT is  → WS_AUDIO_URL, HEALTH_URL, MQTT_*
-    configs/*.env              # WHICH config it runs (local bring-up) → IRENE_CONFIG_FILE
+    configs/*.env              # WHICH config it runs (local bring-up) → LOCVEIL_VOICE_CONFIG_FILE
   fixtures/<lang>/             # audio fixtures per language — committed test inputs (see fixtures/README.md)
   traces/<lang>/               # golden traces per language (see traces/README.md)
 ```
@@ -27,7 +27,7 @@ eval/
 | Axis | Selects | Mechanism | Applies to |
 |---|---|---|---|
 | **TARGET** | `local` vs `wb7` (remote controller) | `profiles/targets/<TARGET>.env` → `{{env.WS_AUDIO_URL}}` | system suites (ws) |
-| **CONFIG** | `embedded-armv7[-en]` / `embedded-aarch64[-en]` / `standalone[-en]` / `custom` | `profiles/configs/<CONFIG>.env` → `IRENE_CONFIG_FILE` | local SUT bring-up |
+| **CONFIG** | `embedded-armv7[-en]` / `embedded-aarch64[-en]` / `standalone[-en]` / `custom` | `profiles/configs/<CONFIG>.env` → `LOCVEIL_VOICE_CONFIG_FILE` | local SUT bring-up |
 | **EVAL_LANG** | `ru` (default) / `en` | derived from the CONFIG name (`*-en` → `en`); picks `fixtures/<lang>/` + the `language` case filter | ws + trace suites |
 
 Test cases never change across combinations. `TARGET` swaps the endpoint; `CONFIG` is what the SUT
@@ -60,7 +60,7 @@ export $(grep -v '^#' .env | xargs)
 ```
 
 The Makefile points promptfoo at the project venv (`PROMPTFOO_PYTHON`) and prepends the venv
-`bin` to `PATH`, so the Python providers import `eval_commons` and the `irene-*` console
+`bin` to `PATH`, so the Python providers import `eval_commons` and the `locveil-voice-*` console
 scripts resolve. No `activate` needed when going through `make`.
 
 ## Run
@@ -103,10 +103,10 @@ keeps only the **failing** cases' traces under `traces/failures/` (the rest are 
 *actual* failing run, not a re-run that may not reproduce a flaky failure. Replay one to debug it:
 
 ```bash
-irene-replay-trace -t traces/failures/<request_id>.json --listen --step   # hear it, step each stage
+locveil-voice-replay-trace -t traces/failures/<request_id>.json --listen --step   # hear it, step each stage
 ```
 
-(For the offline replay tier, `irene-replay-trace --record-out <dir>` keeps the replayed trace on a
+(For the offline replay tier, `locveil-voice-replay-trace --record-out <dir>` keeps the replayed trace on a
 mismatch — the replay already diffs `{text, success, actions}` and names the diverging field.)
 
 **One golden trace → both tiers (`--extract-wav`).** A golden audio trace carries its captured audio,
@@ -114,7 +114,7 @@ so it serves *record once, test twice*: replay it offline **and** derive the WS 
 instead of re-recording with a mic.
 
 ```bash
-irene-replay-trace -t traces/<id>.json --extract-wav fixtures/<case>.wav   # 16 kHz mono PCM
+locveil-voice-replay-trace -t traces/<id>.json --extract-wav fixtures/<case>.wav   # 16 kHz mono PCM
 ```
 
 ## Conventions & gotchas (read before editing)
@@ -129,13 +129,13 @@ These are non-obvious and have already caused (and cost) bugs — keep them in m
   come from `{{env.WS_AUDIO_URL}}` (set by the target profile), never hard-coded.
 - **Run through `make`, not bare `promptfoo`.** The Makefile sets `PROMPTFOO_PYTHON` to the
   project venv and prepends its `bin` to `PATH`; without that, the Python providers can't import
-  `eval_commons` and the `irene-*` console scripts don't resolve. promptfoo is a **global** npm
+  `eval_commons` and the `locveil-voice-*` console scripts don't resolve. promptfoo is a **global** npm
   install; everything Python is **`uv`**-managed in `../.venv`.
 - **The harness runs cache-disabled** (`PROMPTFOO_CACHE_ENABLED=false`, set in the Makefile). Every
   surface here is a *live* test — CLI argparse, the WS suite against a running SUT, the DeepSeek
   judge — so a cached response can only mask reality. A cached transient failure once replayed for
   every later run and read as a persistent SUT bug; never re-enable the cache for these suites.
-- **`irene-config-validate` writes its report (including errors) to STDOUT, not stderr, and exits
+- **`locveil-voice-config-validate` writes its report (including errors) to STDOUT, not stderr, and exits
   1 on invalid/missing config.** Assert on `stdout` + `exit_code`, never `stderr`.
 - **The two axes (TARGET, CONFIG) belong in `profiles/*.env`, never in a test case.** Test YAML
   stays identical across local/wb7 and across configs. If you're tempted to fork a test per
@@ -157,7 +157,7 @@ These are non-obvious and have already caused (and cost) bugs — keep them in m
   (a past fix silently regressed a neighboring criterion), and note the English rubrics carry the
   same structure but are uncalibrated. The live UX cases reference the shared rubric files
   directly (`file://…/shared/rubrics/{ru,en}/*.txt`) — edit them there, never inline.
-- **`serve`/`compare`** launch Irene with `uv run irene-webapi --port 6000`; adjust the command in
+- **`serve`/`compare`** launch Irene with `uv run locveil-voice-webapi --port 6000`; adjust the command in
   the Makefile if your runner takes the config/port differently.
 - **Next refinement:** once the WS suite has run once, the inline cases can be split into
   `tests/ws/*.yaml` (one file per scenario). Kept inline for now — only a handful of cases, and it

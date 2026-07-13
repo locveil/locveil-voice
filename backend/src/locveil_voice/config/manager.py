@@ -397,7 +397,7 @@ default = "{config.workflows.default}"
 [assets]
 auto_create_dirs = {str(config.assets.auto_create_dirs).lower()}
 # Paths use environment variable defaults:
-# IRENE_ASSETS_ROOT (default: ~/.cache/irene)
+# LOCVEIL_VOICE_ASSETS_ROOT (default: ~/.cache/irene)
 
 # Language and locale
 language = "{config.language}"

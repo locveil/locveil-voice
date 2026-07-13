@@ -79,7 +79,7 @@ Two optional cloud integrations read their keys from the container's environment
 cleanly to "off" when the key is absent (the assistant still runs fully offline):
 
 - `DEEPSEEK_API_KEY` — the cloud LLM tier of intent recognition;
-- `IRENE_REPORTS_TOKEN` — the GitHub token that lets spoken problem reports file themselves.
+- `LOCVEIL_VOICE_REPORTS_TOKEN` — the GitHub token that lets spoken problem reports file themselves.
   The deployment profiles ship with reporting enabled and pointed at the private
   `locveil/locveil-reports` repo, so the token is the only missing piece: a fine-grained PAT
   minted for the **locveil** organization, scoped to that repo only, Issues + Contents
@@ -93,13 +93,18 @@ compose from that directory):
 ```sh
 cat > /mnt/data/locveil-voice-config/.env <<'EOF'
 DEEPSEEK_API_KEY=sk-XXXXXXXX
-IRENE_REPORTS_TOKEN=github_pat_XXXXXXXX
+LOCVEIL_VOICE_REPORTS_TOKEN=github_pat_XXXXXXXX
 EOF
 chmod 600 /mnt/data/locveil-voice-config/.env
 ```
 
 `update.sh` never touches this file. After adding or changing it, re-run `./update.sh` (or
 `docker compose up -d` from the runtime tree).
+
+> **Upgrading an existing controller across the `IRENE_*` → `LOCVEIL_VOICE_*` rename:** the env
+> keys changed (both the compose keys, delivered by the pull, and the one secret key in this
+> `.env`). Run the one-time cutover once, after pulling: `sh ops/cutover-env-locveil-voice.sh` —
+> it renames the `.env` key, delivers the new compose, and smoke-tests `/health`. Idempotent.
 
 ## Update
 

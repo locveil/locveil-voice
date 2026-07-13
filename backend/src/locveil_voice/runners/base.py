@@ -160,10 +160,10 @@ class BaseRunner(ABC):
         parser.add_argument(
             "--config", "-c",
             type=Path,
-            # Default from $IRENE_CONFIG_FILE so containers point at the baked config (or a mounted
+            # Default from $LOCVEIL_VOICE_CONFIG_FILE so containers point at the baked config (or a mounted
             # override) with no entrypoint script; falls back to ./config.toml for a bare invocation.
-            default=Path(os.getenv("IRENE_CONFIG_FILE", "config.toml")),
-            help="Configuration file path (default: $IRENE_CONFIG_FILE or config.toml)"
+            default=Path(os.getenv("LOCVEIL_VOICE_CONFIG_FILE", "config.toml")),
+            help="Configuration file path (default: $LOCVEIL_VOICE_CONFIG_FILE or config.toml)"
         )
         
         # Logging options
@@ -270,7 +270,7 @@ class BaseRunner(ABC):
             # but dies confusingly on the first command — better to stop here with directions.)
             print(f"❌ No configuration found: {args.config}")
             print("💡 Pass one with -c — for a first run:  -c configs/config-example.toml")
-            print("   Or set IRENE_CONFIG_FILE. Every option is documented in")
+            print("   Or set LOCVEIL_VOICE_CONFIG_FILE. Every option is documented in")
             print("   configs/config-master.toml; see docs/QUICKSTART.md.")
             raise ValueError(f"Configuration file not found: {args.config}")
         else:

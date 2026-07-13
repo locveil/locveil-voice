@@ -272,18 +272,32 @@ all = [
 ]
 
 [project.scripts]
+# BUILD-36/PROD-21: console scripts are locveil-voice-* org-wide (published-name rule).
+# The old irene-* names are kept as ALIASES for one release (process/python-layout.md §4),
+# so in-repo callers (eval/, CI uses the module form) and any external scripts keep working;
+# they are removed next release. New names and aliases point at the same entry points.
+
 # Configuration and build management tools
+locveil-voice-config-validate = "locveil_voice.tools.config_validator_cli:main"
+locveil-voice-build-analyze = "locveil_voice.tools.build_analyzer:main"
+locveil-voice-dependency-validate = "locveil_voice.tools.dependency_validator:main"
+# QUAL-67: donation schema + contract-wiring gate, warnings-as-errors (enabled by the QUAL-66 zero-baseline)
+locveil-voice-donation-validate = "locveil_voice.tools.donation_validator_cli:main"
+# Trace recording + replay (ARCH-19) — also covers the old VAD-recording workflow
+# (capture_level=segmenter on a mic session → read vad_frames, then replay to tune)
+locveil-voice-replay-trace = "locveil_voice.tools.replay_trace:main"
+# Main runners
+locveil-voice-cli = "locveil_voice.runners.cli:run_cli"
+locveil-voice-webapi = "locveil_voice.runners.webapi_runner:run_webapi"
+locveil-voice-voice = "locveil_voice.runners.voice_runner:run_voice"
+locveil-voice-satellite = "locveil_voice.runners.satellite_runner:run_satellite"
+
+# --- irene-* aliases (deprecated; removed next release) ---
 irene-config-validate = "locveil_voice.tools.config_validator_cli:main"
 irene-build-analyze = "locveil_voice.tools.build_analyzer:main"
 irene-dependency-validate = "locveil_voice.tools.dependency_validator:main"
-# QUAL-67: donation schema + contract-wiring gate, warnings-as-errors (enabled by the QUAL-66 zero-baseline)
 irene-donation-validate = "locveil_voice.tools.donation_validator_cli:main"
-
-# Trace recording + replay (ARCH-19) — also covers the old VAD-recording workflow
-# (capture_level=segmenter on a mic session → read vad_frames, then replay to tune)
 irene-replay-trace = "locveil_voice.tools.replay_trace:main"
-
-# Main runners
 irene-cli = "locveil_voice.runners.cli:run_cli"
 irene-webapi = "locveil_voice.runners.webapi_runner:run_webapi"
 irene-voice = "locveil_voice.runners.voice_runner:run_voice"
