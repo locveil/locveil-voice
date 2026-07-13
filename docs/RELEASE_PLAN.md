@@ -532,9 +532,16 @@ size-matched to the Russian stack; language is a per-config/deployment choice (a
       + .dockerignore (**/.venv) (de58eb2, `buildx --check` clean on x86_64); docs prose sweep — 21 docs
       (README/CONTRIBUTING/QUICKSTART/guides/INSTALL/config-ui-docs) to the new invocation model, persona
       "Irene" + deployment identity (irene.toml/irene.log/~/.cache/irene/compose service) kept; manifest
-      coherence test green. **All repo-side edits for steps 1–7 are complete.** Remaining is OPERATOR-ONLY
-      (needs the WB7 / a Docker build host): (a) 6 image rebuilds + boot-verify (BUILD-11 bar); (b) run
-      `ops/cutover-env-locveil-voice.sh` + smoke on the controller. Flip BUILD-36 to done after those.
+      coherence test green. **All repo-side edits for steps 1–7 are complete + pushed (@ origin/main).**
+      Local image boot-verify (2026-07-13): the x86_64 standalone image BUILT from Dockerfile.x86_64
+      (2.9 GB, in-build verify_components gate ✓ "all 11 enabled components import"), the migrated
+      `locveil_voice` package imports at runtime, and the web API boots and serves `/health` = healthy —
+      validating the whole Docker migration (src-layout build, config/ tree, entry-point rename, module
+      paths, env). Verification artifacts removed (image + container + 7.5 GB build cache). The ARM
+      images (armv7/aarch64) share the identical recipe and rebuild via the multi-arch CI dispatch.
+      **Remaining = the owner's WB7 install (deferred to owner):** rebuild/deploy the 6 GHCR images +
+      boot-verify on the controller, then `git pull && sh ops/cutover-env-locveil-voice.sh` + smoke.
+      Flip BUILD-36 to done (move to DONE ledger + journal, docs: manifest guide set) after the WB7 install.
       Dev bring-up: `uv sync --project backend` + `bash scripts/install_sqlite_shim.sh` + `make setup` in eval/._
 
 ### Documentation (DOC)
