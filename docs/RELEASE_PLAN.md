@@ -99,6 +99,7 @@ Living findings behind the tasks (`read-at-start-record-at-completion`). `[x]` =
 | `docs/review/api_result_contract_review.md` `[x]` (2026-06-27) | API execution-result response-contract consistency — 5 findings (reply field name, 3-way intent split, divergent metadata under one model, confidence placement, live `None` internal misread); root cause = no shared serializer | QUAL-54 ✓, QUAL-55 |
 | `docs/review/codebase_review_2026-06-21.md` (2026-06-21; CR-A1 group resolved 2026-06-22) | whole-codebase health pass — 16 correctness (CR-A1 P0: standalone `voice_runner` web API never starts), 13 dead/zombie (CR-B), 13 duplication (CR-C), 5 stale user-facing doc claims (CR-D). **DONE 2026-06-22:** CR-A1 group (A1/A2/A3/A14/B2/D5 + masking-test fix) + BUILD-7 doc/dup cluster (C1/C2/C4/D1–D4) + dead-code sweep (all CR-B; B4 kept as ARCH-22/25 scaffolding, B12 was QUAL-20) + provider-base dedup (CR-C6/C7, C8 partial — route helpers deferred) + standalone correctness (CR-A4/A8) + silero cleanups (CR-A12/A13) + tracing pair (CR-A7/A9) + path-traversal hardening (CR-A15, security) + correctness trio (CR-A10/A11/A16) + Cyrillic dedup (CR-C3) + nlu-analysis loaders (CR-A6) + audio playback (CR-A5) + dup boot-validator removed (CR-C13) + handler base-class consolidation (CR-C11) + asset-name/path helper (CR-C10) + spaCy init dedup (CR-C5) + WebAPIPlugin walk dedup (CR-C12) + provider /configure gate (CR-C8) + platform-list centralization (CR-C9); **review §A + §B + §C + §D ALL fully resolved**. ARCH-25 (WB7/WB8 hardware bring-up) remains as a separate hardware-gated task, not a review item. Cross-refs: CR-B1→BUILD-7, CR-C1/2/4/D1-4→BUILD-7, CR-C9→ARCH-25, CR-A12→QUAL-15, CR-A16→QUAL-30 | (new findings) |
 | `docs/review/config_ui_review.md` `[x]` (2026-06-28) | config-ui quality/dup/dead/correctness pass — 5 confirmed + 2 plausible correctness bugs (404 reload loop, stale-request overwrite, unreachable blocking dialog, wrong-key validation error, stale memo), type-contract drift in `types/api.ts` (CoreConfig/NLUConfig/VADConfig behind backend → defeats the type-check gate), 6 duplications (apiClient quintet, page clones, editor primitives), unused-export dead code, efficiency + hardcoded-list/altitude smells | BUG-8/9/10, UI-11/12/13/14 |
+| `docs/review/dynamic_loading_hardcodings_review.md` (produced by ARCH-50) | hardcodings & declared-but-unhonored config that violate the entry-points dynamic-build/loading contract — seed: `IntentHandlerManager` hardcodes the handler namespace and ignores `discovery_paths`/`auto_discover` (found dead at the BUILD-36 rename bounce); audit all such namespaces/provider-lists/paths + honor-vs-delete + a code↔config↔entry-points guard | ARCH-50 |
 
 ---
 
@@ -259,6 +260,28 @@ See `docs/review/phase1_architecture_map.md` §5.
       (`config-ui-stays-functional`: endpoints + openapi/types + editors in the same change). Deliverable:
       design doc under `docs/design/` first; implementation follow-ups filed from it. Voice-internal (no
       board). Docs at implementation: `howto-new-intent`/`howto-new-language` teach the current split.
+- [ ] **ARCH-50** [ARCH][BUILD] `[release]` — **★ REVIEW: hardcodings & config overrides that violate
+      dynamic build-and-loading.** Filed 2026-07-13 (owner, from the BUILD-36/PROD-21 bounce). The
+      architecture is entry-points-driven DYNAMIC discovery + config-driven loading — `build_analyzer`
+      derives each image's deps from the enabled entry-points, and the runtime loads providers/handlers
+      dynamically via `utils/loader.dynamic_loader`. Two anti-patterns undermine it and need a systematic
+      sweep: (a) **hardcoded discovery targets** — e.g. `IntentHandlerManager.initialize`
+      (`backend/src/locveil_voice/intents/manager.py:97`) discovers from the literal namespace
+      `"locveil_voice.intents.handlers"` instead of the config's `discovery_paths`; the rename bounce
+      exposed it (the config value sat stale with zero effect because it is never read). (b)
+      **declared-but-unhonored config (the "pydantic override" smell)** — fields like
+      `intent_system.handlers.discovery_paths` / `auto_discover` are declared in `config/models.py`,
+      plumbed through `intent_component`, listed in the build-analyzer skip-set, and documented in
+      config-master, yet the code overrides them with a hardcode — so the config is a lie no gate can
+      catch. Scope: audit EVERY namespace / provider-list / path / class that is hardcoded where the
+      entry-points-or-config contract intends dynamism, and EVERY config field declared but ignored or
+      overridden. For each: decide honor-the-config vs delete-the-dead-field
+      (`dead-code-remove-not-fix`), and whether a guard should assert code↔config↔entry-points agreement
+      (the failure class no test caught). Deliverable: review doc
+      `docs/review/dynamic_loading_hardcodings_review.md`; fixes filed as fresh tasks
+      (`review-then-remediate`). First concrete instance to carry: the `discovery_paths`/`auto_discover`
+      dead-field resolution (voice flagged it at the bounce — spans `intents/manager.py`,
+      `config/models.py`, `intent_component`, the build-analyzer skip-set, and 8 config files).
 ### Code Quality & Review (QUAL)
 
 #### Cross-cutting systemic remediation — principles (the Gate 2 lens)
