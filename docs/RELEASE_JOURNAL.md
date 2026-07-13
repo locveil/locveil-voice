@@ -20,6 +20,17 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-13 — ARCH-49 filed: the language-asset re-cut, designed before touched.** An owner analysis
+  session asked what actually separates `assets/templates/` from `assets/localization/` — answer: the
+  phase-2/3 hardcode extractions split by the SHAPE of what was lifted (strings vs dicts), not by role,
+  and the seam leaks in four places (output templates inside localization/datetime, a non-handler
+  templates key, and two technical-mapping "localizations" forked per language with identical content).
+  Owner picked the role-axis re-cut — `responses/` (what Irene says) vs `lexicon/` (what she listens
+  with), technical mappings evicted to donations/config — and the schema question got settled in the
+  same session: YAML stays on disk, schemas validate the parsed content, and the checks that matter most
+  aren't schemas at all (cross-language key parity, placeholder parity). Filed `[deferred]` as a design
+  task; the design doc comes first, implementation follow-ups from it.
+
 - **2026-07-12 — DOC-11 + DOC-12 + BUILD-35 executed (same-day): voice speaks the docs convention.** The
   whole PROD-17 delegation, in dependency order. The live stale fixes first: the docker guide and the WS
   Python example now say 8080 like the images they describe, the QUICKSTART profile table stops calling

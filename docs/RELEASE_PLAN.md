@@ -233,6 +233,32 @@ See `docs/review/phase1_architecture_map.md` §5.
       firmware-version MQTT topic (the bridge-side tripwire); satellite DES-3/FW decides what the ESP32
       actually reports. Scope at task start: flag semantics (warn-only vs. gate), where the "current"
       wake-pack tag is read from, and whether `/health` participates.
+- [ ] **ARCH-49** [ASSETS][UI] `[deferred]` — **★ DESIGN — language-asset re-cut ("option C"): `responses/` vs
+      `lexicon/`, evict technical mappings, schemas + parity gates** (`design-then-implement`; filed
+      2026-07-13 from an owner analysis session — owner chose option C of three). Today's split
+      (`assets/templates/` by handler = output strings; `assets/localization/` by domain = structured
+      language data) is an extraction-era accident (the "Phase 2/3" hardcode lift-outs split by SHAPE of
+      the extracted artifact, not by role) and the boundary leaks: `localization/datetime` embeds output
+      `templates:`, `templates/clarification` isn't a handler, and `localization/{voice_synthesis,
+      components}` are TECHNICAL mappings (voice→provider+params, component-name aliases) forked per
+      language with identical technical content — against the spirit of `donation-choice-surfaces-rule`.
+      Design brief: (a) re-cut on the ROLE axis — `responses/` (everything spoken/shown: templates + the
+      datetime embedded templates + conversation's user-surfacing labels) vs `lexicon/` (input-side
+      vocab: commands, rooms, domains, datetime names, devices); (b) EVICT the two technical-mapping
+      domains out of language assets into donations/config as single non-forked copies (JSON+schema
+      donations-style is right THERE); (c) **schema stance (decided in the analysis, 2026-07-13): keep
+      YAML on disk — schemas validate parsed content** — per-domain JSON Schemas with real teeth for
+      `lexicon/`, loose schema for `responses/` PLUS the two checks that catch the real bug classes:
+      cross-language KEY PARITY (a key in `ru` missing in `en` = silent fallback today) and PLACEHOLDER
+      PARITY (`{provider_name}` en vs `{provider}` ru); gates ride the normal suite (drift-guard
+      pattern, BUILD-26 mechanics) AND the PUT/validate endpoints so config-ui saves validate
+      server-side (note: `yaml.dump` write-back already destroys comments — design may address or
+      accept); (d) plumbing unification rides along — one loader path with `get_template`/
+      `get_localization` kept as thin views (~140 handler call sites unchanged), the two near-identical
+      REST families and the `TemplatesPage`/`LocalizationsPage` pair merge deliberately
+      (`config-ui-stays-functional`: endpoints + openapi/types + editors in the same change). Deliverable:
+      design doc under `docs/design/` first; implementation follow-ups filed from it. Voice-internal (no
+      board). Docs at implementation: `howto-new-intent`/`howto-new-language` teach the current split.
 ### Code Quality & Review (QUAL)
 
 #### Cross-cutting systemic remediation — principles (the Gate 2 lens)
