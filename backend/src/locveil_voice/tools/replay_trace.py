@@ -353,8 +353,8 @@ def main() -> None:
             "  irene-replay-trace -t <id>.json --record-out out/      # save a second trace\n"
             "  irene-replay-trace -t <id>.json --extract-wav f.wav    # derive the WS fixture (D-9)\n"))
     parser.add_argument("--trace", "-t", type=Path, required=True, help="Path to the trace JSON file")
-    parser.add_argument("--config", "-c", type=Path, default=Path("configs/config-master.toml"),
-                        help="Replayer config (default: configs/config-master.toml)")
+    parser.add_argument("--config", "-c", type=Path, default=Path("config/config-master.toml"),
+                        help="Replayer config (default: config/config-master.toml)")
     parser.add_argument("--reproduce", action="store_true",
                         help="Apply the trace's captured config subset; fail clearly on a missing model "
                              "(default is --local: run through the replayer's own config)")

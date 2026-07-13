@@ -94,7 +94,7 @@ class DependencyValidator:
             project_root: Path to project root. If None, auto-detect from current directory.
         """
         self.project_root = project_root or self._find_project_root()
-        self.pyproject_path = self.project_root / "pyproject.toml"
+        self.pyproject_path = self._resolve_pyproject(self.project_root)
         
         # Cache for loaded configurations and package data
         self._pyproject_cache: Optional[Dict[str, Any]] = None
@@ -119,15 +119,22 @@ class DependencyValidator:
         }
         
     def _find_project_root(self) -> Path:
-        """Find the project root directory by looking for pyproject.toml."""
+        """Find the project root, tolerating the backend/ split (PROD-21/BUILD-36):
+        pyproject.toml lives at <root>/backend/ under the split layout, or at <root>
+        when the Docker analyzer stage has flattened the tree."""
         current = Path.cwd()
         while current != current.parent:
-            if (current / "pyproject.toml").exists():
+            if (current / "pyproject.toml").exists() or (current / "backend" / "pyproject.toml").exists():
                 return current
             current = current.parent
-        
+
         # Fallback to current directory
         return Path.cwd()
+
+    def _resolve_pyproject(self, root: Path) -> Path:
+        """pyproject.toml is in backend/ under the split layout, else at the root."""
+        split = root / "backend" / "pyproject.toml"
+        return split if split.exists() else root / "pyproject.toml"
     
     def _load_pyproject(self) -> Dict[str, Any]:
         """Load and cache pyproject.toml configuration."""

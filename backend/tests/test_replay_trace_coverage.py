@@ -41,7 +41,7 @@ def _replayer(**over):
     """A TraceReplayer with construction bypassed and sane defaults the wiring can override."""
     r = object.__new__(TraceReplayer)
     r.trace_path = Path("dummy.json")
-    r.config_path = Path("configs/config-master.toml")
+    r.config_path = Path("config/config-master.toml")
     r.mode = "local"
     r.record_out = None
     r.do_listen = False

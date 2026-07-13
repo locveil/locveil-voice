@@ -8,10 +8,10 @@ from locveil_voice.config.models import CoreConfig
 from locveil_voice.core.audio_negotiator import AudioNegotiator
 from locveil_voice.intents.models import AudioData
 
-CONFIG_DIR = Path("configs")
+CONFIG_DIR = Path("config")
 
 
-@pytest.mark.parametrize("name", [p.stem for p in Path("configs").glob("*.toml")])
+@pytest.mark.parametrize("name", [p.stem for p in Path("config").glob("*.toml")])
 def test_every_config_derives_a_canonical(name):
     """No shipped config is an infeasible audio negotiation (would be fatal at startup)."""
     cfg = CoreConfig(**tomllib.load(open(CONFIG_DIR / f"{name}.toml", "rb")))

@@ -113,7 +113,7 @@ DEVICE_SUT_CONFIG := /tmp/irene-device-sut.toml
 
 device-sut-config:
 	@sed -e '/^\[outputs.bridge\]/,/^\[/{s|^enabled = false|enabled = true|;s|^base_url = .*|base_url = "http://localhost:$(MOCK_BRIDGE_PORT)"|;}' \
-	  ../configs/config-master.toml > $(DEVICE_SUT_CONFIG)
+	  ../config/config-master.toml > $(DEVICE_SUT_CONFIG)
 ifeq ($(NLU),llm)
 # QUAL-35 Slice-3 measurement leg: append the QUAL-50 LLM tier to the cascade (deterministic
 # tiers still run first; needs DEEPSEEK_API_KEY in the environment for the tier to answer).

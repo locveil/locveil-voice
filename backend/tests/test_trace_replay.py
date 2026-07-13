@@ -182,7 +182,7 @@ class TestReplayerLoad(unittest.TestCase):
     def test_load_reads_replay_and_recorded(self):
         with tempfile.TemporaryDirectory() as d:
             path = self._write_trace(d)
-            r = TraceReplayer(path, Path("configs/config-master.toml"))
+            r = TraceReplayer(path, Path("config/config-master.toml"))
             r.load()
             self.assertEqual(r.replay["input"]["kind"], "audio")
             self.assertEqual(r.recorded["text"], "готово")
@@ -191,7 +191,7 @@ class TestReplayerLoad(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             path = Path(d) / "bad.json"
             path.write_text(json.dumps({"replay": {}}), encoding="utf-8")
-            r = TraceReplayer(path, Path("configs/config-master.toml"))
+            r = TraceReplayer(path, Path("config/config-master.toml"))
             with self.assertRaises(ValueError):
                 r.load()
 

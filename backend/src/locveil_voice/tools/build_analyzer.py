@@ -6,7 +6,7 @@ by analyzing TOML configuration + entry-points metadata to determine
 precisely which modules and dependencies are required.
 
 Usage:
-    python -m locveil_voice.tools.build_analyzer --config configs/embedded-armv7.toml
+    python -m locveil_voice.tools.build_analyzer --config config/embedded-armv7.toml
     python -m locveil_voice.tools.build_analyzer --list-profiles
     python -m locveil_voice.tools.build_analyzer --validate-all-profiles
 """
@@ -83,8 +83,8 @@ class IreneBuildAnalyzer:
             project_root: Path to project root. If None, auto-detect from current directory.
         """
         self.project_root = project_root or self._find_project_root()
-        self.configs_dir = self.project_root / "configs"
-        self.pyproject_path = self.project_root / "pyproject.toml"
+        self.configs_dir = self.project_root / "config"
+        self.pyproject_path = self._resolve_pyproject(self.project_root)
         
         # Cache for loaded configurations and entry-points
         self._config_cache: Dict[str, Dict[str, Any]] = {}
@@ -101,15 +101,34 @@ class IreneBuildAnalyzer:
         }
         
     def _find_project_root(self) -> Path:
-        """Find the project root directory by looking for pyproject.toml."""
+        """Find the repo/data root — the directory holding the config/ profile tree
+        (and assets/).
+
+        Post-migration (PROD-21/BUILD-36) the backend component lives in backend/ with
+        its own pyproject.toml, while config/ and assets/ stay at the repo root; the
+        Docker analyzer stage flattens both into one dir. Both shapes carry
+        config/config-master.toml, so that is the definitive marker — preferred over a
+        bare pyproject.toml, which under the split layout would stop at backend/.
+        """
         current = Path.cwd()
-        while current != current.parent:
-            if (current / "pyproject.toml").exists():
-                return current
-            current = current.parent
-        
-        # Fallback to current directory
-        return Path.cwd()
+        probe = current
+        while probe != probe.parent:
+            if (probe / "config" / "config-master.toml").exists():
+                return probe
+            probe = probe.parent
+        # Fallback: the component root (pyproject.toml), then cwd.
+        probe = current
+        while probe != probe.parent:
+            if (probe / "pyproject.toml").exists():
+                return probe
+            probe = probe.parent
+        return current
+
+    def _resolve_pyproject(self, root: Path) -> Path:
+        """pyproject.toml lives in backend/ under the split layout, or at the data
+        root when the Docker analyzer stage has flattened the tree."""
+        split = root / "backend" / "pyproject.toml"
+        return split if split.exists() else root / "pyproject.toml"
     
     def _normalize_platform_name(self, platform: str) -> str:
         """
@@ -191,7 +210,7 @@ class IreneBuildAnalyzer:
     
     def list_available_profiles(self) -> List[str]:
         """
-        Scan configs/ directory for available configuration profiles.
+        Scan config/ directory for available configuration profiles.
         
         Returns:
             List of available profile names (without .toml extension)
@@ -954,7 +973,7 @@ def main():
         epilog="""
 Examples:
   # Analyze a specific configuration profile
-  python -m locveil_voice.tools.build_analyzer --config configs/embedded-armv7.toml
+  python -m locveil_voice.tools.build_analyzer --config config/embedded-armv7.toml
 
   # List all available profiles
   python -m locveil_voice.tools.build_analyzer --list-profiles
@@ -972,12 +991,12 @@ Examples:
     
     parser.add_argument(
         "--config", 
-        help="Path to configuration file (relative to configs/ or absolute path)"
+        help="Path to configuration file (relative to config/ or absolute path)"
     )
     parser.add_argument(
         "--list-profiles", 
         action="store_true",
-        help="List all available configuration profiles in configs/"
+        help="List all available configuration profiles in config/"
     )
     parser.add_argument(
         "--validate-all-profiles", 
@@ -1052,13 +1071,15 @@ Examples:
         if args.validate_all_profiles:
             profiles = analyzer.list_available_profiles()
             if not profiles:
-                print("No configuration profiles found in configs/")
+                print("No configuration profiles found in config/")
                 return 1
             
             results = {}
             for profile in profiles:
                 try:
-                    config_path = f"configs/{profile}.toml"
+                    # Bare filename: analyze_runtime_requirements resolves it against
+                    # configs_dir, so this works regardless of cwd (repo root vs backend/).
+                    config_path = f"{profile}.toml"
                     requirements = analyzer.analyze_runtime_requirements(config_path)
                     validation = analyzer.validate_build_profile(requirements)
                     results[profile] = {

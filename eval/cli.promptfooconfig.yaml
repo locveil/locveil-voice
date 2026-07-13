@@ -26,19 +26,19 @@ tests:
   # ── Config matrix: every shipped config validates clean (exit 0). ──────────────
   #   Identical assertion, many configs — the static counterpart to the WS config matrix.
   - description: validate config — embedded-armv7.toml
-    vars: { cmd: "irene-config-validate --config-file configs/embedded-armv7.toml --ci-mode" }
+    vars: { cmd: "irene-config-validate --config-file config/embedded-armv7.toml --ci-mode" }
     assert: [{ type: javascript, value: "JSON.parse(output).exit_code === 0" }]
 
   - description: validate config — standalone-x86_64.toml
-    vars: { cmd: "irene-config-validate --config-file configs/standalone-x86_64.toml --ci-mode" }
+    vars: { cmd: "irene-config-validate --config-file config/standalone-x86_64.toml --ci-mode" }
     assert: [{ type: javascript, value: "JSON.parse(output).exit_code === 0" }]
 
   - description: validate config — embedded-armv7.toml (the WB7 profile)
-    vars: { cmd: "irene-config-validate --config-file configs/embedded-armv7.toml --ci-mode" }
+    vars: { cmd: "irene-config-validate --config-file config/embedded-armv7.toml --ci-mode" }
     assert: [{ type: javascript, value: "JSON.parse(output).exit_code === 0" }]
 
   - description: validate config — embedded-aarch64.toml
-    vars: { cmd: "irene-config-validate --config-file configs/embedded-aarch64.toml --ci-mode" }
+    vars: { cmd: "irene-config-validate --config-file config/embedded-aarch64.toml --ci-mode" }
     assert: [{ type: javascript, value: "JSON.parse(output).exit_code === 0" }]
 
   # ── Failure contract: a missing file exits non-zero and reports the reason. ──

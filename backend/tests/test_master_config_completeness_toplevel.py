@@ -31,7 +31,7 @@ def test_real_config_master_is_complete():
 
 
 def _drifted(tmp_path: Path, transform) -> Path:
-    text = Path("configs/config-master.toml").read_text(encoding="utf-8")
+    text = Path("config/config-master.toml").read_text(encoding="utf-8")
     out = tmp_path / "drifted.toml"
     out.write_text(transform(text), encoding="utf-8")
     return out

@@ -31,7 +31,7 @@ from pathlib import Path
 import pytest
 
 REPO = Path(__file__).resolve().parents[2]
-CONFIG = str(REPO / "configs" / "config-master.toml")
+CONFIG = str(REPO / "config" / "config-master.toml")
 # Console scripts live next to the running interpreter — .venv/bin locally, the runner's
 # tool env in CI (which has no .venv; the old hardcoded REPO/.venv/bin broke there).
 VENV_BIN = Path(sys.executable).parent

@@ -19,7 +19,7 @@ import subprocess
 from pathlib import Path
 from typing import Dict, Any, Type
 
-# Repo root (irene/tests/<file> → parents[2]). Replaces a hardcoded absolute path
+# Repo root (backend/tests/<file> → parents[2]). Replaces a hardcoded absolute path
 # to the old "Irene-Voice-Assistant" checkout so the subprocess greps run anywhere.
 _REPO_ROOT = str(Path(__file__).resolve().parents[2])
 from pydantic import BaseModel
@@ -37,7 +37,7 @@ class TestParameterSchemaUnification:
         # Run grep to find any manual parameter schema methods in provider implementations
         # Should only find base classes with auto-generated implementations
         result = subprocess.run([
-            'grep', '-r', 'def get_parameter_schema', 'irene/providers/'
+            'grep', '-r', 'def get_parameter_schema', 'backend/src/locveil_voice/providers/'
         ], capture_output=True, text=True, cwd=_REPO_ROOT)
         
         # Should only find base classes, not individual provider implementations
@@ -45,12 +45,12 @@ class TestParameterSchemaUnification:
         
         # Filter out base class files - these should have auto-generated implementations
         base_class_files = {
-            'irene/providers/audio/base.py',
-            'irene/providers/tts/base.py', 
-            'irene/providers/asr/base.py',
-            'irene/providers/llm/base.py',
-            'irene/providers/voice_trigger/base.py',
-            'irene/providers/nlu/base.py'
+            'backend/src/locveil_voice/providers/audio/base.py',
+            'backend/src/locveil_voice/providers/tts/base.py', 
+            'backend/src/locveil_voice/providers/asr/base.py',
+            'backend/src/locveil_voice/providers/llm/base.py',
+            'backend/src/locveil_voice/providers/voice_trigger/base.py',
+            'backend/src/locveil_voice/providers/nlu/base.py'
         }
         
         manual_implementations = []
@@ -69,14 +69,14 @@ class TestParameterSchemaUnification:
         """Verify no manual parameter schema dictionaries exist"""
         # Check for return statements with parameter schema dictionaries
         result = subprocess.run([
-            'grep', '-r', '-E', 'return.*"type".*:', 'irene/providers/'
+            'grep', '-r', '-E', 'return.*"type".*:', 'backend/src/locveil_voice/providers/'
         ], capture_output=True, text=True, cwd=_REPO_ROOT)
         
         assert result.returncode != 0 or not result.stdout.strip(), f"Manual parameter dictionaries found: {result.stdout}"
         
         # Check for hardcoded parameter validation patterns
         result = subprocess.run([
-            'grep', '-r', '-E', 'parameter.*schema.*=', 'irene/providers/'
+            'grep', '-r', '-E', 'parameter.*schema.*=', 'backend/src/locveil_voice/providers/'
         ], capture_output=True, text=True, cwd=_REPO_ROOT)
         
         assert result.returncode != 0 or not result.stdout.strip(), f"Hardcoded parameter schemas found: {result.stdout}"
@@ -243,7 +243,7 @@ class TestMasterConfigFieldAlignment:
         from pathlib import Path
         
         # Load master config
-        master_config_path = Path("configs/config-master.toml")
+        master_config_path = Path("config/config-master.toml")
         assert master_config_path.exists(), "config-master.toml not found"
         
         with open(master_config_path, "rb") as f:
@@ -350,9 +350,9 @@ class TestArchitecturalCompletion:
         """Final verification that zero manual patterns remain"""
         # Run all verification commands from the document
         verification_commands = [
-            ['grep', '-r', 'def get_parameter_schema', 'irene/providers/'],
-            ['grep', '-r', '-E', 'return.*"type".*:', 'irene/providers/'],
-            ['grep', '-r', '-E', 'parameter.*schema.*=', 'irene/providers/']
+            ['grep', '-r', 'def get_parameter_schema', 'backend/src/locveil_voice/providers/'],
+            ['grep', '-r', '-E', 'return.*"type".*:', 'backend/src/locveil_voice/providers/'],
+            ['grep', '-r', '-E', 'parameter.*schema.*=', 'backend/src/locveil_voice/providers/']
         ]
         
         results = {}

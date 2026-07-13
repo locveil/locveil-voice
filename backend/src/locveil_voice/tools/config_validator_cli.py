@@ -507,19 +507,19 @@ def main():
         epilog="""
 Examples:
   # Validate single configuration file
-  python -m locveil_voice.tools.config_validator_cli --config-file configs/production.toml
+  python -m locveil_voice.tools.config_validator_cli --config-file config/production.toml
   
   # CI/CD mode with JSON output
-  python -m locveil_voice.tools.config_validator_cli --config-file configs/config-master.toml --json --ci-mode
+  python -m locveil_voice.tools.config_validator_cli --config-file config/config-master.toml --json --ci-mode
   
   # Validate all configs in directory
-  python -m locveil_voice.tools.config_validator_cli --config-dir configs/ --json
+  python -m locveil_voice.tools.config_validator_cli --config-dir config/ --json
   
   # Profile-specific validation
-  python -m locveil_voice.tools.config_validator_cli --config-file configs/embedded-armv7.toml --profile voice-assistant
+  python -m locveil_voice.tools.config_validator_cli --config-file config/embedded-armv7.toml --profile voice-assistant
   
   # Generate validation report
-  python -m locveil_voice.tools.config_validator_cli --config-file configs/production.toml --output-report report.json
+  python -m locveil_voice.tools.config_validator_cli --config-file config/production.toml --output-report report.json
 
 Exit Codes:
   0 - All configurations are valid

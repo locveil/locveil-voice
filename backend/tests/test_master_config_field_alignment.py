@@ -37,7 +37,7 @@ class TestMasterConfigFieldAlignment:
     
     def test_master_config_exists_and_readable(self):
         """Test that config-master.toml exists and is readable"""
-        master_config_path = Path("configs/config-master.toml")
+        master_config_path = Path("config/config-master.toml")
         assert master_config_path.exists(), "config-master.toml not found"
         
         with open(master_config_path, "rb") as f:
@@ -48,7 +48,7 @@ class TestMasterConfigFieldAlignment:
     
     def test_audio_provider_field_alignment(self):
         """Test audio providers use 'device' instead of 'device_id' (Phase 6 alignment)"""
-        master_config_path = Path("configs/config-master.toml")
+        master_config_path = Path("config/config-master.toml")
         with open(master_config_path, "rb") as f:
             master_config = tomllib.load(f)
         
@@ -70,7 +70,7 @@ class TestMasterConfigFieldAlignment:
     
     def test_llm_provider_field_alignment(self):
         """Test LLM providers use 'model' instead of 'default_model' (Phase 6 alignment)"""
-        master_config_path = Path("configs/config-master.toml")
+        master_config_path = Path("config/config-master.toml")
         with open(master_config_path, "rb") as f:
             master_config = tomllib.load(f)
         
@@ -92,7 +92,7 @@ class TestMasterConfigFieldAlignment:
     
     def test_no_deprecated_field_names_in_master_config(self):
         """Test that no deprecated field names remain anywhere in master config"""
-        master_config_path = Path("configs/config-master.toml")
+        master_config_path = Path("config/config-master.toml")
         with open(master_config_path, "rb") as f:
             config_content = f.read().decode('utf-8')
         
@@ -110,7 +110,7 @@ class TestMasterConfigFieldAlignment:
     
     def test_provider_section_consistency(self):
         """Test that all provider sections are consistent with schema definitions"""
-        master_config_path = Path("configs/config-master.toml")
+        master_config_path = Path("config/config-master.toml")
         with open(master_config_path, "rb") as f:
             master_config = tomllib.load(f)
         
@@ -140,7 +140,7 @@ class TestMasterConfigFieldAlignment:
     
     def test_field_name_consistency_with_runtime_schemas(self):
         """Test that master config field names are consistent with runtime parameter schemas"""
-        master_config_path = Path("configs/config-master.toml")
+        master_config_path = Path("config/config-master.toml")
         with open(master_config_path, "rb") as f:
             master_config = tomllib.load(f)
         
@@ -189,7 +189,7 @@ class TestMasterConfigIntegrity:
     
     def test_all_components_have_provider_sections(self):
         """Test that all component types have provider sections in master config"""
-        master_config_path = Path("configs/config-master.toml")
+        master_config_path = Path("config/config-master.toml")
         with open(master_config_path, "rb") as f:
             master_config = tomllib.load(f)
         
@@ -207,7 +207,7 @@ class TestMasterConfigIntegrity:
     
     def test_master_config_toml_syntax_valid(self):
         """Test that master config has valid TOML syntax"""
-        master_config_path = Path("configs/config-master.toml")
+        master_config_path = Path("config/config-master.toml")
         
         try:
             with open(master_config_path, "rb") as f:

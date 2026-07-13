@@ -8,7 +8,7 @@ but these rules apply to any task). **Single source of truth** (relocated here f
 — names survive adding/removing/reordering, so references never break.
 
 - **`work-on-main`** — Work on `main`; branch only when explicitly asked.
-- **`config-master-file`** — `configs/config-master.toml` is the canonical config reference (a release-time
+- **`config-master-file`** — `config/config-master.toml` is the canonical config reference (a release-time
   `config-example.toml` is a later story). _Renamed from `config-master-canonical` 2026-07-11 (HK-2: the bridge's
   same-named rule renamed apart as `config-master-tree`); frozen archives keep the old slug._
 - **`hexagonal-architecture`** — Architecture target = Hexagonal; dependencies point inward (domain → application →

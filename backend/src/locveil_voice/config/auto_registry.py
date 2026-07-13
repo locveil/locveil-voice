@@ -560,7 +560,7 @@ class AutoSchemaRegistry:
         Analyze config-master.toml completeness against provider schemas AND (ARCH-15 PR-9.2) the
         top-level config sections + their scalar fields. Returns a report of missing/orphaned items.
 
-        `master_config_path` defaults to ``configs/config-master.toml``; override it (e.g. with a
+        `master_config_path` defaults to ``config/config-master.toml``; override it (e.g. with a
         drifted copy) to test drift detection.
         """
         report = {
@@ -573,7 +573,7 @@ class AutoSchemaRegistry:
         try:
             # Load master config
             if master_config_path is None:
-                master_config_path = Path("configs/config-master.toml")
+                master_config_path = Path("config/config-master.toml")
             if not master_config_path.exists():
                 report["valid"] = False
                 report["missing_sections"].append("ENTIRE_MASTER_CONFIG_MISSING")

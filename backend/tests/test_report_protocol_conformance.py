@@ -98,7 +98,7 @@ class TestConfiguredRepoMatchesThePin:
 
     @pytest.mark.parametrize("config_name", DEPLOYMENT_CONFIGS)
     def test_deployment_profile_points_at_the_pinned_reports_repo(self, config_name):
-        with open(_REPO_ROOT / "configs" / config_name, "rb") as f:
+        with open(_REPO_ROOT / "config" / config_name, "rb") as f:
             config = tomllib.load(f)
         assert config["reports"]["enabled"] is True
         assert config["reports"]["repo"] == PIN["repos"]["reports"]
