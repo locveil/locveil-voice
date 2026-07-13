@@ -494,6 +494,32 @@ size-matched to the Russian stack; language is a per-config/deployment choice (a
       board** (D-4/D-5), seeded when BUILD-21 lands, not decided unilaterally here. Scope for that design: which
       repo owns the unified compose, health-gated `depends_on` vs. tolerant clients, whether the units collapse
       into one, and how `update.sh` stays per-repo when the compose is not. Related: BUILD-18 (ops conformance).
+- [ ] **BUILD-36** [BUILD][ARCH][OPS][DOCKER] `[release]` — **Python backend layout & naming migration —
+      one tree churn** (board **PROD-21**, council decision **HK-8** 2026-07-13; normative & satisfies
+      `design-then-implement`: `../locveil-commons/process/python-layout.md`). Adopt the org convention:
+      src-layout under `backend/`, tests beside the package, uniform `irene`→`locveil_voice` import rename,
+      `configs/`→`config/`. The keeper checklist below is the `task-start-reconciliation` baseline; the
+      load-bearing counts were re-verified at intake 2026-07-13 (✓ = matches repo reality). Do it as ONE
+      churn (the expensive parts — docs sweep, lockfile, image rebuilds, controller cutover — must not run
+      twice); execute in the current quiet-ledger window (closes at ARCH-49 / next release push).
+      1. **Layout** — `irene/` → `backend/src/`; `pyproject.toml`, `uv.lock`, `mypy.ini`,
+         `pyrightconfig.json` into `backend/`; `configs`/`assets`/`ops`/`docker`/`docs`/`contracts`/`eval`
+         stay at repo root (product data, per §1). 3 known `__file__`-relative fixes.
+      2. **Tests** — 142 test files (`irene/tests/**`, ✓ 142) → `backend/tests/`, OUTSIDE the import package
+         (no `sys.path` shims).
+      3. **Rename** — uniform `irene`→`locveil_voice`; distribution `irene-voice-assistant`→`locveil-voice`
+         (+11 self-ref extras, ✓); 13 entry-point groups (✓ — `[project.scripts]` + 12
+         `[project.entry-points."irene.*"]`) → `locveil_voice.*`; 8 config-master/profile lines; config-ui
+         type regen (`config-ui-stays-functional`). Persona "Irene" stays in all user-visible strings (§2).
+      4. **Config tree** — `configs/` → `config/` (singular, org-wide) incl. the `config-master-file`
+         invariant text in CLAUDE.md.
+      5. **Eval venv** — wiring → `backend/.venv` (`eval/Makefile` / profiles).
+      6. **Env & scripts** — `IRENE_*`→`LOCVEIL_VOICE_*` (7 py files use it, ✓ owner-gated env keys per §3);
+         console scripts `irene-*`→`locveil-voice-*` with `irene-*` aliases retained for one release; scripted
+         WB7 cutover (compose keys + the ONE hand-edited secrets `.env` key + `update.sh`) + smoke.
+      7. **Images & docs** — all 6 backend images rebuilt + boot-verified (BUILD-11 bar); docs sweep via the
+         `docs/manifest.json` suspect-set (`user-facing-docs-are-done`). Write the voice local ID back into
+         the PROD-21 board entry.
 
 ### Documentation (DOC)
 
