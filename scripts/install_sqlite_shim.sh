@@ -12,8 +12,8 @@ set -euo pipefail
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
 src="$root/sitecustomize.py"
-sp="$("$root/.venv/bin/python" -c 'import sysconfig; print(sysconfig.get_paths()["purelib"])')"
+sp="$("$root/backend/.venv/bin/python" -c 'import sysconfig; print(sysconfig.get_paths()["purelib"])')"
 
 cp "$src" "$sp/sitecustomize.py"
 echo "installed sqlite shim → $sp/sitecustomize.py"
-"$root/.venv/bin/python" -c "import sqlite3; print('sqlite3 resolves to:', sqlite3.__name__, '| version', sqlite3.sqlite_version)"
+"$root/backend/.venv/bin/python" -c "import sqlite3; print('sqlite3 resolves to:', sqlite3.__name__, '| version', sqlite3.sqlite_version)"

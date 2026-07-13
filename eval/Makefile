@@ -38,10 +38,11 @@ TRACE        ?= 0
 TRACES_DIR   ?= traces/run
 FAILURES_DIR ?= traces/failures
 
-# uv-managed project venv: has irene + eval_commons, and its bin holds the console scripts.
+# uv-managed project venv: has locveil-voice + eval_commons, and its bin holds the console scripts.
+# It lives beside backend/pyproject.toml (src-layout, BUILD-36) → ../backend/.venv.
 # promptfoo shells out to PROMPTFOO_PYTHON for the Python providers/assertions; the cli_provider
 # subprocess finds `irene-*` because we prepend the venv bin to PATH.
-VENV_BIN := $(abspath ..)/.venv/bin
+VENV_BIN := $(abspath ..)/backend/.venv/bin
 export PROMPTFOO_PYTHON := $(VENV_BIN)/python
 export PATH := $(VENV_BIN):$(PATH)
 
@@ -126,7 +127,7 @@ endif
 device-auto: device-tests device-sut-config  ## one-shot local run: mock bridge + SUT up → suite → teardown
 	@pkill -f "[e]val_commons.mock_bridge" 2>/dev/null; sleep 0.5; true  # stale mock on the port = stale golden served silently ([e] keeps pkill from matching THIS shell)
 	@$(PROMPTFOO_PYTHON) -m eval_commons.mock_bridge --catalog ../../locveil-commons/contracts/pins/catalog/catalog.golden.json --port $(MOCK_BRIDGE_PORT) & MOCK=$$!; \
-	( cd .. && .venv/bin/irene-webapi -c $(DEVICE_SUT_CONFIG) --port 6000 >/tmp/irene-device-eval.log 2>&1 ) & SUT=$$!; \
+	( cd .. && backend/.venv/bin/irene-webapi -c $(DEVICE_SUT_CONFIG) --port 6000 >/tmp/irene-device-eval.log 2>&1 ) & SUT=$$!; \
 	echo ">> waiting for $(HEALTH_URL) ..."; \
 	for i in $$(seq 1 60); do curl -sf "$(HEALTH_URL)" >/dev/null 2>&1 && break; sleep 1; done; \
 	$(PROMPTFOO) eval -c device.promptfooconfig.yaml -j 1 $(DEVICE_TIER_FILTER) -o results-device-$(TARGET)-t$(TIER).json; code=$$?; \
@@ -162,7 +163,7 @@ replay-judge:                 ## the trace-ux tier of the replay suite (DeepSeek
 
 serve:                        ## bring Irene up LOCALLY with CONFIG (foreground; Ctrl-C to stop)
 	@echo ">> Irene local: IRENE_CONFIG_FILE=$(IRENE_CONFIG_FILE)  (serving for $(WS_AUDIO_URL))"
-	cd .. && IRENE_CONFIG_FILE=$(IRENE_CONFIG_FILE) uv run irene-webapi --port 6000
+	cd .. && IRENE_CONFIG_FILE=$(IRENE_CONFIG_FILE) uv run --project backend irene-webapi --port 6000
 
 # Local model/config comparison: bring the SUT up per config, run the WS suite, tear down.
 # Writes results-ws-$(TARGET)-<config>.json per run. LOCAL only (remote = one TARGET=wb7 run).
@@ -170,7 +171,7 @@ compare:                      ## run the WS suite against each of CONFIGS (local
 	@for c in $(CONFIGS); do \
 	  echo "=================  config: $$c  ================="; \
 	  set -a; . profiles/configs/$$c.env; set +a; \
-	  ( cd .. && IRENE_CONFIG_FILE=$$IRENE_CONFIG_FILE uv run irene-webapi --port 6000 ) & SUT=$$!; \
+	  ( cd .. && IRENE_CONFIG_FILE=$$IRENE_CONFIG_FILE uv run --project backend irene-webapi --port 6000 ) & SUT=$$!; \
 	  echo ">> waiting for $(HEALTH_URL) ..."; \
 	  for i in $$(seq 1 40); do curl -sf "$(HEALTH_URL)" >/dev/null 2>&1 && break; sleep 1; done; \
 	  $(PROMPTFOO) eval -c ws.promptfooconfig.yaml -o results-ws-$(TARGET)-$$c.json || true; \

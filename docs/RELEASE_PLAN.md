@@ -520,6 +520,15 @@ size-matched to the Russian stack; language is a per-config/deployment choice (a
       7. **Images & docs** — all 6 backend images rebuilt + boot-verified (BUILD-11 bar); docs sweep via the
          `docs/manifest.json` suspect-set (`user-facing-docs-are-done`). Write the voice local ID back into
          the PROD-21 board entry.
+      _Progress 2026-07-13 (commits BUILD-36 1/n–5/n): steps 1–5 code-complete & verified —
+      layout+rename (85dcc4d), configs→config + split-layout tool root-detection (f267035),
+      config-ui regen + ui-openapi v1.1 bump/tag (d125478), contract path fixes (346a5f3),
+      eval venv→backend/.venv wiring. Green: lint-imports 11/11, pytest 1408 passed, build-analyzer
+      14/14 profiles, config-ui check+build, contract-guard. **Pending (paused per plan):** step 6
+      (IRENE_*→LOCVEIL_VOICE_* env, console-script rename+aliases, scripted WB7 cutover, ops/update.sh,
+      install-irene.sh) + step 7 (3 Dockerfiles→root-context rewrite, 6 image rebuilds+boot-verify, docs
+      prose sweep). Dev bring-up before step-7 verify: `cd backend && uv sync` + `bash
+      scripts/install_sqlite_shim.sh` + `make setup` in eval/._
 
 ### Documentation (DOC)
 
