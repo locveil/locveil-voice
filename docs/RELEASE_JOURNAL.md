@@ -24,6 +24,12 @@ newest entries near the top of each dated section.
   (bridge-caught false green at catalog-v1.7); voice passes clean — all four owned-contract tags
   already exist. Executed by the commons session on owner instruction, filed and completed in one
   change per the quick-task precedent.
+- **2026-07-14 — BUILD-36 WB7 install deployed clean.** The controller upgrade — `git pull` + the
+  one-time `ops/cutover-env-locveil-voice.sh` (`.env` token-key rename → `update.sh` image pull/restart →
+  `/health` smoke) — landed without incident on the published armv7/ru image (`v20260713-a946dab`; code ==
+  HEAD). The deferred tail of the closed BUILD-36 is now fully deployed (repo + controller); no
+  breakage-BUG needed.
+
 - **2026-07-13 — BUILD-36 closed: the Python layout & naming migration (PROD-21/HK-8), owner-closed
   ahead of the WB7 install.** `irene`→`locveil_voice` + `backend/` src-layout + `configs/`→`config/` +
   env family `IRENE_*`→`LOCVEIL_VOICE_*` + console-script rename (with `irene-*` aliases), across 13
