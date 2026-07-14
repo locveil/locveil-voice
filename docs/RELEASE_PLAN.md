@@ -452,13 +452,6 @@ _Discrete functional defects (distinct from QUAL refactors/quality work). Surfac
       for ambiguity) may later avoid asking at all in some of these cases; this task is about the question being
       answerable when it *is* asked.
 
-- [ ] **BUG-42** [TEST] `[deferred]` — **Order-dependent flake:
-      `test_arch36_satellite.py::test_recorder_declined_and_next_utterance_finalizes` fails in the full
-      suite, passes in isolation** (its file also passes alone, 14/14). Reproduced identically on
-      2026-07-11 pre- and post-BUILD-29 trees (1 failed / 1379 passed both times), so it is
-      cross-file state leakage (another test's residue), not a recent regression. Diagnose with
-      `pytest -p no:randomly`-style bisection or `--lf`-adjacent ordering; fix the leaking fixture
-      or isolate the recorder state.
 ### Tests (TEST)
 > **Strategy (decided 2026-06-01): do NOT keep repairing the existing suite.** Most tests were written against
 > pre-refactor code and will be invalidated by the ARCH refactors (ARCH-1..5) and the code reviews (QUAL-8/10/12/14).
@@ -484,13 +477,6 @@ _Trace-driven system testing (design `docs/design/trace_system_testing.md`, TEST
       to german" → `greeting.hello` (0.86, keyword beats verb); bare "pause" → `audio.stop` (1.00 — note the
       RU twin «поставь на паузу» routes `smart_home.playback_pause`; decide the intended EN owner before
       fixing). Consumer half unaffected: `expect` stays canonical, the bridge replays language-blind.
-- [ ] **TEST-20** [TEST] `[deferred]` — **`test_arch36_satellite.py::test_recorder_declined_and_next_utterance_finalizes`
-      is flaky (~3/8).** Fails intermittently in isolation on a clean tree (measured 2026-07-09, 3 failures in 8
-      consecutive runs; confirmed **not** caused by the BUG-35 change — reproduced with that diff stashed). A
-      timing/ordering dependency in the recorder-declined path, not a product bug as far as anyone has shown.
-      Fix the test's synchronization (or the race it is accidentally documenting — decide which at task start).
-      Until then it can red a clean CI run at random, which is corrosive: it teaches everyone to ignore failures.
-
 ### Build & CI (BUILD)
 _Real English deployment across all three Docker arches (armv7/aarch64/x86_64) + English eval. Design
 `docs/design/multilingual_deployment.md` (I18N-1 ✓) → the implementation slices below. English models are slim and

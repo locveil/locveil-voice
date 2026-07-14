@@ -1391,6 +1391,15 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       `room_temperature`.
 
 ### Bugs (BUG)
+- [x] **BUG-42** [TEST] `[deferred]` — **Order-dependent flake:
+      `test_arch36_satellite.py::test_recorder_declined_and_next_utterance_finalizes` fails in the full
+      suite, passes in isolation** (its file also passes alone, 14/14). Reproduced identically on
+      2026-07-11 pre- and post-BUILD-29 trees (1 failed / 1379 passed both times), so it is
+      cross-file state leakage (another test's residue), not a recent regression. **CLOSED 2026-07-14 —
+      FOLDED INTO TEST-20.** Same test, same defect: the diagnosis above was wrong — the failure DOES
+      reproduce in isolation (8/20 measured at fix time), so cross-file leakage is falsified; one
+      load-sensitive root cause (the test's mtime-ordering coin flip), fixed under TEST-20.
+      docs: none — folded into TEST-20; test-internal.
 ### Tests (TEST)
 - [x] **TEST-0** (P0) — Minimal end-to-end smoke/integration harness (refactor safety net, Gate 0). **DONE
       2026-06-01** → `irene/tests/test_smoke_e2e.py` (**5 passed / 1 xfailed**, ~21s; boots the WebAPI runner once
@@ -1679,6 +1688,21 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
         EXECUTABLE at ARCH-8 PR-4 + the QUAL-35 T1 donation baseline. ~~Gated on TEST-17~~ (pinned 2026-07-05).
         Design §14.
 
+- [x] **TEST-20** [TEST] `[deferred]` — **DONE 2026-07-14.**
+      **`test_arch36_satellite.py::test_recorder_declined_and_next_utterance_finalizes` is flaky (~3/8).**
+      Failed intermittently in isolation on a clean tree (measured 2026-07-09, 3/8; confirmed not caused by
+      the BUG-35 change — reproduced with that diff stashed). The task-start decision ("test bug or product
+      race?") came down firmly on **test bug**: the recorder itself is deterministic (T-5 finalization, uuid
+      filenames — no overwrite possible). Root cause: the test ordered the two written trace files by
+      `st_mtime`, and back-to-back writes tie on the kernel's coarse file-timestamp clock almost always
+      (measured 196/200 ties), leaving "order" = filesystem hash order of two random uuid names — a coin
+      flip. Fix: identify the finalized first utterance by CONTENT (its dropped-uplink payload; both
+      envelopes carry `declined` since both decline tracing) instead of on-disk order. Evidence: pre-fix
+      8/20 red in isolation; post-fix 0/40 in isolation, file 14/14, full suite 1409 passed / 7 skipped.
+      **BUG-42 folded in** — same test, same root cause seen from the full-suite vantage; its "cross-file
+      state leakage, passes in isolation" diagnosis is falsified by the isolation reproductions (one
+      load-sensitive cause, not two defects).
+      docs: none — test-internal fix; no user-facing surface changed.
 - [x] **TEST-21** [EVAL][MQTT] `[release]` — **DONE 2026-07-10. Re-pin @ bridge v0.6.0 release cut** (the
       TEST-17 inward sync, filed-and-done same day off the bridge's release tag). Bridge commit `e965385`
       (HEAD at pin `46584f0`), bridge version **0.6.0**. The delta was version-only: `openapi.json` changed in

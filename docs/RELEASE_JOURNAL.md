@@ -20,6 +20,18 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-14 — TEST-20 done (BUG-42 folded in): the satellite-recorder flake was a coin flip on file
+  mtimes.** The two tasks turned out to be one defect filed from two vantage points — TEST-20 saw it
+  intermittent in isolation (3/8, 2026-07-09), BUG-42 saw it order-dependent in the full suite and
+  mis-diagnosed cross-file state leakage (2026-07-11). The recorder is innocent: uuid filenames, T-5
+  deterministic finalization. The test sorted the two trace files by `st_mtime` — and two back-to-back
+  writes tie on the kernel's coarse timestamp clock 196/200 times, so `files[0]` was filesystem hash
+  order of two uuids. First fix attempt (select by `declined` marker) failed 30/30 and taught the real
+  shape: BOTH envelopes are trace-declined; the discriminator is the uplink payload (error vs response).
+  Final fix selects by content. Pre-fix 8/20 red in isolation (falsifying BUG-42's "passes in
+  isolation"); post-fix 0/40, file 14/14, full suite 1409 pass / 7 skip. CI's random red — the one that
+  "teaches everyone to ignore failures" — is gone.
+
 - **2026-07-14 — PROD-24 intake: the Workbench delegations filed as ARCH-51 + UI-17.** The board's
   Workbench shell council (PROD-24, decided 2026-07-14; commons `docs/design/workbench.md`) delegated two
   voice items. Reconciled clean against the repo: config-ui is 7 pages (Overview + 6 — matching the

@@ -281,14 +281,20 @@ def test_recorder_declined_and_next_utterance_finalizes(tmp_path):
                            response={"text": "ок"}, error=None, rtt_ms=5.0,
                            trace_granted=False, controller_trace=None)
     rec.flush()
-    files = sorted(tmp_path.glob("*.json"), key=lambda f: f.stat().st_mtime)
-    assert len(files) == 2
-    first = json.loads(files[0].read_text())
+    envelopes = [json.loads(f.read_text()) for f in tmp_path.glob("*.json")]
+    assert len(envelopes) == 2
+
+    def uplink_of(env):
+        return next(s for s in env["execution"]["pipeline_stages"]
+                    if (s.get("stage") or s.get("stage_name")) == "uplink")
+
+    # back-to-back writes tie on coarse mtimes and filenames are uuids, so on-disk order
+    # is meaningless — identify the finalized first utterance by its dropped-uplink payload
+    dropped = [e for e in envelopes if "error" in str(uplink_of(e))]
+    assert len(dropped) == 1
+    first = dropped[0]
     assert first["controller_trace"] == {"declined": True}
     assert "reply_audio" not in first
-    uplink = next(s for s in first["execution"]["pipeline_stages"]
-                  if (s.get("stage") or s.get("stage_name")) == "uplink")
-    assert "error" in str(uplink)
 
 
 # --- reply client vs the §4 wire contract ----------------------------------------------------------
