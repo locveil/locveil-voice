@@ -20,6 +20,15 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-14 — QUAL-78 done: the healthcheck's 2.9k daily access lines are out of the log.** A
+  `logging.Filter` on `uvicorn.access` drops 2xx `/health` + `/ready` probe lines at the emitting logger,
+  installed in `_build_uvicorn_server` (the choke point both serve paths share); non-2xx probes stay —
+  a failing probe is the event worth seeing. The live verification (a real uvicorn server driven through
+  the mixin) caught a placement trap the unit tests could not: `uvicorn.Config.__init__` applies its
+  dictConfig, which RESETS the `uvicorn.access` logger's filters — attached before Config, the filter is
+  silently wiped and every probe still logs. Attached after, verified: two 200-probes dropped, a normal
+  request and a 503 probe both logged. 6 new tests; suite 1415 pass / 7 skip.
+
 - **2026-07-14 — TEST-20 done (BUG-42 folded in): the satellite-recorder flake was a coin flip on file
   mtimes.** The two tasks turned out to be one defect filed from two vantage points — TEST-20 saw it
   intermittent in isolation (3/8, 2026-07-09), BUG-42 saw it order-dependent in the full suite and

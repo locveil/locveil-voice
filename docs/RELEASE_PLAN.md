@@ -362,14 +362,6 @@ _Apply to every remediation task below (from the 4 review docs + QUAL-25/26). So
       phrases («поярче», «потемнее», «потеплее», «похолоднее», «притуши») — dedicated methods or a `delta` param.
       **Fixtures F100–F102 are already authored RED** in locveil-commons `crossover_fixtures.json` (mock static state
       carries `level: 60`; deltas recorded in the fixture notes) — flipping them green completes this.
-- [ ] **QUAL-78** [OPS] `[deferred]` — **The container healthcheck spams the log with one access line per probe.**
-      Since the honest `HEALTHCHECK` landed (ARCH-25, 2026-07-09) uvicorn access-logs every probe:
-      `INFO: 127.0.0.1:… - "GET /health HTTP/1.1" 200 OK` every 30 s, forever — ~2.9k lines/day in
-      `logs/irene.log`, drowning real events and burning the rotation budget BUG-30 just installed. Filter it:
-      a `logging.Filter` on `uvicorn.access` dropping 2xx `/health` (and `/ready`, per ARCH-45), installed where
-      `web_server.py` builds the uvicorn config (`_build_uvicorn_server`, which already special-cases uvicorn's
-      logging so its loggers propagate to the root handlers). Keep non-2xx — a failing probe is exactly the
-      event worth seeing. Surfaced on the WB7 bring-up.
 - [ ] **QUAL-79** [APICONTRACT] `[deferred]` — **`confidence` on the intent-result contract is a success flag, not
       a confidence.** `IntentResult.confidence` (`intents/models.py:55`, *"Confidence in the response"*) is set by
       only **4 of 120** `IntentResult(...)` constructions — all in `handlers/base.py`, `1.0` on the success helper

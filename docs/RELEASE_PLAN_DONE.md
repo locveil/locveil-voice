@@ -1343,6 +1343,21 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       (bridge maintainer's handoff note) and filed as **ARCH-39** (device-level 2-turn force-confirm) +
       **ARCH-40** (scenario force-reconcile via voice), both `[deferred]` post-release design tasks.
 
+- [x] **QUAL-78** [OPS] `[deferred]` — **DONE 2026-07-14. The container healthcheck spams the log with one
+      access line per probe.** Since the honest `HEALTHCHECK` landed (ARCH-25, 2026-07-09) uvicorn
+      access-logged every probe: `INFO: 127.0.0.1:… - "GET /health HTTP/1.1" 200 OK` every 30 s, forever —
+      ~2.9k lines/day drowning real events and burning the BUG-30 rotation budget. Fix as prescribed: a
+      `logging.Filter` on `uvicorn.access` (`_HealthProbeAccessFilter`, `runners/web_server.py`) dropping
+      2xx `/health` **and** `/ready` (covered ahead of ARCH-45), installed in `_build_uvicorn_server` — the
+      single choke point both serve paths share. Non-2xx probes stay visible (a failing probe is exactly the
+      event worth seeing); query strings don't unhide a probe; exact paths only (`/healthz` etc. unaffected).
+      One subtlety the live verification caught: the filter must attach AFTER `uvicorn.Config(...)` — its
+      `__init__` applies uvicorn's dictConfig, which resets the `uvicorn.access` logger's filters (attached
+      before, the filter is silently wiped). Verified against a real uvicorn server driven through
+      `_build_uvicorn_server`: two 200-probes dropped, a normal 200 request and a 503 probe both logged.
+      6 new tests (`test_web_server_logging.py`, incl. no-duplicate-on-rebuild); suite 1415 pass / 7 skip;
+      pyright clean on the changed files.
+      docs: none — removes internal log noise; no manifest doc describes access-log contents.
 - [x] **QUAL-80** [MQTT][TEST] `[release]` — **DONE 2026-07-09.** Golden catalog re-pinned
       `8159b4b0068d1c63` → **`16eee0f2f7832995`** (bridge commit `9714c3c3…`), at the bridge's request. Both
       driving fixes came out of the WB7 bring-up: **DRV-23** — WB-passthrough devices now expose feedback at

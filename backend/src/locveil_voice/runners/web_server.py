@@ -23,6 +23,30 @@ from ..__version__ import __version__
 logger = logging.getLogger(__name__)
 
 
+class _HealthProbeAccessFilter(logging.Filter):
+    """Drop SUCCESSFUL healthcheck-probe access lines (QUAL-78).
+
+    The container healthcheck probes /health every 30 s forever (~2.9k lines/day), drowning
+    real events and burning the BUG-30 rotation budget. Only 2xx probes are dropped — a
+    failing probe is exactly the event worth seeing. /ready is covered ahead of ARCH-45."""
+
+    _PROBE_PATHS = ("/health", "/ready")
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        # uvicorn.access records carry args = (client_addr, method, path, http_version, status)
+        args = record.args
+        if not isinstance(args, tuple) or len(args) != 5:
+            return True
+        path, status = args[2], args[4]
+        return not (isinstance(status, int) and 200 <= status < 300
+                    and str(path).split("?", 1)[0] in self._PROBE_PATHS)
+
+
+# One shared instance: Logger.addFilter is idempotent per object, so repeated server builds
+# (voice_runner + webapi_runner in one process, tests) never stack duplicates.
+_HEALTH_PROBE_FILTER = _HealthProbeAccessFilter()
+
+
 class WebServerMixin:
     """FastAPI/uvicorn server, shared by webapi_runner and voice_runner."""
 
@@ -240,7 +264,12 @@ class WebServerMixin:
             config_kwargs["log_config"] = None
             config_kwargs["access_log"] = False
         config_kwargs.update(ssl_config)
-        return uvicorn.Server(uvicorn.Config(**config_kwargs))  # type: ignore
+        config = uvicorn.Config(**config_kwargs)  # type: ignore
+        # QUAL-78: filter at the emitting logger, so probe noise stays out of the access log
+        # wherever uvicorn's handlers route (terminal, container stdout, or the root file).
+        # Attached AFTER Config: its __init__ applies dictConfig, which resets these filters.
+        logging.getLogger("uvicorn.access").addFilter(_HEALTH_PROBE_FILTER)
+        return uvicorn.Server(config)
 
     def _web_banner(self, args, *, alongside: str = "") -> None:
         if not args.quiet:
