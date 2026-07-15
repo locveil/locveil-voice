@@ -556,13 +556,19 @@ Governed by `config-ui-stays-functional` (config-ui must stay functional).
 
 - [ ] **UI-19** [UI][COMMONS] `[deferred]` — **full port body: composites + pages onto kit primitives** (sprint-02
       port-arc split, filed at intake 2026-07-15; display name "voice UI-19"; flagged at planning as the
-      sprint's largest execution risk, L+). Port the ~35 composite components and 7 pages (~32k lines) off
-      hand-rolled Tailwind palette classes onto `locveil-ui-kit` primitives + tokens (status surfaces →
-      `StatusChip`/`StatusDot`, dialogs → kit `Dialog`, selects → kit `Select`, tabs → kit `Tabs`, raw
-      buttons → kit `Button`, icons per the stylebook sizing rules), retiring the UI-18 wrapper shims where
-      call sites land on the kit directly. Gate: UI-18 done. Standalone app stays green at every cut
+      sprint's largest execution risk, L+. **Execution-intake corrections 2026-07-15:** real size = 35
+      composites + **6** pages (Overview retired at UI-17), **~11.7k** lines / 1051 raw palette class
+      instances — the planning "~32k" was inflated; the stylebook's Toast/AlertDialog/Tooltip standard
+      CANNOT ride this task — `ui-kit-v1` ships none of the three, so the 3× `window.confirm` and native
+      `title=` attrs stay → commons **IMPL-4** (kit additions) + voice **UI-21** (adoption sweep) filed;
+      the UI-18 wrapper shims are KEPT — they are thin kit adapters, not bypasses). Port the composites and
+      pages off hand-rolled Tailwind palette classes onto `locveil-ui-kit` primitives + tokens (status
+      surfaces → `StatusChip`/`StatusDot`/`Alert`, dialogs → kit `Dialog`, selects → kit `Select` where
+      radix semantics fit (empty-string option values keep a token-styled native select), raw buttons →
+      kit `Button`, icons per the stylebook sizing rules; pattern-card editors + Monaco panes stay custom
+      per stylebook §7, tokens only). Gate: UI-18 done. Plugin stays green at every cut
       (`config-ui-stays-functional`); both themes must render (kit tokens; no raw palette status classes
-      survive). Refs: sprint-02, `../locveil-commons/docs/design/ui/stylebook.md`.
+      survive — checked mechanically). Refs: sprint-02, `../locveil-commons/docs/design/ui/stylebook.md`.
 - [ ] **UI-20** [UI] `[deferred]` — **bundle Monaco locally — no CDN at runtime** (HK-11 side-find,
       2026-07-15, filed per `review-then-remediate`; the HK-11 write-back ID). `@monaco-editor/react`
       (used by `TomlPreview.tsx` + `DiffViewer.tsx`) ships no editor code — its default `loader` fetches
@@ -571,6 +577,12 @@ Governed by `config-ui-stays-functional` (config-ui must stay functional).
       loader at it (`loader.config({ monaco })` with a local import, or the vite worker-plugin route), or
       replace the two DiffEditor usages with a bundled diff view; verify the built app makes zero external
       requests. Rides naturally with UI-19/UI-17 (same files move), but is its own deliverable.
+- [ ] **UI-21** [UI][COMMONS] `[deferred]` — **Toast/AlertDialog/Tooltip adoption sweep** (filed at UI-19
+      execution intake, 2026-07-15). The stylebook (§7) names Toast (no more `window.confirm`), AlertDialog
+      and Tooltip (no more bare `title=`) as adopted standards, but `ui-kit-v1` ships none of them — the
+      gap is upstream. Once commons **IMPL-4** lands the kit components (next `ui-kit-vX`), sweep config-ui:
+      the 3× `window.confirm` → AlertDialog/Toast, native `title=` attrs → kit `Tooltip` where they carry
+      real content (icon-only buttons, truncated labels). Gated on commons IMPL-4.
 
 ### Release Readiness (REL)
 
