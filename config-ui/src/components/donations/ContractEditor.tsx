@@ -11,6 +11,9 @@
 
 import { useTranslation } from 'react-i18next';
 import { Plus, Trash2 } from 'lucide-react';
+import {
+  Button, Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from 'locveil-ui-kit';
 import Section from '@/components/ui/Section';
 import Input from '@/components/ui/Input';
 import Toggle from '@/components/ui/Toggle';
@@ -51,41 +54,51 @@ function ContractParamEditor({
   const isNumeric = param.type === 'integer' || param.type === 'float';
 
   return (
-    <div className="border rounded-xl p-3">
+    <div className="border border-border rounded-xl p-3">
       <div className="flex items-center justify-between mb-2">
         <div className="text-sm font-medium">{t('contract.parameter')}</div>
-        <button
-          className="p-1 rounded-lg border hover:bg-gray-50 disabled:opacity-50"
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 text-destructive"
           onClick={onRemove} disabled={disabled} title={t('contract.removeParameter')}
         >
-          <Trash2 className="w-4 h-4" />
-        </button>
+          <Trash2 />
+        </Button>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <Input label={t('contract.name')} value={param.name} onChange={(v) => set('name', v)} disabled={disabled} required />
         <label className="block">
           <div className="text-sm font-medium mb-1">{t('contract.type')}</div>
-          <select
-            className="w-full border rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+          <Select
             value={param.type}
-            onChange={(e) => set('type', e.target.value as ParameterType)}
+            onValueChange={(v) => set('type', v as ParameterType)}
             disabled={disabled}
           >
-            {PARAMETER_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-          </select>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {PARAMETER_TYPES.map((pt) => <SelectItem key={pt} value={pt}>{pt}</SelectItem>)}
+            </SelectContent>
+          </Select>
         </label>
         <Toggle label={t('contract.required')} checked={!!param.required} onChange={(v) => set('required', v)} disabled={disabled} />
         {param.type === 'entity' ? (
           <label className="block">
             <div className="text-sm font-medium mb-1">{t('contract.entityType')}</div>
-            <select
-              className="w-full border rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+            <Select
               value={param.entity_type ?? 'generic'}
-              onChange={(e) => set('entity_type', e.target.value as ContractParam['entity_type'])}
+              onValueChange={(v) => set('entity_type', v as ContractParam['entity_type'])}
               disabled={disabled}
             >
-              {ENTITY_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-            </select>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {ENTITY_TYPES.map((et) => <SelectItem key={et} value={et}>{et}</SelectItem>)}
+              </SelectContent>
+            </Select>
           </label>
         ) : null}
         {param.type === 'choice' ? (
@@ -96,7 +109,7 @@ function ContractParamEditor({
               onChange={(v) => set('choices', v)}
               disabled={disabled}
             />
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-muted-foreground mt-1">
               {t('contract.canonicalChoicesHelp')}
             </p>
           </div>
@@ -136,27 +149,31 @@ export default function ContractEditor({ contract, onChange, disabled = false }:
   return (
     <div className="space-y-6">
       <Section title={t('contract.sectionTitle')} defaultCollapsed={false}>
-        <p className="text-sm text-gray-600 mb-4">
+        <p className="text-sm text-muted-foreground mb-4">
           {t('contract.sectionHelp')}
         </p>
         <div className="space-y-4">
           {methods.map((method, mi) => (
-            <div key={`${method.method_name}#${method.intent_suffix}`} className="border rounded-xl bg-white p-4">
+            <div key={`${method.method_name}#${method.intent_suffix}`} className="border border-border rounded-xl bg-card p-4">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-semibold text-gray-900">{method.method_name}</span>
+                  <span className="text-sm font-semibold text-foreground">{method.method_name}</span>
                   <Badge variant="info">{method.intent_suffix}</Badge>
                 </div>
                 <label className="flex items-center gap-2 text-sm">
-                  <span className="text-gray-600">{t('contract.roomContext')}</span>
-                  <select
-                    className="border rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                  <span className="text-muted-foreground">{t('contract.roomContext')}</span>
+                  <Select
                     value={method.room_context ?? 'none'}
-                    onChange={(e) => setMethod(mi, { ...method, room_context: e.target.value as RoomContext })}
+                    onValueChange={(v) => setMethod(mi, { ...method, room_context: v as RoomContext })}
                     disabled={disabled}
                   >
-                    {ROOM_CONTEXTS.map((rc) => <option key={rc} value={rc}>{rc}</option>)}
-                  </select>
+                    <SelectTrigger className="h-8 w-auto gap-1">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ROOM_CONTEXTS.map((rc) => <SelectItem key={rc} value={rc}>{rc}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
                 </label>
               </div>
 
@@ -177,16 +194,16 @@ export default function ContractEditor({ contract, onChange, disabled = false }:
                     }}
                   />
                 ))}
-                <button
-                  className="inline-flex items-center gap-2 px-3 py-2 border rounded-xl hover:bg-gray-50 disabled:opacity-50"
+                <Button
+                  variant="outline"
                   onClick={() => setMethod(mi, {
                     ...method,
                     parameters: [...(method.parameters ?? []), { name: '', type: 'string', required: false }],
                   })}
                   disabled={disabled}
                 >
-                  <Plus className="w-4 h-4" /> {t('contract.addParameter')}
-                </button>
+                  <Plus /> {t('contract.addParameter')}
+                </Button>
               </div>
             </div>
           ))}

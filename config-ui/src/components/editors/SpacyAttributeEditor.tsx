@@ -11,11 +11,13 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Plus, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
-import { 
-  parseSpacyAttribute, 
-  reconstructSpacyAttribute, 
+import { Alert, AlertDescription, Button, Input, Label } from 'locveil-ui-kit';
+import Badge from '@/components/ui/Badge';
+import {
+  parseSpacyAttribute,
+  reconstructSpacyAttribute,
   getSpacyAttributeSuggestions,
-  type SpacyAttributeStructure 
+  type SpacyAttributeStructure
 } from '@/utils/spacyAttributeHelpers';
 import SpacyValueEditor from './SpacyValueEditor';
 
@@ -50,49 +52,43 @@ function StructuredAttributeEditor({
   };
 
   const getTypeIndicator = () => {
-    const typeColors: Record<string, string> = {
-      'string': 'bg-blue-100 text-blue-800',
-      'regex': 'bg-purple-100 text-purple-800',
-      'list': 'bg-green-100 text-green-800',
-      'boolean': 'bg-yellow-100 text-yellow-800',
-      'number': 'bg-orange-100 text-orange-800',
-      'operator': 'bg-red-100 text-red-800',
-      'unknown': 'bg-gray-100 text-gray-800'
-    };
-
+    // Value-type indicator is a neutral pill (raw palette per type is not part of the
+    // design system's status vocabulary).
     return (
-      <span className={`px-2 py-1 rounded-full text-xs font-medium ${typeColors[structure.valueType] || typeColors.unknown}`}>
+      <Badge variant="custom">
         {structure.valueType}
-      </span>
+      </Badge>
     );
   };
 
   return (
-    <div className="border border-gray-200 rounded-lg bg-white">
+    <div className="border border-border rounded-lg bg-card">
       {/* Header */}
-      <div className="flex items-center justify-between p-3 border-b border-gray-100">
+      <div className="flex items-center justify-between p-3 border-b border-border">
         <button
           onClick={() => setIsExpanded(!isExpanded)}
-          className="flex items-center gap-2 text-left flex-1 hover:bg-gray-50 -m-1 p-1 rounded"
+          className="flex items-center gap-2 text-left flex-1 hover:bg-muted/60 -m-1 p-1 rounded transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           disabled={disabled}
         >
           {isExpanded ? (
-            <ChevronDown className="w-4 h-4 text-gray-500" />
+            <ChevronDown className="w-4 h-4 text-muted-foreground" />
           ) : (
-            <ChevronRight className="w-4 h-4 text-gray-500" />
+            <ChevronRight className="w-4 h-4 text-muted-foreground" />
           )}
-          <span className="font-medium text-gray-900">{structure.displayLabel}</span>
+          <span className="font-medium text-foreground">{structure.displayLabel}</span>
           {getTypeIndicator()}
         </button>
-        
-        <button
+
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={onRemove}
-          className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
+          className="h-7 w-7 text-destructive"
           disabled={disabled}
           title={t('editors.spacy.removeAttribute')}
         >
-          <Trash2 className="w-4 h-4" />
-        </button>
+          <Trash2 />
+        </Button>
       </div>
 
       {/* Expandable Content */}
@@ -100,9 +96,11 @@ function StructuredAttributeEditor({
         <div className="p-3 space-y-3">
           {/* Description/Help */}
           {structure.isComplex && (
-            <div className="text-sm text-gray-600 bg-blue-50 border border-blue-200 rounded p-2">
-              {t('editors.spacy.matchPrefix')}<strong>{structure.attributeName}</strong>{t('editors.spacy.matchInfix')}<strong>{structure.valueType}</strong>{t('editors.spacy.matchSuffix')}
-            </div>
+            <Alert variant="accent">
+              <AlertDescription>
+                {t('editors.spacy.matchPrefix')}<strong>{structure.attributeName}</strong>{t('editors.spacy.matchInfix')}<strong>{structure.valueType}</strong>{t('editors.spacy.matchSuffix')}
+              </AlertDescription>
+            </Alert>
           )}
           
           {/* Value Editor */}
@@ -188,7 +186,7 @@ export default function SpacyAttributeEditor({
           ))}
         </div>
       ) : (
-        <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg border border-gray-200">
+        <div className="text-center py-8 text-muted-foreground bg-muted rounded-lg border border-border">
           <div className="text-sm font-medium mb-1">{t('editors.spacy.noAttributes')}</div>
           <div className="text-xs">{t('editors.spacy.addHint')}</div>
         </div>
@@ -198,23 +196,23 @@ export default function SpacyAttributeEditor({
       {!showAddForm ? (
         <button
           onClick={() => setShowAddForm(true)}
-          className="w-full flex items-center justify-center gap-2 p-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-gray-400 hover:text-gray-700 transition-colors"
+          className="w-full flex items-center justify-center gap-2 p-3 border-2 border-dashed border-border rounded-lg text-muted-foreground hover:border-muted-foreground hover:text-foreground transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
           disabled={disabled}
         >
           <Plus className="w-4 h-4" />
           {t('editors.spacy.addAttribute')}
         </button>
       ) : (
-        <div className="border border-gray-200 rounded-lg p-3 bg-gray-50">
+        <div className="border border-border rounded-lg p-3 bg-muted">
           <div className="space-y-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <Label className="mb-1">
                 {t('editors.spacy.attributeName')}
-              </label>
+              </Label>
               <select
                 value={newAttributeName}
                 onChange={(e) => setNewAttributeName(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full appearance-none rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <option value="">{t('editors.spacy.selectAttribute')}</option>
                 {getAttributeSuggestions().map(attr => (
@@ -223,40 +221,38 @@ export default function SpacyAttributeEditor({
                 <option value="custom">{t('editors.spacy.customAttribute')}</option>
               </select>
             </div>
-            
+
             {newAttributeName === 'custom' && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <Label className="mb-1">
                   {t('editors.spacy.customAttributeName')}
-                </label>
-                <input
+                </Label>
+                <Input
                   type="text"
                   value=""
                   onChange={(e) => setNewAttributeName(e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   placeholder={t('editors.spacy.customAttributePlaceholder')}
                 />
               </div>
             )}
-            
+
             <div className="flex gap-2">
-              <button
+              <Button
                 onClick={handleAddAttribute}
                 disabled={!newAttributeName || disabled}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors text-sm"
               >
                 {t('common:actions.add')}
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="outline"
                 onClick={() => {
                   setShowAddForm(false);
                   setNewAttributeName('');
                 }}
-                className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors text-sm"
                 disabled={disabled}
               >
                 {t('common:actions.cancel')}
-              </button>
+              </Button>
             </div>
           </div>
         </div>

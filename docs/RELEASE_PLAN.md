@@ -554,21 +554,6 @@ Governed by `config-ui-stays-functional` (config-ui must stay functional).
       `LanguageTabs` display-name map is inherently a UI concern (the backend has no display names) and degrades to
       `code.toUpperCase()`; the `DonationsPage` `['en','ru']` fallback is a defensible default for a rare miss._
 
-- [ ] **UI-19** [UI][COMMONS] `[deferred]` — **full port body: composites + pages onto kit primitives** (sprint-02
-      port-arc split, filed at intake 2026-07-15; display name "voice UI-19"; flagged at planning as the
-      sprint's largest execution risk, L+. **Execution-intake corrections 2026-07-15:** real size = 35
-      composites + **6** pages (Overview retired at UI-17), **~11.7k** lines / 1051 raw palette class
-      instances — the planning "~32k" was inflated; the stylebook's Toast/AlertDialog/Tooltip standard
-      CANNOT ride this task — `ui-kit-v1` ships none of the three, so the 3× `window.confirm` and native
-      `title=` attrs stay → commons **IMPL-4** (kit additions) + voice **UI-21** (adoption sweep) filed;
-      the UI-18 wrapper shims are KEPT — they are thin kit adapters, not bypasses). Port the composites and
-      pages off hand-rolled Tailwind palette classes onto `locveil-ui-kit` primitives + tokens (status
-      surfaces → `StatusChip`/`StatusDot`/`Alert`, dialogs → kit `Dialog`, selects → kit `Select` where
-      radix semantics fit (empty-string option values keep a token-styled native select), raw buttons →
-      kit `Button`, icons per the stylebook sizing rules; pattern-card editors + Monaco panes stay custom
-      per stylebook §7, tokens only). Gate: UI-18 done. Plugin stays green at every cut
-      (`config-ui-stays-functional`); both themes must render (kit tokens; no raw palette status classes
-      survive — checked mechanically). Refs: sprint-02, `../locveil-commons/docs/design/ui/stylebook.md`.
 - [ ] **UI-20** [UI] `[deferred]` — **bundle Monaco locally — no CDN at runtime** (HK-11 side-find,
       2026-07-15, filed per `review-then-remediate`; the HK-11 write-back ID). `@monaco-editor/react`
       (used by `TomlPreview.tsx` + `DiffViewer.tsx`) ships no editor code — its default `loader` fetches

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Button } from 'locveil-ui-kit';
 
 function coerceValue(v: string): string | number | boolean {
   if (v === '') return '';
@@ -65,8 +66,8 @@ export default function KeyValueEditor({
         {entries.map(([k, v]) => (
           <div key={k} className="flex items-center gap-2">
             <input
-              className={`border rounded-xl px-3 py-2 flex-1 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                disabled ? 'bg-gray-100 cursor-not-allowed' : ''
+              className={`border border-input bg-background rounded-md px-3 py-2 flex-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                disabled ? 'bg-muted cursor-not-allowed' : ''
               }`}
               value={k}
               onChange={(e) => updateKey(k, e.target.value)}
@@ -74,29 +75,30 @@ export default function KeyValueEditor({
               placeholder={t('keyValue.keyPlaceholder')}
             />
             <input
-              className={`border rounded-xl px-3 py-2 flex-1 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                disabled ? 'bg-gray-100 cursor-not-allowed' : ''
+              className={`border border-input bg-background rounded-md px-3 py-2 flex-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                disabled ? 'bg-muted cursor-not-allowed' : ''
               }`}
               value={String(v)}
               onChange={(e) => setKV(k, coerceValue(e.target.value))}
               disabled={disabled}
               placeholder={t('keyValue.valuePlaceholder')}
             />
-            <button
+            <Button
+              variant="outline"
+              size="icon"
               onClick={() => del(k)}
-              className="p-2 rounded-lg border hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={disabled}
               title={t('keyValue.removeEntry')}
             >
               ✕
-            </button>
+            </Button>
           </div>
         ))}
       </div>
       <div className="flex items-center gap-2">
         <input
-          className={`border rounded-xl px-3 py-2 flex-1 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-            disabled ? 'bg-gray-100 cursor-not-allowed' : ''
+          className={`border border-input bg-background rounded-md px-3 py-2 flex-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+            disabled ? 'bg-muted cursor-not-allowed' : ''
           }`}
           placeholder={t('keyValue.keyPlaceholder')}
           value={newKey}
@@ -104,21 +106,21 @@ export default function KeyValueEditor({
           disabled={disabled}
         />
         <input
-          className={`border rounded-xl px-3 py-2 flex-1 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-            disabled ? 'bg-gray-100 cursor-not-allowed' : ''
+          className={`border border-input bg-background rounded-md px-3 py-2 flex-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+            disabled ? 'bg-muted cursor-not-allowed' : ''
           }`}
           placeholder={t('keyValue.valuePlaceholder')}
           value={newVal}
           onChange={(e) => setNewVal(e.target.value)}
           disabled={disabled}
         />
-        <button
-          className="px-3 py-2 border rounded-xl hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+        <Button
+          variant="outline"
           onClick={addEntry}
           disabled={disabled || !newKey.trim()}
         >
           {t('common:actions.add')}
-        </button>
+        </Button>
       </div>
     </div>
   );

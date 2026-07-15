@@ -9,6 +9,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AlertCircle, FileText, Code } from 'lucide-react';
+import { Alert, AlertTitle, AlertDescription } from 'locveil-ui-kit';
 
 // Import reusable components from donations
 import HandlerList from '@/components/donations/HandlerList';
@@ -385,7 +386,7 @@ const TemplatesPage: React.FC = () => {
   if (loading && !selectedHandler) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
   }
@@ -395,8 +396,8 @@ const TemplatesPage: React.FC = () => {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">{t('page.title')}</h1>
-          <p className="text-gray-600">{t('page.subtitle')}</p>
+          <h1 className="text-2xl font-bold text-foreground">{t('page.title')}</h1>
+          <p className="text-muted-foreground">{t('page.subtitle')}</p>
         </div>
         <div className="flex items-center space-x-2 mt-1">
           <Badge variant="info">
@@ -413,15 +414,13 @@ const TemplatesPage: React.FC = () => {
 
       {/* Error Display */}
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-md p-4">
-          <div className="flex">
-            <AlertCircle className="h-5 w-5 text-red-400" />
-            <div className="ml-3">
-              <h3 className="text-sm font-medium text-red-800">{t('common:status.error')}</h3>
-              <p className="mt-1 text-sm text-red-700">{error}</p>
-            </div>
+        <Alert variant="destructive">
+          <AlertCircle />
+          <div>
+            <AlertTitle>{t('common:status.error')}</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
           </div>
-        </div>
+        </Alert>
       )}
 
       <div className="h-full flex">
@@ -475,25 +474,29 @@ const TemplatesPage: React.FC = () => {
                   {(!validationResult.isValid || validationResult.warnings.length > 0) && (
                     <Section title={t('page.validationResults')}>
                       {validationResult.errors.length > 0 && (
-                        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
-                          <h4 className="text-sm font-medium text-red-800 mb-1">{t('page.errorsHeading')}</h4>
-                          <ul className="text-sm text-red-700 list-disc list-inside">
-                            {validationResult.errors.map((error, index) => (
-                              <li key={index}>{error}</li>
-                            ))}
-                          </ul>
-                        </div>
+                        <Alert variant="destructive" className="mb-4">
+                          <AlertTitle className="text-sm">{t('page.errorsHeading')}</AlertTitle>
+                          <AlertDescription>
+                            <ul className="list-disc list-inside">
+                              {validationResult.errors.map((error, index) => (
+                                <li key={index}>{error}</li>
+                              ))}
+                            </ul>
+                          </AlertDescription>
+                        </Alert>
                       )}
-                      
+
                       {validationResult.warnings.length > 0 && (
-                        <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-md">
-                          <h4 className="text-sm font-medium text-yellow-800 mb-1">{t('page.warningsHeading')}</h4>
-                          <ul className="text-sm text-yellow-700 list-disc list-inside">
-                            {validationResult.warnings.map((warning, index) => (
-                              <li key={index}>{warning}</li>
-                            ))}
-                          </ul>
-                        </div>
+                        <Alert>
+                          <AlertTitle className="text-sm">{t('page.warningsHeading')}</AlertTitle>
+                          <AlertDescription className="text-muted-foreground">
+                            <ul className="list-disc list-inside">
+                              {validationResult.warnings.map((warning, index) => (
+                                <li key={index}>{warning}</li>
+                              ))}
+                            </ul>
+                          </AlertDescription>
+                        </Alert>
                       )}
                     </Section>
                   )}
@@ -511,17 +514,17 @@ const TemplatesPage: React.FC = () => {
                 </>
               ) : (
                 <div className="text-center py-12">
-                  <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">{t('page.noLanguage.title')}</h3>
-                  <p className="text-gray-600">{t('page.noLanguage.subtitle')}</p>
+                  <FileText className="w-12 h-12 text-muted-foreground/60 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-foreground mb-2">{t('page.noLanguage.title')}</h3>
+                  <p className="text-muted-foreground">{t('page.noLanguage.subtitle')}</p>
                 </div>
               )}
             </div>
           ) : (
             <div className="text-center py-12">
-              <Code className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">{t('page.noHandler.title')}</h3>
-              <p className="text-gray-600">{t('page.noHandler.subtitle')}</p>
+              <Code className="w-12 h-12 text-muted-foreground/60 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-foreground mb-2">{t('page.noHandler.title')}</h3>
+              <p className="text-muted-foreground">{t('page.noHandler.subtitle')}</p>
             </div>
           )}
         </div>

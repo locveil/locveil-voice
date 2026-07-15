@@ -9,7 +9,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { AlertCircle, AlertTriangle, Info } from 'lucide-react';
 import Badge from '@/components/ui/Badge';
-import type { ConflictReport } from '@/types';
+import type { BadgeProps, ConflictReport } from '@/types';
 
 interface ConflictBadgeProps {
   conflict: ConflictReport;
@@ -23,30 +23,30 @@ const ConflictBadge: React.FC<ConflictBadgeProps> = ({
   onClick
 }) => {
   const { t } = useTranslation('common');
-  const getSeverityConfig = () => {
+  const getSeverityConfig = (): { icon: typeof Info; variant: BadgeProps['variant']; label: string } => {
     switch (conflict.severity) {
       case 'blocker':
         return {
           icon: AlertCircle,
-          className: 'bg-red-100 text-red-800 border-red-300 hover:bg-red-200',
+          variant: 'error',
           label: 'Blocker'
         };
       case 'warning':
         return {
           icon: AlertTriangle,
-          className: 'bg-yellow-100 text-yellow-800 border-yellow-300 hover:bg-yellow-200',
+          variant: 'warning',
           label: 'Warning'
         };
       case 'info':
         return {
           icon: Info,
-          className: 'bg-blue-100 text-blue-800 border-blue-300 hover:bg-blue-200',
+          variant: 'info',
           label: 'Info'
         };
       default:
         return {
           icon: Info,
-          className: 'bg-gray-100 text-gray-800 border-gray-300 hover:bg-gray-200',
+          variant: 'default',
           label: 'Unknown'
         };
     }
@@ -86,9 +86,9 @@ const ConflictBadge: React.FC<ConflictBadgeProps> = ({
       title={getTooltipContent()}
       onClick={onClick}
     >
-      <Badge 
-        variant="custom" 
-        className={`${config.className} cursor-pointer transition-colors duration-150 text-xs`}
+      <Badge
+        variant={config.variant}
+        className="cursor-pointer transition-colors duration-200 text-xs"
       >
         <Icon className="w-3 h-3 mr-1" />
         {formatConflictType(conflict.conflict_type)}

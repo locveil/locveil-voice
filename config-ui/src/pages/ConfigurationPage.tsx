@@ -10,6 +10,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Settings, AlertCircle, CheckCircle, Loader, RefreshCw } from 'lucide-react';
+import { Button, Alert, AlertTitle, AlertDescription } from 'locveil-ui-kit';
 import apiClient from '@/utils/apiClient';
 import ConfigSection from '@/components/editors/ConfigSection';
 import TomlPreview from '@/components/editors/TomlPreview';
@@ -778,21 +779,21 @@ const ConfigurationPage: React.FC = () => {
     switch (state.connectionStatus) {
       case 'checking':
         return (
-          <div className="flex items-center text-gray-500">
+          <div className="flex items-center text-muted-foreground">
             <Loader className="h-4 w-4 animate-spin mr-2" />
             <span>{t('page.connection.checking')}</span>
           </div>
         );
       case 'connected':
         return (
-          <div className="flex items-center text-green-600">
+          <div className="flex items-center text-[hsl(var(--lv-status-persisted)_55%_32%)] dark:text-[hsl(var(--lv-status-persisted)_70%_72%)]">
             <CheckCircle className="h-4 w-4 mr-2" />
             <span>{t('page.connection.connected')}</span>
           </div>
         );
       case 'disconnected':
         return (
-          <div className="flex items-center text-red-600">
+          <div className="flex items-center text-destructive">
             <AlertCircle className="h-4 w-4 mr-2" />
             <span>{t('page.connection.disconnected')}</span>
           </div>
@@ -805,8 +806,8 @@ const ConfigurationPage: React.FC = () => {
       <div className="p-6 max-w-7xl mx-auto">
         <div className="flex items-center justify-center h-64">
           <div className="flex items-center space-x-3">
-            <Loader className="h-6 w-6 animate-spin text-blue-500" />
-            <span className="text-lg text-gray-600">{t('page.loading')}</span>
+            <Loader className="h-6 w-6 animate-spin text-primary" />
+            <span className="text-lg text-muted-foreground">{t('page.loading')}</span>
           </div>
         </div>
       </div>
@@ -816,22 +817,21 @@ const ConfigurationPage: React.FC = () => {
   if (state.error) {
     return (
       <div className="p-6 max-w-7xl mx-auto">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-          <div className="flex items-center">
-            <AlertCircle className="h-6 w-6 text-red-500 mr-3" />
-            <div>
-              <h2 className="text-lg font-semibold text-red-900">{t('page.errorTitle')}</h2>
-              <p className="text-red-700 mt-1">{state.error}</p>
-            </div>
+        <Alert variant="destructive" className="rounded-lg p-6">
+          <AlertCircle />
+          <div>
+            <AlertTitle className="text-lg font-semibold">{t('page.errorTitle')}</AlertTitle>
+            <AlertDescription>{state.error}</AlertDescription>
+            <Button
+              variant="outline"
+              className="mt-4"
+              onClick={() => void loadConfiguration()}
+            >
+              <RefreshCw />
+              {t('common:actions.retry')}
+            </Button>
           </div>
-          <button
-            onClick={() => void loadConfiguration()}
-            className="mt-4 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 flex items-center"
-          >
-            <RefreshCw className="h-4 w-4 mr-2" />
-            {t('common:actions.retry')}
-          </button>
-        </div>
+        </Alert>
       </div>
     );
   }
@@ -843,33 +843,29 @@ const ConfigurationPage: React.FC = () => {
         <div className="flex items-center justify-between">
           <div>
             <div className="flex items-center space-x-3 mb-2">
-              <h1 className="text-3xl font-bold text-gray-900">
+              <h1 className="text-3xl font-bold text-foreground">
                 {t('page.title')}
               </h1>
               <span
-                className="px-3 py-1 bg-blue-100 text-blue-800 text-sm font-medium rounded-full cursor-help"
+                className="px-3 py-1 border border-border bg-muted text-muted-foreground text-sm font-medium rounded-full cursor-help"
                 title={state.configStatus?.config_path || t('page.configFileTitle')}
               >
                 {getConfigFileName()}
               </span>
             </div>
-            <p className="text-gray-600">
+            <p className="text-muted-foreground">
               {t('page.subtitle')}
             </p>
           </div>
           <div className="flex items-center space-x-4">
             {renderConnectionStatus()}
-            <button
+            <Button
+              variant={showPreview ? 'default' : 'outline'}
               onClick={() => setShowPreview(!showPreview)}
-              className={`px-4 py-2 rounded-md flex items-center transition-colors ${
-                showPreview 
-                  ? 'bg-blue-100 text-blue-700 border border-blue-200 hover:bg-blue-200' 
-                  : 'bg-gray-100 text-gray-700 border border-gray-200 hover:bg-gray-200'
-              }`}
             >
-              <Settings className="h-4 w-4 mr-2" />
+              <Settings />
               {showPreview ? t('page.showConfigEditor') : t('page.showTomlPreview')}
-            </button>
+            </Button>
           </div>
         </div>
 
@@ -881,30 +877,30 @@ const ConfigurationPage: React.FC = () => {
         if (summary.total === 0) return null;
         
         return (
-          <div className="mb-4 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+          <div className="mb-4 p-3 bg-muted border border-border rounded-lg">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
-                <span className="text-sm font-medium text-gray-700">{t('page.testStatus.title')}</span>
+                <span className="text-sm font-medium text-muted-foreground">{t('page.testStatus.title')}</span>
                 {summary.testing > 0 && (
-                  <div className="flex items-center text-blue-600">
+                  <div className="flex items-center text-primary">
                     <Loader className="h-4 w-4 animate-spin mr-1" />
                     <span className="text-sm">{t('page.testStatus.testing', { count: summary.testing })}</span>
                   </div>
                 )}
                 {summary.applied > 0 && (
-                  <div className="flex items-center text-green-600">
+                  <div className="flex items-center text-[hsl(var(--lv-status-persisted)_55%_32%)] dark:text-[hsl(var(--lv-status-persisted)_70%_72%)]">
                     <CheckCircle className="h-4 w-4 mr-1" />
                     <span className="text-sm">{t('page.testStatus.applied', { count: summary.applied })}</span>
                   </div>
                 )}
                 {summary.errors > 0 && (
-                  <div className="flex items-center text-red-600">
+                  <div className="flex items-center text-destructive">
                     <AlertCircle className="h-4 w-4 mr-1" />
                     <span className="text-sm">{t('page.testStatus.errors', { count: summary.errors })}</span>
                   </div>
                 )}
               </div>
-              <div className="text-xs text-gray-500">
+              <div className="text-xs text-muted-foreground">
                 {t('page.testStatus.summary', { count: summary.total })}
               </div>
             </div>

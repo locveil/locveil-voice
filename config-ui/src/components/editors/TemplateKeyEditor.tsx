@@ -8,6 +8,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Trash2, Plus, ChevronDown, ChevronRight } from 'lucide-react';
+import { Button } from 'locveil-ui-kit';
 import Input from '@/components/ui/Input';
 import TextArea from '@/components/ui/TextArea';
 import ArrayOfStringsEditor from './ArrayOfStringsEditor';
@@ -87,7 +88,7 @@ const TemplateKeyEditor: React.FC<TemplateKeyEditorProps> = ({
       case 'string':
         return (
           <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-700">
+            <label className="block text-sm font-medium text-muted-foreground">
               {t('keyEditor.stringLabel')}
             </label>
             {typeof value === 'string' && value.length > 100 ? (
@@ -110,7 +111,7 @@ const TemplateKeyEditor: React.FC<TemplateKeyEditorProps> = ({
       case 'array':
         return (
           <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-700">
+            <label className="block text-sm font-medium text-muted-foreground">
               {t('keyEditor.arrayLabel')}
             </label>
             <ArrayOfStringsEditor
@@ -126,19 +127,20 @@ const TemplateKeyEditor: React.FC<TemplateKeyEditorProps> = ({
         return (
           <div className="space-y-2">
             <div className="flex justify-between items-center">
-              <label className="block text-sm font-medium text-gray-700">
+              <label className="block text-sm font-medium text-muted-foreground">
                 {t('keyEditor.objectLabel')}
               </label>
-              <button
+              <Button
                 type="button"
+                variant="link"
+                size="sm"
                 onClick={addObjectKey}
-                className="flex items-center space-x-1 text-sm text-blue-600 hover:text-blue-500"
               >
-                <Plus className="w-4 h-4" />
+                <Plus />
                 <span>{t('keyEditor.addKey')}</span>
-              </button>
+              </Button>
             </div>
-            <div className="space-y-3 bg-gray-50 p-3 rounded-md">
+            <div className="space-y-3 bg-muted p-3 rounded-md">
               {typeof value === 'object' && value !== null && !Array.isArray(value) && (
                 Object.entries(value).map(([objKey, objValue]) => (
                   <div key={objKey} className="flex space-x-2">
@@ -154,14 +156,16 @@ const TemplateKeyEditor: React.FC<TemplateKeyEditorProps> = ({
                       placeholder={t('keyEditor.valuePlaceholder')}
                       className="flex-1"
                     />
-                    <button
+                    <Button
                       type="button"
+                      variant="ghost"
+                      size="icon"
                       onClick={() => handleObjectKeyDelete(objKey)}
-                      className="p-2 text-red-600 hover:text-red-500"
+                      className="text-destructive"
                       title={t('keyEditor.deleteKey')}
                     >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                      <Trash2 />
+                    </Button>
                   </div>
                 ))
               )}
@@ -175,35 +179,35 @@ const TemplateKeyEditor: React.FC<TemplateKeyEditorProps> = ({
   };
 
   return (
-    <div className="border border-gray-200 rounded-lg p-4 space-y-4">
+    <div className="border border-border rounded-lg p-4 space-y-4">
       <div className="flex items-center justify-between">
-        <button
+        <Button
           type="button"
+          variant="ghost"
+          size="sm"
           onClick={() => setIsExpanded(!isExpanded)}
-          className="flex items-center space-x-2 text-sm font-medium text-gray-700 hover:text-gray-900"
+          className="text-sm font-medium text-muted-foreground hover:text-foreground"
         >
-          {isExpanded ? (
-            <ChevronDown className="w-4 h-4" />
-          ) : (
-            <ChevronRight className="w-4 h-4" />
-          )}
+          {isExpanded ? <ChevronDown /> : <ChevronRight />}
           <span>{templateKey}</span>
-        </button>
-        
-        <button
+        </Button>
+
+        <Button
           type="button"
+          variant="ghost"
+          size="icon"
           onClick={() => onDelete(templateKey)}
-          className="p-1 text-red-600 hover:text-red-500"
+          className="text-destructive"
           title={t('keyEditor.deleteTemplateKey')}
         >
-          <Trash2 className="w-4 h-4" />
-        </button>
+          <Trash2 />
+        </Button>
       </div>
 
       {isExpanded && (
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-muted-foreground mb-1">
               {t('keyEditor.keyNameReadonly')}
             </label>
             <Input
@@ -211,13 +215,13 @@ const TemplateKeyEditor: React.FC<TemplateKeyEditorProps> = ({
               onChange={() => {}} // Read-only
               placeholder={t('keyEditor.keyIdentifierPlaceholder')}
               disabled={true}
-              className="bg-gray-50 cursor-not-allowed"
+              className="cursor-not-allowed"
             />
           </div>
 
           {renderValueEditor()}
 
-          <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded">
+          <div className="text-xs text-muted-foreground bg-muted p-2 rounded">
             <strong>{t('keyEditor.typeLabel')}</strong> {getValueType()} |
             <strong> {t('keyEditor.lengthLabel')}</strong> {
               getValueType() === 'string' 

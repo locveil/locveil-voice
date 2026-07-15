@@ -10,6 +10,7 @@
 
 import { useTranslation } from 'react-i18next';
 import { Plus, Trash2 } from 'lucide-react';
+import { Button } from 'locveil-ui-kit';
 import CardEditor from './CardEditor';
 import { useDecompiledPatterns } from '@/hooks/useDecompiledPatterns';
 import {
@@ -45,19 +46,21 @@ export default function CardPatternsEditor({
   return (
     <div className="space-y-3">
       {patterns.length === 0 && (
-        <div className="text-sm text-gray-500">{t('cards.list.empty', { item })}</div>
+        <div className="text-sm text-muted-foreground">{t('cards.list.empty', { item })}</div>
       )}
       {patterns.map((pattern, pi) => (
-        <div key={pi} className="border rounded-xl p-3 bg-gray-50">
+        <div key={pi} className="border border-border rounded-xl p-3 bg-muted">
           <div className="flex items-center justify-between mb-2">
             <div className="text-sm font-medium capitalize">{t('cards.list.entry', { item, index: pi + 1 })}</div>
-            <button
+            <Button
               type="button"
-              className="p-1 rounded-lg border bg-white hover:bg-gray-50 disabled:opacity-50"
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-destructive"
               onClick={() => removePattern(pi)} disabled={disabled} title={t('cards.list.removeItem', { item })}
             >
-              <Trash2 className="w-4 h-4" />
-            </button>
+              <Trash2 />
+            </Button>
           </div>
           <div className="flex flex-col gap-2">
             {pattern.map((card, ci) => (
@@ -69,23 +72,24 @@ export default function CardPatternsEditor({
                 disabled={disabled}
               />
             ))}
-            <button
+            <Button
               type="button"
-              className="inline-flex items-center gap-2 px-3 py-2 border rounded-lg bg-white hover:bg-gray-50 disabled:opacity-50 text-sm"
+              variant="outline"
+              size="sm"
               onClick={() => addCard(pi)} disabled={disabled}
             >
-              <Plus className="w-4 h-4" /> {t('cards.list.addWord')}
-            </button>
+              <Plus /> {t('cards.list.addWord')}
+            </Button>
           </div>
         </div>
       ))}
-      <button
+      <Button
         type="button"
-        className="inline-flex items-center gap-2 px-3 py-2 border rounded-xl hover:bg-gray-50 disabled:opacity-50"
+        variant="outline"
         onClick={addPattern} disabled={disabled}
       >
-        <Plus className="w-4 h-4" /> {t('cards.list.addAnother', { item })}
-      </button>
+        <Plus /> {t('cards.list.addAnother', { item })}
+      </Button>
     </div>
   );
 }

@@ -8,6 +8,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AlertCircle, Trash2, FileText, ChevronDown, ChevronRight } from 'lucide-react';
+import { Button, Alert, AlertTitle, AlertDescription, Skeleton } from 'locveil-ui-kit';
 
 // Import components
 import HandlerList from '@/components/donations/HandlerList';
@@ -135,8 +136,8 @@ function MethodDonationEditor({
       <Section title={t('page.basicInformation')} defaultCollapsed={false}>
         <div className="space-y-4">
           {/* Structural/Metadata fields - Read only */}
-          <div className="p-4 bg-gray-50 rounded-lg border">
-            <h4 className="text-sm font-medium text-gray-700 mb-3">{t('page.structureMetadata')}</h4>
+          <div className="p-4 bg-muted rounded-lg border border-border">
+            <h4 className="text-sm font-medium text-muted-foreground mb-3">{t('page.structureMetadata')}</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <div>
                 <Input
@@ -146,7 +147,7 @@ function MethodDonationEditor({
                   disabled={true}
                   required
                 />
-                <p className="text-xs text-gray-500 mt-1">{t('page.handlerDomainHelp')}</p>
+                <p className="text-xs text-muted-foreground mt-1">{t('page.handlerDomainHelp')}</p>
               </div>
               <div>
                 <Input
@@ -155,7 +156,7 @@ function MethodDonationEditor({
                   onChange={() => {}} // No-op since it's readonly
                   disabled={true}
                 />
-                <p className="text-xs text-gray-500 mt-1">{t('page.languageHelp')}</p>
+                <p className="text-xs text-muted-foreground mt-1">{t('page.languageHelp')}</p>
               </div>
               <div>
                 <Input
@@ -164,7 +165,7 @@ function MethodDonationEditor({
                   onChange={() => {}} // No-op since it's readonly
                   disabled={true}
                 />
-                <p className="text-xs text-gray-500 mt-1">{t('page.schemaVersionHelp')}</p>
+                <p className="text-xs text-muted-foreground mt-1">{t('page.schemaVersionHelp')}</p>
               </div>
               <div>
                 <Input
@@ -173,7 +174,7 @@ function MethodDonationEditor({
                   onChange={() => {}} // No-op since it's readonly
                   disabled={true}
                 />
-                <p className="text-xs text-gray-500 mt-1">{t('page.donationVersionHelp')}</p>
+                <p className="text-xs text-muted-foreground mt-1">{t('page.donationVersionHelp')}</p>
               </div>
             </div>
           </div>
@@ -187,7 +188,7 @@ function MethodDonationEditor({
               disabled={disabled}
               required
             />
-            <p className="text-xs text-gray-500 mt-1">{t('page.descriptionHelp')}</p>
+            <p className="text-xs text-muted-foreground mt-1">{t('page.descriptionHelp')}</p>
           </div>
         </div>
       </Section>
@@ -200,45 +201,47 @@ function MethodDonationEditor({
             const methodName = method.method_name || t('page.methodFallback', { index: idx + 1 });
             
             return (
-              <div key={idx} className="border rounded-xl bg-white">
+              <div key={idx} className="border border-border rounded-xl bg-card">
                 {/* Collapsible Header */}
-                <div className="flex items-center justify-between p-4 border-b border-gray-100">
+                <div className="flex items-center justify-between p-4 border-b border-border">
                   <button
                     onClick={() => toggleMethodExpansion(idx)}
-                    className="flex items-center space-x-2 text-left flex-1 hover:bg-gray-50 -m-2 p-2 rounded-lg transition-colors"
+                    className="flex items-center space-x-2 text-left flex-1 hover:bg-muted/60 -m-2 p-2 rounded-lg transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     disabled={disabled}
                   >
                     {isExpanded ? (
-                      <ChevronDown className="w-4 h-4 text-gray-500" />
+                      <ChevronDown className="w-4 h-4 text-muted-foreground" />
                     ) : (
-                      <ChevronRight className="w-4 h-4 text-gray-500" />
+                      <ChevronRight className="w-4 h-4 text-muted-foreground" />
                     )}
                     <div>
-                      <h4 className="text-sm font-medium text-gray-900">{methodName}</h4>
+                      <h4 className="text-sm font-medium text-foreground">{methodName}</h4>
                       {method.description && (
-                        <p className="text-xs text-gray-500 mt-0.5">{method.description}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">{method.description}</p>
                       )}
                     </div>
                   </button>
-                  <button
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="text-destructive hover:text-destructive"
                     onClick={() => {
                       const newMethods = v.method_donations.filter((_, i) => i !== idx);
                       set('method_donations', newMethods);
                     }}
-                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
                     disabled={disabled}
                     title={t('page.removeMethod')}
                   >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                    <Trash2 />
+                  </Button>
                 </div>
 
                 {/* Collapsible Content */}
                 {isExpanded && (
                   <div className="p-4">
                     {/* Method Structure - Read only */}
-                    <div className="p-3 bg-gray-50 rounded-lg border mb-4">
-                      <h5 className="text-xs font-medium text-gray-600 mb-2">{t('page.methodStructure')}</h5>
+                    <div className="p-3 bg-muted rounded-lg border border-border mb-4">
+                      <h5 className="text-xs font-medium text-muted-foreground mb-2">{t('page.methodStructure')}</h5>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <div>
                           <Input
@@ -248,7 +251,7 @@ function MethodDonationEditor({
                             disabled={true}
                             required
                           />
-                          <p className="text-xs text-gray-500 mt-1">{t('page.methodNameHelp')}</p>
+                          <p className="text-xs text-muted-foreground mt-1">{t('page.methodNameHelp')}</p>
                         </div>
                         <div>
                           <Input
@@ -257,7 +260,7 @@ function MethodDonationEditor({
                             onChange={() => {}} // No-op since it's readonly
                             disabled={true}
                           />
-                          <p className="text-xs text-gray-500 mt-1">{t('page.intentSuffixHelp')}</p>
+                          <p className="text-xs text-muted-foreground mt-1">{t('page.intentSuffixHelp')}</p>
                         </div>
                       </div>
                     </div>
@@ -275,7 +278,7 @@ function MethodDonationEditor({
                         disabled={disabled}
                         placeholder={t('page.methodDescriptionPlaceholder')}
                       />
-                      <p className="text-xs text-gray-500 mt-1">{t('page.methodDescriptionHelp')}</p>
+                      <p className="text-xs text-muted-foreground mt-1">{t('page.methodDescriptionHelp')}</p>
                     </div>
 
                     {/* Method-specific editors */}
@@ -376,9 +379,9 @@ function MethodDonationEditor({
                                 const pParam = phrasingParams.find(p => p.name === cp.name);
                                 const isChoice = (cp.type === 'choice' || cp.type === 'entity') && (cp.choices?.length ?? 0) > 0;
                                 return (
-                                  <div key={cp.name} className="border rounded-xl p-3">
+                                  <div key={cp.name} className="border border-border rounded-xl p-3">
                                     <div className="text-sm font-medium mb-2">
-                                      {t('page.parameterLabel', { name: cp.name })} <span className="text-xs text-gray-500">{t('page.parameterType', { type: cp.type })}</span>
+                                      {t('page.parameterLabel', { name: cp.name })} <span className="text-xs text-muted-foreground">{t('page.parameterType', { type: cp.type })}</span>
                                     </div>
                                     <ExtractionFillersEditor
                                       value={pParam?.extraction_patterns ?? []}
@@ -409,16 +412,17 @@ function MethodDonationEditor({
             );
           }) || [])}
           
-          <button
+          <Button
+            variant="outline"
             onClick={() => {
               const newMethods = [...(v.method_donations || []), { method_name: '', intent_suffix: '', description: '', phrases: [], parameters: [], token_patterns: [], slot_patterns: {}, examples: [] }];
               set('method_donations', newMethods);
             }}
-            className="w-full p-4 border-2 border-dashed border-gray-300 rounded-xl text-gray-600 hover:border-gray-400 hover:text-gray-700 transition-colors"
+            className="w-full h-auto p-4 border-2 border-dashed rounded-xl text-muted-foreground hover:text-foreground"
             disabled={disabled}
           >
             {t('page.addMethod')}
-          </button>
+          </Button>
         </div>
       </Section>
 
@@ -921,12 +925,10 @@ const DonationsPage: React.FC = () => {
   if (loadingHandlers) {
     return (
       <div className="p-6">
-        <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded mb-4"></div>
-          <div className="grid grid-cols-4 gap-4">
-            <div className="h-96 bg-gray-200 rounded"></div>
-            <div className="col-span-3 h-96 bg-gray-200 rounded"></div>
-          </div>
+        <Skeleton className="h-8 rounded mb-4" />
+        <div className="grid grid-cols-4 gap-4">
+          <Skeleton className="h-96 rounded" />
+          <Skeleton className="col-span-3 h-96 rounded" />
         </div>
       </div>
     );
@@ -935,24 +937,24 @@ const DonationsPage: React.FC = () => {
   if (error) {
     return (
       <div className="p-6">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <div className="flex items-start">
-            <AlertCircle className="w-5 h-5 text-red-400 mt-0.5 mr-3 flex-shrink-0" />
-            <div>
-              <h3 className="text-red-800 font-medium">{t('page.failedToLoad')}</h3>
-              <p className="text-red-700 text-sm mt-1">{error}</p>
-              <button
-                onClick={() => {
-                  setError(null);
-                  void loadHandlers();
-                }}
-                className="mt-3 px-3 py-1 bg-red-100 text-red-800 rounded text-sm hover:bg-red-200 transition-colors"
-              >
-                {t('common:actions.retry')}
-              </button>
-            </div>
+        <Alert variant="destructive" className="rounded-lg p-4">
+          <AlertCircle />
+          <div>
+            <AlertTitle>{t('page.failedToLoad')}</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-3"
+              onClick={() => {
+                setError(null);
+                void loadHandlers();
+              }}
+            >
+              {t('common:actions.retry')}
+            </Button>
           </div>
-        </div>
+        </Alert>
       </div>
     );
   }
@@ -1004,7 +1006,7 @@ const DonationsPage: React.FC = () => {
 
             {/* Cross-Language Validation Panel */}
             {selectedHandler && selectedHandlerInfo && (
-              <div className="border-b border-gray-200 p-4 bg-gray-50">
+              <div className="border-b border-border p-4 bg-muted">
                 <CrossLanguageValidation
                   handlerName={selectedHandler}
                   handlerInfo={selectedHandlerInfo}
@@ -1019,7 +1021,7 @@ const DonationsPage: React.FC = () => {
             )}
 
             {/* QUAL-42: wiring report + LLM translation validation/drafting */}
-            <div className="border-b border-gray-200 p-4 bg-gray-50">
+            <div className="border-b border-border p-4 bg-muted">
               <DonationValidationPanel
                 handlerName={selectedHandler}
                 sourceLanguage={selectedLanguage}
@@ -1029,12 +1031,12 @@ const DonationsPage: React.FC = () => {
             </div>
 
             {/* Header */}
-            <div className="border-b border-gray-200 p-6 bg-white">
+            <div className="border-b border-border p-6 bg-card">
               <div className="flex items-center justify-between">
                 <div>
-                  <h1 className="text-2xl font-bold text-gray-900">{selectedHandler}</h1>
+                  <h1 className="text-2xl font-bold text-foreground">{selectedHandler}</h1>
                   {selectedLanguage && donations[`${selectedHandler}:${selectedLanguage}`] && (
-                    <p className="text-gray-600 mt-1">
+                    <p className="text-muted-foreground mt-1">
                       {donations[`${selectedHandler}:${selectedLanguage}`].description || t('page.noDescription')}
                     </p>
                   )}
@@ -1056,44 +1058,41 @@ const DonationsPage: React.FC = () => {
                     disabled={contractStatus === 'saving'}
                   />
                   <div className="flex items-center gap-2 mt-3">
-                    <button
+                    <Button
                       onClick={() => void handleSaveContract()}
                       disabled={!contractChanged || contractStatus === 'saving'}
-                      className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
                     >
                       {contractStatus === 'saving' ? t('page.savingContract') : t('page.saveContract')}
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                      variant="outline"
                       onClick={() => setContract(JSON.parse(contractOriginal) as DonationContract)}
                       disabled={!contractChanged || contractStatus === 'saving'}
-                      className="px-4 py-2 text-sm border rounded-lg hover:bg-gray-50 disabled:opacity-50"
                     >
                       {t('page.revert')}
-                    </button>
-                    {contractStatus === 'saved' && <span className="text-sm text-green-700">{t('page.contractSaved')}</span>}
+                    </Button>
+                    {contractStatus === 'saved' && <Badge variant="success">{t('page.contractSaved')}</Badge>}
                     {contractChanged && <Badge variant="warning">{t('page.unsavedContractChanges')}</Badge>}
                   </div>
                 </div>
               )}
 
-              <div className="text-lg font-semibold text-gray-900 mb-3">
+              <div className="text-lg font-semibold text-foreground mb-3">
                 {t('page.phrasing', { language: selectedLanguage?.toUpperCase() })}
               </div>
               {selectedLanguage && donations[`${selectedHandler}:${selectedLanguage}`] ? (
                 <div>
                   {/* Show notice for empty donations */}
                   {donations[`${selectedHandler}:${selectedLanguage}`].method_donations?.length === 0 && (
-                    <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                      <div className="flex items-start">
-                        <AlertCircle className="w-5 h-5 text-blue-500 mt-0.5 mr-3 flex-shrink-0" />
-                        <div>
-                          <h3 className="text-blue-800 font-medium">{t('page.newDonationTitle')}</h3>
-                          <p className="text-blue-700 text-sm mt-1">
-                            {t('page.newDonationText')}
-                          </p>
-                        </div>
+                    <Alert variant="accent" className="mb-4 rounded-lg p-4">
+                      <AlertCircle />
+                      <div>
+                        <AlertTitle>{t('page.newDonationTitle')}</AlertTitle>
+                        <AlertDescription>
+                          {t('page.newDonationText')}
+                        </AlertDescription>
                       </div>
-                    </div>
+                    </Alert>
                   )}
                   
                   <MethodDonationEditor
@@ -1114,18 +1113,18 @@ const DonationsPage: React.FC = () => {
                 </div>
               ) : (
                 <div className="flex items-center justify-center h-64">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                  <span className="ml-2 text-gray-600">{t('page.loadingDonation')}</span>
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                  <span className="ml-2 text-muted-foreground">{t('page.loadingDonation')}</span>
                 </div>
               )}
             </div>
           </>
         ) : (
-          <div className="flex items-center justify-center h-full bg-gray-50">
+          <div className="flex items-center justify-center h-full bg-muted">
             <div className="text-center">
-              <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-xl font-medium text-gray-900 mb-2">{t('page.selectHandlerTitle')}</h3>
-              <p className="text-gray-500">
+              <FileText className="w-16 h-16 text-muted-foreground/60 mx-auto mb-4" />
+              <h3 className="text-xl font-medium text-foreground mb-2">{t('page.selectHandlerTitle')}</h3>
+              <p className="text-muted-foreground">
                 {t('page.selectHandlerText')}
               </p>
             </div>

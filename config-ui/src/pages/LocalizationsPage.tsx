@@ -8,6 +8,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Globe, Loader, AlertCircle, Filter, RefreshCw } from 'lucide-react';
+import {
+  Button, Alert, AlertTitle, AlertDescription,
+  Select, SelectTrigger, SelectValue, SelectContent, SelectItem
+} from 'locveil-ui-kit';
 import { 
   DomainLanguageInfo, 
   LocalizationContentResponse
@@ -197,8 +201,8 @@ const LocalizationsPage: React.FC = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader className="w-8 h-8 animate-spin text-blue-600" />
-        <span className="ml-2 text-gray-600">{t('page.loading')}</span>
+        <Loader className="w-8 h-8 animate-spin text-primary" />
+        <span className="ml-2 text-muted-foreground">{t('page.loading')}</span>
       </div>
     );
   }
@@ -208,30 +212,31 @@ const LocalizationsPage: React.FC = () => {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">{t('page.title')}</h1>
-          <p className="text-gray-600">{t('page.subtitle')}</p>
+          <h1 className="text-2xl font-bold text-foreground">{t('page.title')}</h1>
+          <p className="text-muted-foreground">{t('page.subtitle')}</p>
         </div>
 
         <div className="flex items-center gap-2">
-          <button
+          <Button
+            variant="ghost"
             onClick={() => void loadDomains()}
-            className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+            className="text-muted-foreground hover:text-foreground"
           >
-            <RefreshCw className="w-4 h-4" />
+            <RefreshCw />
             {t('common:actions.refresh')}
-          </button>
+          </Button>
         </div>
       </div>
 
       {/* Error Display */}
       {error && (
-        <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-          <div className="flex items-center gap-2">
-            <AlertCircle className="w-5 h-5 text-red-500" />
-            <span className="text-red-800 font-medium">{t('common:status.error')}</span>
+        <Alert variant="destructive" className="rounded-lg p-4">
+          <AlertCircle />
+          <div>
+            <AlertTitle>{t('common:status.error')}</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
           </div>
-          <p className="text-red-700 mt-1">{error}</p>
-        </div>
+        </Alert>
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -240,16 +245,20 @@ const LocalizationsPage: React.FC = () => {
           <Section title={t('page.domains')} className="h-fit">
             {/* Filter Controls */}
             <div className="mb-4 flex items-center gap-2">
-              <Filter className="w-4 h-4 text-gray-500" />
-              <select
+              <Filter className="w-4 h-4 text-muted-foreground" />
+              <Select
                 value={languageFilter}
-                onChange={(e) => setLanguageFilter(e.target.value as 'all' | 'single' | 'multiple')}
-                className="text-sm border border-gray-200 rounded px-2 py-1 bg-white"
+                onValueChange={(value) => setLanguageFilter(value as 'all' | 'single' | 'multiple')}
               >
-                <option value="all">{t('page.filterAll')}</option>
-                <option value="single">{t('page.filterSingle')}</option>
-                <option value="multiple">{t('page.filterMultiple')}</option>
-              </select>
+                <SelectTrigger className="h-8 w-auto text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t('page.filterAll')}</SelectItem>
+                  <SelectItem value="single">{t('page.filterSingle')}</SelectItem>
+                  <SelectItem value="multiple">{t('page.filterMultiple')}</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Domain List */}
@@ -311,7 +320,7 @@ const LocalizationsPage: React.FC = () => {
                 <div className="space-y-4">
                   {/* Metadata */}
                   {metadata && (
-                    <div className="flex items-center gap-4 text-sm text-gray-600 bg-gray-50 p-3 rounded">
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground bg-muted p-3 rounded">
                       <Badge variant="default">
                         {t('page.metadata.entries', { count: metadata.entry_count })}
                       </Badge>
@@ -326,14 +335,16 @@ const LocalizationsPage: React.FC = () => {
 
                   {/* Validation Status */}
                   {!isValid && validationErrors.length > 0 && (
-                    <div className="p-3 bg-yellow-50 border border-yellow-200 rounded">
-                      <h4 className="font-medium text-yellow-800 mb-2">{t('page.validationIssues')}</h4>
-                      <ul className="text-sm text-yellow-700 space-y-1">
-                        {validationErrors.map((error, index) => (
-                          <li key={index}>• {error}</li>
-                        ))}
-                      </ul>
-                    </div>
+                    <Alert>
+                      <AlertTitle className="text-sm">{t('page.validationIssues')}</AlertTitle>
+                      <AlertDescription className="text-muted-foreground">
+                        <ul className="space-y-1">
+                          {validationErrors.map((error, index) => (
+                            <li key={index}>• {error}</li>
+                          ))}
+                        </ul>
+                      </AlertDescription>
+                    </Alert>
                   )}
 
                   {/* Editor */}
@@ -348,7 +359,7 @@ const LocalizationsPage: React.FC = () => {
             </>
           ) : (
             <Section title={t('page.selectDomain')}>
-              <div className="text-center py-12 text-gray-500">
+              <div className="text-center py-12 text-muted-foreground">
                 <Globe className="w-16 h-16 mx-auto mb-4 opacity-50" />
                 <h3 className="text-lg font-medium mb-2">{t('page.noDomain.title')}</h3>
                 <p>{t('page.noDomain.subtitle')}</p>
@@ -360,40 +371,40 @@ const LocalizationsPage: React.FC = () => {
 
       {/* Simple Save Controls */}
       {hasChanges && (
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 z-50">
+        <div className="fixed bottom-0 left-0 right-0 bg-card border-t border-border p-4 z-50">
           <div className="max-w-7xl mx-auto flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <span className="text-sm text-gray-600">
+              <span className="text-sm text-muted-foreground">
                 {t('page.unsavedChanges', { count: Object.values(changes).filter(c => c.hasChanges).length })}
               </span>
               {!isValid && (
-                <span className="text-sm text-red-600">
+                <span className="text-sm text-destructive">
                   {t('page.validationErrorsPresent')}
                 </span>
               )}
             </div>
             <div className="flex items-center gap-2">
-              <button
+              <Button
+                variant="ghost"
                 onClick={handleDiscardChanges}
-                className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+                className="text-muted-foreground hover:text-foreground"
                 disabled={saving}
               >
                 {t('page.discard')}
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={() => void handleSaveChanges()}
                 disabled={saving || !isValid}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 transition-colors flex items-center gap-2"
               >
                 {saving ? (
                   <>
-                    <Loader className="w-4 h-4 animate-spin" />
+                    <Loader className="animate-spin" />
                     {t('common:status.saving')}
                   </>
                 ) : (
                   t('page.saveAll')
                 )}
-              </button>
+              </Button>
             </div>
           </div>
         </div>

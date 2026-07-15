@@ -2297,6 +2297,35 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       primitives; no manifest node describes config-ui's appearance (QUICKSTART's config-ui section is
       functional and unchanged).
 
+- [x] **UI-19** [UI][COMMONS] `[deferred]` — **DONE 2026-07-15 (sprint-02 port arc, the flagged
+      largest-risk row — landed same-day as its foundation).** **Full port body: 35 composites + 6 pages
+      onto `locveil-ui-kit` primitives + tokens.** Real size at execution intake: ~11.7k lines / **1051
+      raw palette class instances → 0** (checked mechanically over the whole tree; the planning "~32k /
+      7 pages" was inflated — Overview had retired at UI-17). Executed as five parallel agents over
+      disjoint file sets against one normative brief distilled from the stylebook; every file re-gated.
+      **Structural swaps:** ~60 raw buttons → kit `Button` (variant/size per role; destructive actions →
+      `destructive`/`text-destructive`, icon-only → ghost icon); **12 native selects → radix `Select`**
+      (static/clean value sets) with **9 kept native** and token-styled (all carry legitimate
+      `value=""` placeholder/sentinel semantics radix forbids — ConfigWidgets ×4, spaCy editors ×2,
+      microphone device picker, LanguageTabs ×2); view-mode switchers → kit `Tabs` ×3 (Prompt/Template/
+      Localization editors); the hand-rolled fixed-overlay modal → kit `Dialog` (BlockingConflictsDialog);
+      ~20 feedback boxes → kit `Alert` (destructive/accent/default; kit has no warning variant — warning
+      icons carry the edited-hue recipe); fake pulse-div loaders → kit `Skeleton`; search/text controls →
+      kit `Input`/`Textarea`; booleans → kit `Checkbox`, range → kit `Slider`. **Meaning:** status pills →
+      the local Badge/StatusChip vocabulary; inline status text/icons use the full-literal token recipes
+      (Tailwind-extractable — verified present in the shipped CSS, light + dark, all five hues); no `*-50`
+      washes survive. Pattern-card editors, LanguageTabs chrome, Monaco/syntax panes stayed custom per
+      stylebook §7 (tokens only). **Recorded deviations:** `window.confirm` ×3 + native `title=` stay
+      (`ui-kit-v1` ships no Toast/AlertDialog — commons IMPL-4 → voice UI-21); the two `fixed bottom-0`
+      action bars (ApplyChangesBar, Localizations save bar) stay token-styled in place — the shell's
+      bottom action-bar slot exists in chrome but the plugin contract exposes no API for it yet (a
+      workbench-vX contract surface, PROD-24 arc); dense-row micro-icons keep explicit small sizes
+      (stylebook's banned pattern is `!`-overrides, none used). **Verified:** whole-tree palette grep = 0;
+      `npm run check` (tsc + eslint strict + orphans) green; plugin build green (lightningcss clean);
+      vitest 44/44; recipe utilities confirmed in `dist/style.css` both themes; shell HTTP smoke (manifest
+      → entry → styles 200). Browser render = the standing honest caveat (owner's `npm run serve` away).
+      docs: none — appearance-only restyle; no manifest node describes config-ui's look, and the
+      UI-17-era run instructions are unchanged.
 ### Release Readiness (REL)
 - [x] **REL-1** (P0) `[release]` — **DONE 2026-07-04 (interactive session). Definition-of-release SIGNED OFF.**
       Decisions: **(1) release artifact** = version tag **+ first real GHCR publish** (backend

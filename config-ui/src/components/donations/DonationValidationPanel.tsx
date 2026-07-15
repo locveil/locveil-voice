@@ -12,7 +12,14 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { RefreshCw, AlertCircle, AlertTriangle, CheckCircle2, Languages } from 'lucide-react';
+import {
+  Button, Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from 'locveil-ui-kit';
 import apiClient from '@/utils/apiClient';
+
+// Status-hued text recipes (stylebook §2 — meaning via status tokens, never raw palette).
+const persistedText = 'text-[hsl(var(--lv-status-persisted)_55%_32%)] dark:text-[hsl(var(--lv-status-persisted)_70%_72%)]';
+const editedText = 'text-[hsl(var(--lv-status-edited)_55%_32%)] dark:text-[hsl(var(--lv-status-edited)_70%_72%)]';
 import type {
   ContractWiringReport, TranslationIssue, TranslatedMethod,
 } from '@/types';
@@ -91,31 +98,32 @@ export default function DonationValidationPanel({
   const warnings = wiring?.warnings ?? [];
 
   return (
-    <div className="border rounded-xl bg-white p-4 space-y-4">
+    <div className="border border-border rounded-xl bg-card p-4 space-y-4">
       {/* Wiring (contract <-> code) */}
       <div>
         <div className="flex items-center justify-between mb-2">
-          <div className="text-sm font-semibold text-gray-900">{t('validation.wiringTitle')}</div>
-          <button
-            className="inline-flex items-center gap-1 text-xs px-2 py-1 border rounded-lg hover:bg-gray-50 disabled:opacity-50"
+          <div className="text-sm font-semibold text-foreground">{t('validation.wiringTitle')}</div>
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => void loadWiring()} disabled={wiringLoading} title={t('validation.wiringRefreshTitle')}
           >
-            <RefreshCw className={`w-3 h-3 ${wiringLoading ? 'animate-spin' : ''}`} /> {t('validation.wiringRefreshTitle')}
-          </button>
+            <RefreshCw className={wiringLoading ? 'animate-spin' : ''} /> {t('validation.wiringRefreshTitle')}
+          </Button>
         </div>
         {errors.length === 0 && warnings.length === 0 ? (
-          <div className="flex items-center gap-2 text-sm text-green-700">
+          <div className={`flex items-center gap-2 text-sm ${persistedText}`}>
             <CheckCircle2 className="w-4 h-4" /> {t('validation.wiringOk')}
           </div>
         ) : (
           <div className="space-y-1">
             {errors.map((e, i) => (
-              <div key={`e${i}`} className="flex items-start gap-2 text-sm text-red-700">
+              <div key={`e${i}`} className="flex items-start gap-2 text-sm text-destructive">
                 <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" /> <span>{e}</span>
               </div>
             ))}
             {warnings.map((w, i) => (
-              <div key={`w${i}`} className="flex items-start gap-2 text-sm text-amber-700">
+              <div key={`w${i}`} className={`flex items-start gap-2 text-sm ${editedText}`}>
                 <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" /> <span>{w}</span>
               </div>
             ))}
@@ -124,40 +132,43 @@ export default function DonationValidationPanel({
       </div>
 
       {/* LLM translation validation + drafting */}
-      <div className="border-t pt-3">
+      <div className="border-t border-border pt-3">
         <div className="flex flex-wrap items-center gap-2 mb-2">
-          <Languages className="w-4 h-4 text-gray-500" />
-          <span className="text-sm font-semibold text-gray-900">{t('validation.translationTitle')}</span>
-          <span className="text-xs text-gray-500">{t('validation.from')} <b>{sourceLanguage}</b> {t('validation.to')}</span>
-          <select
-            className="border rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
-            value={target} onChange={(e) => setTarget(e.target.value)} disabled={disabled || llmBusy}
-          >
-            {availableLanguages.filter((l) => l !== sourceLanguage).map((l) => (
-              <option key={l} value={l}>{l}</option>
-            ))}
-          </select>
-          <button
-            className="text-xs px-3 py-1 border rounded-lg hover:bg-gray-50 disabled:opacity-50"
+          <Languages className="w-4 h-4 text-muted-foreground" />
+          <span className="text-sm font-semibold text-foreground">{t('validation.translationTitle')}</span>
+          <span className="text-xs text-muted-foreground">{t('validation.from')} <b>{sourceLanguage}</b> {t('validation.to')}</span>
+          <Select value={target} onValueChange={setTarget} disabled={disabled || llmBusy}>
+            <SelectTrigger className="h-8 w-auto gap-1 text-sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {availableLanguages.filter((l) => l !== sourceLanguage).map((l) => (
+                <SelectItem key={l} value={l}>{l}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => void runValidate()} disabled={disabled || llmBusy}
           >
             {t('validation.validateQuality')}
-          </button>
-          <button
-            className="text-xs px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+          </Button>
+          <Button
+            size="sm"
             onClick={() => void runTranslate()} disabled={disabled || llmBusy || !target}
           >
             {t('validation.draftTranslations')}
-          </button>
-          {llmBusy ? <RefreshCw className="w-4 h-4 animate-spin text-gray-400" /> : null}
+          </Button>
+          {llmBusy ? <RefreshCw className="w-4 h-4 animate-spin text-muted-foreground" /> : null}
         </div>
 
-        {llmMessage ? <div className="text-sm text-gray-600 mb-2">{llmMessage}</div> : null}
+        {llmMessage ? <div className="text-sm text-muted-foreground mb-2">{llmMessage}</div> : null}
 
         {issues && issues.length > 0 ? (
           <div className="space-y-1">
             {issues.map((it, i) => (
-              <div key={i} className="flex items-start gap-2 text-sm text-amber-700">
+              <div key={i} className={`flex items-start gap-2 text-sm ${editedText}`}>
                 <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
                 <span><b>{it.language}</b>{it.method_key ? ` · ${it.method_key}` : ''}: {it.message}</span>
               </div>
@@ -168,14 +179,14 @@ export default function DonationValidationPanel({
         {drafts && drafts.length > 0 ? (
           <div className="space-y-2">
             {drafts.map((d, i) => (
-              <div key={i} className="border rounded-lg p-2">
-                <div className="text-xs font-mono text-gray-600 mb-1">{d.method_key}</div>
-                <ul className="list-disc list-inside text-sm text-gray-800">
+              <div key={i} className="border border-border rounded-lg p-2">
+                <div className="text-xs font-mono text-muted-foreground mb-1">{d.method_key}</div>
+                <ul className="list-disc list-inside text-sm text-foreground">
                   {(d.suggested_phrases ?? []).map((p, j) => <li key={j}>{p}</li>)}
                 </ul>
               </div>
             ))}
-            <p className="text-xs text-gray-500">{t('validation.draftsHint')}</p>
+            <p className="text-xs text-muted-foreground">{t('validation.draftsHint')}</p>
           </div>
         ) : null}
       </div>

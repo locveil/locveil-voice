@@ -8,6 +8,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ChevronDown, Mic, Info } from 'lucide-react';
+import { Checkbox, Input, Label } from 'locveil-ui-kit';
 import apiClient from '@/utils/apiClient';
 import type { AudioDeviceInfo } from '@/types/api';
 // ConfigWidgetProps import removed - not used in this component
@@ -86,24 +87,24 @@ export const MicrophoneConfigSection: React.FC<MicrophoneConfigSectionProps> = (
   };
 
   return (
-    <div className="space-y-4 p-4 border rounded-lg bg-gray-50">
+    <div className="space-y-4 p-4 border border-border rounded-lg bg-muted">
       <div className="flex items-center space-x-2 mb-4">
-        <Mic className="h-5 w-5 text-blue-600" />
-        <h3 className="text-lg font-medium text-gray-900">{t('microphone.title')}</h3>
+        <Mic className="h-5 w-5 text-primary" />
+        <h3 className="text-lg font-medium text-foreground">{t('microphone.title')}</h3>
       </div>
 
       {/* Device Selection */}
       <div className="space-y-1">
-        <label className="block text-sm font-medium text-gray-700">
+        <Label>
           {t('microphone.audioDevice')}
-          {schema?.device_id?.required && <span className="text-red-500 ml-1">*</span>}
-        </label>
+          {schema?.device_id?.required && <span className="text-destructive ml-1">*</span>}
+        </Label>
         <div className="relative">
           <select
             value={data?.device_id === null || data?.device_id === undefined ? '' : data.device_id.toString()}
             onChange={(e) => handleDeviceChange(e.target.value)}
             disabled={disabled || loading}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:opacity-50 text-sm appearance-none"
+            className="w-full appearance-none rounded-md border border-input bg-background px-3 py-2 pr-9 text-sm text-foreground transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
           >
             <option value="">{t('widgets.device.default')}</option>
             {devices.map((device) => (
@@ -112,18 +113,18 @@ export const MicrophoneConfigSection: React.FC<MicrophoneConfigSectionProps> = (
               </option>
             ))}
           </select>
-          <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+          <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
         </div>
         {loading && (
-          <div className="text-xs text-gray-500">{t('widgets.device.loading')}</div>
+          <div className="text-xs text-muted-foreground">{t('widgets.device.loading')}</div>
         )}
         {!loading && devices.length === 0 && (
-          <div className="text-xs text-red-500">{t('widgets.device.none')}</div>
+          <div className="text-xs text-destructive">{t('widgets.device.none')}</div>
         )}
         {schema?.device_id?.description && (
           <div className="flex items-center">
-            <Info className="h-3 w-3 text-gray-400 mr-1" />
-            <span className="text-xs text-gray-500">{schema.device_id.description}</span>
+            <Info className="h-3 w-3 text-muted-foreground mr-1" />
+            <span className="text-xs text-muted-foreground">{schema.device_id.description}</span>
           </div>
         )}
       </div>
@@ -132,19 +133,19 @@ export const MicrophoneConfigSection: React.FC<MicrophoneConfigSectionProps> = (
       {selectedDevice && (
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1">
-            <label className="block text-sm font-medium text-gray-700">{t('microphone.sampleRate')}</label>
-            <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-600 text-sm">
+            <Label>{t('microphone.sampleRate')}</Label>
+            <div className="w-full px-3 py-2 border border-input rounded-md bg-muted text-muted-foreground text-sm">
               {selectedDevice.sample_rate}
             </div>
-            <div className="text-xs text-gray-500">{t('microphone.autoDetected')}</div>
+            <div className="text-xs text-muted-foreground">{t('microphone.autoDetected')}</div>
           </div>
-          
+
           <div className="space-y-1">
-            <label className="block text-sm font-medium text-gray-700">{t('microphone.channels')}</label>
-            <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-600 text-sm">
+            <Label>{t('microphone.channels')}</Label>
+            <div className="w-full px-3 py-2 border border-input rounded-md bg-muted text-muted-foreground text-sm">
               {selectedDevice.channels}
             </div>
-            <div className="text-xs text-gray-500">{t('microphone.autoDetected')}</div>
+            <div className="text-xs text-muted-foreground">{t('microphone.autoDetected')}</div>
           </div>
         </div>
       )}
@@ -152,41 +153,39 @@ export const MicrophoneConfigSection: React.FC<MicrophoneConfigSectionProps> = (
       {/* Other Configuration Fields */}
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-1">
-          <label className="block text-sm font-medium text-gray-700">
+          <Label>
             {t('microphone.chunkSize')}
-            {schema?.chunk_size?.required && <span className="text-red-500 ml-1">*</span>}
-          </label>
-          <input
+            {schema?.chunk_size?.required && <span className="text-destructive ml-1">*</span>}
+          </Label>
+          <Input
             type="number"
             value={data?.chunk_size ?? schema?.chunk_size?.default ?? 1024}
             onChange={(e) => handleFieldChange('chunk_size', parseInt(e.target.value, 10))}
             disabled={disabled}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:opacity-50 text-sm"
           />
           {schema?.chunk_size?.description && (
             <div className="flex items-center">
-              <Info className="h-3 w-3 text-gray-400 mr-1" />
-              <span className="text-xs text-gray-500">{schema.chunk_size.description}</span>
+              <Info className="h-3 w-3 text-muted-foreground mr-1" />
+              <span className="text-xs text-muted-foreground">{schema.chunk_size.description}</span>
             </div>
           )}
         </div>
 
         <div className="space-y-1">
-          <label className="block text-sm font-medium text-gray-700">
+          <Label>
             {t('microphone.bufferQueueSize')}
-            {schema?.buffer_queue_size?.required && <span className="text-red-500 ml-1">*</span>}
-          </label>
-          <input
+            {schema?.buffer_queue_size?.required && <span className="text-destructive ml-1">*</span>}
+          </Label>
+          <Input
             type="number"
             value={data?.buffer_queue_size ?? schema?.buffer_queue_size?.default ?? 50}
             onChange={(e) => handleFieldChange('buffer_queue_size', parseInt(e.target.value, 10))}
             disabled={disabled}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:opacity-50 text-sm"
           />
           {schema?.buffer_queue_size?.description && (
             <div className="flex items-center">
-              <Info className="h-3 w-3 text-gray-400 mr-1" />
-              <span className="text-xs text-gray-500">{schema.buffer_queue_size.description}</span>
+              <Info className="h-3 w-3 text-muted-foreground mr-1" />
+              <span className="text-xs text-muted-foreground">{schema.buffer_queue_size.description}</span>
             </div>
           )}
         </div>
@@ -194,15 +193,13 @@ export const MicrophoneConfigSection: React.FC<MicrophoneConfigSectionProps> = (
 
       {/* Enable/Disable Toggle */}
       <div className="flex items-center space-x-3">
-        <input
-          type="checkbox"
+        <Checkbox
           id="microphone-enabled"
           checked={data?.enabled ?? true}
-          onChange={(e) => handleFieldChange('enabled', e.target.checked)}
+          onCheckedChange={(state) => handleFieldChange('enabled', state === true)}
           disabled={disabled}
-          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
         />
-        <label htmlFor="microphone-enabled" className="text-sm font-medium text-gray-700">
+        <label htmlFor="microphone-enabled" className="text-sm font-medium text-foreground">
           {t('microphone.enableInput')}
         </label>
       </div>

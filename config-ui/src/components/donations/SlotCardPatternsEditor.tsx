@@ -7,6 +7,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Trash2, Plus } from 'lucide-react';
+import { Button, Input } from 'locveil-ui-kit';
 import CardPatternsEditor from './CardPatternsEditor';
 import type { SpacyPattern } from '@/utils/patternModel';
 
@@ -38,20 +39,22 @@ export default function SlotCardPatternsEditor({ value, onChange, disabled = fal
 
   return (
     <div className="space-y-3">
-      {Object.keys(slots).length === 0 && <div className="text-sm text-gray-500">{t('slots.empty')}</div>}
+      {Object.keys(slots).length === 0 && <div className="text-sm text-muted-foreground">{t('slots.empty')}</div>}
       {Object.entries(slots).map(([label, patterns]) => (
-        <div key={label} className="border rounded-xl p-3">
+        <div key={label} className="border border-border rounded-xl p-3">
           <div className="flex items-center justify-between mb-2">
             <div className="text-sm font-medium">
-              {t('slots.slotLabel')} <span className="font-mono bg-gray-50 px-2 py-0.5 rounded">{label}</span>
+              {t('slots.slotLabel')} <span className="font-mono bg-muted px-2 py-0.5 rounded">{label}</span>
             </div>
-            <button
+            <Button
               type="button"
-              className="p-1 rounded-lg border hover:bg-gray-50 disabled:opacity-50"
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-destructive"
               onClick={() => delSlot(label)} disabled={disabled} title={t('slots.removeSlot')}
             >
-              <Trash2 className="w-4 h-4" />
-            </button>
+              <Trash2 />
+            </Button>
           </div>
           <CardPatternsEditor
             value={patterns ?? []}
@@ -62,21 +65,21 @@ export default function SlotCardPatternsEditor({ value, onChange, disabled = fal
         </div>
       ))}
       <div className="flex items-center gap-2">
-        <input
-          className="border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+        <Input
+          className="max-w-xs"
           placeholder={t('slots.newSlotPlaceholder')}
           value={newSlot}
           onChange={(e) => setNewSlot(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') addSlot(); }}
           disabled={disabled}
         />
-        <button
+        <Button
           type="button"
-          className="inline-flex items-center gap-2 px-3 py-2 border rounded-xl hover:bg-gray-50 disabled:opacity-50 text-sm"
+          variant="outline"
           onClick={addSlot} disabled={disabled || !newSlot.trim()}
         >
-          <Plus className="w-4 h-4" /> {t('slots.addSlot')}
-        </button>
+          <Plus /> {t('slots.addSlot')}
+        </Button>
       </div>
     </div>
   );

@@ -7,7 +7,8 @@
 
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, Eye, Code, Layout, MessageSquare } from 'lucide-react';
+import { Plus, Eye, Code, Layout, MessageSquare, AlertCircle } from 'lucide-react';
+import { Button, Alert, AlertTitle, AlertDescription, Tabs, TabsList, TabsTrigger } from 'locveil-ui-kit';
 import PromptDefinitionEditor from './PromptDefinitionEditor';
 import Section from '@/components/ui/Section';
 import TextArea from '@/components/ui/TextArea';
@@ -245,20 +246,20 @@ const PromptEditor: React.FC<PromptEditorProps> = ({
   const renderStructuredView = () => (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h3 className="text-lg font-medium text-gray-900">{t('editor.definitions')}</h3>
-        <button
+        <h3 className="text-lg font-medium text-foreground">{t('editor.definitions')}</h3>
+        <Button
           type="button"
+          size="sm"
           onClick={addNewPrompt}
-          className="flex items-center space-x-2 px-3 py-1 bg-yellow-600 text-white rounded-md hover:bg-yellow-700"
           title={t('editor.addPromptTitle')}
         >
-          <Plus className="w-4 h-4" />
+          <Plus />
           <span>{t('editor.addPrompt')}</span>
-        </button>
+        </Button>
       </div>
 
       {Object.keys(value).length === 0 ? (
-        <div className="text-center py-8 text-gray-500">
+        <div className="text-center py-8 text-muted-foreground">
           <MessageSquare className="w-8 h-8 mx-auto mb-2" />
           <p>{t('editor.empty')}</p>
         </div>
@@ -279,7 +280,7 @@ const PromptEditor: React.FC<PromptEditorProps> = ({
   const renderYamlView = () => (
     <div className="space-y-4">
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <label className="block text-sm font-medium text-muted-foreground mb-2">
           {t('editor.yamlContent')}
         </label>
         <TextArea
@@ -287,10 +288,10 @@ const PromptEditor: React.FC<PromptEditorProps> = ({
           onChange={handleYamlChange}
           placeholder={t('editor.yamlPlaceholder')}
           rows={20}
-          className={yamlError ? 'border-red-300' : ''}
+          className={yamlError ? 'border-destructive' : ''}
         />
         {yamlError && (
-          <p className="mt-1 text-sm text-red-600">{yamlError}</p>
+          <p className="mt-1 text-sm text-destructive">{yamlError}</p>
         )}
       </div>
     </div>
@@ -298,21 +299,21 @@ const PromptEditor: React.FC<PromptEditorProps> = ({
 
   const renderPreviewView = () => (
     <div className="space-y-4">
-      <h3 className="text-lg font-medium text-gray-900">{t('editor.preview')}</h3>
+      <h3 className="text-lg font-medium text-foreground">{t('editor.preview')}</h3>
       {Object.entries(value).map(([promptName, promptData]) => (
-        <div key={promptName} className="bg-gray-50 rounded-lg p-4 border">
+        <div key={promptName} className="bg-muted rounded-lg p-4 border border-border">
           <div className="flex items-center space-x-2 mb-2">
-            <h4 className="font-medium text-gray-900">{promptName}</h4>
+            <h4 className="font-medium text-foreground">{promptName}</h4>
             <Badge variant={promptData.prompt_type === 'system' ? 'info' : promptData.prompt_type === 'template' ? 'warning' : 'default'}>
               {promptData.prompt_type}
             </Badge>
           </div>
-          <p className="text-sm text-gray-600 mb-2">{promptData.description}</p>
-          <p className="text-xs text-gray-500 mb-3">{t('editor.contextLabel', { ctx: promptData.usage_context })}</p>
+          <p className="text-sm text-muted-foreground mb-2">{promptData.description}</p>
+          <p className="text-xs text-muted-foreground mb-3">{t('editor.contextLabel', { ctx: promptData.usage_context })}</p>
 
           {promptData.variables.length > 0 && (
             <div className="mb-3">
-              <p className="text-xs font-medium text-gray-700 mb-1">{t('editor.variablesLabel')}</p>
+              <p className="text-xs font-medium text-muted-foreground mb-1">{t('editor.variablesLabel')}</p>
               <div className="flex flex-wrap gap-1">
                 {promptData.variables.map((variable, idx) => (
                   <Badge key={idx} variant="default" className="text-xs">
@@ -323,8 +324,8 @@ const PromptEditor: React.FC<PromptEditorProps> = ({
             </div>
           )}
           
-          <div className="bg-white rounded border p-3">
-            <pre className="text-sm text-gray-800 whitespace-pre-wrap">{promptData.content}</pre>
+          <div className="bg-card rounded border border-border p-3">
+            <pre className="text-sm text-foreground whitespace-pre-wrap">{promptData.content}</pre>
           </div>
         </div>
       ))}
@@ -334,55 +335,38 @@ const PromptEditor: React.FC<PromptEditorProps> = ({
   return (
     <Section title={t('editor.title')}>
       {/* View Mode Toggle */}
-      <div className="flex space-x-2 mb-4">
-        <button
-          type="button"
-          onClick={() => setViewMode('structured')}
-          className={`flex items-center space-x-2 px-3 py-1 rounded-md ${
-            viewMode === 'structured' 
-              ? 'bg-blue-100 text-blue-700' 
-              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-          }`}
-        >
-          <Layout className="w-4 h-4" />
-          <span>{t('editor.viewModes.structured')}</span>
-        </button>
-        <button
-          type="button"
-          onClick={() => setViewMode('yaml')}
-          className={`flex items-center space-x-2 px-3 py-1 rounded-md ${
-            viewMode === 'yaml' 
-              ? 'bg-blue-100 text-blue-700' 
-              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-          }`}
-        >
-          <Code className="w-4 h-4" />
-          <span>{t('editor.viewModes.yaml')}</span>
-        </button>
-        <button
-          type="button"
-          onClick={() => setViewMode('preview')}
-          className={`flex items-center space-x-2 px-3 py-1 rounded-md ${
-            viewMode === 'preview' 
-              ? 'bg-blue-100 text-blue-700' 
-              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-          }`}
-        >
-          <Eye className="w-4 h-4" />
-          <span>{t('editor.viewModes.preview')}</span>
-        </button>
-      </div>
+      <Tabs value={viewMode} onValueChange={(mode) => setViewMode(mode as ViewMode)} className="mb-4">
+        <TabsList>
+          <TabsTrigger value="structured" className="gap-2">
+            <Layout className="w-4 h-4" />
+            <span>{t('editor.viewModes.structured')}</span>
+          </TabsTrigger>
+          <TabsTrigger value="yaml" className="gap-2">
+            <Code className="w-4 h-4" />
+            <span>{t('editor.viewModes.yaml')}</span>
+          </TabsTrigger>
+          <TabsTrigger value="preview" className="gap-2">
+            <Eye className="w-4 h-4" />
+            <span>{t('editor.viewModes.preview')}</span>
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
 
       {/* Validation Errors */}
       {validationErrors.length > 0 && (
-        <div className="bg-red-50 border border-red-200 rounded-md p-3 mb-4">
-          <h4 className="text-sm font-medium text-red-800 mb-2">{t('editor.validationErrors')}</h4>
-          <ul className="text-sm text-red-700 space-y-1">
-            {validationErrors.map((error, index) => (
-              <li key={index}>• {error}</li>
-            ))}
-          </ul>
-        </div>
+        <Alert variant="destructive" className="mb-4">
+          <AlertCircle />
+          <div>
+            <AlertTitle>{t('editor.validationErrors')}</AlertTitle>
+            <AlertDescription>
+              <ul className="space-y-1">
+                {validationErrors.map((error, index) => (
+                  <li key={index}>• {error}</li>
+                ))}
+              </ul>
+            </AlertDescription>
+          </div>
+        </Alert>
       )}
 
       {/* Content based on view mode */}

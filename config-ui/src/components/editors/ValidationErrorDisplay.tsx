@@ -8,6 +8,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { AlertCircle, AlertTriangle, Info } from 'lucide-react';
+import { Alert, AlertTitle, AlertDescription, type AlertProps } from 'locveil-ui-kit';
 
 interface ValidationError {
   msg: string;
@@ -34,27 +35,27 @@ export const ValidationErrorDisplay: React.FC<ValidationErrorDisplayProps> = ({
     switch (errorType) {
       case 'syntax_error':
       case 'parse_error':
-        return <AlertCircle className="h-4 w-4 text-red-500 mt-0.5 flex-shrink-0" />;
+        return <AlertCircle />;
       case 'validation_error':
-        return <AlertTriangle className="h-4 w-4 text-amber-500 mt-0.5 flex-shrink-0" />;
+        return <AlertTriangle className="text-[hsl(var(--lv-status-edited)_55%_32%)] dark:text-[hsl(var(--lv-status-edited)_70%_72%)]" />;
       case 'network_error':
-        return <Info className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />;
+        return <Info />;
       default:
-        return <AlertCircle className="h-4 w-4 text-red-500 mt-0.5 flex-shrink-0" />;
+        return <AlertCircle />;
     }
   };
 
-  const getErrorStyle = (errorType: string) => {
+  const getErrorVariant = (errorType: string): AlertProps['variant'] => {
     switch (errorType) {
       case 'syntax_error':
       case 'parse_error':
-        return "bg-red-50 border-red-200";
+        return 'destructive';
       case 'validation_error':
-        return "bg-amber-50 border-amber-200";
+        return 'default';
       case 'network_error':
-        return "bg-blue-50 border-blue-200";
+        return 'accent';
       default:
-        return "bg-red-50 border-red-200";
+        return 'destructive';
     }
   };
 
@@ -76,36 +77,31 @@ export const ValidationErrorDisplay: React.FC<ValidationErrorDisplayProps> = ({
   return (
     <div className={`mt-4 space-y-2 ${className}`}>
       <div className="flex items-center space-x-2">
-        <h4 className="text-sm font-medium text-red-800">
+        <h4 className="text-sm font-medium text-destructive">
           {t('validation.title', { count: errors.length })}
         </h4>
-        <div className="text-xs text-gray-500">
+        <div className="text-xs text-muted-foreground">
           {t('validation.fixBeforeSaving')}
         </div>
       </div>
-      
+
       {errors.map((error, index) => (
-        <div 
-          key={index}
-          className={`p-3 border rounded-md text-sm ${getErrorStyle(error.type)}`}
-        >
-          <div className="flex items-start space-x-2">
-            {getErrorIcon(error.type)}
-            <div className="flex-1">
-              <div className="font-medium text-gray-800">
-                {getErrorTitle(error.type)}
-                {error.line && error.column && (
-                  <span className="ml-2 text-xs font-normal text-gray-600">
-                    {t('validation.lineColumn', { line: error.line, column: error.column })}
-                  </span>
-                )}
-              </div>
-              <div className="text-gray-700 mt-1">
-                {error.msg}
-              </div>
-            </div>
+        <Alert key={index} variant={getErrorVariant(error.type)}>
+          {getErrorIcon(error.type)}
+          <div>
+            <AlertTitle>
+              {getErrorTitle(error.type)}
+              {error.line && error.column && (
+                <span className="ml-2 text-xs font-normal text-muted-foreground">
+                  {t('validation.lineColumn', { line: error.line, column: error.column })}
+                </span>
+              )}
+            </AlertTitle>
+            <AlertDescription>
+              {error.msg}
+            </AlertDescription>
           </div>
-        </div>
+        </Alert>
       ))}
     </div>
   );

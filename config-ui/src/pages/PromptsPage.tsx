@@ -9,6 +9,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AlertCircle, MessageSquare, Code } from 'lucide-react';
+import { Alert, AlertTitle, AlertDescription } from 'locveil-ui-kit';
 
 // Import reusable components from donations
 import HandlerList from '@/components/donations/HandlerList';
@@ -338,8 +339,8 @@ const PromptsPage: React.FC = () => {
     return (
       <div className="p-6">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-yellow-600 mx-auto"></div>
-          <p className="mt-2 text-gray-600">{t('page.loading')}</p>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-2 text-muted-foreground">{t('page.loading')}</p>
         </div>
       </div>
     );
@@ -350,8 +351,8 @@ const PromptsPage: React.FC = () => {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">{t('page.title')}</h1>
-          <p className="text-gray-600">{t('page.subtitle')}</p>
+          <h1 className="text-2xl font-bold text-foreground">{t('page.title')}</h1>
+          <p className="text-muted-foreground">{t('page.subtitle')}</p>
         </div>
         <div className="flex items-center space-x-2 mt-1">
           <Badge variant="info">
@@ -368,15 +369,13 @@ const PromptsPage: React.FC = () => {
 
       {/* Error Display */}
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-md p-4">
-          <div className="flex">
-            <AlertCircle className="h-5 w-5 text-red-400" />
-            <div className="ml-3">
-              <h3 className="text-sm font-medium text-red-800">{t('common:status.error')}</h3>
-              <p className="mt-1 text-sm text-red-700">{error}</p>
-            </div>
+        <Alert variant="destructive">
+          <AlertCircle />
+          <div>
+            <AlertTitle>{t('common:status.error')}</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
           </div>
-        </div>
+        </Alert>
       )}
 
       <div className="h-full flex">
@@ -444,17 +443,17 @@ const PromptsPage: React.FC = () => {
                 </>
               ) : (
                 <div className="text-center py-12">
-                  <MessageSquare className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">{t('page.noLanguage.title')}</h3>
-                  <p className="text-gray-600">{t('page.noLanguage.subtitle')}</p>
+                  <MessageSquare className="w-12 h-12 text-muted-foreground/60 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-foreground mb-2">{t('page.noLanguage.title')}</h3>
+                  <p className="text-muted-foreground">{t('page.noLanguage.subtitle')}</p>
                 </div>
               )}
             </div>
           ) : (
             <div className="text-center py-12">
-              <Code className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">{t('page.noHandler.title')}</h3>
-              <p className="text-gray-600">{t('page.noHandler.subtitle')}</p>
+              <Code className="w-12 h-12 text-muted-foreground/60 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-foreground mb-2">{t('page.noHandler.title')}</h3>
+              <p className="text-muted-foreground">{t('page.noHandler.subtitle')}</p>
             </div>
           )}
         </div>

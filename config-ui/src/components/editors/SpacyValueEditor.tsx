@@ -8,6 +8,10 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Plus, Trash2 } from 'lucide-react';
+import {
+  Alert, AlertDescription, Button, Input,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Textarea
+} from 'locveil-ui-kit';
 import { SpacyAttributeStructure, getOperatorOptions } from '@/utils/spacyAttributeHelpers';
 
 type OperatorKey =
@@ -41,11 +45,10 @@ const SpacyValueEditor: React.FC<SpacyValueEditorProps> = ({
 
   // String input for simple text values and regex patterns
   const renderStringInput = (placeholder?: string) => (
-    <input
+    <Input
       type="text"
       value={editableValue || ''}
       onChange={(e) => onChange(e.target.value)}
-      className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
       placeholder={placeholder}
       disabled={disabled}
     />
@@ -53,37 +56,41 @@ const SpacyValueEditor: React.FC<SpacyValueEditorProps> = ({
 
   // Boolean toggle for true/false values
   const renderBooleanInput = () => (
-    <select
+    <Select
       value={String(editableValue)}
-      onChange={(e) => onChange(e.target.value === 'true')}
-      className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+      onValueChange={(v) => onChange(v === 'true')}
       disabled={disabled}
     >
-      <option value="true">{t('editors.spacyValue.true')}</option>
-      <option value="false">{t('editors.spacyValue.false')}</option>
-    </select>
+      <SelectTrigger>
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="true">{t('editors.spacyValue.true')}</SelectItem>
+        <SelectItem value="false">{t('editors.spacyValue.false')}</SelectItem>
+      </SelectContent>
+    </Select>
   );
 
   // Number input for numeric values
   const renderNumberInput = () => (
-    <input
+    <Input
       type="number"
       value={editableValue || ''}
       onChange={(e) => onChange(Number(e.target.value))}
-      className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
       disabled={disabled}
     />
   );
 
-  // Operator dropdown for OP attribute
+  // Operator dropdown for OP attribute (kept native: the empty-string
+  // "select an operator" placeholder value is not representable in the radix Select)
   const renderOperatorInput = () => {
     const operators = getOperatorOptions();
-    
+
     return (
       <select
         value={editableValue || ''}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+        className="w-full appearance-none rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
         disabled={disabled}
       >
         <option value="">{t('editors.spacyValue.selectOperator')}</option>
@@ -120,40 +127,44 @@ const SpacyValueEditor: React.FC<SpacyValueEditorProps> = ({
         <div className="space-y-2">
           {listValue.map((item, index) => (
             <div key={index} className="flex items-center gap-2">
-              <span className="text-xs text-gray-500 w-6">{index + 1}.</span>
-              <input
+              <span className="text-xs text-muted-foreground w-6">{index + 1}.</span>
+              <Input
                 type="text"
                 value={item}
                 onChange={(e) => updateItem(index, e.target.value)}
-                className="flex-1 border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="flex-1"
                 placeholder={t('editors.spacyValue.itemPlaceholder', { index: index + 1 })}
                 disabled={disabled}
               />
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="icon"
                 onClick={() => removeItem(index)}
-                className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+                className="text-destructive"
                 disabled={disabled}
                 title={t('editors.spacyValue.removeItem')}
               >
-                <Trash2 className="w-4 h-4" />
-              </button>
+                <Trash2 />
+              </Button>
             </div>
           ))}
         </div>
-        
-        <button
+
+        <Button
           type="button"
+          variant="ghost"
+          size="sm"
           onClick={addItem}
-          className="flex items-center gap-2 px-3 py-2 text-sm text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors"
+          className="text-primary"
           disabled={disabled}
         >
-          <Plus className="w-4 h-4" />
+          <Plus />
           {t('editors.spacyValue.addItem')}
-        </button>
+        </Button>
 
         {listValue.length === 0 && (
-          <div className="text-sm text-gray-500 italic">
+          <div className="text-sm text-muted-foreground italic">
             {t('editors.spacyValue.noItems')}
           </div>
         )}
@@ -164,13 +175,15 @@ const SpacyValueEditor: React.FC<SpacyValueEditorProps> = ({
   // JSON editor for unknown/custom structures
   const renderJsonInput = () => (
     <div className="space-y-2">
-      <div className="text-xs text-yellow-700 bg-yellow-50 border border-yellow-200 rounded p-2">
-        {t('editors.spacyValue.jsonWarning')}
-      </div>
-      <textarea
+      <Alert>
+        <AlertDescription className="text-xs">
+          {t('editors.spacyValue.jsonWarning')}
+        </AlertDescription>
+      </Alert>
+      <Textarea
         value={editableValue || ''}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full border rounded-lg px-3 py-2 text-sm font-mono focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+        className="font-mono"
         rows={3}
         placeholder={t('editors.spacyValue.jsonPlaceholder')}
         disabled={disabled}

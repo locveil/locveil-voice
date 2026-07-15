@@ -8,9 +8,17 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ChevronDown, Eye, EyeOff, Info } from 'lucide-react';
+import { Alert, AlertDescription, Button, Checkbox, Input, Label, Slider } from 'locveil-ui-kit';
+import Badge from '@/components/ui/Badge';
 import apiClient from '@/utils/apiClient';
 import KeyValueEditor from './KeyValueEditor';
 import type { ConfigFieldSchema } from '@/types/api';
+
+// Shared token-styled class for native <select> controls (kept native because their
+// option lists legitimately use empty-string "default/placeholder" values, which the
+// radix Select forbids).
+const nativeSelectClass =
+  'w-full appearance-none rounded-md border border-input bg-background px-3 py-2 pr-9 text-sm text-foreground transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50';
 
 // ============================================================
 // WIDGET INTERFACES
@@ -37,20 +45,18 @@ export const BooleanWidget: React.FC<ConfigWidgetProps> = ({
 }) => {
   return (
     <div className="flex items-center space-x-3">
-      <input
-        type="checkbox"
+      <Checkbox
         id={name}
         checked={value ?? schema.default ?? false}
-        onChange={(e) => onChange(e.target.checked)}
+        onCheckedChange={(state) => onChange(state === true)}
         disabled={disabled}
-        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded disabled:opacity-50"
       />
       <label htmlFor={name} className="flex-1">
-        <span className="text-sm font-medium text-gray-700">{name}</span>
+        <span className="text-sm font-medium text-foreground">{name}</span>
         {schema.description && (
           <div className="flex items-center mt-1">
-            <Info className="h-3 w-3 text-gray-400 mr-1" />
-            <span className="text-xs text-gray-500">{schema.description}</span>
+            <Info className="h-3 w-3 text-muted-foreground mr-1" />
+            <span className="text-xs text-muted-foreground">{schema.description}</span>
           </div>
         )}
       </label>
@@ -64,23 +70,22 @@ export const StringWidget: React.FC<ConfigWidgetProps> = ({
   const { t } = useTranslation('configuration');
   return (
     <div className="space-y-1">
-      <label htmlFor={name} className="block text-sm font-medium text-gray-700">
+      <Label htmlFor={name}>
         {name}
-        {schema.required && <span className="text-red-500 ml-1">*</span>}
-      </label>
-      <input
+        {schema.required && <span className="text-destructive ml-1">*</span>}
+      </Label>
+      <Input
         type="text"
         id={name}
         value={value ?? schema.default ?? ''}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
         placeholder={schema.default ? t('widgets.defaultPrefix', { value: schema.default }) : undefined}
-        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:opacity-50 text-sm"
       />
       {schema.description && (
         <div className="flex items-center">
-          <Info className="h-3 w-3 text-gray-400 mr-1" />
-          <span className="text-xs text-gray-500">{schema.description}</span>
+          <Info className="h-3 w-3 text-muted-foreground mr-1" />
+          <span className="text-xs text-muted-foreground">{schema.description}</span>
         </div>
       )}
     </div>
@@ -96,11 +101,11 @@ export const NumberWidget: React.FC<ConfigWidgetProps> = ({
   
   return (
     <div className="space-y-1">
-      <label htmlFor={name} className="block text-sm font-medium text-gray-700">
+      <Label htmlFor={name}>
         {name}
-        {schema.required && <span className="text-red-500 ml-1">*</span>}
-      </label>
-      <input
+        {schema.required && <span className="text-destructive ml-1">*</span>}
+      </Label>
+      <Input
         type="number"
         id={name}
         value={value ?? schema.default ?? ''}
@@ -115,12 +120,11 @@ export const NumberWidget: React.FC<ConfigWidgetProps> = ({
         step={step}
         disabled={disabled}
         placeholder={schema.default ? t('widgets.defaultPrefix', { value: schema.default }) : undefined}
-        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:opacity-50 text-sm"
       />
       {schema.description && (
         <div className="flex items-center">
-          <Info className="h-3 w-3 text-gray-400 mr-1" />
-          <span className="text-xs text-gray-500">{schema.description}</span>
+          <Info className="h-3 w-3 text-muted-foreground mr-1" />
+          <span className="text-xs text-muted-foreground">{schema.description}</span>
         </div>
       )}
     </div>
@@ -150,47 +154,50 @@ export const ArrayWidget: React.FC<ConfigWidgetProps> = ({
   
   return (
     <div className="space-y-2">
-      <label className="block text-sm font-medium text-gray-700">
+      <Label>
         {name}
-        {schema.required && <span className="text-red-500 ml-1">*</span>}
-      </label>
-      
+        {schema.required && <span className="text-destructive ml-1">*</span>}
+      </Label>
+
       <div className="space-y-2">
         {arrayValue.map((item: any, index: number) => (
           <div key={index} className="flex items-center space-x-2">
-            <input
+            <Input
               type="text"
               value={item}
               onChange={(e) => updateItem(index, e.target.value)}
               disabled={disabled}
-              className="flex-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:opacity-50 text-sm"
+              className="flex-1"
               placeholder={t('widgets.itemPlaceholder', { number: index + 1 })}
             />
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="icon"
               onClick={() => removeItem(index)}
               disabled={disabled}
-              className="px-2 py-2 text-red-600 hover:text-red-800 disabled:opacity-50"
+              className="text-destructive"
             >
               ×
-            </button>
+            </Button>
           </div>
         ))}
-        
-        <button
+
+        <Button
           type="button"
+          variant="link"
+          size="sm"
           onClick={addItem}
           disabled={disabled}
-          className="px-3 py-1 text-sm text-blue-600 hover:text-blue-800 disabled:opacity-50"
         >
           {t('widgets.addItem')}
-        </button>
+        </Button>
       </div>
-      
+
       {schema.description && (
         <div className="flex items-center">
-          <Info className="h-3 w-3 text-gray-400 mr-1" />
-          <span className="text-xs text-gray-500">{schema.description}</span>
+          <Info className="h-3 w-3 text-muted-foreground mr-1" />
+          <span className="text-xs text-muted-foreground">{schema.description}</span>
         </div>
       )}
     </div>
@@ -210,44 +217,44 @@ export const EnvironmentVariableWidget: React.FC<ConfigWidgetProps> = ({
   
   return (
     <div className="space-y-1">
-      <label htmlFor={name} className="block text-sm font-medium text-gray-700">
+      <Label htmlFor={name}>
         {name}
-        {schema.required && <span className="text-red-500 ml-1">*</span>}
+        {schema.required && <span className="text-destructive ml-1">*</span>}
         {isEnvVar && (
-          <span className="ml-2 px-2 py-0.5 text-xs bg-green-100 text-green-800 rounded">
+          <Badge variant="success" className="ml-2">
             {t('widgets.envVar.badge')}
-          </span>
+          </Badge>
         )}
-      </label>
+      </Label>
       <div className="relative">
-        <input
+        <Input
           type={showValue ? "text" : "password"}
           id={name}
           value={value ?? schema.default ?? ''}
           onChange={(e) => onChange(e.target.value)}
           disabled={disabled}
           placeholder={t('widgets.envVar.placeholder')}
-          className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:opacity-50 text-sm"
+          className="pr-10"
         />
         <button
           type="button"
           onClick={() => setShowValue(!showValue)}
-          className="absolute inset-y-0 right-0 pr-3 flex items-center"
+          className="absolute inset-y-0 right-0 pr-3 flex items-center text-muted-foreground hover:text-foreground transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-md"
         >
           {showValue ? (
-            <EyeOff className="h-4 w-4 text-gray-400" />
+            <EyeOff className="h-4 w-4" />
           ) : (
-            <Eye className="h-4 w-4 text-gray-400" />
+            <Eye className="h-4 w-4" />
           )}
         </button>
       </div>
-      <div className="text-xs text-gray-500">
+      <div className="text-xs text-muted-foreground">
         {t('widgets.envVar.hint')}
       </div>
       {schema.description && (
         <div className="flex items-center">
-          <Info className="h-3 w-3 text-gray-400 mr-1" />
-          <span className="text-xs text-gray-500">{schema.description}</span>
+          <Info className="h-3 w-3 text-muted-foreground mr-1" />
+          <span className="text-xs text-muted-foreground">{schema.description}</span>
         </div>
       )}
     </div>
@@ -289,17 +296,17 @@ export const ProviderSelectWidget: React.FC<ConfigWidgetProps & {
   
   return (
     <div className="space-y-1">
-      <label htmlFor={name} className="block text-sm font-medium text-gray-700">
+      <Label htmlFor={name}>
         {name}
-        {schema.required && <span className="text-red-500 ml-1">*</span>}
-      </label>
+        {schema.required && <span className="text-destructive ml-1">*</span>}
+      </Label>
       <div className="relative">
         <select
           id={name}
           value={value ?? schema.default ?? ''}
           onChange={(e) => onChange(e.target.value || null)}
           disabled={disabled || loading}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:opacity-50 text-sm appearance-none"
+          className={nativeSelectClass}
         >
           <option value="">{t('widgets.provider.select')}</option>
           {Object.entries(providers).map(([key, provider]) => (
@@ -308,15 +315,15 @@ export const ProviderSelectWidget: React.FC<ConfigWidgetProps & {
             </option>
           ))}
         </select>
-        <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+        <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
       </div>
       {loading && (
-        <div className="text-xs text-gray-500">{t('widgets.provider.loading')}</div>
+        <div className="text-xs text-muted-foreground">{t('widgets.provider.loading')}</div>
       )}
       {schema.description && (
         <div className="flex items-center">
-          <Info className="h-3 w-3 text-gray-400 mr-1" />
-          <span className="text-xs text-gray-500">{schema.description}</span>
+          <Info className="h-3 w-3 text-muted-foreground mr-1" />
+          <span className="text-xs text-muted-foreground">{schema.description}</span>
         </div>
       )}
     </div>
@@ -336,17 +343,17 @@ export const InputSelectWidget: React.FC<ConfigWidgetProps> = ({
   
   return (
     <div className="space-y-1">
-      <label htmlFor={name} className="block text-sm font-medium text-gray-700">
+      <Label htmlFor={name}>
         {name}
-        {schema.required && <span className="text-red-500 ml-1">*</span>}
-      </label>
+        {schema.required && <span className="text-destructive ml-1">*</span>}
+      </Label>
       <div className="relative">
         <select
           id={name}
           value={value ?? schema.default ?? ''}
           onChange={(e) => onChange(e.target.value || null)}
           disabled={disabled}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:opacity-50 text-sm appearance-none"
+          className={nativeSelectClass}
         >
           <option value="">{t('widgets.input.select')}</option>
           {inputSources.map((source) => (
@@ -355,12 +362,12 @@ export const InputSelectWidget: React.FC<ConfigWidgetProps> = ({
             </option>
           ))}
         </select>
-        <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+        <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
       </div>
       {schema.description && (
         <div className="flex items-center">
-          <Info className="h-3 w-3 text-gray-400 mr-1" />
-          <span className="text-xs text-gray-500">{schema.description}</span>
+          <Info className="h-3 w-3 text-muted-foreground mr-1" />
+          <span className="text-xs text-muted-foreground">{schema.description}</span>
         </div>
       )}
     </div>
@@ -413,17 +420,17 @@ export const MicrophoneSelectWidget: React.FC<ConfigWidgetProps & {
   
   return (
     <div className="space-y-1">
-      <label htmlFor={name} className="block text-sm font-medium text-gray-700">
+      <Label htmlFor={name}>
         {name}
-        {schema.required && <span className="text-red-500 ml-1">*</span>}
-      </label>
+        {schema.required && <span className="text-destructive ml-1">*</span>}
+      </Label>
       <div className="relative">
         <select
           id={name}
           value={value === null ? '' : value?.toString() || ''}
           onChange={(e) => handleDeviceChange(e.target.value)}
           disabled={disabled || loading}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:opacity-50 text-sm appearance-none"
+          className={nativeSelectClass}
         >
           <option value="">{t('widgets.device.default')}</option>
           {devices.map((device) => (
@@ -432,18 +439,18 @@ export const MicrophoneSelectWidget: React.FC<ConfigWidgetProps & {
             </option>
           ))}
         </select>
-        <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+        <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
       </div>
       {loading && (
-        <div className="text-xs text-gray-500">{t('widgets.device.loading')}</div>
+        <div className="text-xs text-muted-foreground">{t('widgets.device.loading')}</div>
       )}
       {!loading && devices.length === 0 && (
-        <div className="text-xs text-red-500">{t('widgets.device.none')}</div>
+        <div className="text-xs text-destructive">{t('widgets.device.none')}</div>
       )}
       {schema.description && (
         <div className="flex items-center">
-          <Info className="h-3 w-3 text-gray-400 mr-1" />
-          <span className="text-xs text-gray-500">{schema.description}</span>
+          <Info className="h-3 w-3 text-muted-foreground mr-1" />
+          <span className="text-xs text-muted-foreground">{schema.description}</span>
         </div>
       )}
     </div>
@@ -496,17 +503,17 @@ export const AudioOutputSelectWidget: React.FC<ConfigWidgetProps & {
   
   return (
     <div className="space-y-1">
-      <label htmlFor={name} className="block text-sm font-medium text-gray-700">
+      <Label htmlFor={name}>
         {name}
-        {schema.required && <span className="text-red-500 ml-1">*</span>}
-      </label>
+        {schema.required && <span className="text-destructive ml-1">*</span>}
+      </Label>
       <div className="relative">
         <select
           id={name}
           value={value === null ? '' : value?.toString() || ''}
           onChange={(e) => handleDeviceChange(e.target.value)}
           disabled={disabled || loading}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:opacity-50 text-sm appearance-none"
+          className={nativeSelectClass}
         >
           <option value="">{t('widgets.device.defaultOutput')}</option>
           {devices.map((device) => (
@@ -515,18 +522,18 @@ export const AudioOutputSelectWidget: React.FC<ConfigWidgetProps & {
             </option>
           ))}
         </select>
-        <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+        <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
       </div>
       {loading && (
-        <div className="text-xs text-gray-500">{t('widgets.device.loadingOutput')}</div>
+        <div className="text-xs text-muted-foreground">{t('widgets.device.loadingOutput')}</div>
       )}
       {!loading && devices.length === 0 && (
-        <div className="text-xs text-red-500">{t('widgets.device.noneOutput')}</div>
+        <div className="text-xs text-destructive">{t('widgets.device.noneOutput')}</div>
       )}
       {schema.description && (
         <div className="flex items-center">
-          <Info className="h-3 w-3 text-gray-400 mr-1" />
-          <span className="text-xs text-gray-500">{schema.description}</span>
+          <Info className="h-3 w-3 text-muted-foreground mr-1" />
+          <span className="text-xs text-muted-foreground">{schema.description}</span>
         </div>
       )}
     </div>
@@ -541,16 +548,16 @@ export const ReadOnlyWidget: React.FC<ConfigWidgetProps> = ({
   
   return (
     <div className="space-y-1">
-      <label className="block text-sm font-medium text-gray-700">
+      <Label>
         {name}
-      </label>
-      <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-600 text-sm">
+      </Label>
+      <div className="w-full px-3 py-2 border border-input rounded-md bg-muted text-muted-foreground text-sm">
         {displayValue}
       </div>
       {schema.description && (
         <div className="flex items-center">
-          <Info className="h-3 w-3 text-gray-400 mr-1" />
-          <span className="text-xs text-gray-500">{schema.description}</span>
+          <Info className="h-3 w-3 text-muted-foreground mr-1" />
+          <span className="text-xs text-muted-foreground">{schema.description}</span>
         </div>
       )}
     </div>
@@ -568,34 +575,31 @@ export const RangeSliderWidget: React.FC<ConfigWidgetProps> = ({
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <label htmlFor={name} className="block text-sm font-medium text-gray-700">
+        <Label htmlFor={name}>
           {name}
-          {schema.required && <span className="text-red-500 ml-1">*</span>}
-        </label>
-        <span className="text-sm text-gray-600">{currentValue}</span>
+          {schema.required && <span className="text-destructive ml-1">*</span>}
+        </Label>
+        <span className="text-sm text-muted-foreground">{currentValue}</span>
       </div>
-      <input
-        type="range"
+      <Slider
         id={name}
         min={min}
         max={max}
         step={step}
-        value={currentValue}
-        onChange={(e) => {
-          const val = parseFloat(e.target.value);
+        value={[currentValue]}
+        onValueChange={([val]) => {
           onChange(schema.type === 'integer' ? Math.round(val) : val);
         }}
         disabled={disabled}
-        className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer disabled:opacity-50"
       />
-      <div className="flex justify-between text-xs text-gray-500">
+      <div className="flex justify-between text-xs text-muted-foreground">
         <span>{min}</span>
         <span>{max}</span>
       </div>
       {schema.description && (
         <div className="flex items-center">
-          <Info className="h-3 w-3 text-gray-400 mr-1" />
-          <span className="text-xs text-gray-500">{schema.description}</span>
+          <Info className="h-3 w-3 text-muted-foreground mr-1" />
+          <span className="text-xs text-muted-foreground">{schema.description}</span>
         </div>
       )}
     </div>
@@ -631,24 +635,26 @@ export const ArrayOfObjectsEditor: React.FC<ConfigWidgetProps> = ({
 
   return (
     <div className="space-y-2">
-      <label className="block text-sm font-medium text-gray-700">
+      <Label>
         {name}
-        {schema.required && <span className="text-red-500 ml-1">*</span>}
-      </label>
+        {schema.required && <span className="text-destructive ml-1">*</span>}
+      </Label>
 
       <div className="space-y-3">
         {arrayValue.map((row, index) => (
-          <div key={index} className="border border-gray-200 rounded-md p-3 space-y-2 bg-gray-50">
+          <div key={index} className="border border-border rounded-md p-3 space-y-2 bg-muted">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-gray-500">#{index + 1}</span>
-              <button
+              <span className="text-xs font-medium text-muted-foreground">#{index + 1}</span>
+              <Button
                 type="button"
+                variant="ghost"
+                size="sm"
                 onClick={() => removeItem(index)}
                 disabled={disabled}
-                className="px-2 text-red-600 hover:text-red-800 disabled:opacity-50"
+                className="h-6 px-2 text-destructive"
               >
                 ×
-              </button>
+              </Button>
             </div>
             <div className="grid grid-cols-2 gap-2">
               {propNames.map((prop) => {
@@ -656,14 +662,14 @@ export const ArrayOfObjectsEditor: React.FC<ConfigWidgetProps> = ({
                 const isNumber = ps.type === 'number' || ps.type === 'integer';
                 return (
                   <div key={prop} className="flex flex-col">
-                    <label className="text-xs text-gray-600">{prop}</label>
-                    <input
+                    <label className="text-xs text-muted-foreground">{prop}</label>
+                    <Input
                       type={isNumber ? 'number' : 'text'}
                       value={row?.[prop] ?? ''}
                       onChange={(e) => updateField(index, prop, isNumber ? Number(e.target.value) : e.target.value)}
                       disabled={disabled}
                       title={ps.description}
-                      className="px-2 py-1 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:opacity-50 text-sm"
+                      className="h-8 px-2"
                     />
                   </div>
                 );
@@ -672,20 +678,21 @@ export const ArrayOfObjectsEditor: React.FC<ConfigWidgetProps> = ({
           </div>
         ))}
 
-        <button
+        <Button
           type="button"
+          variant="link"
+          size="sm"
           onClick={addItem}
           disabled={disabled}
-          className="px-3 py-1 text-sm text-blue-600 hover:text-blue-800 disabled:opacity-50"
         >
           {t('widgets.addItem')}
-        </button>
+        </Button>
       </div>
 
       {schema.description && (
         <div className="flex items-center">
-          <Info className="h-3 w-3 text-gray-400 mr-1" />
-          <span className="text-xs text-gray-500">{schema.description}</span>
+          <Info className="h-3 w-3 text-muted-foreground mr-1" />
+          <span className="text-xs text-muted-foreground">{schema.description}</span>
         </div>
       )}
     </div>
@@ -776,7 +783,7 @@ export const ConfigWidget: React.FC<ConfigWidgetProps & {
             />
             {schema.description && (
               <div className="flex items-center">
-                <span className="text-xs text-gray-500">{schema.description}</span>
+                <span className="text-xs text-muted-foreground">{schema.description}</span>
               </div>
             )}
           </div>
@@ -786,16 +793,17 @@ export const ConfigWidget: React.FC<ConfigWidgetProps & {
       // ConfigSection upstream; reaching here means a real routing bug, so keep the warning.
       return (
         <div className="space-y-1">
-          <label className="block text-sm font-medium text-gray-700">
+          <Label>
             {name}
-            {schema.required && <span className="text-red-500 ml-1">*</span>}
-          </label>
-          <div className="px-3 py-2 bg-yellow-50 border border-yellow-200 rounded-md text-sm text-yellow-800">
-            {t('widgets.objectFieldWarning')}
-          </div>
+            {schema.required && <span className="text-destructive ml-1">*</span>}
+          </Label>
+          <Alert variant="accent">
+            <Info />
+            <AlertDescription>{t('widgets.objectFieldWarning')}</AlertDescription>
+          </Alert>
           {schema.description && (
             <div className="flex items-center">
-              <span className="text-xs text-gray-500">{schema.description}</span>
+              <span className="text-xs text-muted-foreground">{schema.description}</span>
             </div>
           )}
         </div>

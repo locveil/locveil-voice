@@ -16,6 +16,7 @@ import {
   X,
   AlertTriangle
 } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle, Button } from 'locveil-ui-kit';
 import type { ApplyChangesBarProps, ValidationResult } from '@/types';
 import { useValidationWorkflow } from '@/hooks';
 import { ValidationIndicator, BlockingConflictsDialog } from '@/components/analysis';
@@ -188,13 +189,13 @@ const ApplyChangesBar: React.FC<ApplyChangesBarProps> = ({
   const canApply = !isApplying && !loading && canSave;
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 border-t border-gray-200 bg-white px-6 py-4 shadow-lg z-50">
+    <div className="fixed bottom-0 left-0 right-0 border-t border-border bg-card px-6 py-4 shadow-lg z-50">
       <div className="flex items-center justify-between">
         {/* Left side - Status */}
         <div className="flex items-center space-x-3">
           <div className="flex items-center space-x-2">
-            <AlertCircle className="w-5 h-5 text-orange-500" />
-            <span className="text-sm text-gray-700">
+            <AlertCircle className="w-5 h-5 text-[hsl(var(--lv-status-edited)_55%_32%)] dark:text-[hsl(var(--lv-status-edited)_70%_72%)]" />
+            <span className="text-sm text-muted-foreground">
               {hasUnsavedChanges ? (
                 selectedHandler ? (
                   <>{t('applyBar.unsavedChangesIn')} <strong>{selectedHandler}</strong></>
@@ -208,7 +209,7 @@ const ApplyChangesBar: React.FC<ApplyChangesBarProps> = ({
           </div>
 
           {lastSaved && (
-            <span className="text-xs text-gray-500">
+            <span className="text-xs text-muted-foreground">
               {t('applyBar.lastSaved', { time: lastSaved.toLocaleTimeString() })}
             </span>
           )}
@@ -219,56 +220,53 @@ const ApplyChangesBar: React.FC<ApplyChangesBarProps> = ({
           {/* BUG-10: blocking conflicts disable Apply — this makes the (otherwise unreachable)
               BlockingConflictsDialog reachable so the user can review the blockers. */}
           {useEnhancedValidation && hasBlockingConflicts && (
-            <button
+            <Button
+              variant="outline"
               onClick={() => setShowBlockingDialog(true)}
-              className="inline-flex items-center px-3 py-2 border border-red-300 text-sm font-medium rounded-md text-red-700 bg-red-50 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+              className="text-destructive hover:text-destructive"
             >
-              <AlertTriangle className="w-4 h-4 mr-2" />
+              <AlertTriangle />
               {t('applyBar.reviewBlockingConflicts', { count: blockingConflicts.length })}
-            </button>
+            </Button>
           )}
 
           {/* Validation Button */}
-          <button
-              onClick={() => void handleValidate()}
-              disabled={isValidating || loading}
-              className="inline-flex items-center px-3 py-2 border border-blue-300 text-sm font-medium rounded-md text-blue-700 bg-blue-50 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isValidating ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <Eye className="w-4 h-4 mr-2" />
-              )}
-              {isValidating ? t('validation.validating') : t('applyBar.validate')}
-            </button>
+          <Button
+            variant="outline"
+            onClick={() => void handleValidate()}
+            disabled={isValidating || loading}
+          >
+            {isValidating ? (
+              <Loader2 className="animate-spin" />
+            ) : (
+              <Eye />
+            )}
+            {isValidating ? t('validation.validating') : t('applyBar.validate')}
+          </Button>
 
           {/* Discard Button */}
-          <button
+          <Button
+            variant="outline"
             onClick={handleDiscard}
             disabled={loading || isApplying}
-            className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <X className="w-4 h-4 mr-2" />
+            <X />
             {t('actions.cancel')}
-          </button>
+          </Button>
 
           {/* Apply Button */}
-          <button
+          <Button
+            variant={hasValidationErrors ? 'destructive' : 'default'}
             onClick={() => void handleApply()}
             disabled={!canApply}
-            className={`inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed ${
-              hasValidationErrors
-                ? 'bg-red-600 hover:bg-red-700 focus:ring-red-500'
-                : 'bg-green-600 hover:bg-green-700 focus:ring-green-500'
-            }`}
           >
             {isApplying ? (
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              <Loader2 className="animate-spin" />
             ) : (
-              <Save className="w-4 h-4 mr-2" />
+              <Save />
             )}
             {isApplying ? t('status.saving') : t('applyBar.saveChanges')}
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -286,53 +284,51 @@ const ApplyChangesBar: React.FC<ApplyChangesBarProps> = ({
             <div className="space-y-2">
               {/* Errors */}
               {legacyValidationResult?.errors && legacyValidationResult.errors.length > 0 && (
-                <div className="bg-red-50 border border-red-200 rounded-md p-3">
-                  <div className="flex">
-                    <AlertCircle className="w-5 h-5 text-red-400 mr-2 mt-0.5 flex-shrink-0" />
-                    <div className="text-sm">
-                      <h4 className="text-red-800 font-medium mb-1">{t('applyBar.validationErrors')}</h4>
-                      <ul className="text-red-700 space-y-1">
+                <Alert variant="destructive">
+                  <AlertCircle />
+                  <div>
+                    <AlertTitle>{t('applyBar.validationErrors')}</AlertTitle>
+                    <AlertDescription>
+                      <ul className="space-y-1">
                         {legacyValidationResult.errors.map((error, index) => (
                           <li key={index} className="list-disc list-inside">
                             {error}
                           </li>
                         ))}
                       </ul>
-                    </div>
+                    </AlertDescription>
                   </div>
-                </div>
+                </Alert>
               )}
 
               {/* Warnings */}
               {hasValidationWarnings && (
-                <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3">
-                  <div className="flex">
-                    <AlertTriangle className="w-5 h-5 text-yellow-400 mr-2 mt-0.5 flex-shrink-0" />
-                    <div className="text-sm">
-                      <h4 className="text-yellow-800 font-medium mb-1">{t('applyBar.validationWarnings')}</h4>
-                      <ul className="text-yellow-700 space-y-1">
+                <Alert>
+                  <AlertTriangle className="text-[hsl(var(--lv-status-edited)_55%_32%)] dark:text-[hsl(var(--lv-status-edited)_70%_72%)]" />
+                  <div>
+                    <AlertTitle>{t('applyBar.validationWarnings')}</AlertTitle>
+                    <AlertDescription>
+                      <ul className="space-y-1">
                         {legacyValidationResult?.warnings?.map((warning, index) => (
                           <li key={index} className="list-disc list-inside">
                             {warning}
                           </li>
                         ))}
                       </ul>
-                    </div>
+                    </AlertDescription>
                   </div>
-                </div>
+                </Alert>
               )}
 
               {/* Success */}
               {legacyValidationResult?.valid && (!legacyValidationResult.warnings || legacyValidationResult.warnings.length === 0) && (
-                <div className="bg-green-50 border border-green-200 rounded-md p-3">
-                  <div className="flex">
-                    <CheckCircle2 className="w-5 h-5 text-green-400 mr-2 mt-0.5 flex-shrink-0" />
-                    <div className="text-sm">
-                      <p className="text-green-800 font-medium">{t('applyBar.validationSuccessful')}</p>
-                      <p className="text-green-700">{t('applyBar.noErrorsReady')}</p>
-                    </div>
+                <Alert>
+                  <CheckCircle2 className="text-[hsl(var(--lv-status-persisted)_55%_32%)] dark:text-[hsl(var(--lv-status-persisted)_70%_72%)]" />
+                  <div>
+                    <AlertTitle>{t('applyBar.validationSuccessful')}</AlertTitle>
+                    <AlertDescription>{t('applyBar.noErrorsReady')}</AlertDescription>
                   </div>
-                </div>
+                </Alert>
               )}
             </div>
           )}

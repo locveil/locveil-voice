@@ -8,6 +8,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Trash2, Plus, Type, List, Hash, ChevronDown, ChevronRight } from 'lucide-react';
+import { Button, Alert, AlertDescription, Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from 'locveil-ui-kit';
 import Input from '@/components/ui/Input';
 import TextArea from '@/components/ui/TextArea';
 import Badge from '@/components/ui/Badge';
@@ -126,38 +127,37 @@ const LocalizationKeyEditor: React.FC<LocalizationKeyEditorProps> = ({
     return (
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <span className="text-sm text-gray-600">{t('keyEditor.items', { count: arrayValue.length })}</span>
-          <button
-            onClick={addArrayItem}
-            className="flex items-center gap-1 px-2 py-1 text-xs bg-blue-50 text-blue-600 rounded hover:bg-blue-100 transition-colors"
-          >
-            <Plus className="w-3 h-3" />
+          <span className="text-sm text-muted-foreground">{t('keyEditor.items', { count: arrayValue.length })}</span>
+          <Button variant="ghost" size="sm" onClick={addArrayItem} className="text-primary">
+            <Plus />
             {t('keyEditor.addItem')}
-          </button>
+          </Button>
         </div>
         
         <div className="space-y-2 max-h-40 overflow-y-auto">
           {arrayValue.map((item, index) => (
             <div key={index} className="flex items-center gap-2">
-              <span className="text-xs text-gray-400 w-6">{index}</span>
+              <span className="text-xs text-muted-foreground w-6">{index}</span>
               <Input
                 value={safeArrayItemStringify(item)}
                 onChange={(newValue) => updateArrayItem(index, newValue)}
                 placeholder={t('keyEditor.itemPlaceholder', { index: index + 1 })}
                 className="text-sm flex-1"
               />
-              <button
+              <Button
+                variant="ghost"
+                size="icon"
                 onClick={() => removeArrayItem(index)}
-                className="p-1 text-red-500 hover:text-red-700 transition-colors"
+                className="text-destructive"
               >
-                <Trash2 className="w-3 h-3" />
-              </button>
+                <Trash2 />
+              </Button>
             </div>
           ))}
         </div>
         
         {arrayValue.length === 0 && (
-          <div className="text-center py-4 text-gray-500 text-sm">
+          <div className="text-center py-4 text-muted-foreground text-sm">
             {t('keyEditor.noItems')}
           </div>
         )}
@@ -198,14 +198,11 @@ const LocalizationKeyEditor: React.FC<LocalizationKeyEditorProps> = ({
     return (
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <span className="text-sm text-gray-600">{t('keyEditor.properties', { count: Object.keys(objectValue).length })}</span>
-          <button
-            onClick={addObjectKey}
-            className="flex items-center gap-1 px-2 py-1 text-xs bg-blue-50 text-blue-600 rounded hover:bg-blue-100 transition-colors"
-          >
-            <Plus className="w-3 h-3" />
+          <span className="text-sm text-muted-foreground">{t('keyEditor.properties', { count: Object.keys(objectValue).length })}</span>
+          <Button variant="ghost" size="sm" onClick={addObjectKey} className="text-primary">
+            <Plus />
             {t('keyEditor.addProperty')}
-          </button>
+          </Button>
         </div>
         
         <div className="space-y-2 max-h-40 overflow-y-auto">
@@ -224,19 +221,21 @@ const LocalizationKeyEditor: React.FC<LocalizationKeyEditorProps> = ({
                   placeholder={t('keyEditor.propertyValue')}
                   className="text-sm flex-1"
                 />
-                <button
+                <Button
+                  variant="ghost"
+                  size="icon"
                   onClick={() => removeObjectKey(key)}
-                  className="p-1 text-red-500 hover:text-red-700 transition-colors"
+                  className="text-destructive"
                 >
-                  <Trash2 className="w-3 h-3" />
-                </button>
+                  <Trash2 />
+                </Button>
               </div>
             </div>
           ))}
         </div>
         
         {Object.keys(objectValue).length === 0 && (
-          <div className="text-center py-4 text-gray-500 text-sm">
+          <div className="text-center py-4 text-muted-foreground text-sm">
             {t('keyEditor.noProperties')}
           </div>
         )}
@@ -269,15 +268,17 @@ const LocalizationKeyEditor: React.FC<LocalizationKeyEditorProps> = ({
   const domainHint = getDomainHint();
 
   return (
-    <div className="border border-gray-200 rounded-lg p-4 bg-white">
+    <div className="border border-border rounded-lg p-4 bg-card">
       {/* Header */}
       <div className="flex items-center gap-3 mb-3">
-        <button
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={() => setIsExpanded(!isExpanded)}
-          className="text-gray-400 hover:text-gray-600 transition-colors"
+          className="text-muted-foreground"
         >
-          {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-        </button>
+          {isExpanded ? <ChevronDown /> : <ChevronRight />}
+        </Button>
         
         <div className="flex-1">
           <Input
@@ -290,35 +291,41 @@ const LocalizationKeyEditor: React.FC<LocalizationKeyEditorProps> = ({
         
         <div className="flex items-center gap-2">
           {/* Type selector */}
-          <select
+          <Select
             value={valueType}
-            onChange={(e) => handleTypeChange(e.target.value as ValueType)}
-            className="text-xs border border-gray-200 rounded px-2 py-1 bg-white"
+            onValueChange={(newType) => handleTypeChange(newType as ValueType)}
           >
-            <option value="string">{t('keyEditor.valueTypes.string')}</option>
-            <option value="array">{t('keyEditor.valueTypes.array')}</option>
-            <option value="object">{t('keyEditor.valueTypes.object')}</option>
-          </select>
+            <SelectTrigger className="h-8 w-auto text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="string">{t('keyEditor.valueTypes.string')}</SelectItem>
+              <SelectItem value="array">{t('keyEditor.valueTypes.array')}</SelectItem>
+              <SelectItem value="object">{t('keyEditor.valueTypes.object')}</SelectItem>
+            </SelectContent>
+          </Select>
 
           <Badge variant="default" className="text-xs">
             {getTypeIcon(valueType)}
             {t(`keyEditor.valueTypes.${valueType}`)}
           </Badge>
-          
-          <button
+
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={onDelete}
-            className="p-1 text-red-500 hover:text-red-700 transition-colors"
+            className="text-destructive"
           >
-            <Trash2 className="w-4 h-4" />
-          </button>
+            <Trash2 />
+          </Button>
         </div>
       </div>
 
       {/* Domain hint */}
       {domainHint && (
-        <div className="mb-3 p-2 bg-blue-50 border border-blue-200 rounded text-blue-700 text-sm">
-          💡 {domainHint}
-        </div>
+        <Alert variant="accent" className="mb-3">
+          <AlertDescription>💡 {domainHint}</AlertDescription>
+        </Alert>
       )}
 
       {/* Value editor */}

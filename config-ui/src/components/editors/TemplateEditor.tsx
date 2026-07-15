@@ -7,7 +7,8 @@
 
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, FileText, Eye, Code, Layout } from 'lucide-react';
+import { Plus, FileText, Eye, Code, Layout, AlertCircle } from 'lucide-react';
+import { Button, Alert, AlertTitle, AlertDescription, Tabs, TabsList, TabsTrigger } from 'locveil-ui-kit';
 import TemplateKeyEditor from './TemplateKeyEditor';
 import Section from '@/components/ui/Section';
 import TextArea from '@/components/ui/TextArea';
@@ -178,20 +179,20 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({
   const renderStructuredView = () => (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h3 className="text-lg font-medium text-gray-900">{t('editor.keys')}</h3>
-        <button
+        <h3 className="text-lg font-medium text-foreground">{t('editor.keys')}</h3>
+        <Button
           type="button"
+          size="sm"
           onClick={addNewKey}
-          className="flex items-center space-x-2 px-3 py-1 bg-yellow-600 text-white rounded-md hover:bg-yellow-700"
           title={t('editor.addKeyTitle')}
         >
-          <Plus className="w-4 h-4" />
+          <Plus />
           <span>{t('editor.addKey')}</span>
-        </button>
+        </Button>
       </div>
 
       {Object.keys(value).length === 0 ? (
-        <div className="text-center py-8 text-gray-500">
+        <div className="text-center py-8 text-muted-foreground">
           <FileText className="w-8 h-8 mx-auto mb-2" />
           <p>{t('editor.empty')}</p>
         </div>
@@ -212,7 +213,7 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({
   const renderYamlView = () => (
     <div className="space-y-4">
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <label className="block text-sm font-medium text-muted-foreground mb-2">
           {t('editor.yamlContent')}
         </label>
         <TextArea
@@ -220,10 +221,10 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({
           onChange={handleYamlChange}
           placeholder={t('editor.yamlPlaceholder')}
           rows={20}
-          className={yamlError ? 'border-red-300' : ''}
+          className={yamlError ? 'border-destructive' : ''}
         />
         {yamlError && (
-          <p className="mt-1 text-sm text-red-600">{yamlError}</p>
+          <p className="mt-1 text-sm text-destructive">{yamlError}</p>
         )}
       </div>
     </div>
@@ -231,17 +232,17 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({
 
   const renderPreviewView = () => (
     <div className="space-y-4">
-      <h3 className="text-lg font-medium text-gray-900">{t('editor.preview')}</h3>
-      <div className="bg-gray-50 p-4 rounded-lg">
-        <pre className="text-sm text-gray-800 whitespace-pre-wrap">
+      <h3 className="text-lg font-medium text-foreground">{t('editor.preview')}</h3>
+      <div className="bg-muted p-4 rounded-lg">
+        <pre className="text-sm text-foreground whitespace-pre-wrap">
           {objectToYaml(value)}
         </pre>
       </div>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <h4 className="text-sm font-medium text-gray-700 mb-2">{t('editor.statistics')}</h4>
-          <div className="space-y-1 text-sm text-gray-600">
+          <h4 className="text-sm font-medium text-muted-foreground mb-2">{t('editor.statistics')}</h4>
+          <div className="space-y-1 text-sm text-muted-foreground">
             <div>{t('editor.totalKeys', { count: Object.keys(value).length })}</div>
             <div>{t('editor.stringValues', { count: Object.values(value).filter(v => typeof v === 'string').length })}</div>
             <div>{t('editor.arrayValues', { count: Object.values(value).filter(v => Array.isArray(v)).length })}</div>
@@ -250,7 +251,7 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({
         </div>
 
         <div>
-          <h4 className="text-sm font-medium text-gray-700 mb-2">{t('editor.keys')}</h4>
+          <h4 className="text-sm font-medium text-muted-foreground mb-2">{t('editor.keys')}</h4>
           <div className="flex flex-wrap gap-1">
             {Object.keys(value).map(key => (
               <Badge key={key} variant="info" className="text-xs">
@@ -266,57 +267,38 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({
   return (
     <Section title={t('editor.title')}>
       {/* View Mode Selector */}
-      <div className="flex space-x-1 mb-6 bg-gray-100 p-1 rounded-lg">
-        <button
-          type="button"
-          onClick={() => setViewMode('structured')}
-          className={`flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-            viewMode === 'structured'
-              ? 'bg-white text-blue-600 shadow-sm'
-              : 'text-gray-700 hover:text-gray-900'
-          }`}
-        >
-          <Layout className="w-4 h-4" />
-          <span>{t('editor.viewModes.structured')}</span>
-        </button>
-        
-        <button
-          type="button"
-          onClick={() => setViewMode('yaml')}
-          className={`flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-            viewMode === 'yaml'
-              ? 'bg-white text-blue-600 shadow-sm'
-              : 'text-gray-700 hover:text-gray-900'
-          }`}
-        >
-          <Code className="w-4 h-4" />
-          <span>{t('editor.viewModes.yaml')}</span>
-        </button>
-        
-        <button
-          type="button"
-          onClick={() => setViewMode('preview')}
-          className={`flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-            viewMode === 'preview'
-              ? 'bg-white text-blue-600 shadow-sm'
-              : 'text-gray-700 hover:text-gray-900'
-          }`}
-        >
-          <Eye className="w-4 h-4" />
-          <span>{t('editor.viewModes.preview')}</span>
-        </button>
-      </div>
+      <Tabs value={viewMode} onValueChange={(mode) => setViewMode(mode as ViewMode)} className="mb-6">
+        <TabsList>
+          <TabsTrigger value="structured" className="gap-2">
+            <Layout className="w-4 h-4" />
+            <span>{t('editor.viewModes.structured')}</span>
+          </TabsTrigger>
+          <TabsTrigger value="yaml" className="gap-2">
+            <Code className="w-4 h-4" />
+            <span>{t('editor.viewModes.yaml')}</span>
+          </TabsTrigger>
+          <TabsTrigger value="preview" className="gap-2">
+            <Eye className="w-4 h-4" />
+            <span>{t('editor.viewModes.preview')}</span>
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
 
       {/* Validation Errors */}
       {validationErrors.length > 0 && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
-          <h4 className="text-sm font-medium text-red-800 mb-1">{t('editor.validationErrors')}</h4>
-          <ul className="text-sm text-red-700 list-disc list-inside">
-            {validationErrors.map((error, index) => (
-              <li key={index}>{error}</li>
-            ))}
-          </ul>
-        </div>
+        <Alert variant="destructive" className="mb-4">
+          <AlertCircle />
+          <div>
+            <AlertTitle>{t('editor.validationErrors')}</AlertTitle>
+            <AlertDescription>
+              <ul className="list-disc list-inside">
+                {validationErrors.map((error, index) => (
+                  <li key={index}>{error}</li>
+                ))}
+              </ul>
+            </AlertDescription>
+          </div>
+        </Alert>
       )}
 
       {/* Content based on view mode */}

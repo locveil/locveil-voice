@@ -7,6 +7,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Trash2, Plus, ChevronDown, ChevronRight, MessageSquare } from 'lucide-react';
+import { Button, Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from 'locveil-ui-kit';
 import Input from '@/components/ui/Input';
 import TextArea from '@/components/ui/TextArea';
 import Badge from '@/components/ui/Badge';
@@ -78,37 +79,37 @@ const PromptDefinitionEditor: React.FC<PromptDefinitionEditorProps> = ({
   };
 
   return (
-    <div className="border border-gray-200 rounded-lg bg-white">
+    <div className="border border-border rounded-lg bg-card">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-200">
+      <div className="flex items-center justify-between p-4 border-b border-border">
         <div className="flex items-center space-x-3">
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="icon"
             onClick={() => setIsExpanded(!isExpanded)}
-            className="text-gray-400 hover:text-gray-600"
+            className="text-muted-foreground"
           >
-            {isExpanded ? (
-              <ChevronDown className="w-5 h-5" />
-            ) : (
-              <ChevronRight className="w-5 h-5" />
-            )}
-          </button>
-          <MessageSquare className="w-5 h-5 text-blue-500" />
+            {isExpanded ? <ChevronDown /> : <ChevronRight />}
+          </Button>
+          <MessageSquare className="w-5 h-5 text-primary" />
           <div className="flex items-center space-x-2">
-            <h3 className="text-lg font-medium text-gray-900">{promptName}</h3>
+            <h3 className="text-lg font-medium text-foreground">{promptName}</h3>
             <Badge variant={getPromptTypeColor(value.prompt_type)}>
               {value.prompt_type}
             </Badge>
           </div>
         </div>
-        <button
+        <Button
           type="button"
+          variant="ghost"
+          size="icon"
           onClick={handleDelete}
-          className="text-red-600 hover:text-red-800"
+          className="text-destructive"
           title={t('keyEditor.deleteTitle', { prompt: promptName })}
         >
-          <Trash2 className="w-4 h-4" />
-        </button>
+          <Trash2 />
+        </Button>
       </div>
 
       {/* Content */}
@@ -116,7 +117,7 @@ const PromptDefinitionEditor: React.FC<PromptDefinitionEditorProps> = ({
         <div className="p-4 space-y-4">
           {/* Description */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-muted-foreground mb-1">
               {t('keyEditor.description')}
             </label>
             <Input
@@ -128,7 +129,7 @@ const PromptDefinitionEditor: React.FC<PromptDefinitionEditorProps> = ({
 
           {/* Usage Context */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-muted-foreground mb-1">
               {t('keyEditor.usageContext')}
             </label>
             <Input
@@ -140,19 +141,23 @@ const PromptDefinitionEditor: React.FC<PromptDefinitionEditorProps> = ({
 
           {/* Prompt Type */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-muted-foreground mb-1">
               {t('keyEditor.promptType')}
             </label>
-            <select
+            <Select
               value={value.prompt_type}
-              onChange={(e) => handleFieldChange('prompt_type', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              onValueChange={(newValue) => handleFieldChange('prompt_type', newValue)}
             >
-              <option value="system">{t('keyEditor.types.system')}</option>
-              <option value="template">{t('keyEditor.types.template')}</option>
-              <option value="user">{t('keyEditor.types.user')}</option>
-            </select>
-            <p className="mt-1 text-xs text-gray-500">
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="system">{t('keyEditor.types.system')}</SelectItem>
+                <SelectItem value="template">{t('keyEditor.types.template')}</SelectItem>
+                <SelectItem value="user">{t('keyEditor.types.user')}</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="mt-1 text-xs text-muted-foreground">
               {t(`keyEditor.typeHints.${value.prompt_type}`)}
             </p>
           </div>
@@ -160,28 +165,28 @@ const PromptDefinitionEditor: React.FC<PromptDefinitionEditorProps> = ({
           {/* Variables */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="block text-sm font-medium text-gray-700">
+              <label className="block text-sm font-medium text-muted-foreground">
                 {t('keyEditor.variables')}
               </label>
-              <button
+              <Button
                 type="button"
+                size="sm"
                 onClick={addVariable}
-                className="flex items-center space-x-1 px-2 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
               >
-                <Plus className="w-3 h-3" />
+                <Plus />
                 <span>{t('keyEditor.addVariable')}</span>
-              </button>
+              </Button>
             </div>
 
             {value.variables.length === 0 ? (
-              <div className="text-center py-4 text-gray-500 border-2 border-dashed border-gray-200 rounded-md">
+              <div className="text-center py-4 text-muted-foreground border-2 border-dashed border-border rounded-md">
                 <p className="text-sm">{t('keyEditor.noVariables')}</p>
                 <p className="text-xs">{t('keyEditor.noVariablesHint')}</p>
               </div>
             ) : (
               <div className="space-y-2">
                 {value.variables.map((variable, index) => (
-                  <div key={index} className="flex items-start space-x-2 p-3 bg-gray-50 rounded-md">
+                  <div key={index} className="flex items-start space-x-2 p-3 bg-muted rounded-md">
                     <div className="flex-1 space-y-2">
                       <Input
                         value={variable.name}
@@ -194,14 +199,16 @@ const PromptDefinitionEditor: React.FC<PromptDefinitionEditorProps> = ({
                         placeholder={t('keyEditor.variableDescriptionPlaceholder')}
                       />
                     </div>
-                    <button
+                    <Button
                       type="button"
+                      variant="ghost"
+                      size="icon"
                       onClick={() => removeVariable(index)}
-                      className="text-red-600 hover:text-red-800 mt-1"
+                      className="text-destructive mt-1"
                       title={t('keyEditor.removeVariable')}
                     >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                      <Trash2 />
+                    </Button>
                   </div>
                 ))}
               </div>
@@ -210,7 +217,7 @@ const PromptDefinitionEditor: React.FC<PromptDefinitionEditorProps> = ({
 
           {/* Content */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-muted-foreground mb-1">
               {t('keyEditor.content')}
             </label>
             <TextArea
@@ -219,7 +226,7 @@ const PromptDefinitionEditor: React.FC<PromptDefinitionEditorProps> = ({
               placeholder={t('keyEditor.contentPlaceholder')}
               rows={6}
             />
-            <div className="mt-1 text-xs text-gray-500">
+            <div className="mt-1 text-xs text-muted-foreground">
               <p>{t('keyEditor.contentHint')}</p>
               {value.variables.length > 0 && (
                 <p>{t('keyEditor.availableVariables', { variables: value.variables.map(v => `{${v.name}}`).join(', ') })}</p>
@@ -230,11 +237,11 @@ const PromptDefinitionEditor: React.FC<PromptDefinitionEditorProps> = ({
           {/* Preview */}
           {value.content && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-muted-foreground mb-1">
                 {t('keyEditor.preview')}
               </label>
-              <div className="bg-gray-50 border rounded-md p-3">
-                <pre className="text-sm text-gray-800 whitespace-pre-wrap">{value.content}</pre>
+              <div className="bg-muted border border-border rounded-md p-3">
+                <pre className="text-sm text-foreground whitespace-pre-wrap">{value.content}</pre>
               </div>
             </div>
           )}

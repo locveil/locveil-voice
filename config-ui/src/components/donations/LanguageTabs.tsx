@@ -8,8 +8,14 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Plus, X, AlertTriangle, CheckCircle, Clock, Shield } from 'lucide-react';
+import { Button } from 'locveil-ui-kit';
 import Badge from '@/components/ui/Badge';
 import type { ValidationReport, CompletenessReport } from '@/types/api';
+
+// Status-hued text/icon recipes (stylebook §2 — meaning via status tokens, never raw palette).
+const persistedText = 'text-[hsl(var(--lv-status-persisted)_55%_32%)] dark:text-[hsl(var(--lv-status-persisted)_70%_72%)]';
+const editedText = 'text-[hsl(var(--lv-status-edited)_55%_32%)] dark:text-[hsl(var(--lv-status-edited)_70%_72%)]';
+const conflictText = 'text-[hsl(var(--lv-status-conflict)_55%_32%)] dark:text-[hsl(var(--lv-status-conflict)_70%_72%)]';
 
 export interface LanguageInfo {
   code: string;
@@ -74,15 +80,15 @@ const LanguageTabs: React.FC<LanguageTabsProps> = ({
   const getStatusIcon = (status: string, validationErrors?: number) => {
     switch (status) {
       case 'loaded':
-        return validationErrors && validationErrors > 0 
-          ? <AlertTriangle className="w-3 h-3 text-yellow-500" />
-          : <CheckCircle className="w-3 h-3 text-green-500" />;
+        return validationErrors && validationErrors > 0
+          ? <AlertTriangle className={`w-3 h-3 ${editedText}`} />
+          : <CheckCircle className={`w-3 h-3 ${persistedText}`} />;
       case 'loading':
-        return <Clock className="w-3 h-3 text-blue-500 animate-spin" />;
+        return <Clock className="w-3 h-3 text-muted-foreground animate-spin" />;
       case 'error':
-        return <AlertTriangle className="w-3 h-3 text-red-500" />;
+        return <AlertTriangle className={`w-3 h-3 ${conflictText}`} />;
       case 'missing':
-        return <AlertTriangle className="w-3 h-3 text-gray-400" />;
+        return <AlertTriangle className="w-3 h-3 text-muted-foreground" />;
       default:
         return null;
     }
@@ -132,7 +138,7 @@ const LanguageTabs: React.FC<LanguageTabsProps> = ({
   };
 
   return (
-    <div className="border-b border-gray-200 bg-white">
+    <div className="border-b border-border bg-card">
       <div className="flex items-center justify-between px-4 py-3">
         <div className="flex items-center space-x-1">
           {/* Available Language Tabs */}
@@ -140,13 +146,13 @@ const LanguageTabs: React.FC<LanguageTabsProps> = ({
             <div
               key={language.code}
               className={`
-                relative flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium transition-colors
+                relative flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200
                 ${activeLanguage === language.code
-                  ? 'bg-blue-100 text-blue-700 border border-blue-300'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                  ? 'bg-primary/10 text-primary border border-primary'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
                 }
                 ${disabled ? 'opacity-50' : 'cursor-pointer'}
-                ${language.status === 'error' ? 'bg-red-50 text-red-700' : ''}
+                ${language.status === 'error' ? conflictText : ''}
               `}
             >
               <button
@@ -166,7 +172,7 @@ const LanguageTabs: React.FC<LanguageTabsProps> = ({
                     e.stopPropagation();
                     onDeleteLanguage(language.code);
                   }}
-                  className="ml-1 p-0.5 text-gray-400 hover:text-red-600 transition-colors"
+                  className="ml-1 p-0.5 text-muted-foreground hover:text-destructive transition-colors duration-200"
                   title={t('languageTabs.deleteLanguage', { language: getLanguageLabel(language.code) })}
                 >
                   <X className="w-3 h-3" />
@@ -179,20 +185,21 @@ const LanguageTabs: React.FC<LanguageTabsProps> = ({
           {!disabled && (
             <div className="relative">
               {!showCreateForm ? (
-                <button
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={() => setShowCreateForm(true)}
-                  className="flex items-center space-x-1 px-3 py-2 text-sm text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
                   title={t('languageTabs.addLanguageTitle')}
                 >
-                  <Plus className="w-4 h-4" />
+                  <Plus />
                   <span>{t('languageTabs.addLanguage')}</span>
-                </button>
+                </Button>
               ) : (
-                <div className="flex items-center space-x-2 p-2 bg-gray-50 rounded-md border">
+                <div className="flex items-center space-x-2 p-2 bg-muted rounded-md border border-border">
                   <select
                     value={newLanguageCode}
                     onChange={(e) => setNewLanguageCode(e.target.value)}
-                    className="text-sm border border-gray-300 rounded px-2 py-1"
+                    className="text-sm border border-input bg-background text-foreground rounded-md px-2 py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   >
                     <option value="">{t('languageTabs.selectLanguage')}</option>
                     {missingLanguages.map(lang => (
@@ -206,7 +213,7 @@ const LanguageTabs: React.FC<LanguageTabsProps> = ({
                     <select
                       value={templateLanguage}
                       onChange={(e) => setTemplateLanguage(e.target.value)}
-                      className="text-sm border border-gray-300 rounded px-2 py-1"
+                      className="text-sm border border-input bg-background text-foreground rounded-md px-2 py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     >
                       <option value="">{t('languageTabs.fromScratch')}</option>
                       {availableLanguages.map(lang => (
@@ -217,24 +224,25 @@ const LanguageTabs: React.FC<LanguageTabsProps> = ({
                     </select>
                   )}
                   
-                  <button
+                  <Button
+                    size="sm"
                     onClick={handleCreateLanguage}
                     disabled={!newLanguageCode}
-                    className="px-2 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
                   >
                     {t('languageTabs.create')}
-                  </button>
+                  </Button>
 
-                  <button
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={() => {
                       setShowCreateForm(false);
                       setNewLanguageCode('');
                       setTemplateLanguage('');
                     }}
-                    className="px-2 py-1 text-sm text-gray-600 hover:text-gray-800"
                   >
                     {t('common:actions.cancel')}
-                  </button>
+                  </Button>
                 </div>
               )}
             </div>
@@ -243,7 +251,7 @@ const LanguageTabs: React.FC<LanguageTabsProps> = ({
 
         {/* Language Info and Cross-Language Validation */}
         <div className="flex items-center space-x-4 text-sm">
-          <span className="text-gray-500">
+          <span className="text-muted-foreground">
             {t('languageTabs.languageCount', { available: availableLanguages.length, total: supportedLanguages.length })}
           </span>
           
@@ -263,38 +271,41 @@ const LanguageTabs: React.FC<LanguageTabsProps> = ({
               )}
 
               {onRefreshValidation && (
-                <button
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 text-primary"
                   onClick={onRefreshValidation}
-                  className="text-blue-600 hover:text-blue-800 p-1 rounded"
                   title={t('languageTabs.refreshValidationTitle')}
                 >
-                  <Shield className="w-4 h-4" />
-                </button>
+                  <Shield />
+                </Button>
               )}
               
             </div>
           )}
           
           {onCompareLanguages && availableLanguages.length > 1 && (
-            <button
+            <Button
+              variant="link"
+              className="h-auto p-0"
               onClick={() => {
                 const otherLang = availableLanguages.find(l => l.code !== activeLanguage);
                 if (otherLang) {
                   onCompareLanguages(activeLanguage, otherLang.code);
                 }
               }}
-              className="text-blue-600 hover:text-blue-800"
             >
               {t('languageTabs.compareLanguages')}
-            </button>
+            </Button>
           )}
         </div>
       </div>
 
       {/* Missing Languages Warning */}
       {missingLanguages.length > 0 && (
-        <div className="px-4 py-2 bg-yellow-50 border-t border-yellow-200">
-          <div className="flex items-center space-x-2 text-sm text-yellow-800">
+        <div className="px-4 py-2 border-t border-border">
+          <div className={`flex items-center space-x-2 text-sm ${editedText}`}>
             <AlertTriangle className="w-4 h-4" />
             <span>
               {t('languageTabs.missingLanguages', { languages: missingLanguages.map(getLanguageLabel).join(', ') })}
@@ -305,23 +316,24 @@ const LanguageTabs: React.FC<LanguageTabsProps> = ({
 
       {/* Phase 4: Cross-Language Validation Details */}
       {availableLanguages.length > 1 && hasValidationIssues() && (validationReport || completenessReport) && (
-        <div className="px-4 py-3 bg-red-50 border-t border-red-200">
+        <div className="px-4 py-3 border-t border-border">
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <h4 className="text-sm font-medium text-red-800">{t('languageTabs.issuesTitle')}</h4>
+              <h4 className="text-sm font-medium text-destructive">{t('languageTabs.issuesTitle')}</h4>
               {onRefreshValidation && (
-                <button
+                <Button
+                  variant="link"
+                  className="h-auto p-0 text-xs text-destructive"
                   onClick={onRefreshValidation}
-                  className="text-xs text-red-600 hover:text-red-800"
                 >
                   {t('languageTabs.refreshValidation')}
-                </button>
+                </Button>
               )}
             </div>
-            
+
             {/* Parameter Consistency Issues */}
             {validationReport && !validationReport.parameter_consistency && (
-              <div className="text-sm text-red-700">
+              <div className="text-sm text-destructive">
                 <div className="font-medium mb-1">{t('languageTabs.parameterIssues')}</div>
                 <ul className="list-disc list-inside text-xs space-y-1">
                   {validationReport.missing_parameters.map((issue, index) => (
@@ -336,7 +348,7 @@ const LanguageTabs: React.FC<LanguageTabsProps> = ({
             
             {/* Method Completeness Issues */}
             {completenessReport && !completenessReport.method_completeness && (
-              <div className="text-sm text-red-700">
+              <div className="text-sm text-destructive">
                 <div className="font-medium mb-1">{t('languageTabs.methodIssues')}</div>
                 <ul className="list-disc list-inside text-xs space-y-1">
                   {completenessReport.missing_methods.map((issue, index) => (

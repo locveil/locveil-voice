@@ -7,8 +7,14 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Play, CheckCircle2, XCircle } from 'lucide-react';
+import { Button, Input } from 'locveil-ui-kit';
 import apiClient from '@/utils/apiClient';
 import type { RecognizeResponse } from '@/types';
+
+// Status-hued text/icon recipes (stylebook §2 — meaning via status tokens, never raw palette).
+const persistedText = 'text-[hsl(var(--lv-status-persisted)_55%_32%)] dark:text-[hsl(var(--lv-status-persisted)_70%_72%)]';
+const editedText = 'text-[hsl(var(--lv-status-edited)_55%_32%)] dark:text-[hsl(var(--lv-status-edited)_70%_72%)]';
+const conflictText = 'text-[hsl(var(--lv-status-conflict)_55%_32%)] dark:text-[hsl(var(--lv-status-conflict)_70%_72%)]';
 
 interface PatternTesterProps {
   /** The intent this method should produce, e.g. "timer.set" — used to show a match/no-match badge. */
@@ -40,47 +46,46 @@ export default function PatternTester({ expectedIntent, placeholder }: PatternTe
   const matched = result && expectedIntent ? result.name === expectedIntent : undefined;
 
   return (
-    <div className="border rounded-xl p-3 bg-blue-50/40">
+    <div className="border border-border rounded-xl p-3 bg-muted/40">
       <div className="flex items-center gap-2">
-        <input
-          className="flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        <Input
+          className="flex-1"
           placeholder={placeholder ?? t('tester.placeholder')}
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') void run(); }}
         />
-        <button
+        <Button
           type="button"
-          className="inline-flex items-center gap-1 px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
           onClick={() => void run()} disabled={busy || !text.trim()}
         >
-          <Play className="w-4 h-4" /> {t('common:actions.test')}
-        </button>
+          <Play /> {t('common:actions.test')}
+        </Button>
       </div>
 
-      {error && <div className="mt-2 text-sm text-amber-700">{error}</div>}
+      {error && <div className={`mt-2 text-sm ${editedText}`}>{error}</div>}
 
       {result && (
         <div className="mt-2 text-sm">
           <div className="flex items-center gap-2">
-            {matched === true && <CheckCircle2 className="w-4 h-4 text-green-600" />}
-            {matched === false && <XCircle className="w-4 h-4 text-red-600" />}
+            {matched === true && <CheckCircle2 className={`w-4 h-4 ${persistedText}`} />}
+            {matched === false && <XCircle className={`w-4 h-4 ${conflictText}`} />}
             <span>
               {t('tester.recognized')} <b>{result.name}</b>
               {typeof result.confidence === 'number' && (
-                <span className="text-gray-500"> ({Math.round(result.confidence * 100)}%)</span>
+                <span className="text-muted-foreground"> ({Math.round(result.confidence * 100)}%)</span>
               )}
               {matched === false && expectedIntent && (
-                <span className="text-red-600"> {t('tester.expected', { intent: expectedIntent })}</span>
+                <span className="text-destructive"> {t('tester.expected', { intent: expectedIntent })}</span>
               )}
             </span>
           </div>
           {Object.keys(entities).length > 0 && (
-            <div className="mt-1 text-gray-700">
+            <div className="mt-1 text-muted-foreground">
               {t('tester.values')}{' '}
               {Object.entries(entities).map(([k, v]) => (
                 <span key={k} className="inline-block mr-2">
-                  <span className="font-mono text-gray-500">{k}</span>=<b>{String(v)}</b>
+                  <span className="font-mono text-muted-foreground">{k}</span>=<b>{String(v)}</b>
                 </span>
               ))}
             </div>

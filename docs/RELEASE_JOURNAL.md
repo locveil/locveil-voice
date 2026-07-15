@@ -20,6 +20,22 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-15 — UI-19 done: the whole editor wears the steel.** The sprint's flagged biggest slice —
+  35 composites and 6 pages, 1051 raw Tailwind palette classes — went onto the design system in one
+  session, executed as five parallel agents over disjoint file sets against a single brief distilled
+  from the stylebook, then swept and re-gated centrally. The mechanical half is total: zero raw palette
+  classes remain anywhere in the tree, both themes ride the tokens, and the status vocabulary
+  (pristine/edited/tested/persisted/conflict) now carries every state surface through chips, alerts and
+  the literal token recipes (verified extracted into the shipped CSS, light and dark). The structural
+  half swapped ~60 raw buttons, 12 selects, 3 tab bars, the one hand-rolled modal, ~20 feedback boxes
+  and the fake loaders onto kit primitives — while 9 native selects stayed deliberately (radix forbids
+  the empty-string placeholder semantics they legitimately use) and the pattern-card editors, LanguageTabs
+  chrome and Monaco panes stayed custom per the stylebook's own carve-out. Honest leftovers, all filed
+  or upstream-gated: window.confirm and bare title= wait for commons IMPL-4 → UI-21; the two fixed
+  bottom bars wait for a plugin-contract bottom-slot surface that doesn't exist yet. Gates: check +
+  plugin build + vitest 44/44 + shell smoke. The port arc is now UI-18 ✓ UI-17 ✓ UI-19 ✓ — of the
+  sprint's voice rows only UI-16 remains.
+
 - **2026-07-15 — BUILD-39: the push-day CI restore — and BUILD-38's fix turned out to be a fix for
   git, not for the action.** The day's push (BUILD-38 + intake + UI-18 + UI-17) failed both path-gated
   jobs, run 29417879036. contract-guard: `fetch-tags: true` is silently IGNORED by actions/checkout@v4

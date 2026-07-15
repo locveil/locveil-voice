@@ -24,12 +24,12 @@ export default function ChoiceSurfacesEditor({
   if (canonicalChoices.length === 0) return null;
 
   return (
-    <div className="border rounded-xl p-3">
+    <div className="border border-border rounded-xl p-3">
       <div className="text-sm font-medium mb-2">{t('choices.title')}</div>
       <div className="space-y-3">
         {canonicalChoices.map((canonical) => (
           <div key={canonical} className="grid grid-cols-1 md:grid-cols-[140px,1fr] gap-3 items-start">
-            <div className="text-sm font-mono bg-gray-50 border rounded-lg px-2 py-2 break-all">{canonical}</div>
+            <div className="text-sm font-mono bg-muted border border-border rounded-lg px-2 py-2 break-all">{canonical}</div>
             <ArrayOfStringsEditor
               label=""
               value={value[canonical] ?? []}

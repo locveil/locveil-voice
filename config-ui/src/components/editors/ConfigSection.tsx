@@ -10,6 +10,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ChevronDown, ChevronRight, Save, TestTube, AlertCircle, CheckCircle, Loader } from 'lucide-react';
+import { Alert, AlertDescription, Button } from 'locveil-ui-kit';
 import { ConfigWidget } from './ConfigWidgets';
 import MicrophoneConfigSection from './MicrophoneConfigSection';
 import TestConfigButton, { type ComponentName, type ComponentConfigType, type ComponentConfigureResponse } from '@/components/ui/TestConfigButton';
@@ -173,7 +174,7 @@ export const ConfigSection: React.FC<ConfigSectionProps> = ({
   
   const renderField = (fieldName: string, fieldSchema: FieldSchema) => {
     return (
-      <div key={fieldName} className="p-4 border-l-2 border-gray-100">
+      <div key={fieldName} className="p-4 border-l-2 border-border">
         <ConfigWidget
           name={fieldName}
           value={data?.[fieldName]}
@@ -311,41 +312,41 @@ export const ConfigSection: React.FC<ConfigSectionProps> = ({
   
   const getStatusIndicator = () => {
     if (isSaving || isValidating) {
-      return <Loader className="h-4 w-4 text-blue-500 animate-spin" />;
+      return <Loader className="h-4 w-4 text-primary animate-spin" />;
     }
-    
+
     if (validationResult) {
       return validationResult.valid ? (
-        <CheckCircle className="h-4 w-4 text-green-500" />
+        <CheckCircle className="h-4 w-4 text-[hsl(var(--lv-status-persisted)_55%_32%)] dark:text-[hsl(var(--lv-status-persisted)_70%_72%)]" />
       ) : (
-        <AlertCircle className="h-4 w-4 text-red-500" />
+        <AlertCircle className="h-4 w-4 text-destructive" />
       );
     }
-    
+
     if (hasChanges) {
-      return <div className="h-2 w-2 bg-orange-500 rounded-full" />;
+      return <div className="h-2 w-2 rounded-full bg-[hsl(var(--lv-status-edited)_45%_60%)] dark:bg-[hsl(var(--lv-status-edited)_45%_45%)]" />;
     }
-    
+
     return null;
   };
-  
+
   const getCardClass = () => {
-    const baseClass = "bg-white border rounded-lg transition-all duration-200";
-    
+    const baseClass = "bg-card border rounded-lg transition-colors duration-200";
+
     if (level === 1) {
-      return `${baseClass} border-gray-200 shadow-sm hover:shadow-md`;
+      return `${baseClass} border-border`;
     } else {
-      return `${baseClass} border-gray-100 shadow-sm`;
+      return `${baseClass} border-border`;
     }
   };
-  
+
   const getHeaderClass = () => {
-    const baseClass = "flex items-center justify-between p-4 cursor-pointer";
-    
+    const baseClass = "flex items-center justify-between p-4 cursor-pointer transition-colors duration-200";
+
     if (level === 1) {
-      return `${baseClass} hover:bg-gray-50`;
+      return `${baseClass} hover:bg-muted/60`;
     } else {
-      return `${baseClass} hover:bg-gray-25`;
+      return `${baseClass} hover:bg-muted/40`;
     }
   };
   
@@ -355,16 +356,16 @@ export const ConfigSection: React.FC<ConfigSectionProps> = ({
       <div className={getHeaderClass()} onClick={() => setIsExpanded(!isExpanded)}>
         <div className="flex items-center space-x-3">
           {isExpanded ? (
-            <ChevronDown className="h-4 w-4 text-gray-400" />
+            <ChevronDown className="h-4 w-4 text-muted-foreground" />
           ) : (
-            <ChevronRight className="h-4 w-4 text-gray-400" />
+            <ChevronRight className="h-4 w-4 text-muted-foreground" />
           )}
           <div>
-            <h3 className={`font-medium ${level === 1 ? 'text-lg text-gray-900' : 'text-md text-gray-800'}`}>
+            <h3 className={`font-medium ${level === 1 ? 'text-lg text-foreground' : 'text-base text-foreground'}`}>
               {displayTitle}
             </h3>
             {level === 1 && schema && (
-              <p className="text-sm text-gray-500 mt-1">
+              <p className="text-sm text-muted-foreground mt-1">
                 {t('section.settingsCount', { count: Object.keys(schema).length })}
               </p>
             )}
@@ -414,31 +415,35 @@ export const ConfigSection: React.FC<ConfigSectionProps> = ({
           {hasChanges && isExpanded && level === 1 && (
             <div className="flex items-center space-x-2">
               {onValidate && (
-                <button
+                <Button
+                  variant="ghost"
+                  size="icon"
                   onClick={(e) => {
                     e.stopPropagation();
                     void handleValidate();
                   }}
                   disabled={isValidating || disabled}
-                  className="p-1 text-blue-600 hover:text-blue-800 disabled:opacity-50"
+                  className="h-7 w-7"
                   title={t('section.validateSection')}
                 >
-                  <TestTube className="h-4 w-4" />
-                </button>
+                  <TestTube />
+                </Button>
               )}
-              
+
               {onApply && (
-                <button
+                <Button
+                  variant="ghost"
+                  size="icon"
                   onClick={(e) => {
                     e.stopPropagation();
                     void handleApply();
                   }}
                   disabled={isSaving || disabled}
-                  className="p-1 text-green-600 hover:text-green-800 disabled:opacity-50"
+                  className="h-7 w-7 text-primary"
                   title={t('section.applyChanges')}
                 >
-                  <Save className="h-4 w-4" />
-                </button>
+                  <Save />
+                </Button>
               )}
             </div>
           )}
@@ -448,17 +453,17 @@ export const ConfigSection: React.FC<ConfigSectionProps> = ({
       {/* Validation Errors */}
       {isExpanded && validationResult && !validationResult.valid && (
         <div className="px-4 pb-2">
-          <div className="bg-red-50 border border-red-200 rounded-md p-3">
-            <div className="flex items-center">
-              <AlertCircle className="h-4 w-4 text-red-500 mr-2" />
-              <span className="text-sm font-medium text-red-800">{t('section.validationErrors')}</span>
-            </div>
-            <ul className="mt-2 text-sm text-red-700 space-y-1">
-              {validationResult.errors?.map((error, index) => (
-                <li key={index}>• {error.message || error}</li>
-              ))}
-            </ul>
-          </div>
+          <Alert variant="destructive">
+            <AlertCircle />
+            <AlertDescription>
+              <span className="font-medium">{t('section.validationErrors')}</span>
+              <ul className="mt-2 space-y-1">
+                {validationResult.errors?.map((error, index) => (
+                  <li key={index}>• {error.message || error}</li>
+                ))}
+              </ul>
+            </AlertDescription>
+          </Alert>
         </div>
       )}
 
@@ -476,7 +481,7 @@ export const ConfigSection: React.FC<ConfigSectionProps> = ({
       
       {/* Section Content */}
       {isExpanded && (
-        <div className="border-t border-gray-100">
+        <div className="border-t border-border">
           <div className="p-4">
             {renderSubsections()}
           </div>

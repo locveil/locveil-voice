@@ -8,6 +8,8 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Lightbulb, CheckCircle, ArrowRight, X } from 'lucide-react';
+import { Button } from 'locveil-ui-kit';
+import Badge from '@/components/ui/Badge';
 import type { ConflictReport } from '@/types';
 
 interface SuggestionPanelProps {
@@ -70,26 +72,26 @@ const SuggestionPanel: React.FC<SuggestionPanelProps> = ({
   const getSeverityColor = (severity: string) => {
     switch (severity) {
       case 'blocker':
-        return 'border-red-200 bg-red-50';
+        return 'bg-[hsl(var(--lv-status-conflict)_70%_96%)] dark:bg-[hsl(var(--lv-status-conflict)_45%_22%_/_0.45)]';
       case 'warning':
-        return 'border-yellow-200 bg-yellow-50';
+        return 'bg-[hsl(var(--lv-status-edited)_70%_96%)] dark:bg-[hsl(var(--lv-status-edited)_45%_22%_/_0.45)]';
       case 'info':
-        return 'border-blue-200 bg-blue-50';
+        return 'bg-[hsl(var(--lv-status-tested)_70%_96%)] dark:bg-[hsl(var(--lv-status-tested)_45%_22%_/_0.45)]';
       default:
-        return 'border-gray-200 bg-gray-50';
+        return 'bg-muted/40';
     }
   };
 
   return (
-    <div className={`border border-gray-200 rounded-lg bg-white ${className}`}>
-      <div className="flex items-center space-x-2 p-3 border-b border-gray-200 bg-gray-50">
-        <Lightbulb className="w-4 h-4 text-yellow-500" />
-        <h3 className="text-sm font-medium text-gray-900">
+    <div className={`border border-border rounded-lg bg-card ${className}`}>
+      <div className="flex items-center space-x-2 p-3 border-b border-border bg-muted">
+        <Lightbulb className="w-4 h-4 text-primary" />
+        <h3 className="text-sm font-medium text-foreground">
           {t('conflicts.smartSuggestions', { count: conflictsWithSuggestions.length })}
         </h3>
       </div>
 
-      <div className="divide-y divide-gray-200">
+      <div className="divide-y divide-border">
         {conflictsWithSuggestions.map((conflict) => {
           const conflictId = getConflictId(conflict);
           const isExpanded = expandedConflicts.has(conflictId);
@@ -100,26 +102,28 @@ const SuggestionPanel: React.FC<SuggestionPanelProps> = ({
               <div className="flex items-center justify-between">
                 <button
                   onClick={() => toggleExpanded(conflictId)}
-                  className="flex items-center space-x-2 text-left flex-1 hover:bg-white hover:bg-opacity-50 -m-1 p-1 rounded transition-colors"
+                  className="flex items-center space-x-2 text-left flex-1 hover:bg-muted/60 -m-1 p-1 rounded transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   <div className="flex-1">
-                    <div className="text-sm font-medium text-gray-900">
+                    <div className="text-sm font-medium text-foreground">
                       {conflict.intent_a} ↔ {conflict.intent_b}
                     </div>
-                    <div className="text-xs text-gray-600">
+                    <div className="text-xs text-muted-foreground">
                       {conflict.conflict_type.replace(/_/g, ' ')} • {t('conflicts.suggestionCount', { count: conflict.suggestions.length })}
                     </div>
                   </div>
-                  <ArrowRight className={`w-4 h-4 text-gray-400 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
+                  <ArrowRight className={`w-4 h-4 text-muted-foreground transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
                 </button>
-                
-                <button
+
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
                   onClick={() => handleDismissConflict(conflict)}
-                  className="p-1 text-gray-400 hover:text-gray-600 hover:bg-white hover:bg-opacity-50 rounded transition-colors"
                   title={t('conflicts.dismissConflict')}
                 >
-                  <X className="w-4 h-4" />
-                </button>
+                  <X />
+                </Button>
               </div>
 
               {/* Expanded Suggestions */}
@@ -130,29 +134,29 @@ const SuggestionPanel: React.FC<SuggestionPanelProps> = ({
                     const isApplied = appliedSuggestions.has(suggestionId);
 
                     return (
-                      <div key={index} className="bg-white bg-opacity-70 border border-gray-200 rounded p-3">
-                        <div className="text-sm text-gray-700 mb-2">
+                      <div key={index} className="bg-card/70 border border-border rounded p-3">
+                        <div className="text-sm text-muted-foreground mb-2">
                           {suggestion}
                         </div>
-                        
+
                         <div className="flex items-center justify-between">
-                          <div className="text-xs text-gray-500">
+                          <div className="text-xs text-muted-foreground">
                             {t('conflicts.suggestionIndex', { index: index + 1, total: conflict.suggestions.length })}
                           </div>
 
                           {isApplied ? (
-                            <div className="flex items-center space-x-1 text-green-600 text-xs">
-                              <CheckCircle className="w-3 h-3" />
-                              <span>{t('conflicts.applied')}</span>
-                            </div>
+                            <Badge variant="success" className="text-xs">
+                              <CheckCircle className="w-3 h-3 mr-1" />
+                              {t('conflicts.applied')}
+                            </Badge>
                           ) : (
-                            <button
+                            <Button
+                              size="sm"
                               onClick={() => handleApplySuggestion(conflict, suggestion)}
-                              className="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition-colors"
                               disabled={!onApplySuggestion}
                             >
                               {t('actions.apply')}
-                            </button>
+                            </Button>
                           )}
                         </div>
                       </div>

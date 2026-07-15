@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { Trash2, Plus } from 'lucide-react';
+import { Button } from 'locveil-ui-kit';
 import TextArea from '@/components/ui/TextArea';
 import KeyValueEditor from './KeyValueEditor';
 import type { ExamplesEditorProps } from '@/types';
@@ -39,20 +40,21 @@ export default function ExamplesEditor({
   return (
     <div className="flex flex-col gap-2">
       {arr.length === 0 ? (
-        <div className="text-sm text-gray-500 mb-2">{t('editors.examples.empty')}</div>
+        <div className="text-sm text-muted-foreground mb-2">{t('editors.examples.empty')}</div>
       ) : null}
       {arr.map((ex, idx) => (
-        <div key={idx} className="border rounded-xl p-3">
+        <div key={idx} className="border border-border rounded-lg p-3">
           <div className="flex items-center justify-between mb-2">
             <div className="text-sm font-medium">{t('editors.examples.example', { index: idx + 1 })}</div>
-            <button
-              className="p-2 rounded-lg border hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            <Button
+              variant="outline"
+              size="icon"
               onClick={() => del(idx)}
               disabled={disabled}
               title={t('editors.examples.removeExample')}
             >
-              <Trash2 className="w-4 h-4" />
-            </button>
+              <Trash2 />
+            </Button>
           </div>
           <TextArea
             label={t('editors.examples.userText')}
@@ -69,19 +71,19 @@ export default function ExamplesEditor({
             disabled={disabled}
           />
           {globalParams?.length ? (
-            <div className="text-xs text-gray-500 mt-2">
+            <div className="text-xs text-muted-foreground mt-2">
               {t('editors.examples.availableParameters', { params: globalParams.join(', ') })}
             </div>
           ) : null}
         </div>
       ))}
-      <button
+      <Button
+        variant="outline"
         onClick={add}
-        className="inline-flex items-center gap-2 px-3 py-2 border rounded-xl hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
         disabled={disabled}
       >
-        <Plus className="w-4 h-4" /> {t('editors.examples.addExample')}
-      </button>
+        <Plus /> {t('editors.examples.addExample')}
+      </Button>
     </div>
   );
 }

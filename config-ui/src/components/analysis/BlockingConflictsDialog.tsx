@@ -7,7 +7,15 @@
 
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { X, AlertCircle, ArrowRight } from 'lucide-react';
+import { AlertCircle, ArrowRight } from 'lucide-react';
+import {
+  Button,
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle
+} from 'locveil-ui-kit';
 import ConflictBadge from './ConflictBadge';
 import ConflictTooltip from './ConflictTooltip';
 import type { ConflictReport } from '@/types';
@@ -37,28 +45,20 @@ const BlockingConflictsDialog: React.FC<BlockingConflictsDialogProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className={`bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[80vh] overflow-hidden ${className}`}>
+    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className={`max-w-2xl max-h-[80vh] overflow-hidden ${className}`}>
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-red-50">
-          <div className="flex items-center space-x-2">
-            <AlertCircle className="w-5 h-5 text-red-500" />
-            <h2 className="text-lg font-semibold text-red-900">
-              {t('conflicts.blockingTitle')}
-            </h2>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-1 text-gray-400 hover:text-gray-600 hover:bg-red-100 rounded transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+        <DialogHeader>
+          <DialogTitle className="flex items-center space-x-2">
+            <AlertCircle className="w-5 h-5 text-destructive" />
+            <span>{t('conflicts.blockingTitle')}</span>
+          </DialogTitle>
+        </DialogHeader>
 
         {/* Content */}
-        <div className="p-4">
+        <div>
           <div className="mb-4">
-            <p className="text-sm text-gray-700">
+            <p className="text-sm text-muted-foreground">
               {t('conflicts.mustResolve', { count: blockingConflicts.length })}
             </p>
           </div>
@@ -68,23 +68,23 @@ const BlockingConflictsDialog: React.FC<BlockingConflictsDialogProps> = ({
               const conflictId = getConflictId(conflict);
 
               return (
-                <div key={conflictId} className="border border-red-200 rounded-lg bg-red-50 p-4">
+                <div key={conflictId} className="border border-border rounded-lg bg-muted/40 p-4">
                   {/* Conflict Header */}
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex-1">
                       <div className="flex items-center space-x-2 mb-2">
-                        <span className="text-sm font-medium text-red-900">
+                        <span className="text-sm font-medium text-destructive">
                           {t('conflicts.conflictNumber', { index: index + 1 })}
                         </span>
                         <ConflictBadge conflict={conflict} />
                       </div>
-                      
+
                       <div className="flex items-center space-x-2 text-sm">
-                        <span className="bg-white px-2 py-1 rounded border text-gray-700">
+                        <span className="bg-background px-2 py-1 rounded border border-border text-muted-foreground">
                           {conflict.intent_a}
                         </span>
-                        <ArrowRight className="w-4 h-4 text-gray-400" />
-                        <span className="bg-white px-2 py-1 rounded border text-gray-700">
+                        <ArrowRight className="w-4 h-4 text-muted-foreground" />
+                        <span className="bg-background px-2 py-1 rounded border border-border text-muted-foreground">
                           {conflict.intent_b}
                         </span>
                       </div>
@@ -92,31 +92,28 @@ const BlockingConflictsDialog: React.FC<BlockingConflictsDialogProps> = ({
                   </div>
 
                   {/* Conflict Details */}
-                  <div className="bg-white rounded border p-3 mb-3">
-                    <ConflictTooltip conflict={conflict} className="border-0 shadow-none p-0 max-w-none" />
+                  <div className="bg-background rounded border border-border p-3 mb-3">
+                    <ConflictTooltip conflict={conflict} className="border-0 shadow-none p-0 max-w-none bg-transparent" />
                   </div>
 
                   {/* Actions */}
                   {conflict.suggestions.length > 0 && (
                     <div className="space-y-2">
-                      <div className="text-xs font-medium text-red-800 mb-2">
+                      <div className="text-xs font-medium text-destructive mb-2">
                         {t('conflicts.suggestedResolutions')}
                       </div>
                       {conflict.suggestions.slice(0, 2).map((suggestion, suggestionIndex) => (
-                        <div key={suggestionIndex} className="bg-white border rounded p-2 text-sm text-gray-700">
+                        <div key={suggestionIndex} className="bg-background border border-border rounded p-2 text-sm text-muted-foreground">
                           <div className="mb-2">{suggestion}</div>
                           {onResolve && (
-                            <button
-                              onClick={() => onResolve(conflictId)}
-                              className="text-xs bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700 transition-colors"
-                            >
+                            <Button size="sm" onClick={() => onResolve(conflictId)}>
                               {t('conflicts.applyThisFix')}
-                            </button>
+                            </Button>
                           )}
                         </div>
                       ))}
                       {conflict.suggestions.length > 2 && (
-                        <div className="text-xs text-gray-600 italic">
+                        <div className="text-xs text-muted-foreground italic">
                           {t('conflicts.andMoreSuggestionsAvailable', { count: conflict.suggestions.length - 2 })}
                         </div>
                       )}
@@ -129,21 +126,16 @@ const BlockingConflictsDialog: React.FC<BlockingConflictsDialogProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between p-4 border-t border-gray-200 bg-gray-50">
-          <div className="text-sm text-gray-600">
+        <DialogFooter className="items-center justify-between">
+          <div className="text-sm text-muted-foreground">
             {t('conflicts.resolveAllToSave')}
           </div>
-          <div className="flex space-x-2">
-            <button
-              onClick={onClose}
-              className="px-4 py-2 text-sm border border-gray-300 rounded hover:bg-gray-100 transition-colors"
-            >
-              {t('actions.close')}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+          <Button variant="outline" onClick={onClose}>
+            {t('actions.close')}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };
 

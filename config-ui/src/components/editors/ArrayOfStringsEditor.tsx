@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { Plus, Trash2 } from 'lucide-react';
+import { Button } from 'locveil-ui-kit';
 import type { ArrayOfStringsEditorProps } from '@/types';
 
 export default function ArrayOfStringsEditor({
@@ -31,36 +32,37 @@ export default function ArrayOfStringsEditor({
     <div className="mb-4">
       <div className="font-medium mb-2">{label}</div>
       {arr.length === 0 ? (
-        <div className="text-sm text-gray-500 mb-2">{t('editors.noItems')}</div>
+        <div className="text-sm text-muted-foreground mb-2">{t('editors.noItems')}</div>
       ) : null}
       {arr.map((item, idx) => (
         <div key={idx} className="flex items-center gap-2 mb-2">
           <input
-            className={`flex-1 border rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-              disabled ? 'bg-gray-100 cursor-not-allowed' : ''
+            className={`flex-1 border border-input bg-background rounded-md px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+              disabled ? 'bg-muted cursor-not-allowed' : ''
             }`}
             value={item}
             onChange={(e) => update(idx, e.target.value)}
             placeholder={placeholder}
             disabled={disabled}
           />
-          <button
-            className="p-2 rounded-lg border hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          <Button
+            variant="outline"
+            size="icon"
             onClick={() => remove(idx)}
             title={t('common:actions.remove')}
             disabled={disabled}
           >
-            <Trash2 className="w-4 h-4" />
-          </button>
+            <Trash2 />
+          </Button>
         </div>
       ))}
-      <button
-        className="inline-flex items-center gap-2 px-3 py-2 border rounded-xl hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+      <Button
+        variant="outline"
         onClick={add}
         disabled={disabled}
       >
-        <Plus className="w-4 h-4" /> {t('common:actions.add')}
-      </button>
+        <Plus /> {t('common:actions.add')}
+      </Button>
     </div>
   );
 }

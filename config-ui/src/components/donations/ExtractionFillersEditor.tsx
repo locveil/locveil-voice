@@ -10,6 +10,7 @@
 
 import { useTranslation } from 'react-i18next';
 import { Plus, Trash2 } from 'lucide-react';
+import { Button } from 'locveil-ui-kit';
 import CardEditor from './CardEditor';
 import Input from '@/components/ui/Input';
 import { useDecompiledPatterns } from '@/hooks/useDecompiledPatterns';
@@ -41,11 +42,11 @@ export default function ExtractionFillersEditor({ value, onChange, disabled = fa
 
   return (
     <div className="space-y-2">
-      {fillers.length === 0 && <div className="text-xs text-gray-500">{t('extraction.empty')}</div>}
+      {fillers.length === 0 && <div className="text-xs text-muted-foreground">{t('extraction.empty')}</div>}
       {fillers.map((filler, fi) => (
-        <div key={fi} className="border rounded-lg p-2 bg-gray-50">
+        <div key={fi} className="border border-border rounded-lg p-2 bg-muted">
           <div className="flex items-center gap-2 mb-2">
-            <div className="text-xs text-gray-600">{t('extraction.findsValueAs')}</div>
+            <div className="text-xs text-muted-foreground">{t('extraction.findsValueAs')}</div>
             <div className="flex-1" />
             <Input
               label=""
@@ -54,36 +55,40 @@ export default function ExtractionFillersEditor({ value, onChange, disabled = fa
               placeholder={t('extraction.slotLabelPlaceholder')}
               disabled={disabled}
             />
-            <button
+            <Button
               type="button"
-              className="p-1 rounded-lg border bg-white hover:bg-gray-50 disabled:opacity-50"
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-destructive"
               onClick={() => removeFiller(fi)} disabled={disabled} title={t('extraction.removeTitle')}
             >
-              <Trash2 className="w-4 h-4" />
-            </button>
+              <Trash2 />
+            </Button>
           </div>
           <div className="flex flex-col gap-2">
             {filler.cards.map((card, ci) => (
               <CardEditor key={ci} card={card} onChange={(c) => setCard(fi, ci, c)}
                 onRemove={() => removeCard(fi, ci)} disabled={disabled} />
             ))}
-            <button
+            <Button
               type="button"
-              className="inline-flex items-center gap-2 px-3 py-1.5 border rounded-lg bg-white hover:bg-gray-50 disabled:opacity-50 text-sm"
+              variant="outline"
+              size="sm"
               onClick={() => addCard(fi)} disabled={disabled}
             >
-              <Plus className="w-4 h-4" /> {t('extraction.addWord')}
-            </button>
+              <Plus /> {t('extraction.addWord')}
+            </Button>
           </div>
         </div>
       ))}
-      <button
+      <Button
         type="button"
-        className="inline-flex items-center gap-2 px-3 py-1.5 border rounded-lg hover:bg-gray-50 disabled:opacity-50 text-sm"
+        variant="outline"
+        size="sm"
         onClick={addFiller} disabled={disabled}
       >
-        <Plus className="w-4 h-4" /> {t('extraction.addWay')}
-      </button>
+        <Plus /> {t('extraction.addWay')}
+      </Button>
     </div>
   );
 }

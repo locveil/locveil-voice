@@ -9,6 +9,10 @@
 
 import { useTranslation } from 'react-i18next';
 import { Trash2, Wrench } from 'lucide-react';
+import {
+  Button, Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from 'locveil-ui-kit';
+import Badge from '@/components/ui/Badge';
 import Input from '@/components/ui/Input';
 import Toggle from '@/components/ui/Toggle';
 import ArrayOfStringsEditor from '@/components/editors/ArrayOfStringsEditor';
@@ -54,53 +58,61 @@ export default function CardEditor({ card, onChange, onRemove, disabled = false 
   const formsOn = (card.kind === 'word' || card.kind === 'oneOf') && card.attr === 'LEMMA';
 
   return (
-    <div className="border rounded-lg p-2 bg-white">
+    <div className="border border-border rounded-lg p-2 bg-card">
       <div className="flex items-center gap-2 mb-2">
         {isAdvanced ? (
-          <span className="inline-flex items-center gap-1 text-xs font-medium text-purple-700">
+          <Badge variant="custom" className="inline-flex items-center gap-1">
             <Wrench className="w-3 h-3" /> {t('cards.advancedRule')}
-          </span>
+          </Badge>
         ) : (
-          <select
-            className="border rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+          <Select
             value={card.kind}
-            onChange={(e) => onChange(freshCard(e.target.value as FriendlyKind, card))}
+            onValueChange={(v) => onChange(freshCard(v as FriendlyKind, card))}
             disabled={disabled}
           >
-            {FRIENDLY_KINDS.map((k) => (
-              <option key={k} value={k}>{kindLabel(k)}</option>
-            ))}
-          </select>
+            <SelectTrigger className="h-8 w-auto gap-1 text-sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {FRIENDLY_KINDS.map((k) => (
+                <SelectItem key={k} value={k}>{kindLabel(k)}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         )}
         <div className="flex-1" />
         {isAdvanced ? (
-          <button
+          <Button
             type="button"
-            className="text-xs px-2 py-1 border rounded-lg hover:bg-gray-50 disabled:opacity-50"
+            variant="outline"
+            size="sm"
             onClick={() => onChange(decompileToken(card.raw))}
             disabled={disabled}
             title={t('cards.backToCardsTitle')}
           >
             {t('cards.backToCards')}
-          </button>
+          </Button>
         ) : (
-          <button
+          <Button
             type="button"
-            className="text-xs px-2 py-1 border rounded-lg hover:bg-gray-50 disabled:opacity-50"
+            variant="outline"
+            size="sm"
             onClick={() => onChange({ kind: 'advanced', raw: compileToken(card) })}
             disabled={disabled}
             title={t('cards.advancedTitle')}
           >
             {t('cards.advanced')}
-          </button>
+          </Button>
         )}
-        <button
+        <Button
           type="button"
-          className="p-1 rounded-lg border hover:bg-gray-50 disabled:opacity-50"
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 text-destructive"
           onClick={onRemove} disabled={disabled} title={t('cards.removeTitle')}
         >
-          <Trash2 className="w-4 h-4" />
-        </button>
+          <Trash2 />
+        </Button>
       </div>
 
       {isAdvanced ? (
@@ -111,12 +123,12 @@ export default function CardEditor({ card, onChange, onRemove, disabled = false 
             disabled={disabled}
           />
           {Object.keys(card.raw).length === 0 && (
-            <p className="text-xs text-gray-500 mt-1">{t('cards.emptyToken')}</p>
+            <p className="text-xs text-muted-foreground mt-1">{t('cards.emptyToken')}</p>
           )}
         </div>
       ) : (
         <div className="space-y-2">
-          <p className="text-xs text-gray-500">{kindHelp(card.kind)}</p>
+          <p className="text-xs text-muted-foreground">{kindHelp(card.kind)}</p>
           {card.kind === 'word' && (
             <Input label="" value={card.word} onChange={(v) => onChange({ ...card, word: v })}
               placeholder={t('cards.wordPlaceholder')} disabled={disabled} />

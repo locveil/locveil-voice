@@ -7,7 +7,8 @@
 
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, Eye, Code, Layout, Globe } from 'lucide-react';
+import { Plus, Eye, Code, Layout, Globe, AlertCircle } from 'lucide-react';
+import { Button, Alert, AlertTitle, AlertDescription, Tabs, TabsList, TabsTrigger } from 'locveil-ui-kit';
 import LocalizationKeyEditor from './LocalizationKeyEditor';
 import Section from '@/components/ui/Section';
 import TextArea from '@/components/ui/TextArea';
@@ -241,24 +242,24 @@ const LocalizationEditor: React.FC<LocalizationEditorProps> = ({
   const renderPreview = () => {
     return (
       <div className="space-y-4">
-        <div className="p-4 bg-gray-50 rounded-lg">
-          <h4 className="font-medium text-gray-700 mb-2 flex items-center gap-2">
+        <div className="p-4 bg-muted rounded-lg">
+          <h4 className="font-medium text-muted-foreground mb-2 flex items-center gap-2">
             <Globe className="w-4 h-4" />
             {t('editor.previewDomain', { domain: domain || t('editor.unknownDomain') })}
           </h4>
-          <div className="text-sm text-gray-600">
+          <div className="text-sm text-muted-foreground">
             {schema?.domain_description || t('editor.domainDescriptionFallback', { domain })}
           </div>
         </div>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <h5 className="font-medium text-gray-700 mb-2">{t('editor.keysHeading', { count: Object.keys(value).length })}</h5>
+            <h5 className="font-medium text-muted-foreground mb-2">{t('editor.keysHeading', { count: Object.keys(value).length })}</h5>
             <div className="space-y-1">
               {Object.keys(value).map(key => (
                 <div key={key} className="flex items-center gap-2">
                   <Badge variant="default">{key}</Badge>
-                  <span className="text-sm text-gray-500">
+                  <span className="text-sm text-muted-foreground">
                     {Array.isArray(value[key]) ? t('editor.typeArray', { count: value[key].length }) :
                      typeof value[key] === 'object' ? t('editor.typeObject', { count: Object.keys(value[key]).length }) :
                      t('editor.typeString')}
@@ -267,15 +268,15 @@ const LocalizationEditor: React.FC<LocalizationEditorProps> = ({
               ))}
             </div>
           </div>
-          
+
           <div>
-            <h5 className="font-medium text-gray-700 mb-2">{t('editor.validationHeading')}</h5>
+            <h5 className="font-medium text-muted-foreground mb-2">{t('editor.validationHeading')}</h5>
             {validationErrors.length === 0 ? (
-              <div className="text-green-600 text-sm">{t('editor.noValidationErrors')}</div>
+              <div className="text-[hsl(var(--lv-status-persisted)_55%_32%)] dark:text-[hsl(var(--lv-status-persisted)_70%_72%)] text-sm">{t('editor.noValidationErrors')}</div>
             ) : (
               <div className="space-y-1">
                 {validationErrors.map((error, index) => (
-                  <div key={index} className="text-red-600 text-sm">{t('editor.validationErrorItem', { error })}</div>
+                  <div key={index} className="text-destructive text-sm">{t('editor.validationErrorItem', { error })}</div>
                 ))}
               </div>
             )}
@@ -289,49 +290,47 @@ const LocalizationEditor: React.FC<LocalizationEditorProps> = ({
     <div className="space-y-4">
       {/* View Mode Selector */}
       <div className="flex items-center gap-2">
-        <span className="text-sm font-medium text-gray-700">{t('editor.view')}</span>
-        {(['structured', 'yaml', 'preview'] as ViewMode[]).map((mode) => (
-          <button
-            key={mode}
-            onClick={() => setViewMode(mode)}
-            className={`flex items-center gap-2 px-3 py-1 rounded-md text-sm transition-colors ${
-              viewMode === mode
-                ? 'bg-blue-100 text-blue-700 border border-blue-200'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-            }`}
-          >
-            {getViewModeIcon(mode)}
-            {t(`editor.viewModes.${mode}`)}
-          </button>
-        ))}
+        <span className="text-sm font-medium text-muted-foreground">{t('editor.view')}</span>
+        <Tabs value={viewMode} onValueChange={(mode) => setViewMode(mode as ViewMode)}>
+          <TabsList>
+            {(['structured', 'yaml', 'preview'] as ViewMode[]).map((mode) => (
+              <TabsTrigger key={mode} value={mode} className="gap-2">
+                {getViewModeIcon(mode)}
+                {t(`editor.viewModes.${mode}`)}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
       </div>
 
       {/* Validation Errors */}
       {validationErrors.length > 0 && (
-        <div className="p-3 bg-red-50 border border-red-200 rounded-md">
-          <h4 className="font-medium text-red-800 mb-2">{t('editor.validationErrors')}</h4>
-          <ul className="text-sm text-red-700 space-y-1">
-            {validationErrors.map((error, index) => (
-              <li key={index}>• {error}</li>
-            ))}
-          </ul>
-        </div>
+        <Alert variant="destructive">
+          <AlertCircle />
+          <div>
+            <AlertTitle>{t('editor.validationErrors')}</AlertTitle>
+            <AlertDescription>
+              <ul className="space-y-1">
+                {validationErrors.map((error, index) => (
+                  <li key={index}>• {error}</li>
+                ))}
+              </ul>
+            </AlertDescription>
+          </div>
+        </Alert>
       )}
 
       {/* Content based on view mode */}
       {viewMode === 'structured' && (
         <Section title={t('editor.entriesSection')} className="space-y-4">
           <div className="flex justify-between items-center">
-            <div className="text-sm text-gray-600">
+            <div className="text-sm text-muted-foreground">
               {t('editor.entriesCount', { count: Object.keys(value).length })}
             </div>
-            <button
-              onClick={handleAddKey}
-              className="flex items-center gap-2 px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm"
-            >
-              <Plus className="w-4 h-4" />
+            <Button size="sm" onClick={handleAddKey}>
+              <Plus />
               {t('editor.addEntry')}
-            </button>
+            </Button>
           </div>
           
           <div className="space-y-3">
@@ -348,7 +347,7 @@ const LocalizationEditor: React.FC<LocalizationEditorProps> = ({
           </div>
           
           {Object.keys(value).length === 0 && (
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-8 text-muted-foreground">
               <Globe className="w-12 h-12 mx-auto mb-3 opacity-50" />
               <p>{t('editor.noEntries')}</p>
               <p className="text-sm mt-1">{t('editor.noEntriesHint')}</p>
@@ -361,9 +360,10 @@ const LocalizationEditor: React.FC<LocalizationEditorProps> = ({
         <Section title={t('editor.yamlEditor')}>
           <div className="space-y-2">
             {yamlError && (
-              <div className="p-2 bg-red-50 border border-red-200 rounded text-red-700 text-sm">
-                {yamlError}
-              </div>
+              <Alert variant="destructive">
+                <AlertCircle />
+                <AlertDescription>{yamlError}</AlertDescription>
+              </Alert>
             )}
             <TextArea
               value={yamlContent}

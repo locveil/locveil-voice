@@ -25,16 +25,16 @@ const ValidationIndicator: React.FC<ValidationIndicatorProps> = ({
   if (isValidating) {
     return (
       <div className={`flex items-center space-x-2 ${className}`}>
-        <Clock className="w-4 h-4 animate-spin text-blue-500" />
-        <span className="text-sm text-blue-600">{t('validation.validating')}</span>
+        <Clock className="w-4 h-4 animate-spin text-primary" />
+        <span className="text-sm text-muted-foreground">{t('validation.validating')}</span>
       </div>
     );
   }
 
   if (!result) {
     return (
-      <div className={`flex items-center space-x-2 text-gray-500 ${className}`}>
-        <div className="w-4 h-4 border border-gray-300 rounded-full"></div>
+      <div className={`flex items-center space-x-2 text-muted-foreground ${className}`}>
+        <div className="w-4 h-4 border border-border rounded-full"></div>
         <span className="text-sm">{t('validation.notValidated')}</span>
       </div>
     );
@@ -44,9 +44,7 @@ const ValidationIndicator: React.FC<ValidationIndicatorProps> = ({
     if (!result.is_valid || result.has_blocking_conflicts) {
       return {
         icon: AlertCircle,
-        color: 'text-red-600',
-        bgColor: 'bg-red-50',
-        borderColor: 'border-red-200',
+        color: 'text-destructive',
         message: t('validation.failed')
       };
     }
@@ -54,18 +52,14 @@ const ValidationIndicator: React.FC<ValidationIndicatorProps> = ({
     if (result.has_warnings) {
       return {
         icon: AlertTriangle,
-        color: 'text-yellow-600',
-        bgColor: 'bg-yellow-50',
-        borderColor: 'border-yellow-200',
+        color: 'text-[hsl(var(--lv-status-edited)_55%_32%)] dark:text-[hsl(var(--lv-status-edited)_70%_72%)]',
         message: t('validation.passedWithWarnings')
       };
     }
 
     return {
       icon: CheckCircle,
-      color: 'text-green-600',
-      bgColor: 'bg-green-50',
-      borderColor: 'border-green-200',
+      color: 'text-[hsl(var(--lv-status-persisted)_55%_32%)] dark:text-[hsl(var(--lv-status-persisted)_70%_72%)]',
       message: t('validation.passed')
     };
   };
@@ -91,17 +85,17 @@ const ValidationIndicator: React.FC<ValidationIndicatorProps> = ({
   };
 
   return (
-    <div className={`inline-flex items-center space-x-2 px-3 py-2 rounded-lg border ${status.bgColor} ${status.borderColor} ${className}`}>
+    <div className={`inline-flex items-center space-x-2 px-3 py-2 rounded-lg border border-border bg-card ${className}`}>
       <Icon className={`w-4 h-4 ${status.color}`} />
       <div className="flex flex-col">
         <span className={`text-sm font-medium ${status.color}`}>
           {status.message}
         </span>
-        <span className="text-xs text-gray-600">
+        <span className="text-xs text-muted-foreground">
           {getConflictSummary()}
         </span>
         {result.validation_time_ms && (
-          <span className="text-xs text-gray-500">
+          <span className="text-xs text-muted-foreground">
             {t('validation.validatedIn', { ms: result.validation_time_ms.toFixed(1) })}
           </span>
         )}

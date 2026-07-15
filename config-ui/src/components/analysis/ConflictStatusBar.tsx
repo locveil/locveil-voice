@@ -8,6 +8,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { AlertCircle, CheckCircle, Clock, AlertTriangle } from 'lucide-react';
+import Badge from '@/components/ui/Badge';
 import type { ConflictReport } from '@/types';
 
 interface ConflictStatusBarProps {
@@ -29,16 +30,16 @@ const ConflictStatusBar: React.FC<ConflictStatusBarProps> = ({
   const getStatusIcon = () => {
     switch (status) {
       case 'analyzing':
-        return <Clock className="w-4 h-4 animate-spin text-blue-500" />;
+        return <Clock className="w-4 h-4 animate-spin text-primary" />;
       case 'error':
-        return <AlertCircle className="w-4 h-4 text-red-500" />;
+        return <AlertCircle className="w-4 h-4 text-destructive" />;
       case 'complete':
         if (blockers.length > 0) {
-          return <AlertCircle className="w-4 h-4 text-red-500" />;
+          return <AlertCircle className="w-4 h-4 text-destructive" />;
         } else if (warnings.length > 0) {
-          return <AlertTriangle className="w-4 h-4 text-yellow-500" />;
+          return <AlertTriangle className="w-4 h-4 text-[hsl(var(--lv-status-edited)_55%_32%)] dark:text-[hsl(var(--lv-status-edited)_70%_72%)]" />;
         } else {
-          return <CheckCircle className="w-4 h-4 text-green-500" />;
+          return <CheckCircle className="w-4 h-4 text-[hsl(var(--lv-status-persisted)_55%_32%)] dark:text-[hsl(var(--lv-status-persisted)_70%_72%)]" />;
         }
       default:
         return null;
@@ -66,43 +67,31 @@ const ConflictStatusBar: React.FC<ConflictStatusBarProps> = ({
     }
   };
 
-  const getStatusColor = () => {
-    if (status === 'analyzing') return 'border-blue-200 bg-blue-50';
-    if (status === 'error') return 'border-red-200 bg-red-50';
-    if (blockers.length > 0) return 'border-red-200 bg-red-50';
-    if (warnings.length > 0) return 'border-yellow-200 bg-yellow-50';
-    if (infos.length > 0) return 'border-blue-200 bg-blue-50';
-    return 'border-green-200 bg-green-50';
-  };
-
   return (
-    <div className={`flex items-center justify-between p-3 border rounded-lg ${getStatusColor()} ${className}`}>
+    <div className={`flex items-center justify-between p-3 border border-border bg-card rounded-lg ${className}`}>
       <div className="flex items-center space-x-2">
         {getStatusIcon()}
-        <span className="text-sm font-medium text-gray-700">
+        <span className="text-sm font-medium text-foreground">
           {getStatusText()}
         </span>
       </div>
-      
+
       {status === 'complete' && conflicts.length > 0 && (
-        <div className="flex items-center space-x-3 text-xs">
+        <div className="flex items-center space-x-2 text-xs">
           {blockers.length > 0 && (
-            <div className="flex items-center space-x-1 text-red-600">
-              <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-              <span>{t('conflicts.count.blockers', { count: blockers.length })}</span>
-            </div>
+            <Badge variant="error" className="text-xs">
+              {t('conflicts.count.blockers', { count: blockers.length })}
+            </Badge>
           )}
           {warnings.length > 0 && (
-            <div className="flex items-center space-x-1 text-yellow-600">
-              <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-              <span>{t('conflicts.count.warnings', { count: warnings.length })}</span>
-            </div>
+            <Badge variant="warning" className="text-xs">
+              {t('conflicts.count.warnings', { count: warnings.length })}
+            </Badge>
           )}
           {infos.length > 0 && (
-            <div className="flex items-center space-x-1 text-blue-600">
-              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-              <span>{t('conflicts.count.info', { count: infos.length })}</span>
-            </div>
+            <Badge variant="info" className="text-xs">
+              {t('conflicts.count.info', { count: infos.length })}
+            </Badge>
           )}
         </div>
       )}
