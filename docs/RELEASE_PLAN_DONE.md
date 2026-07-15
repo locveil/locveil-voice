@@ -2357,6 +2357,22 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       → entry → styles 200). Browser render = the standing honest caveat (owner's `npm run serve` away).
       docs: none — appearance-only restyle; no manifest node describes config-ui's look, and the
       UI-17-era run instructions are unchanged.
+- [x] **UI-20** [UI] `[deferred]` — **DONE 2026-07-15 (the HK-11 write-back side-find).** **Monaco
+      bundled locally — no CDN at runtime.** `monaco-editor` **0.53.0** added (0.55 pinned back: it
+      depends on a dompurify with open advisories — 0.53 keeps the 0-vulns bar; read-only DiffEditor
+      usage unaffected); `src/utils/monacoLoader.ts` points `@monaco-editor/react`'s loader at the
+      bundled instance (`loader.config({ monaco })`) and inlines the editor worker as a blob
+      (`?worker&inline` — no worker-asset path to break under the import-map load); both consumers
+      (TomlPreview, DiffViewer) import it at module top, so config runs before any render. Monaco's own
+      dynamic imports code-split the dist (lazy editor core ~3 MB + per-language chunks, ALL LOCAL,
+      resolved relative to the entry — exactly the ESM mechanism the HK-11 runtime assembly serves);
+      monaco css folded into `style.css`. **Honest residual:** the jsdelivr URL still appears ONCE in
+      the bundle as `@monaco-editor/loader`'s inert default-config object — dead data on a branch the
+      provided instance short-circuits; zero external requests at runtime. Verified: check + build +
+      vitest 44/44; served-shell smoke (entry, lazy editor core, a language chunk, styles — all 200
+      from the plugin mount). TOML stays plaintext in the diff view (monaco ships no TOML grammar —
+      unchanged from the CDN build). docs: none — invisible when online, works offline now; no
+      manifest node describes the editor's loading mechanics.
 - [x] **UI-21** [UI][COMMONS] `[deferred]` — **DONE 2026-07-15 (same session as its ungating —
       commons IMPL-4 shipped Toast/AlertDialog as ui-kit 0.1.1/`ui-kit-v1.1`).** **Toast/AlertDialog/
       Tooltip adoption sweep.** `window.confirm` ×3 (all in `ApplyChangesBar`'s save flow) → one

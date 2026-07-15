@@ -14,6 +14,7 @@ import { Copy, CheckCircle, Eye, EyeOff, RefreshCw, AlertCircle, GitCompare, Cod
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark, oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { DiffEditor } from '@monaco-editor/react';
+import '@/utils/monacoLoader'; // UI-20: bundled monaco, no CDN
 import { Button, Alert, AlertTitle, AlertDescription, Tooltip, TooltipTrigger, TooltipContent } from 'locveil-ui-kit';
 import DiffViewer from './DiffViewer';
 import ValidationErrorDisplay from './ValidationErrorDisplay';

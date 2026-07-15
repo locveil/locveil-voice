@@ -8,6 +8,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { DiffEditor } from '@monaco-editor/react';
+import '@/utils/monacoLoader'; // UI-20: bundled monaco, no CDN
 import Badge from '@/components/ui/Badge';
 
 interface DiffViewerProps {

@@ -543,14 +543,6 @@ Governed by `config-ui-stays-functional` (config-ui must stay functional).
       (today `canSaveNLU` hard-requires `!hasBlockingConflicts`). Deliverable: a design doc under `docs/design/` first,
       then implementation follow-up(s). The inline `ValidationIndicator` already surfaces blockers, so scope the modal's
       added value deliberately (resolution UX, not just a second display).
-- [ ] **UI-20** [UI] `[deferred]` — **bundle Monaco locally — no CDN at runtime** (HK-11 side-find,
-      2026-07-15, filed per `review-then-remediate`; the HK-11 write-back ID). `@monaco-editor/react`
-      (used by `TomlPreview.tsx` + `DiffViewer.tsx`) ships no editor code — its default `loader` fetches
-      monaco from the **jsdelivr CDN at runtime**, a silent external dependency in a privacy-first,
-      LAN-deployable product (and a hard failure offline). Fix class: bundle `monaco-editor` and point the
-      loader at it (`loader.config({ monaco })` with a local import, or the vite worker-plugin route), or
-      replace the two DiffEditor usages with a bundled diff view; verify the built app makes zero external
-      requests. Rides naturally with UI-19/UI-17 (same files move), but is its own deliverable.
 
 ### Release Readiness (REL)
 

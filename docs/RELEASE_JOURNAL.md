@@ -20,6 +20,17 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-15 — UI-20 done: the editor works offline — Monaco ships in the bundle.** The HK-11
+  side-find closed: `@monaco-editor/react` no longer reaches for jsdelivr at runtime. Monaco 0.53
+  (0.55 deliberately pinned back — its dompurify has open advisories, and the 0-vulns bar stands) is
+  bundled with the loader pointed at the local instance and the editor worker inlined as a blob, so
+  nothing about the import-map load path can break worker resolution. Monaco's own laziness carried
+  over for free: the 3 MB editor core and the per-language grammars are code-split chunks fetched
+  relative to the plugin entry — local files under the shell mount, loaded only when a diff view
+  opens. One honest residual: the CDN URL string survives in the bundle as the loader package's inert
+  default config, dead on a branch the provided instance short-circuits. Zero external requests at
+  runtime; the privacy-first product no longer phones a CDN to show its own config diff.
+
 - **2026-07-15 — UI-21 + UI-22 done: the last shims of the old world — window.confirm, bare title=,
   and the plugin's own fixed bottom bars — are gone.** Hours after commons shipped IMPL-4 (Toast +
   AlertDialog, ui-kit 0.1.1) and IMPL-5 (ActionBar/ActionBarHost, ui-kit 0.1.2 + workbench-v1.1),
