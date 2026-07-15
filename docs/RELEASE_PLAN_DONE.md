@@ -1933,6 +1933,19 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
   class the bridge caught at catalog-v1.7). Check green, 0 warnings — all four voice contract tags
   resolve (`ws-protocol-v1`, `wake-pack-v1`, `ui-openapi-v1.1`, `docs-manifest-v1`). CLAUDE.md pin
   reference bumped v1→v2. docs: none — vendored tool + the dialect pin line only.
+- [x] **BUILD-38** [PROCESS] — **DONE 2026-07-15 (filed + completed same session; board PROD-25
+  delegation): contract-guard CI checkout fetches tags.** Intake reconciliation: the board's sweep
+  ("voice is vendored at v1, the gap bites at the v2 re-pin") was stale — BUILD-37 had already
+  re-vendored v2 on 2026-07-14 but left the v1 labels in the `ci.yml` step name and
+  `contracts/README.md` (the lines the bridge sweep read), so the `TAG-MISSING` rule was live
+  against a bare checkout and the job was latently broken NOW, commons-style. The re-pin half of
+  the delegation was therefore already done; this task is the remaining checkout fix + the stale
+  labels. Change: `fetch-tags: true` on the `contract-guard` job's checkout (per
+  `process/contracts.md` §4; shallow stays); step-name + registry labels v1→v2. Verified by
+  simulating CI locally: a `--no-tags --depth 1` clone fails 4× TAG-MISSING (the exact board
+  signature), same clone after `git fetch --tags` is green; working-tree check green, 0 warnings.
+  Voice ID written back into board PROD-25. docs: none — CI workflow + internal contracts
+  registry label only.
 ### Models & Assets (ASSET)
 ### Documentation (DOC)
 - [x] **DOC-5b** (P2) — DONE 2026-06-08: regenerated `guides/DONATION_FILE_SPECIFICATION.md` for the v1.1

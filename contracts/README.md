@@ -30,7 +30,7 @@ the commons `catalog/` copy the eval framework's mock bridge serves (voice stamp
 catalog PIN.jsons via `scripts/repin.py` — the two copies move together or not at all)._
 
 Guards: layer 1 is the vendored `scripts/contract_guard.py` (commons
-`packages/contract-guard/`, pinned at tag **`contract-guard-v1`** — never edit the
+`packages/contract-guard/`, pinned at tag **`contract-guard-v2`** — never edit the
 vendored file, re-pin to move; runs in `hooks/pre-commit` and the path-gated
 `contract-guard` CI job, `--check` only); layer 2 is the per-pin conformance tests
 listed above.

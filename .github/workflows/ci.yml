@@ -112,7 +112,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Contract coherence guard (contract-guard, vendored at contract-guard-v1)
+        with:
+          # v2's TAG-MISSING rule resolves owned STAMP tags via `git tag -l`;
+          # the default checkout is tag-less and the rule can never pass
+          # without this (process/contracts.md §4).
+          fetch-tags: true
+      - name: Contract coherence guard (contract-guard, vendored at contract-guard-v2)
         run: python3 scripts/contract_guard.py --check
 
   # ------------------------------------------------------------------ #

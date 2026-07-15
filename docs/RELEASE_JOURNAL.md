@@ -20,6 +20,17 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-15 — BUILD-38: the contract-guard CI job can now actually see the tags it checks.**
+  Board PROD-25 (filed off the bridge's OPS-30 incident) delegated "checkout fix + v2 re-pin" to
+  voice — but intake reconciliation found the re-pin already landed (BUILD-37, 2026-07-14); the
+  bridge's sweep had read the two labels BUILD-37 missed (`ci.yml` step name, `contracts/README.md`
+  registry line), both still saying v1. Net effect: v2's `TAG-MISSING` rule was already live here
+  against a tag-less `actions/checkout` — the path-gated job would have fired 4 false alarms on the
+  next `contracts/**` push, exactly the commons situation. Fix: `fetch-tags: true` on the guard
+  job's checkout + the two label bumps. Proven by simulation: a `--no-tags --depth 1` clone of this
+  repo fails 4× TAG-MISSING, the same clone passes after fetching tags. BUILD-38 written back into
+  the board entry.
+
 - **2026-07-14 — QUAL-78 done: the healthcheck's 2.9k daily access lines are out of the log.** A
   `logging.Filter` on `uvicorn.access` drops 2xx `/health` + `/ready` probe lines at the emitting logger,
   installed in `_build_uvicorn_server` (the choke point both serve paths share); non-2xx probes stay —
