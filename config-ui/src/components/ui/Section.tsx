@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import type { SectionProps } from '@/types';
+import { Card, CardTitle, Icon, cn } from 'locveil-ui-kit';
 
 export default function Section({
   title,
@@ -12,51 +13,49 @@ export default function Section({
   actions
 }: SectionProps) {
   const [isCollapsed, setIsCollapsed] = useState(defaultCollapsed);
+  const contentId = `section-content-${title.replace(/\s+/g, '-').toLowerCase()}`;
 
   if (!collapsible) {
     return (
-      <div className={`border rounded-2xl shadow-sm bg-white ${className}`}>
-        <div className="flex items-center justify-between px-4 py-3 border-b">
+      <Card className={cn('shadow-sm', className)}>
+        <div className="flex items-center justify-between border-b border-border px-4 py-3">
           <div className="flex items-center gap-2">
-            <div className="text-lg font-semibold">{title}</div>
+            <CardTitle className="text-lg font-semibold">{title}</CardTitle>
             {badge}
           </div>
           {actions}
         </div>
         <div className="px-4 py-4">{children}</div>
-      </div>
+      </Card>
     );
   }
 
   return (
-    <div className={`border rounded-2xl shadow-sm bg-white ${className}`}>
+    <Card className={cn('shadow-sm', className)}>
       <button
         onClick={() => setIsCollapsed(!isCollapsed)}
-        className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors"
+        className="flex w-full items-center justify-between px-4 py-3 transition-colors duration-200 hover:bg-muted/60"
         aria-expanded={!isCollapsed}
-        aria-controls={`section-content-${title.replace(/\s+/g, '-').toLowerCase()}`}
+        aria-controls={contentId}
       >
         <div className="flex items-center gap-2">
-          <div className="text-lg font-semibold text-left">{title}</div>
+          <CardTitle className="text-left text-lg font-semibold">{title}</CardTitle>
           {badge}
         </div>
         <div className="flex items-center gap-2">
           {actions}
-          {isCollapsed ? (
-            <ChevronRight className="w-5 h-5 text-gray-400" />
-          ) : (
-            <ChevronDown className="w-5 h-5 text-gray-400" />
-          )}
+          <Icon
+            icon={isCollapsed ? ChevronRight : ChevronDown}
+            size="button"
+            className="text-muted-foreground"
+          />
         </div>
       </button>
       {!isCollapsed && (
-        <div
-          id={`section-content-${title.replace(/\s+/g, '-').toLowerCase()}`}
-          className="px-4 pb-4"
-        >
+        <div id={contentId} className="px-4 pb-4">
           {children}
         </div>
       )}
-    </div>
+    </Card>
   );
 }

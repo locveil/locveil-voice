@@ -1,49 +1,50 @@
 /**
  * TestConfigButton Component - Button for testing configuration via /configure endpoints
- * 
+ *
  * Handles live configuration testing for all 8 voice assistant components
  */
 
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { TestTube, Loader } from 'lucide-react';
-import type { 
-  TTSConfig, ASRConfig, AudioConfig, LLMConfig, NLUConfig, 
+import { Button, cn } from 'locveil-ui-kit';
+import type {
+  TTSConfig, ASRConfig, AudioConfig, LLMConfig, NLUConfig,
   VoiceTriggerConfig, TextProcessorConfig, IntentSystemConfig,
-  TTSConfigureResponse, ASRConfigureResponse, AudioConfigureResponse, 
+  TTSConfigureResponse, ASRConfigureResponse, AudioConfigureResponse,
   LLMConfigureResponse, NLUConfigureResponse, VoiceTriggerConfigureResponse,
   TextProcessorConfigureResponse, IntentSystemConfigureResponse
 } from '@/types/api';
 
 // Union types for all config types and responses
-export type ComponentConfigType = 
-  | TTSConfig 
-  | ASRConfig 
-  | AudioConfig 
-  | LLMConfig 
-  | NLUConfig 
-  | VoiceTriggerConfig 
-  | TextProcessorConfig 
+export type ComponentConfigType =
+  | TTSConfig
+  | ASRConfig
+  | AudioConfig
+  | LLMConfig
+  | NLUConfig
+  | VoiceTriggerConfig
+  | TextProcessorConfig
   | IntentSystemConfig;
 
-export type ComponentConfigureResponse = 
-  | TTSConfigureResponse 
-  | ASRConfigureResponse 
-  | AudioConfigureResponse 
-  | LLMConfigureResponse 
-  | NLUConfigureResponse 
+export type ComponentConfigureResponse =
+  | TTSConfigureResponse
+  | ASRConfigureResponse
+  | AudioConfigureResponse
+  | LLMConfigureResponse
+  | NLUConfigureResponse
   | VoiceTriggerConfigureResponse
-  | TextProcessorConfigureResponse 
+  | TextProcessorConfigureResponse
   | IntentSystemConfigureResponse;
 
-export type ComponentName = 
-  | 'tts' 
-  | 'asr' 
-  | 'audio' 
-  | 'llm' 
-  | 'nlu' 
-  | 'voice_trigger' 
-  | 'text_processing' 
+export type ComponentName =
+  | 'tts'
+  | 'asr'
+  | 'audio'
+  | 'llm'
+  | 'nlu'
+  | 'voice_trigger'
+  | 'text_processing'
   | 'intent_system';
 
 interface TestConfigButtonProps {
@@ -58,6 +59,9 @@ interface TestConfigButtonProps {
   showPreview?: boolean; // Show preview of what will be applied
   hasChanges?: boolean; // Whether there are changes to test
 }
+
+const kitVariant = { primary: 'default', secondary: 'secondary', outline: 'outline' } as const;
+const kitSize = { sm: 'sm', md: 'default', lg: 'lg' } as const;
 
 export const TestConfigButton: React.FC<TestConfigButtonProps> = ({
   component,
@@ -74,45 +78,11 @@ export const TestConfigButton: React.FC<TestConfigButtonProps> = ({
   const { t } = useTranslation('common');
   const handleClick = async () => {
     if (disabled || loading) return;
-    
+
     try {
       await onTest(component, config);
     } catch (error) {
       console.error(`Failed to test ${component} configuration:`, error);
-    }
-  };
-
-  const getSizeClasses = () => {
-    switch (size) {
-      case 'sm':
-        return 'px-2 py-1 text-xs';
-      case 'md':
-        return 'px-3 py-2 text-sm';
-      case 'lg':
-        return 'px-4 py-3 text-base';
-    }
-  };
-
-  const getVariantClasses = () => {
-    const isDisabled = disabled || loading;
-    const noChanges = disabled && !hasChanges;
-    
-    switch (variant) {
-      case 'primary':
-        return isDisabled 
-          ? 'bg-blue-300 text-white cursor-not-allowed'
-          : 'bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800';
-      case 'secondary':
-        return isDisabled
-          ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-          : 'bg-gray-600 text-white hover:bg-gray-700 active:bg-gray-800';
-      case 'outline':
-        if (noChanges) {
-          return 'border border-gray-200 text-gray-400 cursor-not-allowed bg-gray-50';
-        }
-        return isDisabled
-          ? 'border border-gray-300 text-gray-400 cursor-not-allowed'
-          : 'border border-blue-600 text-blue-600 hover:bg-blue-50 active:bg-blue-100';
     }
   };
 
@@ -132,9 +102,9 @@ export const TestConfigButton: React.FC<TestConfigButtonProps> = ({
 
   const getPreviewText = () => {
     if (!showPreview || !config) return '';
-    
+
     const preview: string[] = [];
-    
+
     // Add key configuration details based on component type
     if ('enabled' in config) {
       preview.push(t('workflow.preview.enabled', { value: String(config.enabled) }));
@@ -150,29 +120,21 @@ export const TestConfigButton: React.FC<TestConfigButtonProps> = ({
   };
 
   return (
-    <button
+    <Button
+      variant={kitVariant[variant]}
+      size={kitSize[size]}
       onClick={() => void handleClick()}
       disabled={disabled || loading}
-      className={`
-        inline-flex items-center justify-center
-        font-medium rounded-md transition-colors duration-200
-        ${getSizeClasses()}
-        ${getVariantClasses()}
-        ${className}
-      `}
+      className={className}
       title={
         disabled && !hasChanges
           ? t('workflow.noChangesToTest', { component: getComponentDisplayName() })
           : t('workflow.testConfigTitle', { component: getComponentDisplayName(), preview: getPreviewText() })
       }
     >
-      {loading ? (
-        <Loader className={`${size === 'sm' ? 'h-3 w-3' : size === 'lg' ? 'h-5 w-5' : 'h-4 w-4'} animate-spin mr-2`} />
-      ) : (
-        <TestTube className={`${size === 'sm' ? 'h-3 w-3' : size === 'lg' ? 'h-5 w-5' : 'h-4 w-4'} mr-2`} />
-      )}
+      {loading ? <Loader className={cn('animate-spin')} /> : <TestTube />}
       {loading ? t('workflow.testing') : disabled && !hasChanges ? t('workflow.noChanges') : t('workflow.testConfig')}
-    </button>
+    </Button>
   );
 };
 

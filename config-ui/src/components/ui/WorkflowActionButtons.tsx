@@ -1,12 +1,13 @@
 /**
  * WorkflowActionButtons Component - Action buttons for the Test → Validate → Persist workflow
- * 
+ *
  * Provides persist and rollback functionality for Phase 4.3 workflow integration
  */
 
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Save, RotateCcw, AlertTriangle, Loader } from 'lucide-react';
+import { Button, StatusChip, Icon, cn } from 'locveil-ui-kit';
 import { ComponentName } from './TestConfigButton';
 
 interface WorkflowStatus {
@@ -30,6 +31,8 @@ interface WorkflowActionButtonsProps {
   size?: 'sm' | 'md' | 'lg';
 }
 
+const kitSize = { sm: 'sm', md: 'default', lg: 'lg' } as const;
+
 export const WorkflowActionButtons: React.FC<WorkflowActionButtonsProps> = ({
   component,
   status,
@@ -45,7 +48,7 @@ export const WorkflowActionButtons: React.FC<WorkflowActionButtonsProps> = ({
 
   const handlePersist = async () => {
     if (persisting || loading) return;
-    
+
     setPersisting(true);
     try {
       await onPersistTested(component);
@@ -53,28 +56,6 @@ export const WorkflowActionButtons: React.FC<WorkflowActionButtonsProps> = ({
       console.error(`Failed to persist ${component} configuration:`, error);
     } finally {
       setPersisting(false);
-    }
-  };
-
-  const getSizeClasses = () => {
-    switch (size) {
-      case 'sm':
-        return 'px-2 py-1 text-xs';
-      case 'md':
-        return 'px-3 py-2 text-sm';
-      case 'lg':
-        return 'px-4 py-3 text-base';
-    }
-  };
-
-  const getIconSize = () => {
-    switch (size) {
-      case 'sm':
-        return 'h-3 w-3';
-      case 'md':
-        return 'h-4 w-4';
-      case 'lg':
-        return 'h-5 w-5';
     }
   };
 
@@ -93,87 +74,60 @@ export const WorkflowActionButtons: React.FC<WorkflowActionButtonsProps> = ({
   };
 
   return (
-    <div className={`flex items-center space-x-1 ${className}`}>
+    <div className={cn('flex items-center gap-1', className)}>
       {/* Persist to TOML Button */}
       {status.canPersist && (
-        <button
+        <Button
+          size={kitSize[size]}
           onClick={() => void handlePersist()}
           disabled={persisting || loading || !status.canPersist}
-          className={`
-            inline-flex items-center justify-center
-            font-medium rounded-md transition-colors duration-200
-            ${getSizeClasses()}
-            ${persisting || loading
-              ? 'bg-green-300 text-white cursor-not-allowed'
-              : 'bg-green-600 text-white hover:bg-green-700 active:bg-green-800'
-            }
-          `}
           title={t('workflow.persistTitle', { component: getComponentDisplayName() })}
         >
-          {persisting ? (
-            <Loader className={`${getIconSize()} animate-spin mr-1`} />
-          ) : (
-            <Save className={`${getIconSize()} mr-1`} />
-          )}
+          {persisting ? <Loader className="animate-spin" /> : <Save />}
           {persisting ? t('workflow.persisting') : t('workflow.persistToToml')}
-        </button>
+        </Button>
       )}
 
       {/* Rollback Buttons */}
-      <div className="flex items-center space-x-1">
+      <div className="flex items-center gap-1">
         {/* Rollback to Tested */}
         {status.hasChanges && status.isTested && (
-          <button
+          <Button
+            variant="outline"
+            size={kitSize[size]}
             onClick={() => onRollbackToTested(component)}
             disabled={loading}
-            className={`
-              inline-flex items-center justify-center
-              font-medium rounded-md transition-colors duration-200
-              border border-blue-600 text-blue-600 hover:bg-blue-50 active:bg-blue-100
-              ${getSizeClasses()}
-              ${loading ? 'opacity-50 cursor-not-allowed' : ''}
-            `}
             title={t('workflow.rollbackToTestedTitle', { component: getComponentDisplayName() })}
           >
-            <RotateCcw className={`${getIconSize()} mr-1`} />
+            <RotateCcw />
             {t('workflow.rollbackToTested')}
-          </button>
+          </Button>
         )}
 
         {/* Rollback to Persisted */}
         {(status.hasChanges || status.isTested) && !status.isPersisted && (
-          <button
+          <Button
+            variant="ghost"
+            size={kitSize[size]}
             onClick={() => onRollbackToPersisted(component)}
             disabled={loading}
-            className={`
-              inline-flex items-center justify-center
-              font-medium rounded-md transition-colors duration-200
-              border border-gray-600 text-gray-600 hover:bg-gray-50 active:bg-gray-100
-              ${getSizeClasses()}
-              ${loading ? 'opacity-50 cursor-not-allowed' : ''}
-            `}
             title={t('workflow.rollbackToTomlTitle', { component: getComponentDisplayName() })}
           >
-            <RotateCcw className={`${getIconSize()} mr-1`} />
+            <RotateCcw />
             {t('workflow.rollbackToToml')}
-          </button>
+          </Button>
         )}
       </div>
 
       {/* Conflict Indicator */}
       {status.hasConflicts && (
-        <div 
-          className={`
-            inline-flex items-center justify-center
-            font-medium rounded-md
-            bg-red-50 border border-red-200 text-red-600
-            ${getSizeClasses()}
-          `}
+        <StatusChip
+          variant="conflict"
           title={t('workflow.conflictTitle', { component: getComponentDisplayName() })}
         >
-          <AlertTriangle className={`${getIconSize()} mr-1`} />
+          <Icon icon={AlertTriangle} className="mr-1" />
           {t('workflow.conflict')}
-        </div>
+        </StatusChip>
       )}
     </div>
   );

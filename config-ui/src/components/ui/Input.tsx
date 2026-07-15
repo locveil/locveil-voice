@@ -1,5 +1,6 @@
 import React from 'react';
 import type { InputProps } from '@/types';
+import { Input as KitInput, Label, cn } from 'locveil-ui-kit';
 
 export default function Input({
   label,
@@ -12,6 +13,8 @@ export default function Input({
   disabled = false,
   className = ''
 }: InputProps) {
+  const id = React.useId();
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (type === 'number') {
       const numValue = e.target.value === '' ? '' : Number(e.target.value);
@@ -22,30 +25,29 @@ export default function Input({
   };
 
   return (
-    <label className={`block mb-3 ${className}`}>
+    <div className={cn('mb-3', className)}>
       {label && (
-        <div className="text-sm font-medium mb-1">
+        <Label htmlFor={id} className="mb-1">
           {label}
-          {required && <span className="text-red-500">*</span>}
-        </div>
+          {required && <span className="text-destructive">*</span>}
+        </Label>
       )}
-      <input
-        className={`w-full border rounded-xl px-3 py-2 focus:outline-none focus:ring ${
-          error ? 'border-red-500 focus:ring-red-200' : 'border-gray-300 focus:ring-blue-200'
-        } ${disabled ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+      <KitInput
+        id={id}
         value={value ?? ''}
         onChange={handleChange}
         placeholder={placeholder}
         type={type}
         disabled={disabled}
         aria-invalid={!!error}
-        aria-describedby={error ? `${label}-error` : undefined}
+        aria-describedby={error ? `${id}-error` : undefined}
+        className={error ? 'border-destructive focus-visible:ring-destructive' : undefined}
       />
       {error && (
-        <div id={`${label}-error`} className="text-sm text-red-600 mt-1">
+        <div id={`${id}-error`} className="mt-1 text-sm text-destructive">
           {error}
         </div>
       )}
-    </label>
+    </div>
   );
 }

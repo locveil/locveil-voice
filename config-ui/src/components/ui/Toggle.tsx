@@ -1,4 +1,6 @@
+import React from 'react';
 import type { ToggleProps } from '@/types';
+import { Checkbox, cn } from 'locveil-ui-kit';
 
 export default function Toggle({
   label,
@@ -7,16 +9,25 @@ export default function Toggle({
   disabled = false,
   className = ''
 }: ToggleProps) {
+  const id = React.useId();
+
   return (
-    <label className={`flex items-center gap-3 mb-2 ${disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'} ${className}`}>
-      <input
-        type="checkbox"
+    <div className={cn('mb-2 flex items-center gap-3', className)}>
+      <Checkbox
+        id={id}
         checked={!!checked}
-        onChange={(e) => onChange(e.target.checked)}
+        onCheckedChange={(state) => onChange(state === true)}
         disabled={disabled}
-        className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
       />
-      <span className="text-sm select-none">{label}</span>
-    </label>
+      <label
+        htmlFor={id}
+        className={cn(
+          'select-none text-sm text-foreground',
+          disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'
+        )}
+      >
+        {label}
+      </label>
+    </div>
   );
 }

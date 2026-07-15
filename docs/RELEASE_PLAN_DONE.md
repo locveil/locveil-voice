@@ -2218,6 +2218,33 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       (`config-ui-stays-functional`): `npm run check` + `npm run build` green. Like UI-12, the review's §E altitude items
       were partly over-credited (most need backend signals or are non-issues); the genuine config-ui wins (efficiency +
       E6 drift-guard) are done.
+- [x] **UI-18** [UI][COMMONS] `[deferred]` — **DONE 2026-07-15 (filed + completed same session; sprint-02
+      port-arc split, "voice UI-18" foundation row).** **Kit-first foundation: eslint-9 flat + `ui-kit-v1`
+      + the 9 hand-built primitives swapped onto kit primitives.** (a) **eslint-9 flat config**: eslint
+      8.57→9, `.eslintrc.cjs` → `eslint.config.mjs` (`typescript-eslint` meta-package, react-hooks 5), rule
+      set preserved verbatim incl. the type-aware tuning — verified live via `--print-config`
+      (`no-floating-promises`/`no-misused-promises`/`await-thenable` all error); `--ext` dropped from the
+      lint script (v9), lint scope unchanged (ts/tsx). (b) **`locveil-ui-kit` file: sibling dep** +
+      `presets:[preset]` + kit-dist content glob + `tokens.css` at the entry — both themes in the bundle
+      (`.dark` class strategy; the standalone app stays light until a toggle exists — shell-owned at UI-17).
+      (c) All **9 primitives** (`src/components/ui/`) rebuilt on kit primitives with their local prop APIs
+      intact (composites untouched — that's UI-19): Badge→StatusChip (default/success/warning/error/info →
+      pristine/persisted/edited/conflict/tested; custom→kit Badge outline), Input/TextArea→kit
+      Input/Textarea+Label (a11y improved: `useId` replaces label-text ids), Toggle→kit Checkbox,
+      Section→Card+Icon (collapse kept), ConfigurationStatus→Alert+Icon, TestConfigButton +
+      WorkflowActionButtons→kit Button (variant/size mapped; conflict pill→StatusChip),
+      WorkflowStatusIndicator→StatusChip (the state enum IS the kit `StatusVariant` set). **Side-find
+      fixed upstream: commons IMPL-3** — the kit's StatusChip built classes via a template literal, so
+      Tailwind never generated the real recipes (chips unstyled in every consumer) and the extracted `${h}`
+      pseudo-candidate broke lightningcss minification (this build failure found it); fixed in the kit
+      (static per-variant class map), voice's build is the live verification. Intake reconciliation: the
+      sprint's "ci.yml guard-version prose batches in" side-find was already fixed by BUILD-38 — nothing to
+      batch. **Verified:** `npm run check` (tsc + eslint strict + orphans) green, `npm run build` green,
+      vitest 44/44, all five chip recipes + both theme token sets present in the built CSS (checked at the
+      generated-utility level), HTTP smoke over `vite preview` (app + hashed assets served; browser render
+      is one `npm run dev` away — IMPL-1-style honest caveat). docs: none — visual restyle of internal
+      primitives; no manifest node describes config-ui's appearance (QUICKSTART's config-ui section is
+      functional and unchanged).
 
 ### Release Readiness (REL)
 - [x] **REL-1** (P0) `[release]` — **DONE 2026-07-04 (interactive session). Definition-of-release SIGNED OFF.**

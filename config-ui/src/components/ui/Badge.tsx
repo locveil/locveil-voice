@@ -1,20 +1,27 @@
 import type { BadgeProps } from '@/types';
+import { Badge as KitBadge, StatusChip, type StatusVariant } from 'locveil-ui-kit';
+
+// Status variants map onto the kit's status contract (StatusChip, never raw palette
+// classes); 'custom' keeps the neutral pill shell and lets the caller style it.
+const statusFor: Record<Exclude<NonNullable<BadgeProps['variant']>, 'custom'>, StatusVariant> = {
+  default: 'pristine',
+  success: 'persisted',
+  warning: 'edited',
+  error: 'conflict',
+  info: 'tested',
+};
 
 export default function Badge({ children, variant = 'default', className = '' }: BadgeProps) {
-  const variantClasses = {
-    default: 'bg-gray-50 text-gray-700 border-gray-200',
-    success: 'bg-green-50 text-green-700 border-green-200',
-    warning: 'bg-yellow-50 text-yellow-700 border-yellow-200',
-    error: 'bg-red-50 text-red-700 border-red-200',
-    info: 'bg-blue-50 text-blue-700 border-blue-200',
-    custom: '', // Custom variant allows for completely custom className
-  };
-
-  const variantClass = variantClasses[variant] || variantClasses.default;
-
+  if (variant === 'custom') {
+    return (
+      <KitBadge variant="outline" className={className}>
+        {children}
+      </KitBadge>
+    );
+  }
   return (
-    <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs ${variantClass} ${className}`}>
+    <StatusChip variant={statusFor[variant]} className={className}>
       {children}
-    </span>
+    </StatusChip>
   );
 }

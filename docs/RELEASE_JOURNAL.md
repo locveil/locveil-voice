@@ -20,6 +20,19 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-15 — UI-18 done: config-ui stands on the design system.** The port arc's foundation slice
+  landed in one session: eslint-9 flat config (rule set carried over verbatim, type-aware gate verified
+  still firing), `locveil-ui-kit` wired in (sibling `file:` dep, Tailwind preset, blued-steel tokens at
+  the entry — both themes now ship in the bundle), and all nine hand-built primitives rebuilt on kit
+  primitives behind their existing prop APIs, so the 35 composites compile untouched and wait for UI-19.
+  The satisfying rhyme: the kit's `StatusVariant` vocabulary (pristine/edited/tested/persisted/conflict)
+  is exactly config-ui's workflow-state enum — the council took voice's states as canon, and now voice
+  consumes them back. First-consumer duty paid too: the adoption build immediately exposed a latent kit
+  bug (StatusChip classes assembled via template literal — invisible to Tailwind's extractor, and the
+  `${h}` pseudo-class it did extract broke lightningcss minification); fixed upstream as commons IMPL-3
+  with voice's green build as the live proof. Gates: check + build + vitest 44/44; chip recipes verified
+  down to the generated utilities in the shipped CSS.
+
 - **2026-07-15 — sprint-02 intake: the port arc lands in the ledger (UI-17 narrowed; UI-18/UI-19/UI-20
   filed).** The sprint-02 §4 split turned the XL-in-disguise UI-17 into a three-task arc: **UI-18**
   (kit-first foundation — eslint-9 flat, `ui-kit-v1` dep + preset/tokens, the 9 hand-built primitives

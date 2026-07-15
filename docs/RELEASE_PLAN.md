@@ -575,22 +575,6 @@ Governed by `config-ui-stays-functional` (config-ui must stay functional).
       2026-07-15), not the shell finished. Travels with **UI-16**; foundation prerequisite = **UI-18**, port
       body = **UI-19**. Refs: board PROD-24 (1)(2)(4)(5), HK-11 (BOARD_DONE),
       `../locveil-commons/docs/design/workbench.md` §4 as amended.
-- [ ] **UI-18** [UI][COMMONS] `[deferred]` — **kit-first foundation: eslint-9 flat + `ui-kit-v1` + swap the 9 hand-built
-      primitives** (sprint-02 port-arc split, filed at intake 2026-07-15; display name "voice UI-18" in
-      `../locveil-commons/board/sprints/sprint-02.md`). Scope: (a) migrate config-ui to **eslint-9 flat
-      config** (sprint-01 decision 1), keeping the type-aware rule set (`no-floating-promises`,
-      `no-misused-promises`) — the strict `npm run check` gate must not weaken; (b) add **`locveil-ui-kit`**
-      (dev-phase sibling `file:` dep per the kit README), wire `presets: [locveil-ui-kit/preset]` + kit-dist
-      content glob into `tailwind.config.js`, import `locveil-ui-kit/tokens.css` at the app entry (both
-      themes ship; `.dark` class strategy); (c) rebuild the **9 hand-built primitives**
-      (`src/components/ui/`: Badge, Input, TextArea, Toggle, Section, ConfigurationStatus, TestConfigButton,
-      WorkflowActionButtons, WorkflowStatusIndicator — 867 lines) **on kit primitives** (Badge/StatusChip,
-      Input+Label, Textarea, Checkbox, Card, Alert, Button; the kit's `StatusVariant` set
-      pristine/edited/tested/persisted/conflict is literally the workflow-state enum), keeping their local
-      prop APIs so the 35 composites don't churn — those move in **UI-19**. Standalone app stays green at
-      every cut (`config-ui-stays-functional`: `npm run check && npm run build`). Intake reconciliation:
-      the sprint side-find "ci.yml guard-version prose batches in" was already fixed by **BUILD-38**
-      (2026-07-15, PROD-25) — nothing left to batch.
 - [ ] **UI-19** [UI][COMMONS] `[deferred]` — **full port body: composites + pages onto kit primitives** (sprint-02
       port-arc split, filed at intake 2026-07-15; display name "voice UI-19"; flagged at planning as the
       sprint's largest execution risk, L+). Port the ~35 composite components and 7 pages (~32k lines) off
