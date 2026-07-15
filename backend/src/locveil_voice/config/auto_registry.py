@@ -297,8 +297,9 @@ class AutoSchemaRegistry:
 
                 # UI-16 (E9): propagate the declared widget hint — the config-ui widget
                 # factory dispatches on this instead of guessing from field names/paths.
-                if isinstance(getattr(field_info, 'json_schema_extra', None), dict):
-                    widget = field_info.json_schema_extra.get('widget')
+                schema_extra = getattr(field_info, 'json_schema_extra', None)
+                if isinstance(schema_extra, dict):
+                    widget = schema_extra.get('widget')
                     if widget:
                         field_schema["widget"] = widget
                 
