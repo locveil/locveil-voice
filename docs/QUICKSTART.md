@@ -106,10 +106,14 @@ including the mutual-TLS enrollment for real deployments: [satellite guide](guid
 
 ### config-ui (browser config editor)
 Needs the WebAPI backend running (step above), which it talks to at `http://localhost:8080`.
+The editor runs as the **Voice** tab of the Locveil Workbench (the shared UI shell in the
+sibling `locveil-commons` checkout):
 ```bash
 cd config-ui
 npm ci
-npm run dev          # opens a Vite dev server (printed URL, usually http://localhost:3000)
+npm run build        # the Workbench plugin bundle (npm run dev rebuilds on change)
+cd ../../locveil-commons/packages/workbench
+npm install && npm run build && npm run serve   # open http://localhost:6107 → Voice tab
 ```
 
 ---

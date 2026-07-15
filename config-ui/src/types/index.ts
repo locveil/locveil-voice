@@ -10,4 +10,3 @@ export * from './donations';
 
 // Common types (UI-13: removed 8 never-imported utility aliases — Maybe/Optional/RequiredKeys/
 // ChangeHandler/ClickHandler/AsyncClickHandler/ApiMethod/LoadingState).
-export type ConnectionStatus = 'connected' | 'disconnected' | 'connecting' | 'error';

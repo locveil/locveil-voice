@@ -1,17 +1,67 @@
-import { defineConfig } from 'vite'
+import { defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
+import { writeFile } from 'node:fs/promises'
+import pkg from './package.json' with { type: 'json' }
 
-// https://vitejs.dev/config/
+/* UI-17: config-ui builds as the VOICE WORKBENCH PLUGIN (HK-11 runtime assembly) —
+   an ESM library with the frozen singleton set external (the shell serves those via
+   its import map) plus a build-emitted manifest fragment. The standalone app is
+   retired; the shell owns chrome, router, tokens and preflight. */
+
+const SINGLETONS = [
+  'react',
+  'react-dom',
+  'react-dom/client',
+  'react/jsx-runtime',
+  'react-router-dom',
+  'locveil-ui-kit',
+]
+
+/** Peer majors the shell refuses-and-surfaces on (contract: ManifestFragment.peers). */
+const PEERS = {
+  react: '^18',
+  'react-dom': '^18',
+  'react-router-dom': '^6',
+  'locveil-ui-kit': '^0.1',
+}
+
+function emitManifestFragment(): Plugin {
+  return {
+    name: 'voice-manifest-fragment',
+    async writeBundle() {
+      const fragment = {
+        id: 'voice',
+        version: pkg.version,
+        entry: './index.js',
+        styles: ['./style.css'],
+        peers: PEERS,
+      }
+      await writeFile(
+        path.resolve(__dirname, 'dist/manifest.json'),
+        JSON.stringify(fragment, null, 2) + '\n'
+      )
+    },
+  }
+}
+
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), emitManifestFragment()],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
     },
   },
-  server: {
-    port: 3000,
-    host: 'localhost'
+  build: {
+    lib: {
+      entry: path.resolve(__dirname, 'src/plugin.tsx'),
+      formats: ['es'],
+      fileName: () => 'index.js',
+      cssFileName: 'style',
+    },
+    rollupOptions: {
+      external: SINGLETONS,
+    },
+    sourcemap: true,
   },
 })

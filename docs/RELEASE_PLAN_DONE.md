@@ -2218,6 +2218,37 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       (`config-ui-stays-functional`): `npm run check` + `npm run build` green. Like UI-12, the review's §E altitude items
       were partly over-credited (most need backend signals or are non-issues); the genuine config-ui wins (efficiency +
       E6 drift-guard) are done.
+- [x] **UI-17** [UI][COMMONS] `[deferred]` — **DONE 2026-07-15 (sprint-02 port arc; the PROD-24 write-back
+      ID; HK-11 corrections applied at intake the same day).** **config-ui → the Voice Workbench plugin.**
+      `src/plugin.tsx` default-exports the `WorkbenchPlugin` (contract types from
+      `locveil-workbench/contract`, devDep `file:`): **6-page cut** (donations, templates, prompts,
+      localizations, monitoring, configuration) — `OverviewPage`, `Header`, `Layout`, `Sidebar` and
+      `LanguageSwitcher` DELETED (shell chrome owns nav/locale/theme; the retiring components' types,
+      `layout`/`overview` i18n namespaces, and the router usage went with them — the 6 surviving pages are
+      router-free); the **status slot** preserves the Header's visibility (`checkConnection` +
+      `getIntentStatus` → level ok/error + RU/EN text with handler count, shell-polled); **i18n =
+      plugin-local instance** following the shell's `PageProps.locale` signal (persistence + `<html lang>`
+      dropped — chrome owns both; collision-free by construction since react-i18next bundles per-plugin).
+      **Packaging (HK-11)**: vite **lib build** → `dist/index.js` (ESM, singleton set external — verified
+      bare specifiers in dist), `style.css` (Tailwind **preflight off**, tokens shell-owned), build-emitted
+      `manifest.json` fragment (peers `^18/^18/^6/^0.1` — passes the shell's strict check incl. the 0.x
+      strict-minor rule); `npm run dev` = `vite build --watch` per the HK-11 dev loop; orphan-guard entry →
+      `plugin.tsx`. **Intake decisions recorded:** (a) contract-as-code has NO `backendTarget` (IMPL-1
+      simplified `PageProps` to `{locale}`) — voice keeps its own base-URL mechanism (same-host:8080 +
+      `window.__IRENE_API_BASE__` override; the nginx runtime-injection file retired with the container);
+      (b) voice has NO REST report-write surface (intake is the ARCH-30 spoken dialog) — `reportHook` is a
+      minimal in-plugin handler naming the voice-first path, a real write endpoint stays PROD-4-auth-gated;
+      (c) **the standalone container fate** (side-find routed here): RETIRED with the app — `Dockerfile` /
+      `nginx.conf` / `docker-entrypoint.sh` / `public/runtime-config.js` deleted, the `publish-ui` CI job +
+      `build_ui` dispatch input removed (`locveil-voice-ui` stops publishing; existing GHCR tags remain
+      pullable but frozen); the WB7 deployment was never affected (compose carries no UI service).
+      **`config-ui-stays-functional` DoD re-anchored to the plugin build in CLAUDE.md (same change, HK-11
+      owner ruling q5).** Shell mount landed in commons `workbench.config.json` (two real plugins now).
+      **Verified:** `npm run check` + plugin build + vitest 44/44 + docs-manifest 8/8; full HTTP loading
+      path against the served shell (runtime-config → voice manifest → entry 200 → styles 200); dist carries
+      the default export and zero `process.env`. Browser render remains the honest caveat (IMPL-1
+      precedent) — one `npm run serve` away. docs: quickstart, install, guides/build-docker (+ the non-root
+      `config-ui/README.md`, rewritten — it still described the pre-UI-13 AJV standalone).
 - [x] **UI-18** [UI][COMMONS] `[deferred]` — **DONE 2026-07-15 (filed + completed same session; sprint-02
       port-arc split, "voice UI-18" foundation row).** **Kit-first foundation: eslint-9 flat + `ui-kit-v1`
       + the 9 hand-built primitives swapped onto kit primitives.** (a) **eslint-9 flat config**: eslint

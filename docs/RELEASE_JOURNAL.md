@@ -20,6 +20,24 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-15 — UI-17 done: config-ui is now the Voice tab of the Workbench — the standalone app is
+  gone.** The plugin conversion landed hours after its foundation: `src/plugin.tsx` default-exports the
+  contract's `WorkbenchPlugin` with the six real pages (Overview, Header, Layout, Sidebar and the
+  language switcher deleted — shell chrome owns navigation, locale and theme now), the status slot
+  carrying what the old Header showed (connection + handler count, RU/EN), and i18n gone plugin-local
+  behind the shell's locale signal. The build is a vite library: ESM entry with the HK-11 singleton set
+  external (verified as bare specifiers in dist), preflight-free styles, and a build-emitted manifest
+  fragment whose peers pass the shell's strict check. The whole loading path was driven live against the
+  served shell — runtime-config lists voice beside the demo plugin, manifest → entry → styles all 200 —
+  making it the Workbench's first real product plugin (commons `workbench.config.json` now mounts it).
+  Three intake decisions on record: voice keeps its own backend-base mechanism (the contract's PageProps
+  carries only locale), the report hook honestly names the voice-first ARCH-30 path (no REST write
+  surface exists, and one would be PROD-4-gated), and the standalone container retired with the app
+  (Dockerfile/nginx/publish job removed; the WB7 was never running it). The `config-ui-stays-functional`
+  DoD is re-anchored to the plugin build in CLAUDE.md, same change, per the HK-11 owner ruling. Gates:
+  check + plugin build + vitest 44/44 + docs-manifest 8/8; QUICKSTART, INSTALL, build-docker and the
+  config-ui README all teach the Workbench story now.
+
 - **2026-07-15 — UI-18 done: config-ui stands on the design system.** The port arc's foundation slice
   landed in one session: eslint-9 flat config (rule set carried over verbatim, type-aware gate verified
   still firing), `locveil-ui-kit` wired in (sibling `file:` dep, Tailwind preset, blued-steel tokens at

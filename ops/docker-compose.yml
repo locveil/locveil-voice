@@ -56,5 +56,6 @@ services:
         max-file: "3"
 
 # No config-ui here: the editor is NOT deployed on the controller. The repo owns the
-# config (delivered read-only) — editing happens repo-side, with config-ui run on a
-# workstation when wanted (see docs/guides/build-docker.md, "The configuration editor").
+# config (delivered read-only) — editing happens repo-side, with the editor run on a
+# workstation as the Locveil Workbench's Voice tab when wanted
+# (see docs/guides/build-docker.md, "The configuration editor").

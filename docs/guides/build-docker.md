@@ -10,7 +10,6 @@ original, unsuffixed names; English variants add an `-en` suffix:
 | `locveil-voice-standalone` / `-standalone-en` | x86_64 | Full local voice box — mic → wake-word → ASR → intent → TTS → playback. |
 | `locveil-voice-aarch64` / `-aarch64-en` | aarch64 (WB8.5 / Pi) | Satellite server — ASR + intent + TTS for ESP32 satellites; no local mic. |
 | `locveil-voice-armv7` / `-armv7-en` | armv7 (WB7) | Satellite server, smaller models; no local mic. |
-| `locveil-voice-ui` | multi-arch (one manifest) | The configuration editor as a static site (see below). |
 
 On the satellites the ESP32 owns the microphone, voice activity detection, wake-word, and playback; the
 container only does recognition and speech synthesis and streams the reply back over the web API. The
@@ -24,7 +23,6 @@ Each image is published to the GitHub Container Registry and tagged `latest`, `s
 ```bash
 docker pull ghcr.io/locveil/locveil-voice-standalone:latest      # Russian
 docker pull ghcr.io/locveil/locveil-voice-armv7-en:latest        # English
-docker pull ghcr.io/locveil/locveil-voice-ui:latest              # configuration editor
 ```
 
 Publishing is a deliberate act, not a side effect of pushing code: every push runs the fast health checks,
@@ -92,10 +90,9 @@ Both serve the full web API on 8080 alongside their primary input.
 
 ## Compose and controller deployment
 
-The repository ships a ready deployment under [`ops/`](../../ops/INSTALL.md): a compose file (Irene plus the
-optional configuration editor behind a compose profile), a ten-line update script that syncs assets and pulls
-images, and a systemd unit — on a Wirenboard the whole loop is `git pull && ./ops/update.sh`. For a quick
-ad-hoc compose elsewhere:
+The repository ships a ready deployment under [`ops/`](../../ops/INSTALL.md): a compose file, a ten-line
+update script that syncs assets and pulls images, and a systemd unit — on a Wirenboard the whole loop is
+`git pull && ./ops/update.sh`. For a quick ad-hoc compose elsewhere:
 
 ```yaml
 services:
@@ -132,24 +129,20 @@ uv run --project backend python -m locveil_voice.tools.build_analyzer --config c
 uv run --project backend python -m locveil_voice.tools.build_analyzer --list-profiles
 ```
 
-## The configuration editor image
+## The configuration editor
 
-The donation/configuration editor ships as `locveil-voice-ui`: a small nginx container serving the built
-static app on **port 3000**, published as a single multi-arch manifest (the same tag runs on x86_64, aarch64,
-and armv7). It is not part of the standard controller deployment — run it wherever convenient when you need
-to edit donations or configuration:
-
-```bash
-docker run --rm -p 3000:3000 ghcr.io/locveil/locveil-voice-ui:latest
-```
-
-By default the app talks to Irene on **the same host it is served from**, port 8080. Point it elsewhere with
-the `API_BASE_URL` environment variable:
+The donation/configuration editor (`config-ui/`) runs as a plugin inside the **Locveil Workbench** — the
+shared browser workbench that hosts every Locveil product's setup pages under one roof. There is no separate
+editor container: build the plugin bundle in this repository, then run the Workbench from the sibling
+`locveil-commons` checkout and open the **Voice** tab:
 
 ```bash
-docker run --rm -p 3000:3000 -e API_BASE_URL=http://192.168.110.250:8080 \
-  ghcr.io/locveil/locveil-voice-ui:latest
+cd config-ui && npm ci && npm run build          # the plugin bundle (npm run dev rebuilds on change)
+cd ../../locveil-commons/packages/workbench
+npm install && npm run build && npm run serve    # http://localhost:6107
 ```
+
+By default the editor talks to Irene on **the same host the Workbench is served from**, port 8080.
 
 ## How the image is built
 

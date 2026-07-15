@@ -54,26 +54,6 @@ export interface SectionProps {
   actions?: ReactNode;
 }
 
-// Layout Component Props
-export interface LayoutProps {
-  children: ReactNode;
-}
-
-export interface SidebarProps {
-  collapsed: boolean;
-  onToggle: (collapsed: boolean) => void;
-}
-
-export interface HeaderProps {
-  connectionStatus?: 'connected' | 'disconnected' | 'connecting';
-  systemInfo?: {
-    version?: string;
-    uptime?: string;
-    handlersCount?: number;
-    donationsCount?: number;
-  };
-}
-
 // Editor Component Props
 export interface ArrayOfStringsEditorProps {
   label: string;

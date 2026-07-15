@@ -12,8 +12,8 @@
 # Guards (D-6): a published image FAILS the run if /app/assets is non-empty (models must
 # never be baked) and its size is reported + checked against a per-target budget.
 #
-# Publish everything:  gh workflow run CI            (defaults: all targets × both languages + UI)
-# One image:           gh workflow run CI -f targets=armv7 -f languages=en -f build_ui=false
+# Publish everything:  gh workflow run CI            (defaults: all targets × both languages)
+# One image:           gh workflow run CI -f targets=armv7 -f languages=en
 
 name: CI
 
@@ -36,10 +36,6 @@ on:
         default: all
       build_backend:
         description: "Publish backend images"
-        type: boolean
-        default: true
-      build_ui:
-        description: "Publish the config-ui image (locveil-voice-ui, multi-arch)"
         type: boolean
         default: true
 
@@ -183,13 +179,14 @@ jobs:
         run: python -m pytest -c backend/pyproject.toml backend/tests/ -q
 
   # ------------------------------------------------------------------ #
-  # Frontend health — gates the config-ui image publish.                #
+  # Frontend health — the config-ui gate (UI-17: config-ui is the       #
+  # Voice Workbench PLUGIN; `build` = the ESM lib + manifest fragment). #
   # ------------------------------------------------------------------ #
   frontend-health:
     needs: changes
     if: >-
       needs.changes.outputs.ui == 'true' ||
-      (github.event_name == 'workflow_dispatch' && inputs.build_ui)
+      github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -328,40 +325,6 @@ jobs:
             exit 1
           fi
 
-  # ------------------------------------------------------------------ #
-  # config-ui image — ONE multi-arch manifest (static files are arch-   #
-  # independent). Published, but not deployed to the controller (D-4).  #
-  # ------------------------------------------------------------------ #
-  publish-ui:
-    needs: frontend-health
-    if: github.event_name == 'workflow_dispatch' && inputs.build_ui
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: docker/setup-qemu-action@v3
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ghcr.io/${{ github.repository_owner }}/locveil-voice-ui
-          tags: |
-            type=raw,value=latest
-            type=sha,format=short
-            type=raw,value=v{{date 'YYYYMMDD'}}-{{sha}}
-
-      - name: Build + push (multi-arch manifest)
-        uses: docker/build-push-action@v6
-        with:
-          context: config-ui
-          platforms: linux/amd64,linux/arm64,linux/arm/v7
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha,scope=ui
-          cache-to: type=gha,mode=max,scope=ui
+  # NB (UI-17): the config-ui nginx image (locveil-voice-ui) is RETIRED with the
+  # standalone app — config-ui ships as a Workbench plugin bundle consumed by the
+  # commons shell at runtime; published bundle URLs are a productization-step act.

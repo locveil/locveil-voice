@@ -554,27 +554,6 @@ Governed by `config-ui-stays-functional` (config-ui must stay functional).
       `LanguageTabs` display-name map is inherently a UI concern (the backend has no display names) and degrades to
       `code.toUpperCase()`; the `DonationsPage` `['en','ru']` fallback is a defensible default for a rare miss._
 
-- [ ] **UI-17** [UI][COMMONS] `[deferred]` — **config-ui → Workbench plugin conversion** (filed at PROD-24
-      intake; **NARROWED at sprint-02 planning** — the §4 split moved the kit-first foundation to **UI-18**
-      and the full port body to **UI-19**; this ID keeps the plugin conversion and stays the PROD-24
-      write-back ID. **Corrected at HK-11 intake, 2026-07-15**). config-ui becomes a **Workbench plugin**
-      (repo = plugin, one Voice tab; shell = commons `packages/workbench`, IMPL-1) with a **6-page cut** —
-      `OverviewPage` and the own top bar (`components/layout/Header.tsx`) retire into shell chrome/Monitoring,
-      and the plugin contract's per-plugin **status slot** preserves the Header's connection/health
-      visibility. Plugin contract v1 surfaces: i18n = plugin-local instances RU/EN + shell locale signal,
-      per-page backend targets, runtime-registrable pages (UI-16-proof), report hook. **Packaging (HK-11):**
-      plugin source lives HERE; the build is a vite **library** build that externalizes the frozen singleton
-      set (react / react-dom(/client) / react/jsx-runtime / react-router-dom **pinned major 6** /
-      locveil-ui-kit — the shell serves them via import map) and emits the **manifest fragment** in dist
-      (`{id, version, entry, styles[], peers{}, backendCompat?}`); the shell loads BUILT bundles at
-      **runtime via native ESM dynamic import** — the earlier "shell consumes `file:` deps on the built
-      package" sentence is superseded (HK-11; `file:` remains only the dev-phase npm pattern for
-      *libraries* like ui-kit). Peer mismatch = shell refuses-and-surfaces. **The standalone config-ui app
-      RETIRES in this task** (HK-11 owner ruling q5), and the `config-ui-stays-functional` DoD re-anchors to
-      the plugin build **in the same change**. Needs IMPL-1's contract frozen (it is — IMPL-1 done
-      2026-07-15), not the shell finished. Travels with **UI-16**; foundation prerequisite = **UI-18**, port
-      body = **UI-19**. Refs: board PROD-24 (1)(2)(4)(5), HK-11 (BOARD_DONE),
-      `../locveil-commons/docs/design/workbench.md` §4 as amended.
 - [ ] **UI-19** [UI][COMMONS] `[deferred]` — **full port body: composites + pages onto kit primitives** (sprint-02
       port-arc split, filed at intake 2026-07-15; display name "voice UI-19"; flagged at planning as the
       sprint's largest execution risk, L+). Port the ~35 composite components and 7 pages (~32k lines) off

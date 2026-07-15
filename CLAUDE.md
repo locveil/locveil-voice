@@ -20,7 +20,9 @@ but these rules apply to any task). **Single source of truth** (relocated here f
   - **Config schema** (`CoreConfig` / `config-master.toml`) → `ConfigSection` editors, `/configuration/config*` calls, `src/types/*`.
   - **REST API endpoints / parameter schemas / analysis endpoints** → `src/utils/apiClient.ts`, the analysis components.
   - Definition-of-done addendum: `cd config-ui && npm run check && npm run build` passes (`check` = type-check **+**
-    the strict ESLint gate). _Pairs with `user-facing-docs-are-done` — config-ui is the user-facing **app**._
+    the strict ESLint gate; **`build` = the Voice Workbench plugin bundle + manifest fragment** — the standalone app
+    retired at UI-17 per the HK-11 owner ruling; the shell consuming it is commons `packages/workbench`).
+    _Pairs with `user-facing-docs-are-done` — config-ui is the user-facing **app**._
 - **`ws-protocol-doc-canonical`** — `docs/guides/websocket-api.md` is the **single source of truth for the
   WebSocket wire protocol** (`/ws/audio`, `/ws/audio/reply`, `/ws/output`, `/ws/observe`) — a hand-written
   reference, deliberately not generated tooling. Any change to a WS endpoint or message shape (the

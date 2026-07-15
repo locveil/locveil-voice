@@ -1,42 +1,47 @@
-# Irene Donation Editor
+# config-ui — the Voice Workbench plugin
 
-A small React (Vite) app that edits Irene donation JSON files without exposing JSON syntax. It validates live against the provided JSON Schema.
+The configuration and donation editor for the Irene voice assistant. Since UI-17 it is
+not a standalone app: it builds as a **plugin bundle for the Locveil Workbench** (the
+shared browser workbench in the sibling `locveil-commons` checkout) and appears there
+as the **Voice** tab — six pages: Donations, Templates, Prompts, Localizations,
+Monitoring, Configuration.
 
-## Quick start
-
-```bash
-# 1) Install dependencies
-npm install
-
-# 2) Start the dev server
-npm run dev
-
-# 3) Open the printed local URL
-
-# 4) (Optional) Load the full Irene schema:
-#    - In the app, go to "Schema settings"
-#    - Import the file: schemas/donation/v1.0.json from your Irene project
-#    - Or use the included irene-schema.json for testing
-```
-
-## Build
+## Build & run
 
 ```bash
-npm run build
-npm run preview
+npm ci
+npm run build     # dist/: index.js (ESM) + style.css + manifest.json
+npm run dev       # same build, rebuilds on change (reload the Workbench tab)
 ```
 
-## Features
-- Form-based UI for all schema fields (no raw JSON editing required)
-- Live validation with AJV (errors shown inline)
-- Import donation JSON (your data) and export back out
-- Dynamic schema loading: import your own schema JSON or use the built-in default
-- No hardcoded schema dependencies - fully configurable
+Then run the Workbench and open the Voice tab:
 
-## Tech
-- Vite + React
-- Tailwind for styling
-- AJV + ajv-formats for schema validation
-- lucide-react for icons
+```bash
+cd ../../locveil-commons/packages/workbench
+npm install && npm run build && npm run serve   # http://localhost:6107
+```
 
-All logic runs locally in the browser.
+The plugin talks to the Irene backend on the same host the Workbench is served from,
+port 8080 (override by setting `window.__IRENE_API_BASE__` before the plugin loads).
+
+## How the bundle fits the Workbench
+
+- `dist/manifest.json` is the build-emitted manifest fragment: entry, styles, and the
+  peer majors the shell verifies before loading.
+- React, react-dom, react-router-dom and `locveil-ui-kit` are **not bundled** — the
+  shell serves them through its import map, so every plugin shares one copy.
+- Everything else (i18next, the editors, Monaco wrapper) bundles into `dist/index.js`;
+  the locale follows the shell's RU/EN switch.
+- Design tokens and the CSS reset come from the shell; the bundle carries only its own
+  component styles.
+
+## Gates
+
+```bash
+npm run check     # type-check + strict ESLint + orphan-module guard
+npm run test      # vitest
+```
+
+Both must stay green together with `npm run build` — config-ui is a first-class
+consumer of the backend contracts (donation schema, config schema, REST API), and its
+generated types (`npm run gen:api-types`) must match the backend it edits.

@@ -4,7 +4,7 @@
  *
  * The strict ESLint gate (`--max-warnings 0`) only flags unused *locals/imports within a file*; it cannot see an
  * exported component/type/util that nothing imports. So dead modules accumulate silently (as the UI-5 v1.0 cleanup
- * found). This walks the static import graph (incl. dynamic `import()`) from src/main.tsx + src/App.tsx and reports
+ * found). This walks the static import graph (incl. dynamic `import()`) from src/plugin.tsx (the Workbench plugin entry) and reports
  * any reachable-from-nowhere module. Generated `*.gen.*` files are exempt.
  *
  * Run: `node scripts/find-orphans.mjs` (wired into `npm run check`). Exit 1 if orphans found.
@@ -14,7 +14,7 @@ import path from 'node:path';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const SRC = path.join(ROOT, 'src');
-const STATIC_ENTRIES = ['src/main.tsx', 'src/App.tsx'];
+const STATIC_ENTRIES = ['src/plugin.tsx'];
 const isTest = (f) => /\.(test|spec)\.tsx?$/.test(f);
 
 function walk(dir) {

@@ -157,8 +157,8 @@ unknown name aborts instead of delivering the wrong config.
 The image and the profile must agree: the profile names the models the image actually ships.
 
 The configuration editor (config-ui) is **not deployed on the controller** — the repo owns the
-config here, so editing happens repo-side; run config-ui on a workstation against a dev
-backend when you want the visual editor.
+config here, so editing happens repo-side; when you want the visual editor, run the Locveil
+Workbench on a workstation (the Voice tab; see the build guide's "The configuration editor").
 
 ## Satellite TLS plane (optional)
 
