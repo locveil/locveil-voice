@@ -84,7 +84,7 @@ class ConsoleProviderSchema(TTSProviderSchema):
 
 class ElevenLabsProviderSchema(TTSProviderSchema):
     """ElevenLabs provider configuration schema"""
-    api_key: str = Field(description="ElevenLabs API key (use ${ELEVENLABS_API_KEY})")
+    api_key: str = Field(json_schema_extra={"widget": "env_var"}, description="ElevenLabs API key (use ${ELEVENLABS_API_KEY})")
     voice_id: str = Field(default="21m00Tcm4TlvDq8ikWAM", description="Voice ID")
     model: str = Field(default="eleven_monolingual_v1", description="Model name")
     stability: float = Field(default=0.5, ge=0.0, le=1.0, description="Voice stability")
@@ -143,20 +143,20 @@ class PiperRuAccentProviderSchema(PiperProviderSchema):
 
 class SoundDeviceProviderSchema(AudioProviderSchema):
     """SoundDevice provider configuration schema"""
-    device: int = Field(default=-1, description="Audio output device ID for playback")
+    device: int = Field(default=-1, json_schema_extra={"widget": "audio_output_select"}, description="Audio output device ID for playback")
     sample_rate: int = Field(default=44100, description="Audio sample rate")
     volume: float = Field(default=1.0, ge=0.0, le=1.0, description="Playback volume")
 
 
 class APlayProviderSchema(AudioProviderSchema):
     """APlay provider configuration schema"""
-    device: str = Field(default="default", description="ALSA device name for audio output")
+    device: str = Field(default="default", json_schema_extra={"widget": "audio_output_select"}, description="ALSA device name for audio output")
     volume: float = Field(default=1.0, ge=0.0, le=1.0, description="Playback volume")
 
 
 class MiniaudioProviderSchema(AudioProviderSchema):
     """Miniaudio provider configuration schema (self-contained streaming backend)"""
-    device: Optional[int] = Field(default=None, description="Playback device id (None = system default)")
+    device: Optional[int] = Field(default=None, json_schema_extra={"widget": "audio_output_select"}, description="Playback device id (None = system default)")
     sample_rate: int = Field(default=44100, description="Output sample rate (Hz)")
     channels: int = Field(default=2, ge=1, le=2, description="Output channel count")
     buffersize_msec: int = Field(default=200, ge=10, le=2000, description="Device buffer size (ms)")
@@ -165,7 +165,7 @@ class MiniaudioProviderSchema(AudioProviderSchema):
 
 class ConsoleAudioProviderSchema(AudioProviderSchema):
     """Console Audio provider configuration schema"""
-    device: str = Field(default="console", description="Console output device mode")
+    device: str = Field(default="console", json_schema_extra={"widget": "audio_output_select"}, description="Console output device mode")
     volume: float = Field(default=1.0, ge=0.0, le=1.0, description="Playback volume") 
     simulate_timing: bool = Field(default=True, description="Simulate playback timing")
 
@@ -223,7 +223,7 @@ class GoogleCloudProviderSchema(ASRProviderSchema):
 
 class OpenAIProviderSchema(LLMProviderSchema):
     """OpenAI provider configuration schema"""
-    api_key: str = Field(description="OpenAI API key (use ${OPENAI_API_KEY})")
+    api_key: str = Field(json_schema_extra={"widget": "env_var"}, description="OpenAI API key (use ${OPENAI_API_KEY})")
     model: str = Field(default="gpt-4", description="Model to use")
     max_tokens: int = Field(default=16384, ge=1, description="Maximum tokens")
     context_window: int = Field(default=128000, description="Input context window (tokens); default = the model capability (QUAL-52)")
@@ -232,7 +232,7 @@ class OpenAIProviderSchema(LLMProviderSchema):
 
 class AnthropicProviderSchema(LLMProviderSchema):
     """Anthropic provider configuration schema"""
-    api_key: str = Field(description="Anthropic API key (use ${ANTHROPIC_API_KEY})")
+    api_key: str = Field(json_schema_extra={"widget": "env_var"}, description="Anthropic API key (use ${ANTHROPIC_API_KEY})")
     model: str = Field(default="claude-3-haiku-20240307", description="Model to use")
     max_tokens: int = Field(default=8192, ge=1, description="Maximum tokens")
     context_window: int = Field(default=200000, description="Input context window (tokens); default = the model capability (QUAL-52)")
@@ -240,7 +240,7 @@ class AnthropicProviderSchema(LLMProviderSchema):
 
 class DeepSeekProviderSchema(LLMProviderSchema):
     """DeepSeek provider configuration schema (OpenAI-compatible API)"""
-    api_key: str = Field(description="DeepSeek API key (use ${DEEPSEEK_API_KEY})")
+    api_key: str = Field(json_schema_extra={"widget": "env_var"}, description="DeepSeek API key (use ${DEEPSEEK_API_KEY})")
     base_url: str = Field(default="https://api.deepseek.com", description="DeepSeek API base URL")
     model: str = Field(default="deepseek-chat", description="Model: deepseek-chat (V3) | deepseek-reasoner (R1)")
     max_tokens: int = Field(default=8000, description="Maximum response tokens")
@@ -411,7 +411,7 @@ class UnifiedTextProcessorProviderSchema(TextProcessorProviderSchema):
 class ComponentProviderConfigSchema(BaseModel):
     """Base schema for component provider configurations"""
     enabled: bool = Field(default=True, description="Enable component")
-    default_provider: str = Field(description="Default provider name")
+    default_provider: str = Field(json_schema_extra={"widget": "provider_select"}, description="Default provider name")
     fallback_providers: List[str] = Field(default_factory=list, description="Fallback providers")
     providers: Dict[str, Dict[str, Any]] = Field(default_factory=dict, description="Provider configurations")
 

@@ -2238,6 +2238,37 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       (`config-ui-stays-functional`): `npm run check` + `npm run build` green. Like UI-12, the review's §E altitude items
       were partly over-credited (most need backend signals or are non-issues); the genuine config-ui wins (efficiency +
       E6 drift-guard) are done.
+- [x] **UI-16** [UI] (P3) `[deferred]` — **DONE 2026-07-15 (sprint-02 port arc, the travel-with row —
+      the backend-metadata blocker dissolved by building the metadata).** **config-ui schema-driven
+      sections/widgets + the spaCy-attr E10 finding** (review §E, spun out of UI-14). **E7:** the sections
+      endpoint (`/configuration/config/schema/sections`) now returns **`component_sections`** — section →
+      live-testable component name, sourced from `CONFIGURABLE_COMPONENT_SECTIONS` in the configuration
+      component (adjacent to the API identities it names; the `text_processor→text_processing` divergence
+      lives there ONCE, guarded by a new test asserting every key is a real CoreConfig section + a
+      ComponentConfig flag). `ConfigurationPage` + `ConfigSection` derive the Test/Workflow roster from it
+      (`testableComponent` prop) — both frontend hardcoded rosters + remap tables DELETED. **E9:**
+      `_extract_model_schema` propagates a **`widget`** hint from `json_schema_extra`; 23 hints declared
+      (`provider_select` ×8 incl. the component-schema base, `input_select`, `microphone_select`,
+      `readonly` ×2, `env_var` ×7, `audio_output_select` ×4 on the audio provider schemas) — chosen by a
+      mechanical audit of every model field against the old frontend predicates; the `ConfigWidget`
+      factory now dispatches on `schema.widget` and the name/path heuristic stack is DELETED (the runtime
+      `${...}`-value env detection stays — values can be env refs on any string field). Deliberate
+      non-preservations, recorded: `fallback_providers`/`provider_cascade_order` (List fields) no longer
+      hit the single-value ProviderSelect — the old name-match would REPLACE the array with a string on
+      edit (a latent shape-corruption path); they fall to the array editor. `provider_class`/`provider`
+      (NLU internals) render as plain strings. **E10 narrowed at execution intake:** the 21 English
+      attribute descriptions were **dead data** — no caller ever rendered them (the picker shows keys
+      only) — so per `dead-code-remove-not-fix` the i18n bypass was removed by deleting them
+      (`SPACY_ATTRIBUTE_SUGGESTIONS` keys-only list; attribute keys stay technical per
+      `donation-choice-surfaces-rule`). **Contract note (owner question answered in-session):** the REST
+      surface is the `ui-openapi` repo-internal contract — the hints DO reach the generated artifact via
+      the component model schemas, an additive regeneration (widget keys + one docstring), NOT a breaking
+      reshape → `dump_openapi.py` re-run + `gen:api-types` (+3 lines), **no STAMP bump** per the
+      convention; drift guard green. **Verified:** backend suite **1417/7 skip** (CI-style from repo root
+      — the first from-`backend/` run's 76 failures were cwd-relative asset resolution, reproduced
+      identically WITHOUT the change), 2 new tests (roster coherence + hints-reach-payload incl. nested);
+      config-ui check + plugin build + vitest 44/44. docs: none — internal schema plumbing; config-ui
+      behavior described in manifest nodes (edit/test/persist flows) is unchanged.
 - [x] **UI-17** [UI][COMMONS] `[deferred]` — **DONE 2026-07-15 (sprint-02 port arc; the PROD-24 write-back
       ID; HK-11 corrections applied at intake the same day).** **config-ui → the Voice Workbench plugin.**
       `src/plugin.tsx` default-exports the `WorkbenchPlugin` (contract types from

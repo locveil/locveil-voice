@@ -16,7 +16,7 @@ import Badge from '@/components/ui/Badge';
 import {
   parseSpacyAttribute,
   reconstructSpacyAttribute,
-  getSpacyAttributeSuggestions,
+  SPACY_ATTRIBUTE_SUGGESTIONS,
   type SpacyAttributeStructure
 } from '@/utils/spacyAttributeHelpers';
 import SpacyValueEditor from './SpacyValueEditor';
@@ -164,9 +164,8 @@ export default function SpacyAttributeEditor({
   };
 
   const getAttributeSuggestions = () => {
-    const suggestions = getSpacyAttributeSuggestions();
     const currentKeys = Object.keys(value || {});
-    return Object.keys(suggestions).filter(key => !currentKeys.includes(key));
+    return SPACY_ATTRIBUTE_SUGGESTIONS.filter(key => !currentKeys.includes(key));
   };
 
   return (

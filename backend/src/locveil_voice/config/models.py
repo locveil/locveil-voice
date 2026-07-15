@@ -44,7 +44,7 @@ class SystemConfig(BaseModel):
 
     # ARCH-15 PR-6b: gated observation tap (debug). Disabled unless a token is set. Localhost-only
     # by default — set observe_allow_remote=true to accept non-local connections (still token-gated).
-    observe_token: Optional[str] = Field(default=None, description="Shared token for the /ws/observe debug tap; None disables it")
+    observe_token: Optional[str] = Field(default=None, json_schema_extra={"widget": "env_var"}, description="Shared token for the /ws/observe debug tap; None disables it")
     observe_allow_remote: bool = Field(default=False, description="Allow non-localhost observation-tap connections (still token-gated)")
 
     @field_validator('web_port')
@@ -62,9 +62,9 @@ class SystemConfig(BaseModel):
 class MicrophoneInputConfig(BaseModel):
     """Microphone input configuration with Phase 5 audio enhancements"""
     enabled: bool = Field(default=True, description="Enable microphone input")
-    device_id: Optional[int] = Field(default=None, description="Audio device ID (None = default)")
-    sample_rate: int = Field(default=16000, description="Audio sample rate in Hz")
-    channels: int = Field(default=1, description="Number of audio channels")
+    device_id: Optional[int] = Field(default=None, json_schema_extra={"widget": "microphone_select"}, description="Audio device ID (None = default)")
+    sample_rate: int = Field(default=16000, json_schema_extra={"widget": "readonly"}, description="Audio sample rate in Hz")
+    channels: int = Field(default=1, json_schema_extra={"widget": "readonly"}, description="Number of audio channels")
     chunk_size: int = Field(default=1024, description="Audio buffer chunk size")
     buffer_queue_size: int = Field(default=50, description="Audio buffer queue size for handling processing delays")
     
@@ -128,7 +128,7 @@ class InputConfig(BaseModel):
     microphone: bool = Field(default=False, description="Enable microphone input source")
     web: bool = Field(default=True, description="Enable web interface input")
     cli: bool = Field(default=True, description="Enable command line input")
-    default_input: str = Field(default="cli", description="Default input source")
+    default_input: str = Field(default="cli", json_schema_extra={"widget": "input_select"}, description="Default input source")
     
     # Input-specific configurations
     microphone_config: MicrophoneInputConfig = Field(default_factory=MicrophoneInputConfig, description="Microphone input configuration")
@@ -203,7 +203,7 @@ class ComponentConfig(BaseModel):
 class TTSConfig(BaseModel):
     """TTS component configuration"""
     enabled: bool = Field(default=False, description="Enable TTS component")
-    default_provider: Optional[str] = Field(default=None, description="Default TTS provider")
+    default_provider: Optional[str] = Field(default=None, json_schema_extra={"widget": "provider_select"}, description="Default TTS provider")
     fallback_providers: List[str] = Field(default_factory=list, description="Fallback providers in order")
     providers: Dict[str, Dict[str, Any]] = Field(
         default_factory=dict,
@@ -214,7 +214,7 @@ class TTSConfig(BaseModel):
 class AudioConfig(BaseModel):
     """Audio component configuration"""
     enabled: bool = Field(default=False, description="Enable Audio component")
-    default_provider: Optional[str] = Field(default=None, description="Default audio provider")
+    default_provider: Optional[str] = Field(default=None, json_schema_extra={"widget": "provider_select"}, description="Default audio provider")
     fallback_providers: List[str] = Field(default_factory=list, description="Fallback providers in order")
     concurrent_playback: bool = Field(default=False, description="Allow concurrent audio playback")
     # ARCH-20: local TTS playback path. "file" = synthesize to a temp WAV and play_file (legacy).
@@ -240,7 +240,7 @@ class AudioConfig(BaseModel):
 class ASRConfig(BaseModel):
     """ASR component configuration with Phase 5 audio enhancements"""
     enabled: bool = Field(default=False, description="Enable ASR component")
-    default_provider: Optional[str] = Field(default=None, description="Default ASR provider")
+    default_provider: Optional[str] = Field(default=None, json_schema_extra={"widget": "provider_select"}, description="Default ASR provider")
     fallback_providers: List[str] = Field(default_factory=list, description="Fallback providers in order")
     
     # Phase 5: Audio configuration enhancements
@@ -279,7 +279,7 @@ class ASRConfig(BaseModel):
 class LLMConfig(BaseModel):
     """LLM component configuration"""
     enabled: bool = Field(default=False, description="Enable LLM component")
-    default_provider: Optional[str] = Field(default=None, description="Default LLM provider")
+    default_provider: Optional[str] = Field(default=None, json_schema_extra={"widget": "provider_select"}, description="Default LLM provider")
     fallback_providers: List[str] = Field(default_factory=list, description="Fallback providers in order")
     providers: Dict[str, Dict[str, Any]] = Field(
         default_factory=dict,
@@ -306,7 +306,7 @@ class WakeWordSpec(BaseModel):
 class VoiceTriggerConfig(BaseModel):
     """Voice trigger / wake word component configuration with Phase 5 audio enhancements"""
     enabled: bool = Field(default=False, description="Enable voice trigger component")
-    default_provider: Optional[str] = Field(default=None, description="Default voice trigger provider")
+    default_provider: Optional[str] = Field(default=None, json_schema_extra={"widget": "provider_select"}, description="Default voice trigger provider")
     wake_words: List[WakeWordSpec] = Field(
         default_factory=list,
         description="Optional component-level wake-word override (QUAL-20); when set, injected into the "
@@ -353,7 +353,7 @@ class VoiceTriggerConfig(BaseModel):
 class NLUConfig(BaseModel):
     """NLU component configuration"""
     enabled: bool = Field(default=False, description="Enable NLU component")
-    default_provider: Optional[str] = Field(default=None, description="Default NLU provider")
+    default_provider: Optional[str] = Field(default=None, json_schema_extra={"widget": "provider_select"}, description="Default NLU provider")
     confidence_threshold: float = Field(default=0.7, description="Global confidence threshold")
     fallback_intent: str = Field(default="conversation.general", description="Fallback intent name")
     
@@ -441,7 +441,7 @@ class VADConfig(BaseModel):
     `[vad.providers.<name>]` (energy / silero / microvad), like every other provider family. The set of
     providers is the `locveil_voice.providers.vad` entry-points (no hand-maintained enum)."""
     enabled: bool = Field(default=True, description="Enable VAD processing")
-    default_provider: str = Field(default="energy", description="VAD provider: 'energy' (built-in) | 'silero' (sherpa-onnx) | 'microvad' (pymicro-vad). 64-bit for the latter two.")
+    default_provider: str = Field(default="energy", json_schema_extra={"widget": "provider_select"}, description="VAD provider: 'energy' (built-in) | 'silero' (sherpa-onnx) | 'microvad' (pymicro-vad). 64-bit for the latter two.")
 
     # Segmentation / pipeline (component-level — not engine-specific)
     max_segment_duration_s: int = Field(default=10, description="Maximum voice segment duration in seconds", ge=1, le=60)
@@ -508,6 +508,7 @@ class ReportsConfig(BaseModel):
     # Delivery (ARCH-32): a PRIVATE GitHub repo receiving the ticket + the support bundle (design D-1).
     repo: str = Field(default="", description="Reports repo, 'owner/name' — MUST be private (bundles carry logs/config)")
     token_env: str = Field(default="LOCVEIL_VOICE_REPORTS_TOKEN",
+                           json_schema_extra={"widget": "env_var"},
                            description="Env var holding a fine-grained PAT scoped to the reports repo only (issues + contents write)")
     rate_limit_per_hour: int = Field(default=3, ge=1, description="Max reports filed per hour (design D-7)")
     rate_limit_per_day: int = Field(default=10, ge=1, description="Max reports filed per day (design D-7)")
@@ -526,7 +527,7 @@ class SatelliteTLSConfig(BaseModel):
     bootstrap_url: str = Field(default="", description="The provisioning bootstrap zone, e.g. 'http://wb7:8081' — used only until a cert is issued")
     ca_cert: Optional[str] = Field(default=None, description="CA cert path (default: <assets_root>/credentials/satellite/ca.crt)")
     client_cert: Optional[str] = Field(default=None, description="Client cert path (default: <assets_root>/credentials/satellite/sat.crt)")
-    client_key: Optional[str] = Field(default=None, description="Client key path (default: <assets_root>/credentials/satellite/sat.key)")
+    client_key: Optional[str] = Field(default=None, json_schema_extra={"widget": "env_var"}, description="Client key path (default: <assets_root>/credentials/satellite/sat.key)")
 
 
 class SatelliteConfig(BaseModel):

@@ -2286,7 +2286,7 @@
           "Configuration Management"
         ],
         "summary": "Get Section Order And Titles",
-        "description": "Get section order and titles for frontend auto-generation\n\nReturns:\n- section_order: Array of section names in logical display order\n- section_titles: Mapping of section names to display titles with emojis\n- total_sections: Total number of available sections\n\nThis endpoint enables the frontend to auto-generate section lists\ninstead of using hardcoded arrays.",
+        "description": "Get section order and titles for frontend auto-generation\n\nReturns:\n- section_order: Array of section names in logical display order\n- section_titles: Mapping of section names to display titles with emojis\n- component_sections: Mapping of section names to live-testable component\n  names (the /{component}/configure surfaces) — UI-16: the frontend derives\n  its component roster from this instead of a hardcoded list\n- total_sections: Total number of available sections\n\nThis endpoint enables the frontend to auto-generate section lists\ninstead of using hardcoded arrays.",
         "operationId": "get_section_order_and_titles_configuration_config_schema_sections_get",
         "responses": {
           "200": {
@@ -4747,7 +4747,8 @@
               }
             ],
             "title": "Default Provider",
-            "description": "Default ASR provider"
+            "description": "Default ASR provider",
+            "widget": "provider_select"
           },
           "fallback_providers": {
             "items": {
@@ -5128,7 +5129,8 @@
               }
             ],
             "title": "Default Provider",
-            "description": "Default audio provider"
+            "description": "Default audio provider",
+            "widget": "provider_select"
           },
           "fallback_providers": {
             "items": {
@@ -7824,7 +7826,8 @@
             "type": "string",
             "title": "Default Input",
             "description": "Default input source",
-            "default": "cli"
+            "default": "cli",
+            "widget": "input_select"
           },
           "microphone_config": {
             "$ref": "#/components/schemas/MicrophoneInputConfig",
@@ -8532,7 +8535,8 @@
               }
             ],
             "title": "Default Provider",
-            "description": "Default LLM provider"
+            "description": "Default LLM provider",
+            "widget": "provider_select"
           },
           "fallback_providers": {
             "items": {
@@ -9428,19 +9432,22 @@
               }
             ],
             "title": "Device Id",
-            "description": "Audio device ID (None = default)"
+            "description": "Audio device ID (None = default)",
+            "widget": "microphone_select"
           },
           "sample_rate": {
             "type": "integer",
             "title": "Sample Rate",
             "description": "Audio sample rate in Hz",
-            "default": 16000
+            "default": 16000,
+            "widget": "readonly"
           },
           "channels": {
             "type": "integer",
             "title": "Channels",
             "description": "Number of audio channels",
-            "default": 1
+            "default": 1,
+            "widget": "readonly"
           },
           "chunk_size": {
             "type": "integer",
@@ -10014,7 +10021,8 @@
               }
             ],
             "title": "Default Provider",
-            "description": "Default NLU provider"
+            "description": "Default NLU provider",
+            "widget": "provider_select"
           },
           "confidence_threshold": {
             "type": "number",
@@ -11306,7 +11314,8 @@
             "type": "string",
             "title": "Token Env",
             "description": "Env var holding a fine-grained PAT scoped to the reports repo only (issues + contents write)",
-            "default": "LOCVEIL_VOICE_REPORTS_TOKEN"
+            "default": "LOCVEIL_VOICE_REPORTS_TOKEN",
+            "widget": "env_var"
           },
           "rate_limit_per_hour": {
             "type": "integer",
@@ -11506,7 +11515,8 @@
               }
             ],
             "title": "Client Key",
-            "description": "Client key path (default: <assets_root>/credentials/satellite/sat.key)"
+            "description": "Client key path (default: <assets_root>/credentials/satellite/sat.key)",
+            "widget": "env_var"
           }
         },
         "type": "object",
@@ -11794,7 +11804,8 @@
               }
             ],
             "title": "Observe Token",
-            "description": "Shared token for the /ws/observe debug tap; None disables it"
+            "description": "Shared token for the /ws/observe debug tap; None disables it",
+            "widget": "env_var"
           },
           "observe_allow_remote": {
             "type": "boolean",
@@ -11959,7 +11970,8 @@
               }
             ],
             "title": "Default Provider",
-            "description": "Default TTS provider"
+            "description": "Default TTS provider",
+            "widget": "provider_select"
           },
           "fallback_providers": {
             "items": {
@@ -13422,7 +13434,8 @@
             "type": "string",
             "title": "Default Provider",
             "description": "VAD provider: 'energy' (built-in) | 'silero' (sherpa-onnx) | 'microvad' (pymicro-vad). 64-bit for the latter two.",
-            "default": "energy"
+            "default": "energy",
+            "widget": "provider_select"
           },
           "max_segment_duration_s": {
             "type": "integer",
@@ -13671,7 +13684,8 @@
               }
             ],
             "title": "Default Provider",
-            "description": "Default voice trigger provider"
+            "description": "Default voice trigger provider",
+            "widget": "provider_select"
           },
           "wake_words": {
             "items": {

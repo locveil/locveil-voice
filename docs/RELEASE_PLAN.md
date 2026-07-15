@@ -543,17 +543,6 @@ Governed by `config-ui-stays-functional` (config-ui must stay functional).
       (today `canSaveNLU` hard-requires `!hasBlockingConflicts`). Deliverable: a design doc under `docs/design/` first,
       then implementation follow-up(s). The inline `ValidationIndicator` already surfaces blockers, so scope the modal's
       added value deliberately (resolution UX, not just a second display).
-- [ ] **UI-16** [UI] (P3) `[deferred]` — **config-ui schema-driven sections/widgets + spaCy-attr i18n** (review §E
-      altitude; spun out of UI-14 on completion, 2026-06-28 — these need backend support or are low-value, unlike the
-      E6 part UI-14 did). **E7** schema-drive the `ConfigSection` component roster + `section→component` map, and **E9**
-      schema-drive `ConfigWidgets`' per-name/path widget heuristics — **both blocked on backend schema metadata** (a
-      per-section `is_component` signal / per-field `widget` hint; the config schema carries neither today), so this is
-      a backend+frontend task, not a config-ui-only fix. **E10** i18n the spaCy attribute descriptions
-      (`getSpacyAttributeSuggestions`, 21 entries) — config-ui-only but niche (a power-user raw-pattern editor; the
-      attribute *keys* stay technical per `donation-choice-surfaces-rule`). _Assessed non-issue (not filed): E8 — the
-      `LanguageTabs` display-name map is inherently a UI concern (the backend has no display names) and degrades to
-      `code.toUpperCase()`; the `DonationsPage` `['en','ru']` fallback is a defensible default for a rare miss._
-
 - [ ] **UI-20** [UI] `[deferred]` — **bundle Monaco locally — no CDN at runtime** (HK-11 side-find,
       2026-07-15, filed per `review-then-remediate`; the HK-11 write-back ID). `@monaco-editor/react`
       (used by `TomlPreview.tsx` + `DiffViewer.tsx`) ships no editor code — its default `loader` fetches

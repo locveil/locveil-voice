@@ -857,6 +857,9 @@ export interface ConfigFieldSchema {
   constraints?: Record<string, any>;
   properties?: Record<string, ConfigFieldSchema>; // For nested objects
   items?: ConfigFieldSchema; // For arrays of objects, e.g. wake_words: WakeWordSpec[] (QUAL-20)
+  // UI-16 (E9): backend-declared widget hint (json_schema_extra.widget) — the widget
+  // factory dispatches on this; absent = plain type-based widget.
+  widget?: string;
 }
 
 // A single wake word, uniform across voice-trigger providers (QUAL-20).
@@ -881,6 +884,9 @@ export interface ConfigSchemaResponse {
 export interface ConfigSectionOrderResponse extends BaseApiResponse {
   section_order: string[];
   section_titles: Record<string, string>;
+  // UI-16 (E7): section name -> live-testable component name (the /{component}/configure
+  // surface); the component roster derives from this, not a hardcoded list.
+  component_sections?: Record<string, string>;
   total_sections: number;
 }
 

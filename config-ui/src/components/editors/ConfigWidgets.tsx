@@ -707,49 +707,30 @@ export const ConfigWidget: React.FC<ConfigWidgetProps & {
   componentName?: string
 }> = (props) => {
   const { t } = useTranslation('configuration');
-  const { name, value, schema, componentName, path } = props;
+  const { name, value, schema, componentName } = props;
   
-  // Detect specialized widget types
-  if (typeof value === 'string' && (value.startsWith('${') || name.toLowerCase().includes('key') || name.toLowerCase().includes('token'))) {
+  // A value that IS an env reference renders as the env-var widget regardless of
+  // schema (the reference may be set on any string field at runtime).
+  if (typeof value === 'string' && value.startsWith('${')) {
     return <EnvironmentVariableWidget {...props} />;
   }
-  
-  // Enhanced provider field detection
-  if (name === 'default_provider' || name.endsWith('_provider') || name.includes('provider')) {
-    return <ProviderSelectWidget {...props} componentName={componentName} />;
+
+  // UI-16 (E9): specialized widgets are SCHEMA-DRIVEN — the backend declares
+  // `widget` on the field (json_schema_extra); the old name/path heuristics are gone.
+  switch (schema.widget) {
+    case 'env_var':
+      return <EnvironmentVariableWidget {...props} />;
+    case 'provider_select':
+      return <ProviderSelectWidget {...props} componentName={componentName} />;
+    case 'input_select':
+      return <InputSelectWidget {...props} />;
+    case 'microphone_select':
+      return <MicrophoneSelectWidget {...props} />;
+    case 'audio_output_select':
+      return <AudioOutputSelectWidget {...props} />;
+    case 'readonly':
+      return <ReadOnlyWidget {...props} />;
   }
-  
-  // Input source field detection
-  if (name === 'default_input' || name.endsWith('_input') || (name.includes('input') && name.includes('default'))) {
-    return <InputSelectWidget {...props} />;
-  }
-  
-  // Microphone device field detection
-  if (name === 'device_id' && path && path.some((p: string) => p.includes('microphone'))) {
-    return <MicrophoneSelectWidget {...props} />;
-  }
-  
-  // Audio output device field detection
-  if (name === 'device_id' && path && path.some((p: string) =>
-    p.includes('audio') || p.includes('tts') || p.includes('sounddevice') ||
-    p.includes('aplay') || p.includes('console') || p.includes('miniaudio')
-  )) {
-    return <AudioOutputSelectWidget {...props} />;
-  }
-  
-  // Legacy device field detection for backward compatibility
-  if (name === 'device' && path && path.some((p: string) => 
-    p.includes('audio') || p.includes('aplay') || p.includes('console')
-  )) {
-    return <AudioOutputSelectWidget {...props} />;
-  }
-  
-  // Read-only fields for microphone configuration (auto-populated from device)
-  if ((name === 'sample_rate' || name === 'channels') && path && path.some((p: string) => p.includes('microphone'))) {
-    return <ReadOnlyWidget {...props} />;
-  }
-  
-  // Read-only fields marked in schema (removed as readonly property doesn't exist in ConfigFieldSchema)
   
   if (schema.constraints && (schema.constraints.ge !== undefined || schema.constraints.le !== undefined) && schema.type === 'number') {
     return <RangeSliderWidget {...props} />;

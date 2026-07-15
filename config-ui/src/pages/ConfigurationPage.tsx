@@ -114,19 +114,11 @@ const ConfigurationPage: React.FC = () => {
     return path.split(/[/\\]/).pop() || 'config.toml';
   };
 
-  // Helper function to map section names to component names
+  // Map section names to live-testable component names — backend-declared
+  // (UI-16 E7: `component_sections` from /configuration/config/schema/sections;
+  // the old hardcoded roster + its text_processor->text_processing remap are gone).
   const getComponentName = (sectionName: string): ComponentName | null => {
-    const sectionToComponent: Record<string, ComponentName> = {
-      'tts': 'tts',
-      'asr': 'asr', 
-      'audio': 'audio',
-      'llm': 'llm',
-      'nlu': 'nlu',
-      'voice_trigger': 'voice_trigger',
-      'text_processor': 'text_processing', // Section name is 'text_processor', component name is 'text_processing'
-      'intent_system': 'intent_system'
-    };
-    return sectionToComponent[sectionName] || null;
+    return (componentSections[sectionName] as ComponentName | undefined) ?? null;
   };
 
   // Helper function to get test state for a section
@@ -196,6 +188,8 @@ const ConfigurationPage: React.FC = () => {
   // Auto-generated section order and titles from backend
   const [sectionOrder, setSectionOrder] = useState<string[]>([]);
   const [sectionTitles, setSectionTitles] = useState<Record<string, string>>({});
+  // UI-16 (E7): section -> live-testable component name, backend-declared
+  const [componentSections, setComponentSections] = useState<Record<string, string>>({});
 
   useEffect(() => {
     void loadConfiguration();
@@ -209,6 +203,7 @@ const ConfigurationPage: React.FC = () => {
       const response = await apiClient.getConfigSectionOrder();
       setSectionOrder(response.section_order || []);
       setSectionTitles(response.section_titles || {});
+      setComponentSections(response.component_sections || {});
     } catch (error) {
       console.error('Failed to load section order and titles:', error);
       // Fallback to basic section discovery if API fails
@@ -943,6 +938,7 @@ const ConfigurationPage: React.FC = () => {
                     onTestConfig={handleTestConfiguration}
                     testState={getTestStateForSection(sectionName)}
                     level={1}
+                    testableComponent={componentName}
                     // Phase 4.3: Enhanced workflow props
                     workflowStatus={workflowStatus}
                     workflowStateType={workflowStateType}

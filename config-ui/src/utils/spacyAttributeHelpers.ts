@@ -227,32 +227,17 @@ export function getOperatorOptions(): string[] {
 }
 
 /**
- * Get common SpaCy attribute suggestions
+ * The suggestable spaCy token attributes (technical identifiers — rendered as-is per
+ * `donation-choice-surfaces-rule`, never translated). UI-16 (review E10): the old
+ * per-attribute English description strings were dead data — no caller ever rendered
+ * them (the picker shows the keys) — so the i18n-bypass was removed by removing them.
  */
-export function getSpacyAttributeSuggestions(): Record<string, string[]> {
-  return {
-    'TEXT': ['Basic text matching'],
-    'LOWER': ['Lowercase text matching'],
-    'LEMMA': ['Lemmatized form matching'],
-    'POS': ['Part-of-speech tags'],
-    'TAG': ['Fine-grained POS tags'],
-    'DEP': ['Dependency relation'],
-    'ENT_TYPE': ['Named entity type'],
-    'LIKE_NUM': ['Looks like a number'],
-    'LIKE_EMAIL': ['Looks like an email'],
-    'LIKE_URL': ['Looks like a URL'],
-    'IS_ALPHA': ['Only alphabetic characters'],
-    'IS_DIGIT': ['Only digits'],
-    'IS_LOWER': ['All lowercase'],
-    'IS_UPPER': ['All uppercase'],
-    'IS_TITLE': ['Title case'],
-    'IS_PUNCT': ['Punctuation'],
-    'IS_SPACE': ['Whitespace'],
-    'IS_STOP': ['Stop word'],
-    'SHAPE': ['Word shape (capitalization pattern)'],
-    'LENGTH': ['Token length'],
-    'OP': ['Operator (quantifier)']
-  };
-}
+export const SPACY_ATTRIBUTE_SUGGESTIONS: readonly string[] = [
+  'TEXT', 'LOWER', 'LEMMA', 'POS', 'TAG', 'DEP', 'ENT_TYPE',
+  'LIKE_NUM', 'LIKE_EMAIL', 'LIKE_URL',
+  'IS_ALPHA', 'IS_DIGIT', 'IS_LOWER', 'IS_UPPER', 'IS_TITLE',
+  'IS_PUNCT', 'IS_SPACE', 'IS_STOP',
+  'SHAPE', 'LENGTH', 'OP',
+];
 
 // UI-13: removed dead validateSpacyAttribute (exported, never called).

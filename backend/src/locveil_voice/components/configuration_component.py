@@ -30,6 +30,24 @@ from ..api.schemas import (
 
 logger = logging.getLogger(__name__)
 
+# UI-16 (review E7): config sections that are LIVE-TESTABLE components — each value is
+# the component name config-ui dispatches its /{component}/configure call under (the
+# section→component naming divergences are the components' own web-API identities:
+# text_processor mounts as /text_processing, intent_system as /intents). This is the
+# single source the frontend roster derives from; a component gaining or losing a
+# /configure surface updates THIS map, nothing UI-side. Keys must be CoreConfig section
+# names (asserted against the registry by test_configuration_component sections tests).
+CONFIGURABLE_COMPONENT_SECTIONS: Dict[str, str] = {
+    "tts": "tts",
+    "asr": "asr",
+    "audio": "audio",
+    "llm": "llm",
+    "nlu": "nlu",
+    "voice_trigger": "voice_trigger",
+    "text_processor": "text_processing",
+    "intent_system": "intent_system",
+}
+
 
 class ConfigurationComponent(Component, WebAPIPlugin):
     """
@@ -171,17 +189,22 @@ class ConfigurationComponent(Component, WebAPIPlugin):
         async def get_section_order_and_titles():
             """
             Get section order and titles for frontend auto-generation
-            
+
             Returns:
             - section_order: Array of section names in logical display order
             - section_titles: Mapping of section names to display titles with emojis
+            - component_sections: Mapping of section names to live-testable component
+              names (the /{component}/configure surfaces) — UI-16: the frontend derives
+              its component roster from this instead of a hardcoded list
             - total_sections: Total number of available sections
-            
+
             This endpoint enables the frontend to auto-generate section lists
             instead of using hardcoded arrays.
             """
             try:
-                return AutoSchemaRegistry.get_section_order_and_titles()
+                result = AutoSchemaRegistry.get_section_order_and_titles()
+                result["component_sections"] = dict(CONFIGURABLE_COMPONENT_SECTIONS)
+                return result
             except Exception as e:
                 logger.error(f"Failed to get section order and titles: {e}")
                 raise HTTPException(status_code=500, detail=f"Failed to get section order and titles: {str(e)}")

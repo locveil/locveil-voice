@@ -51,6 +51,9 @@ interface ConfigSectionProps {
   disabled?: boolean;
   level?: 1 | 2; // Level 1 = major section, Level 2 = subsection
   componentName?: string; // Original component name for provider lookups
+  // UI-16 (E7): the backend-declared live-testable component name for this section
+  // (drives the Test/Workflow chrome); null/absent = not a component section.
+  testableComponent?: ComponentName | null;
   // Phase 4.3: Enhanced workflow props
   workflowStatus?: WorkflowStatus;
   workflowStateType?: WorkflowStateType;
@@ -73,6 +76,7 @@ export const ConfigSection: React.FC<ConfigSectionProps> = ({
   disabled = false,
   level = 1,
   componentName,
+  testableComponent = null,
   // Phase 4.3: Enhanced workflow props
   workflowStatus,
   workflowStateType = 'pristine',
@@ -95,26 +99,13 @@ export const ConfigSection: React.FC<ConfigSectionProps> = ({
     }
   }, [validationResult]);
 
-  // Check if this is a top-level voice assistant component section
-  const isComponentSection = level === 1 && ['tts', 'asr', 'audio', 'llm', 'nlu', 'voice_trigger', 'text_processor', 'intent_system'].includes(name);
-  
-  // Get component name for testing
+  // UI-16 (E7): a section is a live-testable component section iff the backend
+  // declared it (`component_sections` on the sections endpoint, passed down as
+  // `testableComponent`) — no hardcoded roster, no name-remap table here.
+  const isComponentSection = level === 1 && !!testableComponent;
+
   const getComponentNameForTesting = (): ComponentName | null => {
-    if (!isComponentSection) return null;
-    
-    // Map section names to component names for API calls
-    const sectionToComponent: Record<string, ComponentName> = {
-      'tts': 'tts',
-      'asr': 'asr',
-      'audio': 'audio', 
-      'llm': 'llm',
-      'nlu': 'nlu',
-      'voice_trigger': 'voice_trigger',
-      'text_processor': 'text_processing', // Section name 'text_processor' maps to component 'text_processing'
-      'intent_system': 'intent_system'
-    };
-    
-    return sectionToComponent[name] || null;
+    return isComponentSection ? (testableComponent ?? null) : null;
   };
 
   

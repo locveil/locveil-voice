@@ -912,6 +912,9 @@ export interface paths {
          *     Returns:
          *     - section_order: Array of section names in logical display order
          *     - section_titles: Mapping of section names to display titles with emojis
+         *     - component_sections: Mapping of section names to live-testable component
+         *       names (the /{component}/configure surfaces) — UI-16: the frontend derives
+         *       its component roster from this instead of a hardcoded list
          *     - total_sections: Total number of available sections
          *
          *     This endpoint enables the frontend to auto-generate section lists

@@ -20,6 +20,22 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-15 — UI-16 done: the config editor stops guessing — the schema now says.** The port arc's
+  last row closed by building the backend metadata it was blocked on. The sections endpoint declares
+  which sections are live-testable components (one map, beside the API identities it names — the
+  text_processor→text_processing remap now exists in exactly one place, test-guarded), and every
+  specialized widget is chosen by a `widget` hint the Pydantic fields declare — 23 hints placed by
+  mechanically auditing every model field against the old frontend name/path predicates, which are
+  deleted. The audit also caught what guessing had cost: list fields like `fallback_providers` matched
+  the single-value provider select, whose onChange would replace the array with a string — that
+  corruption path is gone, deliberately not preserved. E10 dissolved at intake: the 21 English attribute
+  descriptions were dead data nobody rendered, so the i18n bypass was removed by deleting them. The
+  owner's mid-session contract question sharpened the verification: the hints do flow into the
+  `ui-openapi` artifact through the component model schemas — an additive regeneration under the drift
+  guard, no STAMP bump. A cwd lesson for the books: the first full-suite run from `backend/` "failed"
+  76 tests; identical failures without the change — CI runs from the repo root because tests resolve
+  assets cwd-relative, and from the root the suite is 1417/7 green with two new tests.
+
 - **2026-07-15 — UI-19 done: the whole editor wears the steel.** The sprint's flagged biggest slice —
   35 composites and 6 pages, 1051 raw Tailwind palette classes — went onto the design system in one
   session, executed as five parallel agents over disjoint file sets against a single brief distilled
