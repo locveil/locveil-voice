@@ -17,6 +17,29 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       deleted (2026-07-08 verdict), and the wire protocol the firmware builds against stays here as
       `docs/guides/websocket-api.md` (pinned by the satellite repo).
       docs: none — export-close bookkeeping; the doc moves rode BUILD-22 (retro-verdict, BUILD-35 cutover).
+- [x] **ARCH-42** [COMMONS][PROCESS] `[deferred]` — **✓ DONE 2026-07-16. DESIGN: extract the
+      entry-point discovery engine to `locveil-commons/packages/core-py`** (BUILD-20 D-8; PROD-8
+      council scope, reconciled at intake same day; hard predecessor ARCH-50 delivered its inventory
+      first, per the sequencing lock). Deliverable landed:
+      `docs/design/core_py_loader_extraction.md` — AGREED in a 2-round interactive owner session.
+      Decisions: shared module **`entry_point_loader`** ships the `DynamicLoader` CLASS ONLY
+      (consumers own their singleton — the shared artifact stays state-free); surface = faithful
+      extract (py3.8/pkg_resources compat dies; both repos pin 3.11) + three deltas: optional
+      `base_class=` validation (bridge's inline DevicePort check becomes the engine's native
+      rejection path — the rule-of-two feature), `get_provider_class` loads the single named EP
+      (no more importing the whole group to fetch one class; analyzer seam unaffected), and
+      `list_registered` (names WITHOUT importing — voice `startup_validation` + bridge
+      `dump_catalog` are the two consumers). Consumption = **vendored module at `core-py-vN` tags**
+      (the guards' model, hermetic Docker) with **STRICT pin enforcement** — contracts/pins/core-py
+      PIN.json + a byte-identity conformance test between pin and importable copy, because this is
+      the estate's first vendored RUNTIME code. Voice migration = FULL 20-file import sweep to a
+      new voice-owned `utils/entry_points.py` singleton (owner ruling over a loader.py shim);
+      metadata quartet, `utils/namespaces.py`, aux helpers, and bridge's `class_loader.py` all stay
+      put; ARCH-43 (logging) stays parked. §5 records the bridge CORE-7 adoption contract
+      (base_class native, loader never in domain/, no golden drift, zero new import-linter
+      exceptions). Follow-up filed: **ARCH-58 `[release]`** (the voice migration, gated on commons
+      cutting `core-py-v1`); board PROD-8 written back — the skeleton is unblocked (ARCH-50 ✓ +
+      ARCH-42 ✓). docs: none — design doc (internal); no manifest node describes loader internals.
 - [x] **ARCH-44** [HW][SEC] `[deferred]` — **✓ EXPORT-CLOSED 2026-07-12 (BUILD-22/PROD-15) → `../locveil-satellite`
       DES-5.** The device-certificate lifecycle design (revocation + renewal — `esp32-provision revoke` only drops
       pending CSRs; issued certs trusted 825 days with no `ssl_crl` and no renewal path; surfaced by the ARCH-25

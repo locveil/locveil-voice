@@ -94,6 +94,7 @@ Living findings behind the tasks (`read-at-start-record-at-completion`). `[x]` =
 | `docs/design/torch_free_armv7_voice.md` `[x]` (2026-06-15; research/analysis, no code) | torch-free inference for the armv7 voice stack — canonical three-image matrix (§5): torch contained to the x86_64 standalone image; both ARM satellites (armv7 WB7 + aarch64 WB8/Pi) are torch-free sherpa-onnx; Whisper→sherpa-Whisper, Silero TTS→Piper/RUAccent seams | ARCH-24 ✓ |
 | `docs/design/multilingual_deployment.md` `[x]` (2026-07-01; design, no code) | real English deployment across all 3 Docker arches + English eval — slim cross-arch model set size-matched to Russian (armv7 EN ASR spike zipformer-en-20M vs moonshine-tiny-en; EN Piper amy; whisper multilingual on 64-bit); one-bulk-per-language eval; auto-detect NOT wired to ASR/TTS so language is a per-config choice | I18N-1 ✓ → I18N-2..6 |
 | `../locveil-commons/docs/design/productization.md` `[x]` (AGREED 2026-07-08, joint session, both repos; MIGRATED to the commons 2026-07-11 per D-2 — local file is a pointer; name executed as **Locveil**) | BUILD-20 — the productization umbrella (written as "Domovoy"): product name (D-1), ONE commons repo = eval-commons renamed `locveil-commons` with three ownership regimes (D-2/D-3), PROD-board cross-repo idea discipline + board-as-outbox (D-4/D-5), `locveil-satellite` third product repo + ESP32 estate relocation (D-6/D-7), rule-of-two extractions loader+logging (D-8), two-apps-shared-kit config UI (D-9), ledgers kept over trackers (D-10), semver components + calver suite manifests + contract tagging/scripted re-pin (D-11), normative ops spec + CLAUDE.md invariant blocks/drift guard + landing page + report-policy spec (D-12), drift inventory (§2), commons seed backlog (§3) | BUILD-20 ✓ → BUILD-21/22/23/24, ARCH-42/43, BUILD-18 (narrowed); bridge intake VWB-29, CORE-7, OPS-14/15/16 |
+| `docs/design/core_py_loader_extraction.md` `[x]` (AGREED 2026-07-16, interactive owner session, 2 rounds) | ARCH-42 — extract the entry-point discovery engine to commons `packages/core-py` (module `entry_point_loader`, class-only — consumers own their singleton): faithful surface + `base_class=` validation (bridge's DevicePort check natively), single-EP `get_provider_class`, names-without-import `list_registered`; consumption = vendored module at `core-py-vN` tags with STRICT pin (contracts/pins/core-py + byte-identity test — first vendored RUNTIME code); voice migration = full 20-file sweep to a new `utils/entry_points.py` singleton; §5 = the bridge CORE-7 adoption contract; metadata quartet/namespaces/aux stay put | ARCH-42 ✓ → ARCH-58; commons skeleton via PROD-8; bridge CORE-7 |
 | `config-ui/docs/donation_editor_ux.md` | human-friendly donations editor design | UI-1/2/3 |
 | `docs/review/test7_triage.md` (2026-06-15) | TEST-7 Phase-B worklist — 82-failure triage (delete/rewrite/fix) + risk-ranked coverage tiers + fix-code suspects | TEST-7 ✓ |
 | `docs/review/api_result_contract_review.md` `[x]` (2026-06-27) | API execution-result response-contract consistency — 5 findings (reply field name, 3-way intent split, divergent metadata under one model, confidence placement, live `None` internal misread); root cause = no shared serializer | QUAL-54 ✓, QUAL-55 |
@@ -197,26 +198,6 @@ See `docs/review/phase1_architecture_map.md` §5.
       confirm → execute, never blanket. Deliverable: design doc under `docs/design/` + implementation follow-up
       task(s). Refs: bridge `43c504c`, bridge `docs/design/ui_backend_contract.md` ("Scenario force-reconcile
       dialog"), locveil-commons pin `7cfd5a7`.
-- [ ] **ARCH-42** `[deferred]` [COMMONS][PROCESS] — **DESIGN: extract the entry-point-group discovery engine to
-      `locveil-commons/packages/core-py`** (BUILD-20 D-8; voice becomes consumer #1, bridge #2 — ownership
-      flips to the commons on extraction). **RECONCILED AT INTAKE 2026-07-16 (PROD-8 council delegation,
-      2 rounds; keepers voice+bridge).** Scope NARROWED from "the dynamic code loader" to **the
-      entry-point-group registry only** — voice's `DynamicLoader` engine (`backend/src/locveil_voice/utils/loader.py:133`:
-      `discover_providers` / `get_provider_class` / `list_available_providers` / cache + discovery-failure
-      recording), the genuine rule-of-two leaf. **Stays voice-side** (each auxiliary graduates only on its own
-      second consumer): the `EntryPointMetadata` build-time metadata quartet
-      (`backend/src/locveil_voice/core/metadata.py:25` — `get_python_dependencies` / `get_platform_support` /
-      `get_supported_architectures` / `get_platform_dependencies`), the dependency-closure + the load-bearing
-      arch gate, and all its values. Bridge's by-name config resolver (`class_loader.py`) stays bridge-side;
-      no config→entry-point unification (council rejected it — it breaks the offline `dump_catalog` generator
-      that builds the voice-pinned golden without loading a driver; CORE-7 is a self-contained infra swap, no
-      catalog-contract bump). Design must **preserve the `build_analyzer`→`get_provider_class`→classmethod
-      seam**. Deliverable: design doc under `docs/design/`, then the voice-side migration implementation task.
-      **HARD PREDECESSOR: ARCH-50** (its hardcodings inventory feeds this design — council sequencing lock;
-      **satisfied 2026-07-16** — the inventory is `docs/review/dynamic_loading_hardcodings_review.md`).
-      Also gated on commons **PROD-8**; the `packages/core-py` skeleton is cut AFTER ARCH-50 + ARCH-42 land
-      (surface known first). Refs: `docs/design/productization.md` D-3/D-8; commons `board/BOARD.md` PROD-8;
-      bridge intake CORE-7.
 - [ ] **ARCH-43** `[deferred]` [COMMONS][PROCESS] — **DESIGN: extract the logging scheme to
       `locveil-commons/packages/core-py`** (BUILD-20 D-8). The startup-rollover + midnight
       TimedRotatingFileHandler + retention-prune family exists twice by hand-copy (bridge OPS-12 → voice
@@ -297,6 +278,18 @@ See `docs/review/phase1_architecture_map.md` §5.
       Refs: board PROD-24 (2)(3)(6), `../locveil-commons/docs/design/workbench.md`,
       `docs/design/python_satellite.md`.
 
+- [ ] **ARCH-58** [ARCH][COMMONS] `[release]` — **Consume core-py's `entry_point_loader` — the voice
+      migration** (ARCH-42 design §4; owner tagged [release]). Gated on commons cutting
+      `packages/core-py` + tag **`core-py-v1`** (PROD-8; unblocked — the design landed 2026-07-16).
+      Scope: vendor `utils/entry_point_loader.py` (never edit; class-only) at the pin
+      `contracts/pins/core-py/` (PIN.json sha256 + registry row + byte-identity conformance test —
+      the first vendored RUNTIME-code contract, strict per the owner ruling); new voice-owned
+      `utils/entry_points.py` holding the `dynamic_loader` singleton; FULL import sweep — all 20
+      call sites move to it, `utils/loader.py` shrinks to the aux helpers; `startup_validation` may
+      adopt `list_registered` (names-without-import) in the same change. DELETE the now-shadowed
+      `DynamicLoader` from `utils/loader.py`. Acceptance: full suite green, analyzer JSON
+      byte-identical across all 6 profiles, coherence guard green, contracts 11/11.
+      Ref: `docs/design/core_py_loader_extraction.md` §3-§4.
 ### Code Quality & Review (QUAL)
 
 #### Cross-cutting systemic remediation — principles (the Gate 2 lens)

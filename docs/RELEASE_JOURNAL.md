@@ -20,6 +20,23 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-16 — ARCH-42 DONE: the core-py loader extraction is designed — the council's sequencing
+  lock is fully discharged.** Interactive session, two rounds, on top of a same-day foundation that
+  didn't exist this morning: ARCH-50's inventory plus its remediation left the engine small and
+  honest (the namespace registry, no hand-maps, the coherence guard watching). The design
+  (`docs/design/core_py_loader_extraction.md`): commons ships `entry_point_loader` as class-only —
+  each consumer owns its process singleton — with three surface deltas beyond the faithful extract:
+  `base_class=` validation (bridge's hand-rolled DevicePort check becomes the engine's native
+  rejection path, failures ledgered by name), single-EP `get_provider_class` (fetching one class no
+  longer imports the whole group), and `list_registered` for names-without-import (voice's startup
+  validation and bridge's offline `dump_catalog` are the rule-of-two). Consumption is the guards'
+  vendored-at-tag model but with STRICT enforcement — pin folder, sha256, and a byte-identity test
+  between the pin and the importable copy — because this is the estate's first vendored code that
+  RUNS in production. Voice's migration (full 20-file sweep to a new `utils/entry_points.py`
+  singleton) is filed as ARCH-58 [release], gated on commons cutting `core-py-v1`; the board's
+  PROD-8 got its write-back: surface known, skeleton unblocked. Bridge's CORE-7 now has a concrete
+  §5 to code against instead of board prose.
+
 - **2026-07-16 — ARCH-55 addendum: CI's pyright caught what the local venv couldn't.** The
   backend-health gate (full provider extras) flagged four `str | None` type errors from the ARCH-55
   literal removal — the deleted `or "console"`/`or "openai"` had been silently doing type-narrowing
