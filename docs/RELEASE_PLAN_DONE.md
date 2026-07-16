@@ -89,6 +89,23 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       **QUAL-84** `[deferred]`. Unblocks ARCH-42 (the council's sequencing lock — the loader-extraction
       design consumes this inventory). docs: none — review-only change (frozen evidence under `docs/review/`,
       no behavior altered; the remediation tasks carry their own docs verdicts).
+- [x] **ARCH-57** [ARCH][QUAL][UI] `[release]` — **✓ DONE 2026-07-16. One canonical component→namespace
+      map; analyzer module paths from entry-point values — the live config-ui VAD dropdown 404 fixed**
+      (ARCH-50 F-E1/F-E2). New `utils/namespaces.py`: `PROVIDER_NAMESPACES` (8 families incl. `vad`) +
+      the group constants + `ALL_NAMESPACES`, asserted ≡ pyproject's 13 entry-point groups at completion.
+      Adopted: `core/assets.py` (map values + the cross-family search sweep), `core/startup_validation.py`
+      (gains `vad` — its name-ref fields are now startup-validated), `configuration_component.py`
+      (`/config/providers/vad` now resolves → the `provider_select` dropdown for `vad.default_provider`
+      populates), `config/validator.py` (gains `vad`+`text_processor`), `build_analyzer.py` fallback list
+      (phantom `locveil_voice.outputs` gone). Analyzer component module paths now come from entry-point
+      VALUES — the convention-derived phantom `locveil_voice.components.intent_system_component` is out,
+      the real `intent_component` in; verified by baseline diff over all 6 Docker profiles (exactly that
+      one delta, nothing else moved). NOTE: the analyzer's 8-of-11 `component_names` hand-lists are
+      retired in ARCH-54's `_analyze_components` rewrite (same sweep) — the sections-reading logic they
+      feed is replaced wholesale there. Verified: full suite 1417 passed / 7 skipped, import contracts
+      11/11, pyright delta clean on touched files. docs: none — internal map unification; no manifest
+      node describes the providers endpoint's component coverage (the UI fix restores doc-implied
+      behavior without changing any documented claim).
 ### Code Quality & Review (QUAL)
 - [x] **QUAL-5** (P2) — **✓ DONE 2026-06-06.** Cruft cleanup. **Reconciled (Invariant #8): counts fell during QUAL-4's
       import churn** (F401 360→237, star-imports 62→5+57 F405, F841 22→15). **Cleared the verifiable cruft to ZERO:**

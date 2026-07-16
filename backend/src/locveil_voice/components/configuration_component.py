@@ -347,19 +347,12 @@ class ConfigurationComponent(Component, WebAPIPlugin):
             try:
                 # Use dynamic loader to discover available providers
                 from ..utils.loader import dynamic_loader
-                
-                # Map component names to provider entry-point groups
-                provider_groups = {
-                    "tts": "locveil_voice.providers.tts",
-                    "audio": "locveil_voice.providers.audio", 
-                    "asr": "locveil_voice.providers.asr",
-                    "llm": "locveil_voice.providers.llm",
-                    "voice_trigger": "locveil_voice.providers.voice_trigger",
-                    "nlu": "locveil_voice.providers.nlu",
-                    "text_processor": "locveil_voice.providers.text_processor"
-                }
-                
-                entry_point_group = provider_groups.get(component_name)
+                # Component names -> provider entry-point groups: the canonical registry
+                # (ARCH-57 — the old hand-copy omitted `vad`, so the config-ui provider
+                # dropdown for vad.default_provider got a 404 and rendered empty).
+                from ..utils.namespaces import PROVIDER_NAMESPACES
+
+                entry_point_group = PROVIDER_NAMESPACES.get(component_name)
                 if not entry_point_group:
                     raise HTTPException(status_code=404, detail=f"Component '{component_name}' not found")
                 

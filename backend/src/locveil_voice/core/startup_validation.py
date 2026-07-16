@@ -26,18 +26,12 @@ import os
 from importlib.metadata import entry_points
 from typing import Any, Dict, List, Set
 
-logger = logging.getLogger(__name__)
+# component config key -> provider entry-point namespace: the canonical registry
+# (ARCH-57 — the old hand-copy here had drifted, silently omitting `vad`, so
+# [vad] name-ref fields were never startup-validated).
+from ..utils.namespaces import PROVIDER_NAMESPACES as COMPONENT_NAMESPACES
 
-# component config key -> provider entry-point namespace
-COMPONENT_NAMESPACES: Dict[str, str] = {
-    "llm": "locveil_voice.providers.llm",
-    "nlu": "locveil_voice.providers.nlu",
-    "tts": "locveil_voice.providers.tts",
-    "asr": "locveil_voice.providers.asr",
-    "audio": "locveil_voice.providers.audio",
-    "voice_trigger": "locveil_voice.providers.voice_trigger",
-    "text_processor": "locveil_voice.providers.text_processor",
-}
+logger = logging.getLogger(__name__)
 
 # config fields that reference a provider name by value (vs the providers dict keys)
 _NAME_REF_FIELDS = ("default_provider", "fallback_providers", "provider_cascade_order")

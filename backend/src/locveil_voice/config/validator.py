@@ -211,12 +211,14 @@ class ConfigValidator:
             # ARCH-2: use the low-level loader directly (config -> utils, downward) instead of
             # reaching up into core.components (which doesn't even export discover_providers).
             from ..utils.loader import dynamic_loader
+            # ARCH-57: the canonical registry (the old hand-list here omitted vad + text_processor)
+            from ..utils.namespaces import PROVIDER_NAMESPACES
 
             # Discover available providers for each component type
             available_providers = {}
-            for component_type in ["tts", "audio", "asr", "llm", "voice_trigger", "nlu"]:
+            for component_type, namespace in PROVIDER_NAMESPACES.items():
                 try:
-                    providers = dynamic_loader.discover_providers(f"locveil_voice.providers.{component_type}")
+                    providers = dynamic_loader.discover_providers(namespace)
                     available_providers[component_type] = set(providers.keys())
                 except Exception as e:
                     logger.debug(f"Could not discover {component_type} providers: {e}")

@@ -332,16 +332,6 @@ See `docs/review/phase1_architecture_map.md` §5.
       `inputs/manager.py:17-19,52-101` drops the direct imports + per-class if-branches for generic
       group discovery with config-driven enablement/configuration; the decorative `runners` group is removed
       from pyproject (nothing reads it — runners launch via `python -m`). Evidence: review doc §F.
-- [ ] **ARCH-57** [ARCH][QUAL][UI] `[release]` — **One canonical component→namespace map; build analyzer
-      derives from entry-point values — fixes the live config-ui VAD dropdown 404** (ARCH-50 F-E1/F-E2).
-      A single constants module (component key → entry-point group) next to the loader; adopted by
-      `core/assets.py:65-95`, `core/startup_validation.py:33-39` (missing `vad` today),
-      `configuration_component.py:352-360` (missing `vad` → `/config/providers/vad` 404s → the
-      `provider_select` widget for `vad.default_provider` renders an EMPTY dropdown — live user-visible bug),
-      `config/validator.py:219` (missing `vad`+`text_processor`), `build_analyzer.py:429-434` (drops the
-      phantom `locveil_voice.outputs`). Analyzer also stops deriving module paths by naming convention
-      (`:596` yields the phantom `intent_system_component`; the entry-point value carries the true path) and
-      replaces its 8-of-11 `component_names` hand-lists (:575-578,:618-620). Evidence: review doc §E.
 ### Code Quality & Review (QUAL)
 
 #### Cross-cutting systemic remediation — principles (the Gate 2 lens)

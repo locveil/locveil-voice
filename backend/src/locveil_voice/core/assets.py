@@ -56,24 +56,25 @@ class AssetManager:
         
         # Discover provider class and get asset config
         from ..utils.loader import dynamic_loader
-        
-        # Map asset names to namespaces. A tuple value maps an asset name to a DIFFERENT
-        # entry-point name — needed when two provider families share an entry-point name
-        # (e.g. 'silero' is silero TTS here; the silero VAD provider's assets live under
-        # the distinct asset name 'silero_vad'). ASSET-4.
+        from ..utils.namespaces import PROVIDER_NAMESPACES
+
+        # Map asset names to namespaces (via the canonical registry, ARCH-57). A tuple value
+        # maps an asset name to a DIFFERENT entry-point name — needed when two provider
+        # families share an entry-point name (e.g. 'silero' is silero TTS here; the silero
+        # VAD provider's assets live under the distinct asset name 'silero_vad'). ASSET-4.
         provider_namespace_map = {
-            'whisper': 'locveil_voice.providers.asr',
-            'silero': 'locveil_voice.providers.tts',
-            'silero_vad': ('locveil_voice.providers.vad', 'silero'),
-            'vosk': 'locveil_voice.providers.asr',
-            'openwakeword': 'locveil_voice.providers.voice_trigger',
-            'microwakeword': 'locveil_voice.providers.voice_trigger',
-            'elevenlabs': 'locveil_voice.providers.tts',
-            'openai': 'locveil_voice.providers.llm',
-            'anthropic': 'locveil_voice.providers.llm',
-            'google_cloud': 'locveil_voice.providers.asr',
-            'sounddevice': 'locveil_voice.providers.audio',
-            'console': 'locveil_voice.providers.audio',
+            'whisper': PROVIDER_NAMESPACES['asr'],
+            'silero': PROVIDER_NAMESPACES['tts'],
+            'silero_vad': (PROVIDER_NAMESPACES['vad'], 'silero'),
+            'vosk': PROVIDER_NAMESPACES['asr'],
+            'openwakeword': PROVIDER_NAMESPACES['voice_trigger'],
+            'microwakeword': PROVIDER_NAMESPACES['voice_trigger'],
+            'elevenlabs': PROVIDER_NAMESPACES['tts'],
+            'openai': PROVIDER_NAMESPACES['llm'],
+            'anthropic': PROVIDER_NAMESPACES['llm'],
+            'google_cloud': PROVIDER_NAMESPACES['asr'],
+            'sounddevice': PROVIDER_NAMESPACES['audio'],
+            'console': PROVIDER_NAMESPACES['audio'],
         }
 
         # Try to find the provider in appropriate namespace
@@ -84,17 +85,7 @@ class AssetManager:
             provider_class = dynamic_loader.get_provider_class(namespace, ep_name)
         else:
             # Search across all provider namespaces
-            namespaces = [
-                'locveil_voice.providers.tts',
-                'locveil_voice.providers.asr',
-                'locveil_voice.providers.audio',
-                'locveil_voice.providers.llm',
-                'locveil_voice.providers.voice_trigger',
-                'locveil_voice.providers.vad',
-                'locveil_voice.providers.nlu',
-                'locveil_voice.providers.text_processor'
-            ]
-            for namespace in namespaces:
+            for namespace in PROVIDER_NAMESPACES.values():
                 provider_class = dynamic_loader.get_provider_class(namespace, provider)
                 if provider_class:
                     break

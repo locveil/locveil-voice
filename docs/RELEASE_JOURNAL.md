@@ -20,6 +20,19 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-16 — ARCH-57 DONE: one namespace registry, and the VAD dropdown lives.** First of the
+  ARCH-50 remediation sweep (owner-ordered batch: 57 → 52 → QUAL-83 → 54, unattended). The five
+  independently-drifting component→namespace maps now all derive from `utils/namespaces.py`, whose
+  `ALL_NAMESPACES` is asserted identical to pyproject's 13 entry-point groups. Two silent omissions of
+  `vad` die with it: startup validation now checks `[vad]` name-ref fields, and `/config/providers/vad`
+  resolves — the config-ui VAD provider dropdown had been rendering empty off a 404 the widget swallowed
+  as a console warning. The build analyzer's fallback list loses the phantom `locveil_voice.outputs`
+  group, and its component module paths now come from entry-point values instead of a naming convention
+  that minted the nonexistent `intent_system_component` module — baseline diff across all 6 Docker
+  profiles shows exactly that one correction and nothing else. En route, a fresh latent finding for the
+  ARCH-54 leg: the analyzer's intent-handler analysis has never run — its gate reads `[intents]` while
+  every TOML says `[intent_system]`. Suite 1417 green, contracts 11/11.
+
 - **2026-07-16 — ARCH-50 DONE: the dynamic-loading sweep — the config was lying in ~40 places.** The
   review the BUILD-36 rename bounce demanded: everywhere the entry-points-or-config contract promises
   dynamism, is the code actually listening? Mostly no. The seed generalized into seven finding classes

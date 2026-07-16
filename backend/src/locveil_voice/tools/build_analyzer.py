@@ -424,15 +424,10 @@ class IreneBuildAnalyzer:
             
         except Exception as e:
             logger.error(f"Failed to discover entry-point namespaces: {e}")
-            # Fallback to known namespaces to prevent complete failure
-            return [
-                "locveil_voice.providers.audio", "locveil_voice.providers.tts", "locveil_voice.providers.asr",
-                "locveil_voice.providers.llm", "locveil_voice.providers.voice_trigger", "locveil_voice.providers.nlu",
-                "locveil_voice.providers.vad",
-                "locveil_voice.providers.text_processor", "locveil_voice.components", "locveil_voice.workflows",
-                "locveil_voice.intents.handlers", "locveil_voice.inputs", "locveil_voice.outputs",
-                "locveil_voice.runners"
-            ]
+            # Fallback to the canonical registry (ARCH-57 — the old inline list had
+            # drifted, naming a phantom `locveil_voice.outputs` group).
+            from ..utils.namespaces import ALL_NAMESPACES
+            return sorted(ALL_NAMESPACES)
     
     def _get_entry_points_catalog(self) -> Dict[str, List[str]]:
         """Get all entry-points from dynamic discovery."""
@@ -593,10 +588,21 @@ class IreneBuildAnalyzer:
         
         if unique_enabled:
             requirements.enabled_providers["locveil_voice.components"] = unique_enabled
+            # Module paths come from the entry-point VALUES, not a naming convention —
+            # the old f"...{name}_component" derivation minted the phantom module
+            # `intent_system_component` (the real file is intent_component.py). ARCH-57.
+            from importlib.metadata import entry_points
+            from ..utils.namespaces import COMPONENTS_NAMESPACE
+            component_modules = {ep.name: ep.value.split(":")[0]
+                                 for ep in entry_points(group=COMPONENTS_NAMESPACE)}
             for component_name in unique_enabled:
-                module_path = f"locveil_voice.components.{component_name}_component"
-                requirements.python_modules.add(module_path)
-            
+                module_path = component_modules.get(component_name)
+                if module_path:
+                    requirements.python_modules.add(module_path)
+                else:
+                    logger.warning(f"Component '{component_name}' has no entry point in "
+                                   f"{COMPONENTS_NAMESPACE}; no module recorded")
+
             logger.debug(f"Components found: {unique_enabled}")
         
         # Analyze component-based providers (e.g., tts.providers.*, nlu.providers.*)
