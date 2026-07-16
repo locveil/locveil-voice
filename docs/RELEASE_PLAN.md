@@ -99,7 +99,7 @@ Living findings behind the tasks (`read-at-start-record-at-completion`). `[x]` =
 | `docs/review/api_result_contract_review.md` `[x]` (2026-06-27) | API execution-result response-contract consistency — 5 findings (reply field name, 3-way intent split, divergent metadata under one model, confidence placement, live `None` internal misread); root cause = no shared serializer | QUAL-54 ✓, QUAL-55 |
 | `docs/review/codebase_review_2026-06-21.md` (2026-06-21; CR-A1 group resolved 2026-06-22) | whole-codebase health pass — 16 correctness (CR-A1 P0: standalone `voice_runner` web API never starts), 13 dead/zombie (CR-B), 13 duplication (CR-C), 5 stale user-facing doc claims (CR-D). **DONE 2026-06-22:** CR-A1 group (A1/A2/A3/A14/B2/D5 + masking-test fix) + BUILD-7 doc/dup cluster (C1/C2/C4/D1–D4) + dead-code sweep (all CR-B; B4 kept as ARCH-22/25 scaffolding, B12 was QUAL-20) + provider-base dedup (CR-C6/C7, C8 partial — route helpers deferred) + standalone correctness (CR-A4/A8) + silero cleanups (CR-A12/A13) + tracing pair (CR-A7/A9) + path-traversal hardening (CR-A15, security) + correctness trio (CR-A10/A11/A16) + Cyrillic dedup (CR-C3) + nlu-analysis loaders (CR-A6) + audio playback (CR-A5) + dup boot-validator removed (CR-C13) + handler base-class consolidation (CR-C11) + asset-name/path helper (CR-C10) + spaCy init dedup (CR-C5) + WebAPIPlugin walk dedup (CR-C12) + provider /configure gate (CR-C8) + platform-list centralization (CR-C9); **review §A + §B + §C + §D ALL fully resolved**. ARCH-25 (WB7/WB8 hardware bring-up) remains as a separate hardware-gated task, not a review item. Cross-refs: CR-B1→BUILD-7, CR-C1/2/4/D1-4→BUILD-7, CR-C9→ARCH-25, CR-A12→QUAL-15, CR-A16→QUAL-30 | (new findings) |
 | `docs/review/config_ui_review.md` `[x]` (2026-06-28) | config-ui quality/dup/dead/correctness pass — 5 confirmed + 2 plausible correctness bugs (404 reload loop, stale-request overwrite, unreachable blocking dialog, wrong-key validation error, stale memo), type-contract drift in `types/api.ts` (CoreConfig/NLUConfig/VADConfig behind backend → defeats the type-check gate), 6 duplications (apiClient quintet, page clones, editor primitives), unused-export dead code, efficiency + hardcoded-list/altitude smells | BUG-8/9/10, UI-11/12/13/14 |
-| `docs/review/dynamic_loading_hardcodings_review.md` (produced by ARCH-50) | hardcodings & declared-but-unhonored config that violate the entry-points dynamic-build/loading contract — seed: `IntentHandlerManager` hardcodes the handler namespace and ignores `discovery_paths`/`auto_discover` (found dead at the BUILD-36 rename bounce); audit all such namespaces/provider-lists/paths + honor-vs-delete + a code↔config↔entry-points guard | ARCH-50 |
+| `docs/review/dynamic_loading_hardcodings_review.md` `[x]` (2026-07-16, produced by ARCH-50; verdicts ruled in a 3-round owner session) | hardcodings & declared-but-unhonored config that violate the entry-points dynamic-build/loading contract — seed confirmed (`IntentHandlerManager` literal namespace, `discovery_paths`/`auto_discover` dead end-to-end) + 7 more classes: ~30 dead config fields, 5 drifting namespace maps (2 missing `vad` → live config-ui VAD-dropdown 404), dual enable-flag authority with silent force-sync, provider-name literals/force-adds in 6 components, decorative `inputs`/`runners` EP groups + phantom `outputs`, 4 dead code units, heuristic literals. Conversation-context special-casing = the one sanctioned exception. Governing ruling: no config overrides — honor or delete | ARCH-50 ✓ → ARCH-52/53/54/55/56/57, QUAL-83/84, TEST-22 |
 
 ---
 
@@ -212,7 +212,8 @@ See `docs/review/phase1_architecture_map.md` §5.
       that builds the voice-pinned golden without loading a driver; CORE-7 is a self-contained infra swap, no
       catalog-contract bump). Design must **preserve the `build_analyzer`→`get_provider_class`→classmethod
       seam**. Deliverable: design doc under `docs/design/`, then the voice-side migration implementation task.
-      **HARD PREDECESSOR: ARCH-50** (its hardcodings inventory feeds this design — council sequencing lock).
+      **HARD PREDECESSOR: ARCH-50** (its hardcodings inventory feeds this design — council sequencing lock;
+      **satisfied 2026-07-16** — the inventory is `docs/review/dynamic_loading_hardcodings_review.md`).
       Also gated on commons **PROD-8**; the `packages/core-py` skeleton is cut AFTER ARCH-50 + ARCH-42 land
       (surface known first). Refs: `docs/design/productization.md` D-3/D-8; commons `board/BOARD.md` PROD-8;
       bridge intake CORE-7.
@@ -277,34 +278,6 @@ See `docs/review/phase1_architecture_map.md` §5.
       (`config-ui-stays-functional`: endpoints + openapi/types + editors in the same change). Deliverable:
       design doc under `docs/design/` first; implementation follow-ups filed from it. Voice-internal (no
       board). Docs at implementation: `howto-new-intent`/`howto-new-language` teach the current split.
-- [ ] **ARCH-50** [ARCH][BUILD] `[release]` — **★ REVIEW: hardcodings & config overrides that violate
-      dynamic build-and-loading.** Filed 2026-07-13 (owner, from the BUILD-36/PROD-21 bounce). The
-      architecture is entry-points-driven DYNAMIC discovery + config-driven loading — `build_analyzer`
-      derives each image's deps from the enabled entry-points, and the runtime loads providers/handlers
-      dynamically via `utils/loader.dynamic_loader`. Two anti-patterns undermine it and need a systematic
-      sweep: (a) **hardcoded discovery targets** — e.g. `IntentHandlerManager.initialize`
-      (`backend/src/locveil_voice/intents/manager.py:97`) discovers from the literal namespace
-      `"locveil_voice.intents.handlers"` instead of the config's `discovery_paths`; the rename bounce
-      exposed it (the config value sat stale with zero effect because it is never read). (b)
-      **declared-but-unhonored config (the "pydantic override" smell)** — fields like
-      `intent_system.handlers.discovery_paths` / `auto_discover` are declared in `config/models.py`,
-      plumbed through `intent_component`, listed in the build-analyzer skip-set, and documented in
-      config-master, yet the code overrides them with a hardcode — so the config is a lie no gate can
-      catch. Scope: audit EVERY namespace / provider-list / path / class that is hardcoded where the
-      entry-points-or-config contract intends dynamism, and EVERY config field declared but ignored or
-      overridden. For each: decide honor-the-config vs delete-the-dead-field
-      (`dead-code-remove-not-fix`), and whether a guard should assert code↔config↔entry-points agreement
-      (the failure class no test caught). Deliverable: review doc
-      `docs/review/dynamic_loading_hardcodings_review.md`; fixes filed as fresh tasks
-      (`review-then-remediate`). First concrete instance to carry: the `discovery_paths`/`auto_discover`
-      dead-field resolution (voice flagged it at the bounce — spans `intents/manager.py`,
-      `config/models.py`, `intent_component`, the build-analyzer skip-set, and 8 config files).
-      **ADDENDUM 2026-07-16 (PROD-8 council delegation):** the sweep also carries the dead
-      `get_provider_capabilities` (`backend/src/locveil_voice/components/base.py:216`) — verified at intake to
-      have **zero call sites** repo-wide (the definition is the only occurrence), so it resolves as delete per
-      `dead-code-remove-not-fix`. **This task is a HARD PREDECESSOR of ARCH-42** (council sequencing lock): its
-      hardcodings inventory feeds the core-py loader-extraction design, and the `packages/core-py` skeleton is
-      cut only after both land. Ref: commons `board/BOARD.md` PROD-8.
 - [ ] **ARCH-51** [SATELLITE][CONFIG] `[deferred]` — **★ DESIGN: satellite-local config endpoint (device-owned
       direct write; PROD-24 delegation a).** Filed 2026-07-14 at PROD-24 intake (the Workbench shell council;
       commons `docs/design/workbench.md`). The Workbench write model classifies the desktop-satellite config as
@@ -323,6 +296,52 @@ See `docs/review/phase1_architecture_map.md` §5.
       UI-17's plugin shell). Deliverable: design doc under `docs/design/` + implementation follow-up(s).
       Refs: board PROD-24 (2)(3)(6), `../locveil-commons/docs/design/workbench.md`,
       `docs/design/python_satellite.md`.
+- [ ] **ARCH-52** [ARCH][CONFIG] `[release]` — **Intent-handler loading: delete dead discovery config, one
+      namespace constant, shared assets-root resolver, fail-hard priorities** (ARCH-50 F-A1/F-A2/F-A3;
+      owner rulings 2026-07-16). Delete `IntentHandlerListConfig.discovery_paths` + `auto_discover`
+      end-to-end (model, `intent_component` plumbing ×2, build-analyzer skip-set, config-master + 7 TOMLs,
+      config-ui types/editors — `config-ui-stays-functional`); ONE shared handler-namespace constant used by
+      `intents/manager.py:97`, `config/models.py:879`, `contract_validator.py:37`. One shared intent-assets-root
+      resolver (env override, else package-relative) adopted by `manager.py:88`, `nlu_component.py:529`,
+      `web_server.py:122`. Delete the literal fallback domain-priorities dict (`manager.py:568-574`) — a
+      priorities-loading failure raises at startup. Evidence: `docs/review/dynamic_loading_hardcodings_review.md` §A.
+- [ ] **ARCH-53** [ARCH] `[release]` — **Capability ports become handler-declared metadata** (ARCH-50 F-A4).
+      Replace the static `capability_ports` table (`intent_component.py:259-265`) + the
+      `provider_control_handler` special case (:287) with a handler classmethod (the
+      `requires_configuration()`/`EntryPointMetadata` pattern) declaring needed component ports; the injection
+      loop becomes generic; new handlers self-describe. The conversation-context special-casing in
+      `context_models.py` stays — the sanctioned exception (owner, 2026-07-16). Evidence: review doc §A.
+- [ ] **ARCH-54** [ARCH][CONFIG] `[release]` — **`[components]` is the single enable authority** (ARCH-50
+      F-C1). Delete the per-section `enabled` fields (tts/asr/audio/llm/voice_trigger/nlu/text_processor/
+      intent_system) and the force-sync validator (`models.py:75-82` — a silent config override, only 8 of 11
+      synced); the build analyzer reads `[components]` instead of raw `[X].enabled` (`build_analyzer.py:583`);
+      8 TOMLs drop the redundant lines; config-ui ConfigSection editors updated in the same change
+      (`config-ui-stays-functional`). Closes the image-vs-runtime enablement divergence. Evidence: review doc §C.
+- [ ] **ARCH-55** [ARCH][QUAL] `[release]` — **Provider loading honors config strictly — no force-adds, no
+      name literals** (ARCH-50 §D; owner ruling: strict config only). Remove the console/openwakeword/vosk/
+      openai/energy literals and force-adds across `tts_component` (:86-87,127-128,143-144,185,194,309-312,776,795),
+      `audio_component` (:84-85,151-152,180-185,510), `voice_trigger_component` (:42-43,162-163,198-214 incl.
+      the literal `hey_jarvis` wake-word), `asr_component` (:79,159,162), `llm_component`
+      (:82,162,166,253,274-275,600), `workflows/audio_processor.py` (:193-233). `default_provider` +
+      `fallback_providers` from config are the entire loading set; nothing configured survives → fail loud
+      (BUG-36 posture). Deployment TOMLs gain explicit console/energy entries where that resilience is wanted
+      (visible config, not code override). `VoiceTriggerConfig` gains the missing `fallback_providers` field
+      or the code path drops it — decide at implementation. Evidence: review doc §D.
+- [ ] **ARCH-56** [ARCH] `[release]` — **InputManager consumes the `locveil_voice.inputs` entry-points;
+      `locveil_voice.runners` group deleted** (ARCH-50 F-F1/F-F2; owner chose adopt-over-delete for inputs).
+      `inputs/manager.py:17-19,52-101` drops the direct imports + per-class if-branches for generic
+      group discovery with config-driven enablement/configuration; the decorative `runners` group is removed
+      from pyproject (nothing reads it — runners launch via `python -m`). Evidence: review doc §F.
+- [ ] **ARCH-57** [ARCH][QUAL][UI] `[release]` — **One canonical component→namespace map; build analyzer
+      derives from entry-point values — fixes the live config-ui VAD dropdown 404** (ARCH-50 F-E1/F-E2).
+      A single constants module (component key → entry-point group) next to the loader; adopted by
+      `core/assets.py:65-95`, `core/startup_validation.py:33-39` (missing `vad` today),
+      `configuration_component.py:352-360` (missing `vad` → `/config/providers/vad` 404s → the
+      `provider_select` widget for `vad.default_provider` renders an EMPTY dropdown — live user-visible bug),
+      `config/validator.py:219` (missing `vad`+`text_processor`), `build_analyzer.py:429-434` (drops the
+      phantom `locveil_voice.outputs`). Analyzer also stops deriving module paths by naming convention
+      (`:596` yields the phantom `intent_system_component`; the entry-point value carries the true path) and
+      replaces its 8-of-11 `component_names` hand-lists (:575-578,:618-620). Evidence: review doc §E.
 ### Code Quality & Review (QUAL)
 
 #### Cross-cutting systemic remediation — principles (the Gate 2 lens)
@@ -422,6 +441,26 @@ _Apply to every remediation task below (from the 4 review docs + QUAL-25/26). So
       forbids. Also honest-UX: mode/fan are daily speech; vane is a set-once remote-in-hand tweak — no demand
       recorded yet. Ref: QUAL-81 (binding table), `docs/design/mqtt_integration.md` §14, bridge VWB-33.
 
+- [ ] **QUAL-83** [QUAL][CONFIG] `[release]` — **Dead config-field + dead-code sweep** (ARCH-50 §B/F-F3;
+      owner ruling: dead fields are DELETED, not implemented — `dead-code-remove-not-fix`). Config fields
+      (~30): the entire `AssetConfig` download/cache block (11 fields, `models.py:982-998`);
+      `DateTimeHandlerConfig` + `GreetingsHandlerConfig` deleted whole (handlers take no config);
+      4 of 5 `ContextualCommandsConfig`; 5 `MonitoringConfig` (incl. QUAL-28 MemoryManager leftovers);
+      3 `NLUAnalysisPerformanceConfig`; `NLUAnalysisLanguagesConfig` deleted whole AND the capabilities
+      endpoint stops hardcoding `["ru","en"]` (`nlu_analysis_component.py:990`) — reads the canonical
+      top-level language policy (QUAL-36 rule); scattered singles + passthrough-only fields per the review
+      doc's F-B4 list. TOMLs + config-ui types/editors in the same change (`config-ui-stays-functional`).
+      Dead code: `get_provider_capabilities` (`components/base.py:216`, PROD-8 delegation),
+      `EnhancedHandlerManager` (`intent_asset_loader.py:1627`), `ComponentLoader` (`models.py:1298`,
+      export-only), `add_handler`/`remove_handler` + the legacy `_get_handler_patterns` fallback
+      (`intents/manager.py:403-503`; `reload_handlers` stays — live ×3). Evidence:
+      `docs/review/dynamic_loading_hardcodings_review.md` §B + §F.
+- [ ] **QUAL-84** [QUAL] `[deferred]` — **Donation-driven classification heuristics** (ARCH-50 §G; owner:
+      keep as named constants now, revisit later). `entity_resolver.py:290` device-domain list +
+      `report_bundle.py:124` `smart_home` intent-prefix triage derive from donations (e.g. a
+      `handler_domain` trait) instead of module-level literals. Not a loading violation — filed to record
+      the coupling. Evidence: review doc §G.
+
 ### Bugs (BUG)
 _Discrete functional defects (distinct from QUAL refactors/quality work). Surfaced from any source; filed before fixing._
 
@@ -489,6 +528,14 @@ _Trace-driven system testing (design `docs/design/trace_system_testing.md`, TEST
       to german" → `greeting.hello` (0.86, keyword beats verb); bare "pause" → `audio.stop` (1.00 — note the
       RU twin «поставь на паузу» routes `smart_home.playback_pause`; decide the intended EN owner before
       fixing). Consumer half unaffected: `expect` stays canonical, the bridge replays language-blind.
+- [ ] **TEST-22** [TEST][CONFIG] `[release]` — **Coherence guard: code↔config↔entry-points agreement**
+      (ARCH-50 §H; owner ruling: full scope). Hermetic test(s) asserting (a) every hand-maintained
+      component→namespace map / analyzer list ≡ pyproject entry-point groups (after ARCH-57 this is the one
+      canonical map vs pyproject), (b) every declared config field has a runtime reader (AST/grep-based with
+      an explicit tiny allowlist — the check that would have caught the ~30 QUAL-83 fields and the ARCH-50
+      seed), (c) config-master ≡ model schema. Sequenced AFTER the deletion tasks (ARCH-52/54, QUAL-83) so
+      the allowlist starts near-empty. Evidence: `docs/review/dynamic_loading_hardcodings_review.md` §H.
+
 ### Build & CI (BUILD)
 _Real English deployment across all three Docker arches (armv7/aarch64/x86_64) + English eval. Design
 `docs/design/multilingual_deployment.md` (I18N-1 ✓) → the implementation slices below. English models are slim and

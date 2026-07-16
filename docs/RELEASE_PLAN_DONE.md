@@ -68,6 +68,27 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       Verified: new conformance 4/4, WS+satellite suites 28/28, full suite 1395 passed/7 skipped,
       pyright 0 on touched files, import contracts 11/11, contract-guard 0 warnings.
       docs: guides/websocket-api
+- [x] **ARCH-50** [ARCH][BUILD] `[release]` — **✓ DONE 2026-07-16. ★ REVIEW: hardcodings & config overrides
+      that violate dynamic build-and-loading.** Filed 2026-07-13 (owner, from the BUILD-36/PROD-21 bounce);
+      PROD-8 council addendum 2026-07-16 (carries the dead `get_provider_capabilities`, hard predecessor of
+      ARCH-42). Deliverable landed: `docs/review/dynamic_loading_hardcodings_review.md` — frozen evidence for
+      the full sweep (backend + tools + TOMLs + config-ui touchpoints), verdicts ruled in a 3-round
+      interactive owner session (governing ruling: **no config overrides** — a declared field is honored or
+      deleted, never silently out-voted). Findings: the seed confirmed end-to-end (literal handler namespace;
+      `discovery_paths`/`auto_discover` declared+plumbed+documented+never-read); ~30 dead config fields
+      (whole `AssetConfig` download/cache block, two dead handler-config models, partial families); dual
+      enable-flag authority with a silent 8-of-11 force-sync while the build analyzer reads the raw loser;
+      provider-name literals/force-adds in 6 components (incl. the literal `hey_jarvis` wake-word); five
+      independently-drifting component→namespace maps — two missing `vad`, one causing a LIVE config-ui bug
+      (VAD provider dropdown renders empty via `/config/providers/vad` 404); decorative `inputs`/`runners`
+      entry-point groups + phantom `locveil_voice.outputs` + phantom `intent_system_component` module path;
+      4 dead code units (`get_provider_capabilities` per the PROD-8 delegation, `EnhancedHandlerManager`,
+      `ComponentLoader`, `add_handler`/`remove_handler`+legacy pattern fallback); heuristic domain literals.
+      Conversation-context special-casing sanctioned as the ONE intent-path exception (owner). Remediation
+      filed per `review-then-remediate`: **ARCH-52/53/54/55/56/57, QUAL-83, TEST-22** (all `[release]`) +
+      **QUAL-84** `[deferred]`. Unblocks ARCH-42 (the council's sequencing lock — the loader-extraction
+      design consumes this inventory). docs: none — review-only change (frozen evidence under `docs/review/`,
+      no behavior altered; the remediation tasks carry their own docs verdicts).
 ### Code Quality & Review (QUAL)
 - [x] **QUAL-5** (P2) — **✓ DONE 2026-06-06.** Cruft cleanup. **Reconciled (Invariant #8): counts fell during QUAL-4's
       import churn** (F401 360→237, star-imports 62→5+57 F405, F841 22→15). **Cleared the verifiable cruft to ZERO:**

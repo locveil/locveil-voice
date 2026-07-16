@@ -20,6 +20,27 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-16 — ARCH-50 DONE: the dynamic-loading sweep — the config was lying in ~40 places.** The
+  review the BUILD-36 rename bounce demanded: everywhere the entry-points-or-config contract promises
+  dynamism, is the code actually listening? Mostly no. The seed generalized into seven finding classes
+  (`docs/review/dynamic_loading_hardcodings_review.md`): ~30 declared-but-never-read config fields (the
+  whole `AssetConfig` download/cache block among them — downloads were never verified, retried, or
+  throttled by any of those knobs); a silent parse-time force-sync making `[components]` overwrite each
+  section's `enabled` while the build analyzer reads the raw overwritten value (image and runtime can
+  disagree about what's enabled); provider names (`console`, `openwakeword`, `hey_jarvis`, `vosk`,
+  `openai`, `energy`) force-added or pinned in six components past what config says; five hand-maintained
+  component→namespace maps drifting independently — two forgot `vad`, and one of those backs the
+  config-ui provider dropdown, so the VAD provider selector has been silently rendering EMPTY (live bug);
+  two decorative entry-point groups nothing reads (`inputs` — InputManager hardcodes its three classes —
+  and `runners`) plus a phantom `outputs` group and a phantom module path in the analyzer; four dead code
+  units including the PROD-8-delegated `get_provider_capabilities`. Verdicts came out of a three-round
+  interactive session under one governing ruling — **no config overrides: honor or delete**. The
+  intent-handler path itself proved healthy at the core (entry-points discovery, config-filtered,
+  donation-registered) with the conversation handler's context special-casing sanctioned as the one
+  exception. Remediation filed: ARCH-52..57 + QUAL-83 + TEST-22 (a full code↔config↔entry-points
+  coherence guard) all `[release]`; QUAL-84 `[deferred]`. ARCH-42 (core-py loader extraction) is now
+  unblocked — its council-locked predecessor delivered the inventory it needs.
+
 - **2026-07-15 — BUILD-40: scope-guard re-pinned `scope-v5`→`scope-v6` (commons HK-10 / IMPL-2).** The
   new version (1.3.0) adds the UNREFERENCED-evidence check — the "fourth direction" of evidence-doc
   discipline: a file on disk under `docs/review`/`docs/design` that no ledger entry (active or DONE)
