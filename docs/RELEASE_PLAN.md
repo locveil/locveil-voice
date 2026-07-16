@@ -453,7 +453,12 @@ _Apply to every remediation task below (from the 4 review docs + QUAL-25/26). So
       Dead code: `get_provider_capabilities` (`components/base.py:216`, PROD-8 delegation),
       `EnhancedHandlerManager` (`intent_asset_loader.py:1627`), `ComponentLoader` (`models.py:1298`,
       export-only), `add_handler`/`remove_handler` + the legacy `_get_handler_patterns` fallback
-      (`intents/manager.py:403-503`; `reload_handlers` stays — live ×3). Evidence:
+      (`intents/manager.py:403-503`; `reload_handlers` stays — live ×3). **Orphan-TOML fold-in (owner,
+      2026-07-16):** delete `config/vad-development.toml`, `vad-production.toml`, `vad-testing.toml`,
+      `vosk-test.toml` — referenced nowhere outside frozen archives (verified); resolve `config/full.toml`
+      (live only as the `test_audio_negotiator.py` fixture): point the test at a live profile or keep it as
+      an explicitly test-owned fixture that must stay schema-current. The live TOML set for all config-surface
+      tasks is the NINE: config-master, config-example, 6 Docker profiles, satellite. Evidence:
       `docs/review/dynamic_loading_hardcodings_review.md` §B + §F.
 - [ ] **QUAL-84** [QUAL] `[deferred]` — **Donation-driven classification heuristics** (ARCH-50 §G; owner:
       keep as named constants now, revisit later). `entity_resolver.py:290` device-domain list +
