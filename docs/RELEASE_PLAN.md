@@ -197,14 +197,25 @@ See `docs/review/phase1_architecture_map.md` §5.
       confirm → execute, never blanket. Deliverable: design doc under `docs/design/` + implementation follow-up
       task(s). Refs: bridge `43c504c`, bridge `docs/design/ui_backend_contract.md` ("Scenario force-reconcile
       dialog"), locveil-commons pin `7cfd5a7`.
-- [ ] **ARCH-42** `[deferred]` [COMMONS][PROCESS] — **DESIGN: extract the dynamic code loader to
+- [ ] **ARCH-42** `[deferred]` [COMMONS][PROCESS] — **DESIGN: extract the entry-point-group discovery engine to
       `locveil-commons/packages/core-py`** (BUILD-20 D-8; voice becomes consumer #1, bridge #2 — ownership
-      flips to the commons on extraction). Design first (`design-then-implement`): inventory what the loader
-      actually is today (entry-point discovery, provider/plugin instantiation, the `provider_namespace_map`
-      seams), decide the package's public surface so BOTH products can consume it (bridge wants it for
-      driver/module loading — their intake CORE-7), then file the voice-side migration implementation task.
-      Gated on commons **PROD-8** (the `core-py` package home must exist; BUILD-21 itself landed
-      2026-07-11 — re-anchored by the DOC-13 sweep, 2026-07-14). Ref: `docs/design/productization.md` D-3/D-8.
+      flips to the commons on extraction). **RECONCILED AT INTAKE 2026-07-16 (PROD-8 council delegation,
+      2 rounds; keepers voice+bridge).** Scope NARROWED from "the dynamic code loader" to **the
+      entry-point-group registry only** — voice's `DynamicLoader` engine (`backend/src/locveil_voice/utils/loader.py:133`:
+      `discover_providers` / `get_provider_class` / `list_available_providers` / cache + discovery-failure
+      recording), the genuine rule-of-two leaf. **Stays voice-side** (each auxiliary graduates only on its own
+      second consumer): the `EntryPointMetadata` build-time metadata quartet
+      (`backend/src/locveil_voice/core/metadata.py:25` — `get_python_dependencies` / `get_platform_support` /
+      `get_supported_architectures` / `get_platform_dependencies`), the dependency-closure + the load-bearing
+      arch gate, and all its values. Bridge's by-name config resolver (`class_loader.py`) stays bridge-side;
+      no config→entry-point unification (council rejected it — it breaks the offline `dump_catalog` generator
+      that builds the voice-pinned golden without loading a driver; CORE-7 is a self-contained infra swap, no
+      catalog-contract bump). Design must **preserve the `build_analyzer`→`get_provider_class`→classmethod
+      seam**. Deliverable: design doc under `docs/design/`, then the voice-side migration implementation task.
+      **HARD PREDECESSOR: ARCH-50** (its hardcodings inventory feeds this design — council sequencing lock).
+      Also gated on commons **PROD-8**; the `packages/core-py` skeleton is cut AFTER ARCH-50 + ARCH-42 land
+      (surface known first). Refs: `docs/design/productization.md` D-3/D-8; commons `board/BOARD.md` PROD-8;
+      bridge intake CORE-7.
 - [ ] **ARCH-43** `[deferred]` [COMMONS][PROCESS] — **DESIGN: extract the logging scheme to
       `locveil-commons/packages/core-py`** (BUILD-20 D-8). The startup-rollover + midnight
       TimedRotatingFileHandler + retention-prune family exists twice by hand-copy (bridge OPS-12 → voice
@@ -212,7 +223,10 @@ See `docs/review/phase1_architecture_map.md` §5.
       shared package surface (rollover naming family, retention constants, prune sweep, report-bundle
       same-day glob compatibility both sides), then file the voice-side adoption task (bridge intake:
       OPS-14). Gated on commons **PROD-8** (re-anchored 2026-07-14, DOC-13; BUILD-21 landed).
-      Ref: `docs/design/productization.md` D-8.
+      **PARKED 2026-07-16 (PROD-8 council decision 4 — sequencing lock):** the loader extraction goes first;
+      the logging extraction is a later round. Do not start this design until ARCH-42's arc lands. Bridge's
+      OPS-12 (DONE — voice's BUG-30 is the verbatim copy of it) is the authoring reference when it resumes.
+      Ref: `docs/design/productization.md` D-8; commons `board/BOARD.md` PROD-8.
 - [ ] **ARCH-45** [INFER][OPS] `[deferred]` — **DESIGN: split readiness from liveness on `/health`.** `/health`
       returns a static `{"status": "healthy", version, timestamp}` (`webapi_router.py` ~L343) — it reports the
       process is alive and nothing more. Observed on the WB7 first boot (2026-07-09): uvicorn binds ~8 s in,
@@ -285,6 +299,12 @@ See `docs/review/phase1_architecture_map.md` §5.
       (`review-then-remediate`). First concrete instance to carry: the `discovery_paths`/`auto_discover`
       dead-field resolution (voice flagged it at the bounce — spans `intents/manager.py`,
       `config/models.py`, `intent_component`, the build-analyzer skip-set, and 8 config files).
+      **ADDENDUM 2026-07-16 (PROD-8 council delegation):** the sweep also carries the dead
+      `get_provider_capabilities` (`backend/src/locveil_voice/components/base.py:216`) — verified at intake to
+      have **zero call sites** repo-wide (the definition is the only occurrence), so it resolves as delete per
+      `dead-code-remove-not-fix`. **This task is a HARD PREDECESSOR of ARCH-42** (council sequencing lock): its
+      hardcodings inventory feeds the core-py loader-extraction design, and the `packages/core-py` skeleton is
+      cut only after both land. Ref: commons `board/BOARD.md` PROD-8.
 - [ ] **ARCH-51** [SATELLITE][CONFIG] `[deferred]` — **★ DESIGN: satellite-local config endpoint (device-owned
       direct write; PROD-24 delegation a).** Filed 2026-07-14 at PROD-24 intake (the Workbench shell council;
       commons `docs/design/workbench.md`). The Workbench write model classifies the desktop-satellite config as
