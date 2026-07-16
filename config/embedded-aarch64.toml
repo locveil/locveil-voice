@@ -260,8 +260,6 @@ fallback_intent = "conversation.general"
 [intent_system.handlers]
 enabled = ["conversation", "greetings", "timer", "datetime", "system", "text_enhancement_handler", "smart_home", "report"]
 disabled = []
-auto_discover = true
-discovery_paths = ["locveil_voice.intents.handlers"]
 
 [intent_system.handlers.asset_validation]
 strict_mode = true

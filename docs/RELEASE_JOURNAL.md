@@ -20,6 +20,18 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-16 — ARCH-52 DONE: the seed finding is dead — intent-handler loading tells no more lies.**
+  Second leg of the remediation sweep. The two config fields the BUILD-36 bounce exposed as pure fiction
+  (`auto_discover`/`discovery_paths` — declared, plumbed, documented, skip-listed, never read) are
+  deleted everywhere: model, both intent_component plumbing sites, analyzer skip-set, all 8 TOMLs, and
+  the config-ui contract (openapi re-dumped, types regenerated, check+build green). The handler
+  namespace is one constant now, shared by the manager, the config validator, and the contract
+  validator. The cwd-relative `Path("assets")` family — the QUAL-59 bug class that survived in three
+  more places — is replaced by one self-validating resolver (env root → cwd → package-relative, each
+  gated on `donations/` actually being there), proven from a foreign cwd. And the hardcoded fallback
+  domain-priorities dict is gone: broken priorities now fail the boot loudly instead of silently
+  running with made-up numbers. Suite 1417 green, contracts 11/11.
+
 - **2026-07-16 — ARCH-57 DONE: one namespace registry, and the VAD dropdown lives.** First of the
   ARCH-50 remediation sweep (owner-ordered batch: 57 → 52 → QUAL-83 → 54, unattended). The five
   independently-drifting component→namespace maps now all derive from `utils/namespaces.py`, whose

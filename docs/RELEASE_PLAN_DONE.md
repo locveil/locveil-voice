@@ -89,6 +89,22 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       **QUAL-84** `[deferred]`. Unblocks ARCH-42 (the council's sequencing lock — the loader-extraction
       design consumes this inventory). docs: none — review-only change (frozen evidence under `docs/review/`,
       no behavior altered; the remediation tasks carry their own docs verdicts).
+- [x] **ARCH-52** [ARCH][CONFIG] `[release]` — **✓ DONE 2026-07-16. Intent-handler loading: dead discovery
+      config deleted, one namespace constant, shared assets-root resolver, fail-hard priorities**
+      (ARCH-50 F-A1/F-A2/F-A3). `IntentHandlerListConfig.auto_discover` + `discovery_paths` deleted
+      end-to-end: model, `intent_component` plumbing ×2, build-analyzer skip-set, all 8 TOMLs,
+      `config-ui/openapi.json` re-dumped + `openapi.gen.ts` regenerated + `api.ts` interface trimmed
+      (`config-ui-stays-functional`: check + build green). The handler namespace is now the ONE
+      `INTENT_HANDLERS_NAMESPACE` constant (utils/namespaces.py) consumed by `intents/manager.py`,
+      `config/models.py` (validator), `core/contract_validator.py`. New
+      `resolve_intent_assets_root()` (core/intent_asset_loader.py) — env root if it holds `donations/`,
+      else cwd `assets/`, else package-relative repo root; raises when nothing validates — adopted at all
+      four sites (manager, nlu_component ×2, web_server), retiring the QUAL-59-class cwd-relative
+      `Path("assets")`; verified resolving correctly from a foreign cwd with unset/bogus/valid env. The
+      hardcoded fallback domain-priorities dict is gone — a priorities-loading failure now raises at
+      startup (fail-hard ruling). Verified: full suite 1417 passed / 7 skipped, import contracts 11/11,
+      config-ui `npm run check` + `build` green. docs: none — the deleted fields appear in no manifest
+      node (config-file comments only); no user-visible behavior changed on the happy path.
 - [x] **ARCH-57** [ARCH][QUAL][UI] `[release]` — **✓ DONE 2026-07-16. One canonical component→namespace
       map; analyzer module paths from entry-point values — the live config-ui VAD dropdown 404 fixed**
       (ARCH-50 F-E1/F-E2). New `utils/namespaces.py`: `PROVIDER_NAMESPACES` (8 families incl. `vad`) +

@@ -138,8 +138,6 @@ class TestIntentHandlerManager:
         return {
             "enabled": ["conversation", "timer"],
             "disabled": [],
-            "auto_discover": True,
-            "discovery_paths": ["locveil_voice.intents.handlers"],
             "asset_validation": {
                 "strict_mode": True
             }

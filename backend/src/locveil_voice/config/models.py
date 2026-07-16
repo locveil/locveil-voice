@@ -712,12 +712,10 @@ class IntentHandlerListConfig(BaseModel):
         default_factory=list,
         description="List of explicitly disabled intent handlers (takes precedence)"
     )
-    auto_discover: bool = Field(default=True, description="Automatically discover available handlers")
-    discovery_paths: List[str] = Field(
-        default_factory=lambda: ["locveil_voice.intents.handlers"],
-        description="Entry-point paths for handler discovery"
-    )
-    
+    # ARCH-52: auto_discover/discovery_paths deleted — declared-but-never-read (ARCH-50 F-A1).
+    # Discovery is always the INTENT_HANDLERS_NAMESPACE entry-point group, which is already
+    # open for third-party handler registration; a configurable namespace list bought nothing.
+
     # Asset validation configuration (moved from manager)
     asset_validation: Dict[str, Any] = Field(
         default_factory=lambda: {
@@ -874,9 +872,10 @@ class IntentSystemConfig(BaseModel):
         
         try:
             from ..utils.loader import dynamic_loader
-            
+            from ..utils.namespaces import INTENT_HANDLERS_NAMESPACE
+
             # Discover handler classes to check their configuration requirements
-            handler_classes = dynamic_loader.discover_providers("locveil_voice.intents.handlers", enabled_handlers)
+            handler_classes = dynamic_loader.discover_providers(INTENT_HANDLERS_NAMESPACE, enabled_handlers)
             
             missing_configs = []
             for handler_name, handler_class in handler_classes.items():

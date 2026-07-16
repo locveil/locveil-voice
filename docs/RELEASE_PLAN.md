@@ -296,15 +296,6 @@ See `docs/review/phase1_architecture_map.md` §5.
       UI-17's plugin shell). Deliverable: design doc under `docs/design/` + implementation follow-up(s).
       Refs: board PROD-24 (2)(3)(6), `../locveil-commons/docs/design/workbench.md`,
       `docs/design/python_satellite.md`.
-- [ ] **ARCH-52** [ARCH][CONFIG] `[release]` — **Intent-handler loading: delete dead discovery config, one
-      namespace constant, shared assets-root resolver, fail-hard priorities** (ARCH-50 F-A1/F-A2/F-A3;
-      owner rulings 2026-07-16). Delete `IntentHandlerListConfig.discovery_paths` + `auto_discover`
-      end-to-end (model, `intent_component` plumbing ×2, build-analyzer skip-set, config-master + 7 TOMLs,
-      config-ui types/editors — `config-ui-stays-functional`); ONE shared handler-namespace constant used by
-      `intents/manager.py:97`, `config/models.py:879`, `contract_validator.py:37`. One shared intent-assets-root
-      resolver (env override, else package-relative) adopted by `manager.py:88`, `nlu_component.py:529`,
-      `web_server.py:122`. Delete the literal fallback domain-priorities dict (`manager.py:568-574`) — a
-      priorities-loading failure raises at startup. Evidence: `docs/review/dynamic_loading_hardcodings_review.md` §A.
 - [ ] **ARCH-53** [ARCH] `[release]` — **Capability ports become handler-declared metadata** (ARCH-50 F-A4).
       Replace the static `capability_ports` table (`intent_component.py:259-265`) + the
       `provider_control_handler` special case (:287) with a handler classmethod (the

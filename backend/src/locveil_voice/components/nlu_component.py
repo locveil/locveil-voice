@@ -521,13 +521,11 @@ class NLUComponent(Component, NLUPlugin, WebAPIPlugin):
                 logger.info(f"Loading JSON donations independently for enabled handlers: {enabled_handler_names}")
                 
                 # Import unified asset loader
-                from ..core.intent_asset_loader import IntentAssetLoader, AssetLoaderConfig
-                from pathlib import Path
-                
+                from ..core.intent_asset_loader import IntentAssetLoader, AssetLoaderConfig, resolve_intent_assets_root
+
                 # Initialize asset loader with strict validation
                 asset_config = AssetLoaderConfig(strict_mode=True)
-                assets_root = Path("assets")
-                self.asset_loader = IntentAssetLoader(assets_root, asset_config)
+                self.asset_loader = IntentAssetLoader(resolve_intent_assets_root(), asset_config)
                 
                 # Load assets only for enabled handlers
                 await self.asset_loader.load_all_assets(enabled_handler_names)
@@ -675,17 +673,13 @@ class NLUComponent(Component, NLUPlugin, WebAPIPlugin):
             List of KeywordDonation objects ready for provider consumption
         """
         try:
-            from ..core.intent_asset_loader import IntentAssetLoader, AssetLoaderConfig
-            from pathlib import Path
-            
+            from ..core.intent_asset_loader import IntentAssetLoader, AssetLoaderConfig, resolve_intent_assets_root
+
             # Use the unified asset loader's conversion method. The loader instance exists only
             # for convert_to_keyword_donations (donations are injected below, nothing is read from
-            # disk here) — but give it a real root anyway: package-relative, not cwd-relative
-            # (QUAL-59; Path("assets") only resolved from the repo root).
+            # disk here) — but give it a real root anyway via the shared resolver (ARCH-52).
             asset_config = AssetLoaderConfig()
-            # repo-root assets/; this file is backend/src/locveil_voice/components/ → parents[4] is root.
-            assets_root = Path(__file__).resolve().parents[4] / "assets"
-            asset_loader = IntentAssetLoader(assets_root, asset_config)
+            asset_loader = IntentAssetLoader(resolve_intent_assets_root(), asset_config)
             
             # Set the donations directly and convert
             asset_loader.donations = donations

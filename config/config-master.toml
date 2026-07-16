@@ -558,8 +558,6 @@ latency_threshold_ms = 5.0          # Alert threshold for disambiguation latency
 [intent_system.handlers]
 enabled = ["conversation", "greetings", "timer", "datetime", "system", "text_enhancement_handler", "smart_home", "report"]  # Enabled handlers
 disabled = []                       # Disabled handlers
-auto_discover = true               # Automatically discover handlers
-discovery_paths = ["locveil_voice.intents.handlers"]  # Entry-point discovery paths
 
 # Asset validation configuration
 [intent_system.handlers.asset_validation]

@@ -70,8 +70,6 @@ class IntentComponent(Component, WebAPIPlugin):
                 handler_config = {
                     "enabled": handlers_obj.enabled,
                     "disabled": handlers_obj.disabled,
-                    "auto_discover": handlers_obj.auto_discover,
-                    "discovery_paths": handlers_obj.discovery_paths,
                     "asset_validation": handlers_obj.asset_validation
                 }
             else:
@@ -2106,8 +2104,6 @@ class IntentComponent(Component, WebAPIPlugin):
                             handler_config = {
                                 "enabled": handlers_obj.enabled,
                                 "disabled": handlers_obj.disabled,
-                                "auto_discover": handlers_obj.auto_discover,
-                                "discovery_paths": handlers_obj.discovery_paths,
                                 "asset_validation": handlers_obj.asset_validation
                             }
                         else:

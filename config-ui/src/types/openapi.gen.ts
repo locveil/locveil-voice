@@ -4701,17 +4701,6 @@ export interface components {
              */
             disabled?: string[];
             /**
-             * Auto Discover
-             * @description Automatically discover available handlers
-             * @default true
-             */
-            auto_discover: boolean;
-            /**
-             * Discovery Paths
-             * @description Entry-point paths for handler discovery
-             */
-            discovery_paths?: string[];
-            /**
              * Asset Validation
              * @description Asset validation configuration
              */

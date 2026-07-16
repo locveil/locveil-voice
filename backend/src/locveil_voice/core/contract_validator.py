@@ -32,9 +32,13 @@ import time
 from dataclasses import dataclass, field
 from typing import Dict, List, Mapping, Optional, Set
 
+from ..utils.namespaces import INTENT_HANDLERS_NAMESPACE
+
 logger = logging.getLogger(__name__)
 
-HANDLERS_PACKAGE = "locveil_voice.intents.handlers"
+# The handlers' import package coincides with their entry-point group name (ARCH-52:
+# one canonical constant instead of a re-typed literal).
+HANDLERS_PACKAGE = INTENT_HANDLERS_NAMESPACE
 
 
 @dataclass

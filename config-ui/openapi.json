@@ -7978,20 +7978,6 @@
             "title": "Disabled",
             "description": "List of explicitly disabled intent handlers (takes precedence)"
           },
-          "auto_discover": {
-            "type": "boolean",
-            "title": "Auto Discover",
-            "description": "Automatically discover available handlers",
-            "default": true
-          },
-          "discovery_paths": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Discovery Paths",
-            "description": "Entry-point paths for handler discovery"
-          },
           "asset_validation": {
             "additionalProperties": true,
             "type": "object",

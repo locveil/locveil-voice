@@ -112,9 +112,39 @@ class AssetLoaderConfig:
         self.enable_language_filtering = enable_language_filtering
 
 
+def resolve_intent_assets_root() -> Path:
+    """The ONE way to locate the intent-assets tree (donations/templates/localization) — ARCH-52.
+
+    Replaces the scattered cwd-relative ``Path("assets")`` (the QUAL-59 bug class: it only
+    resolved when the process happened to start at the repo root; containers aligned by
+    coincidence of WORKDIR + the volume mount). Resolution order, each step self-validated
+    by the presence of ``donations/``:
+
+    1. ``LOCVEIL_VOICE_ASSETS_ROOT`` — in deployments this is the merged runtime tree
+       (git-owned intent assets synced in next to downloaded models);
+    2. cwd-relative ``assets/`` — local runs from the repo root;
+    3. package-relative repo root — local runs from anywhere else (this file is
+       backend/src/locveil_voice/core/ → parents[4] is the repo root).
+    """
+    import os
+    candidates = []
+    env_root = os.getenv("LOCVEIL_VOICE_ASSETS_ROOT")
+    if env_root:
+        candidates.append(Path(env_root).expanduser())
+    candidates.append(Path("assets"))
+    candidates.append(Path(__file__).resolve().parents[4] / "assets")
+    for root in candidates:
+        if (root / "donations").is_dir():
+            return root
+    raise RuntimeError(
+        "intent assets tree not found (no 'donations/' under any of: "
+        + ", ".join(str(c) for c in candidates)
+        + ") — set LOCVEIL_VOICE_ASSETS_ROOT or run from the repo root")
+
+
 class IntentAssetLoader:
     """Unified loader for all intent handler assets"""
-    
+
     def __init__(self, assets_root: Path, config: Optional[AssetLoaderConfig] = None):
         self.assets_root = Path(assets_root)
         self.config = config or AssetLoaderConfig()

@@ -117,15 +117,9 @@ class WebServerMixin:
                             f"{len(loaded.localizations)} localization sets)")
                 return
 
-            from ..core.intent_asset_loader import IntentAssetLoader, AssetLoaderConfig
+            from ..core.intent_asset_loader import IntentAssetLoader, AssetLoaderConfig, resolve_intent_assets_root
 
-            assets_root = Path("assets")
-            if not assets_root.exists():
-                # package-relative fallback: assets/ lives at repo root, and this file is
-                # backend/src/locveil_voice/runners/web_server.py → parents[4] is the repo root.
-                assets_root = Path(__file__).resolve().parents[4] / "assets"
-
-            self._asset_loader = IntentAssetLoader(assets_root, AssetLoaderConfig())
+            self._asset_loader = IntentAssetLoader(resolve_intent_assets_root(), AssetLoaderConfig())
             await self._asset_loader._load_web_templates()
             logger.info(f"✅ Web asset loader initialized with {len(self._asset_loader.web_templates)} templates")
         except Exception as e:

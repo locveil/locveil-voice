@@ -734,8 +734,6 @@ export interface ContextualCommandsConfig {
 export interface IntentHandlerListConfig {
   enabled: string[];
   disabled: string[];
-  auto_discover: boolean;
-  discovery_paths: string[];
   asset_validation: Record<string, any>;
 }
 

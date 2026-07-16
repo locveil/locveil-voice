@@ -13,7 +13,8 @@ from .registry import IntentRegistry
 from .orchestrator import IntentOrchestrator
 from ..core.metrics import get_metrics_collector
 from ..utils.loader import dynamic_loader
-from ..core.intent_asset_loader import IntentAssetLoader, AssetLoaderConfig
+from ..utils.namespaces import INTENT_HANDLERS_NAMESPACE
+from ..core.intent_asset_loader import IntentAssetLoader, AssetLoaderConfig, resolve_intent_assets_root
 
 logger = logging.getLogger(__name__)
 
@@ -83,10 +84,8 @@ class IntentHandlerManager:
         logger.info(f"Enabled intent handlers: {enabled_handlers}")
         
         # Phase 6: Initialize unified asset loader
-        from pathlib import Path
         asset_config = AssetLoaderConfig(**config.get("asset_validation", {}))
-        assets_root = Path("assets")
-        self._asset_loader = IntentAssetLoader(assets_root, asset_config)
+        self._asset_loader = IntentAssetLoader(resolve_intent_assets_root(), asset_config)
         
         # Validate enabled handlers before discovery
         if not enabled_handlers:
@@ -95,7 +94,7 @@ class IntentHandlerManager:
         # Discover handlers from entry-points (configuration-driven filtering)
         try:
             self._handler_classes = dynamic_loader.discover_providers(
-                "locveil_voice.intents.handlers", 
+                INTENT_HANDLERS_NAMESPACE,
                 enabled_handlers
             )
         except Exception as e:
@@ -534,45 +533,26 @@ class IntentHandlerManager:
         Args:
             config: Intent system configuration dict (unused - kept for interface compatibility)
         """
-        try:
-        # Phase 4 TODO16: Cache integration moved to unified MetricsCollector
-        # TODO: Implement domain priority caching in MetricsCollector if needed
-        # For now, load fresh each time (performance impact is minimal)
-            
-            # Step 1: Load priorities from donation files
-            donation_priorities = self._extract_priorities_from_donations()
-            
-            # Step 2: Load priorities from IntentSystemConfig schema (required)
-            config_priorities = {}
-            if self._intent_system_config and hasattr(self._intent_system_config, 'domain_priorities'):
-                # Pydantic IntentSystemConfig object
-                config_priorities = self._intent_system_config.domain_priorities
-                logger.debug("Using domain priorities from IntentSystemConfig schema")
-            else:
-                raise ValueError("IntentSystemConfig with domain_priorities is required - no dict fallback supported")
-            
-            # Step 3: Merge priorities (config overrides donations)
-            self._domain_priorities = {**donation_priorities, **config_priorities}
-            
-            # Phase 4 TODO16: Domain priorities loaded successfully
-            # Caching moved to unified MetricsCollector system
-            
-            logger.info(f"Loaded domain priorities: {self._domain_priorities}")
-            
-            if not self._domain_priorities:
-                logger.warning("No domain priorities configured - contextual command disambiguation may not work properly")
-            
-        except Exception as e:
-            logger.error(f"Failed to load domain priorities: {e}")
-            # Set default priorities to prevent system failure (matching IntentSystemConfig defaults)
-            self._domain_priorities = {
-                "audio": 90,
-                "timer": 70, 
-                "voice_synthesis": 60,
-                "system": 50,
-                "conversation": 40
-            }
-            logger.warning(f"Using default domain priorities: {self._domain_priorities}")
+        # ARCH-52 (fail-hard ruling): a failure to load domain priorities raises at startup
+        # like every other config error — the old hardcoded fallback dict silently masked
+        # broken donations/config (ARCH-50 F-A3).
+
+        # Step 1: Load priorities from donation files
+        donation_priorities = self._extract_priorities_from_donations()
+
+        # Step 2: Load priorities from IntentSystemConfig schema (required)
+        if not (self._intent_system_config and hasattr(self._intent_system_config, 'domain_priorities')):
+            raise ValueError("IntentSystemConfig with domain_priorities is required - no dict fallback supported")
+        config_priorities = self._intent_system_config.domain_priorities
+        logger.debug("Using domain priorities from IntentSystemConfig schema")
+
+        # Step 3: Merge priorities (config overrides donations)
+        self._domain_priorities = {**donation_priorities, **config_priorities}
+
+        logger.info(f"Loaded domain priorities: {self._domain_priorities}")
+
+        if not self._domain_priorities:
+            logger.warning("No domain priorities configured - contextual command disambiguation may not work properly")
     
     def _extract_priorities_from_donations(self) -> Dict[str, int]:
         """

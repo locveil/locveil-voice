@@ -773,7 +773,7 @@ class IreneBuildAnalyzer:
         
         # Method 2: Object-based individual handler configs (e.g., intents.handlers.timer = true)
         for key, value in handlers_config.items():
-            if key in ["enabled", "disabled", "auto_discover", "discovery_paths"]:
+            if key in ["enabled", "disabled", "asset_validation"]:
                 continue  # Skip meta-configuration keys
             
             # Direct boolean configuration (e.g., timer = true)
