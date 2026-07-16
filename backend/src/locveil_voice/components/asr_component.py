@@ -27,6 +27,7 @@ from ..utils.audio_helpers import AudioTranscoder
 # Import ASR provider base class and dynamic loader
 from ..providers.asr import ASRProvider
 from ..utils.loader import dynamic_loader
+from ..utils.namespaces import PROVIDER_NAMESPACES
 
 logger = logging.getLogger(__name__)
 
@@ -130,7 +131,7 @@ class ASRComponent(MetricsPushMixin, Component, ASRPlugin, WebAPIPlugin, ASRPort
                                 if (provider_config.get("enabled", False) if isinstance(provider_config, dict) 
                                     else getattr(provider_config, "enabled", False))]
             
-            self._provider_classes = dynamic_loader.discover_providers("locveil_voice.providers.asr", enabled_providers)
+            self._provider_classes = dynamic_loader.discover_providers(PROVIDER_NAMESPACES["asr"], enabled_providers)
             logger.info(f"Discovered {len(self._provider_classes)} enabled ASR providers: {list(self._provider_classes.keys())}")
             
             for provider_name, provider_class in self._provider_classes.items():
@@ -163,7 +164,7 @@ class ASRComponent(MetricsPushMixin, Component, ASRPlugin, WebAPIPlugin, ASRPort
                 self.default_language = getattr(config, "default_language", "ru")
 
             # BUG-36 kind 1 — a configured engine that cannot even import is a broken build: fatal.
-            self._require_loadable_providers("locveil_voice.providers.asr", enabled_providers, self._provider_classes)
+            self._require_loadable_providers(PROVIDER_NAMESPACES["asr"], enabled_providers, self._provider_classes)
             # BUG-36 kind 2 — imported but unavailable (missing model/deps): loud, not fatal.
             self._note_inactive_providers(enabled_providers, self.providers)
 

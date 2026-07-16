@@ -21,6 +21,7 @@ from ..intents.context_models import UnifiedConversationContext
 from ..utils.loader import dynamic_loader
 from ..providers.nlu.base import NLUProvider
 from ..core.entity_resolver import ContextualEntityResolver
+from ..utils.namespaces import PROVIDER_NAMESPACES
 
 logger = logging.getLogger(__name__)
 
@@ -353,7 +354,7 @@ class NLUComponent(Component, NLUPlugin, WebAPIPlugin):
         if "hybrid_keyword_matcher" not in enabled_providers and providers_config.get("hybrid_keyword_matcher", {}).get("enabled", True):
             enabled_providers.append("hybrid_keyword_matcher")
             
-        self._provider_classes = dynamic_loader.discover_providers("locveil_voice.providers.nlu", enabled_providers)
+        self._provider_classes = dynamic_loader.discover_providers(PROVIDER_NAMESPACES["nlu"], enabled_providers)
         logger.info(f"Discovered {len(self._provider_classes)} enabled NLU providers: {list(self._provider_classes.keys())}")
         
         # Initialize enabled providers
@@ -388,7 +389,7 @@ class NLUComponent(Component, NLUPlugin, WebAPIPlugin):
         
         # BUG-36: a silently-missing NLU provider degrades the cascade (e.g. the spaCy tier vanishes)
         # with no signal anywhere. Kind 1 cannot import → fatal; kind 2 unavailable → loud, not fatal.
-        self._require_loadable_providers("locveil_voice.providers.nlu", configured_providers, self._provider_classes)
+        self._require_loadable_providers(PROVIDER_NAMESPACES["nlu"], configured_providers, self._provider_classes)
         self._note_inactive_providers(configured_providers, self.providers)
 
         # Set default provider if not set

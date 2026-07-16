@@ -22,6 +22,7 @@ from ..core.metrics import get_metrics_collector
 # Voice trigger provider base class and dynamic loader
 from ..providers.voice_trigger import VoiceTriggerProvider
 from ..utils.loader import DependencyChecker, safe_import, dynamic_loader
+from ..utils.namespaces import PROVIDER_NAMESPACES
 
 logger = logging.getLogger(__name__)
 
@@ -159,7 +160,7 @@ class VoiceTriggerComponent(MetricsPushMixin, Component, VoiceTriggerPlugin, Web
         # ARCH-55: no force-adds — what the operator enabled IS the loading set.
         configured_providers = list(enabled_providers)
 
-        self._provider_classes = dynamic_loader.discover_providers("locveil_voice.providers.voice_trigger", enabled_providers)
+        self._provider_classes = dynamic_loader.discover_providers(PROVIDER_NAMESPACES["voice_trigger"], enabled_providers)
         logger.info(f"Discovered {len(self._provider_classes)} enabled voice trigger providers: {list(self._provider_classes.keys())}")
         
         enabled_count = 0
@@ -197,7 +198,7 @@ class VoiceTriggerComponent(MetricsPushMixin, Component, VoiceTriggerPlugin, Web
                          "[voice_trigger.providers.*] failed or was unavailable")
 
         # BUG-36: kind 1 cannot import → fatal; kind 2 unavailable → loud, not fatal.
-        self._require_loadable_providers("locveil_voice.providers.voice_trigger", configured_providers, self._provider_classes)
+        self._require_loadable_providers(PROVIDER_NAMESPACES["voice_trigger"], configured_providers, self._provider_classes)
         self._note_inactive_providers(configured_providers, self.providers)
 
         # Fall back only when the operator did not name the default explicitly.

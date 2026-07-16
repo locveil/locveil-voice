@@ -28,6 +28,7 @@ from ..intents.ports import TTSPort  # QUAL-24: domain capability port (applicat
 from ..providers.tts import TTSProvider
 from ..utils.loader import dynamic_loader
 from ..utils.audio_stream import PCMStream
+from ..utils.namespaces import PROVIDER_NAMESPACES
 
 logger = logging.getLogger(__name__)
 
@@ -139,12 +140,12 @@ class TTSComponent(Component, TTSPlugin, WebAPIPlugin, TTSPort):
         # ARCH-55: no force-adds — what the operator enabled IS the loading set.
         configured_providers = list(enabled_providers)
 
-        self._provider_classes = dynamic_loader.discover_providers("locveil_voice.providers.tts", enabled_providers)
+        self._provider_classes = dynamic_loader.discover_providers(PROVIDER_NAMESPACES["tts"], enabled_providers)
         logger.info(f"Discovered {len(self._provider_classes)} enabled TTS providers: {list(self._provider_classes.keys())}")
 
         # BUG-36 kind 1 — a configured provider must at least IMPORT. Instantiation may legitimately be
         # deferred here (lazy loading), so this checks the discovered classes, not the instances.
-        self._require_loadable_providers("locveil_voice.providers.tts", configured_providers, self._provider_classes)
+        self._require_loadable_providers(PROVIDER_NAMESPACES["tts"], configured_providers, self._provider_classes)
         
         if self._lazy_loading_enabled:
             # Lazy loading: Only load essential providers immediately

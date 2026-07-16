@@ -154,7 +154,7 @@ class DynamicLoader:
         Discover providers via entry-points with optional configuration filtering.
         
         Args:
-            namespace: Entry-points namespace (e.g., 'locveil_voice.providers.tts')
+            namespace: Entry-points namespace (a utils.namespaces constant)
             enabled: Optional list of enabled provider names for filtering
             
         Returns:

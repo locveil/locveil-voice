@@ -1888,6 +1888,29 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       unchanged (`5622ba7a1a78102a`) — so no fixture or code impact. PIN.json updated (bridge_commit mirrors
       STAMP.bridge_commit per the TEST-17 rule); eval-commons suite 40/40; eval-commons `3fd9091` pushed.
       This pin records the release pairing: **voice v0.5.2 ↔ bridge v0.6.0**.
+- [x] **TEST-22** [TEST][CONFIG] `[release]` — **✓ DONE 2026-07-16. The code↔config↔entry-points
+      coherence guard** (ARCH-50 §H; full-scope ruling). `backend/tests/test_coherence_guard.py`, three
+      directions, hermetic: **(a)** `utils/namespaces.py` ≡ pyproject's entry-point groups (registry
+      mirror + provider-family mapping + a NO-STRAY-LITERALS sweep — no runtime module may restate a
+      group as a string; the sweep's first run found 29 restatements across 11 files, all replaced with
+      registry imports); **(b)** every declared config field has a runtime reader (textual, corpus
+      excludes the declaration site + the pure-serialization template; allowlist = exactly the three
+      `*_config` fields ARCH-56 reads dynamically, each with its reason); **(c)** the reverse of
+      master-completeness — no live TOML carries a key the models don't declare (nested models silently
+      ignore extras, so deletions used to leave lying lines forever). **First-run catches — all real:**
+      two stray `cache_ttl_seconds` lines QUAL-83's strip missed; stale `system.metrics_enabled/
+      metrics_port`; nine dead `workflows.unified_voice_assistant.*` keys + two dead sub-tables
+      (audio_validation, resampling); the analyzer's unreachable "Method 2" (boolean handler keys — a
+      shape no TOML has and the model forbids) deleted; **handler-config sections MISPLACED in all 7
+      full profiles** (`[intent_system.handlers.conversation]` etc. vs the model's
+      `[intent_system.conversation]`) — every such setting had been silently dropped since inception
+      (all values happen to repeat model defaults, so zero behavior change) — relocated, and the dead
+      datetime/greetings tables deleted; and **BUG-43 filed**: `[asr] default_language` was never a
+      declared field, so the EN profiles' `"en"` decode hint never reached whisper (guard allowlists the
+      key naming BUG-43 until wired per QUAL-36). Verified: guard 14/14, full suite 1425 passed / 7
+      skipped, analyzer parity vs the ARCH-55 state (only the declared VAD fallback's deps join —
+      correct), all profiles valid, armv7l gate green, config-validator valid, contracts 11/11.
+      docs: none — a test + config-file corrections; no manifest node documents the relocated sections.
 
 ### Internationalization (I18N)
 ### Build & CI (BUILD)

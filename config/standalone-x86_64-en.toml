@@ -37,8 +37,6 @@ microphone_enabled = true       # local mic → VAD is required to segment the r
 audio_playback_enabled = true   # local speaker
 web_api_enabled = true
 web_port = 8080
-metrics_enabled = false
-metrics_port = 9090
 
 # ============================================================
 # INPUT SOURCES
@@ -296,26 +294,16 @@ strict_mode = true
 validate_spacy_patterns = false
 validate_json_schema = true
 
-[intent_system.handlers.conversation]
+[intent_system.conversation]
 session_timeout = 1800
 max_sessions = 50
 max_context_length = 10
 default_conversation_confidence = 0.6
 
-[intent_system.handlers.timer]
+[intent_system.timer]
 min_seconds = 1
 max_seconds = 86400
-
-[intent_system.handlers.datetime]
-timezone = ""
-date_format = "%Y-%m-%d"
-time_format = "%H:%M:%S"
-
-[intent_system.handlers.greetings]
-personalized = true
-context_aware = true
-
-[intent_system.handlers.system]
+[intent_system.system]
 allow_shutdown = false
 allow_restart = false
 info_detail_level = "basic"
@@ -368,7 +356,6 @@ pattern_validation_enabled = true
 
 [nlu_analysis.performance]
 max_concurrent_analyses = 3
-cache_ttl_seconds = 300
 
 [workflows]
 enabled = ["unified_voice_assistant"]
@@ -383,22 +370,6 @@ intent_execution_enabled = true
 llm_enabled = true
 tts_enabled = true
 audio_enabled = true
-sample_rate = 16000
-channels = 1
-validate_audio_compatibility = true
-default_source = "voice"
-default_language = "en"
-session_timeout_minutes = 30
-
-[workflows.unified_voice_assistant.audio_validation]
-enabled = true
-fatal_on_conflicts = true
-auto_resolve_defaults = true
-log_resolution_details = true
-
-# ============================================================
-# TRACE — per-request traces (ARCH-19). OFF by default; --trace to enable.
-# ============================================================
 [trace]
 enabled = false
 capture_level = "utterance"

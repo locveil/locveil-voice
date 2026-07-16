@@ -20,6 +20,23 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-16 — TEST-22 DONE: the coherence guard is live — and its first run caught six more lies.**
+  The closing leg of the ARCH-50 remediation. `test_coherence_guard.py` asserts the three directions
+  no gate covered: the namespace registry mirrors pyproject (with a no-stray-literals sweep — 29
+  restatements across 11 files got replaced with registry imports on the spot), every declared config
+  field has a runtime reader (allowlist: exactly the three dynamically-read `*_config` fields, each
+  with its reason), and no live TOML carries a key the models don't declare — the reverse direction
+  that silent extra-ignoring had left unguarded forever. The first run earned its keep immediately:
+  stray keys my own QUAL-83 strip missed, dead workflow sub-tables, the analyzer's unreachable
+  boolean-handler "Method 2", and two genuine discoveries — the handler-config sections in ALL seven
+  full profiles were misplaced (`[intent_system.handlers.conversation]` instead of
+  `[intent_system.conversation]`), silently dropped since inception and saved only by the values
+  repeating the model defaults; and `[asr] default_language` was never a declared field at all, so
+  the EN profiles' whisper decode hint has been "ru" — filed as BUG-43 (fix wires the canonical
+  QUAL-36 language policy). Guard 14/14, suite 1425 green, analyzer parity verified, all profiles
+  valid. **The ARCH-50 remediation is complete: all eight [release] tasks landed in two unattended
+  batches, seven commits, every gate green.** QUAL-84/85 remain [deferred] by design.
+
 - **2026-07-16 — ARCH-55 DONE: what the config says is what loads — resilience is declared, not
   conjured.** The behavioral leg. Six components stopped second-guessing the operator: tts and audio
   no longer force console into the enabled set, silently conjure it when everything else dies, or

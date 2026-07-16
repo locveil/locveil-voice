@@ -16,6 +16,7 @@ from .interfaces.component import ComponentPort
 from ..intents.context import ContextManager
 from ..intents.ports import ComponentControlRegistryPort  # QUAL-24: registry port (application implements it)
 from ..__version__ import ARCH_GENERATION
+from ..utils.namespaces import COMPONENTS_NAMESPACE
 
 logger = logging.getLogger(__name__)
 
@@ -145,7 +146,7 @@ class ComponentManager(ComponentControlRegistryPort):
         """Get available components through existing entry-point discovery"""
         # Use EXISTING dynamic_loader instead of hardcoded dictionary
         from ..utils.loader import dynamic_loader
-        return dynamic_loader.discover_providers("locveil_voice.components")
+        return dynamic_loader.discover_providers(COMPONENTS_NAMESPACE)
         
     async def get_system_status(self) -> Dict[str, Any]:
         """Get comprehensive system status using loader.py utilities"""
@@ -169,7 +170,7 @@ class ComponentManager(ComponentControlRegistryPort):
 
         # Requested but never loaded: entry point missing, or its module failed to import.
         from ..utils.loader import dynamic_loader
-        why = dynamic_loader.get_discovery_failures("locveil_voice.components")
+        why = dynamic_loader.get_discovery_failures(COMPONENTS_NAMESPACE)
         self._missing_components = {
             name: why.get(name, "no `locveil_voice.components` entry point is registered under this name")
             for name in requested if name not in available_components

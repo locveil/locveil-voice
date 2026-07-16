@@ -22,6 +22,9 @@ from typing import Dict, List, Optional, Set, Any, Tuple
 import json
 
 from locveil_voice.utils.loader import dynamic_loader
+from locveil_voice.utils.namespaces import (ALL_NAMESPACES, COMPONENTS_NAMESPACE,
+                                            INTENT_HANDLERS_NAMESPACE, PROVIDER_NAMESPACES,
+                                            WORKFLOWS_NAMESPACE)
 
 logger = logging.getLogger(__name__)
 
@@ -426,7 +429,6 @@ class IreneBuildAnalyzer:
             logger.error(f"Failed to discover entry-point namespaces: {e}")
             # Fallback to the canonical registry (ARCH-57 — the old inline list had
             # drifted, naming a phantom `locveil_voice.outputs` group).
-            from ..utils.namespaces import ALL_NAMESPACES
             return sorted(ALL_NAMESPACES)
     
     def _get_entry_points_catalog(self) -> Dict[str, List[str]]:
@@ -568,12 +570,11 @@ class IreneBuildAnalyzer:
                           if isinstance(on, bool) and on]
         
         if unique_enabled:
-            requirements.enabled_providers["locveil_voice.components"] = unique_enabled
+            requirements.enabled_providers[COMPONENTS_NAMESPACE] = unique_enabled
             # Module paths come from the entry-point VALUES, not a naming convention —
             # the old f"...{name}_component" derivation minted the phantom module
             # `intent_system_component` (the real file is intent_component.py). ARCH-57.
             from importlib.metadata import entry_points
-            from ..utils.namespaces import COMPONENTS_NAMESPACE
             component_modules = {ep.name: ep.value.split(":")[0]
                                  for ep in entry_points(group=COMPONENTS_NAMESPACE)}
             for component_name in unique_enabled:
@@ -606,7 +607,6 @@ class IreneBuildAnalyzer:
         # 8-name hand-list silently skipped it, so VAD provider deps never reached images).
         # Enablement: [components] for component families; [vad].enabled for vad (not a
         # component — model default True).
-        from ..utils.namespaces import PROVIDER_NAMESPACES
         components_config = config.get("components", {})
 
         for component_name, family_namespace in PROVIDER_NAMESPACES.items():
@@ -664,7 +664,7 @@ class IreneBuildAnalyzer:
         enabled = workflows_config.get("enabled", [])
         
         if enabled:
-            requirements.enabled_providers["locveil_voice.workflows"] = enabled
+            requirements.enabled_providers[WORKFLOWS_NAMESPACE] = enabled
             for workflow_name in enabled:
                 module_path = f"locveil_voice.workflows.{workflow_name}"
                 requirements.python_modules.add(module_path)
@@ -754,15 +754,10 @@ class IreneBuildAnalyzer:
         if enabled_list and isinstance(enabled_list, list):
             enabled_handlers.extend(enabled_list)
         
-        # Method 2: Object-based individual handler configs (e.g., intents.handlers.timer = true)
-        for key, value in handlers_config.items():
-            if key in ["enabled", "disabled", "asset_validation"]:
-                continue  # Skip meta-configuration keys
-            
-            # Direct boolean configuration (e.g., timer = true)
-            if isinstance(value, bool) and value:
-                enabled_handlers.append(key)
-        
+        # TEST-22: the old "Method 2" (boolean handler keys, `handlers.timer = true`) is gone —
+        # a shape no TOML carries and IntentHandlerListConfig forbids; the enabled LIST above is
+        # the single source.
+
         # Remove duplicates while preserving order
         seen = set()
         unique_enabled = []
@@ -777,7 +772,7 @@ class IreneBuildAnalyzer:
             unique_enabled = [h for h in unique_enabled if h not in disabled_handlers]
         
         if unique_enabled:
-            namespace = "locveil_voice.intents.handlers"
+            namespace = INTENT_HANDLERS_NAMESPACE
             requirements.enabled_providers[namespace] = unique_enabled
             
             # Add intent handler modules to requirements
@@ -833,8 +828,8 @@ class IreneBuildAnalyzer:
     def _validate_critical_providers(self, requirements: BuildRequirements, result: ValidationResult):
         """Validate that critical providers are available."""
         # Check for audio output if TTS is enabled
-        tts_providers = requirements.enabled_providers.get("locveil_voice.providers.tts", [])
-        audio_providers = requirements.enabled_providers.get("locveil_voice.providers.audio", [])
+        tts_providers = requirements.enabled_providers.get(PROVIDER_NAMESPACES["tts"], [])
+        audio_providers = requirements.enabled_providers.get(PROVIDER_NAMESPACES["audio"], [])
         
         # BUG-21: TTS needs SOME way out — a local audio provider OR the web API's reply
         # channel (ARCH-22: satellite profiles synthesize and stream to the ESP32; they
@@ -845,8 +840,8 @@ class IreneBuildAnalyzer:
                 "(no audio provider and web_api_enabled is false)")
         
         # Check for ASR if microphone input is expected
-        components = requirements.enabled_providers.get("locveil_voice.components", [])
-        asr_providers = requirements.enabled_providers.get("locveil_voice.providers.asr", [])
+        components = requirements.enabled_providers.get(COMPONENTS_NAMESPACE, [])
+        asr_providers = requirements.enabled_providers.get(PROVIDER_NAMESPACES["asr"], [])
         
         if "asr" in components and not asr_providers:
             result.errors.append("ASR component enabled but no ASR providers configured")
@@ -854,7 +849,7 @@ class IreneBuildAnalyzer:
     def _validate_dependency_conflicts(self, requirements: BuildRequirements, result: ValidationResult):
         """Check for conflicting provider dependencies."""
         # Example: Check for conflicting audio systems
-        audio_providers = requirements.enabled_providers.get("locveil_voice.providers.audio", [])
+        audio_providers = requirements.enabled_providers.get(PROVIDER_NAMESPACES["audio"], [])
         
         # ALSA vs PulseAudio conflicts (example)
         has_alsa = any(p in audio_providers for p in ["aplay"])

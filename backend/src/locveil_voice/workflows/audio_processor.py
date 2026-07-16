@@ -21,6 +21,7 @@ from ..utils.vad import VADResult
 from ..utils.loader import dynamic_loader
 from ..utils.audio_helpers import calculate_audio_energy, estimate_optimal_vad_threshold
 from ..core.metrics import get_metrics_collector
+from ..utils.namespaces import PROVIDER_NAMESPACES
 
 _PREROLL_MARGIN_FRAMES = 2  # ARCH-18 PR-5: safety frames added to the detection-latency-derived pre-roll
 
@@ -195,7 +196,7 @@ class VoiceSegmenter:
         all_cfg = vad_config.model_dump() if hasattr(vad_config, "model_dump") else dict(vad_config)
         self._fallback_providers = list(all_cfg.get("fallback_providers") or [])
         candidates = list(dict.fromkeys([default, *self._fallback_providers]))
-        classes = dynamic_loader.discover_providers("locveil_voice.providers.vad", candidates)
+        classes = dynamic_loader.discover_providers(PROVIDER_NAMESPACES["vad"], candidates)
         name = next((c for c in candidates if c in classes), None)
         if name is None:
             raise RuntimeError(
@@ -232,7 +233,7 @@ class VoiceSegmenter:
                 f"fallback remains — fix the provider or declare [vad] fallback_providers")
         logger.error(f"VAD provider '{active}' failed to initialize ({reason}); "
                      f"trying configured fallbacks {remaining}")
-        classes = dynamic_loader.discover_providers("locveil_voice.providers.vad", remaining)
+        classes = dynamic_loader.discover_providers(PROVIDER_NAMESPACES["vad"], remaining)
         for name in remaining:
             if name not in classes:
                 continue

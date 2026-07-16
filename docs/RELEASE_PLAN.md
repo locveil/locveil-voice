@@ -461,6 +461,20 @@ _Discrete functional defects (distinct from QUAL refactors/quality work). Surfac
       for ambiguity) may later avoid asking at all in some of these cases; this task is about the question being
       answerable when it *is* asked.
 
+- [ ] **BUG-43** [ASR][CONFIG][I18N] `[deferred]` — **`[asr] default_language` never arrives — the EN
+      profiles' whisper decode hint has been "ru".** Discovered 2026-07-16 by TEST-22's unknown-key check:
+      `ASRConfig` never declared `default_language`, so the three EN profiles' `[asr] default_language =
+      "en"` ("whisper decodes in this language") is silently DROPPED at parse; `asr_component` reads
+      `config.get("default_language", "ru")` off the section's `model_dump()` — key absent — and always
+      resolves "ru" (`asr_component.py:160-163`; the default feeds transcription when no per-request
+      `language` kwarg arrives, :220/:304). Severity depends on whether the workflow always passes the
+      session language per request — verify first. Fix per QUAL-36 (language policy is CANONICAL at
+      CoreConfig top level): wire the component to the canonical `default_language` (like the asset
+      loader does) rather than re-declaring a per-section twin; then drop the TOML lines + the guard
+      allowlist entry (`test_coherence_guard.py` names this task). Ref:
+      `docs/review/dynamic_loading_hardcodings_review.md` (the failure class; this is a post-review
+      instance found by the guard on its first run).
+
 ### Tests (TEST)
 > **Strategy (decided 2026-06-01): do NOT keep repairing the existing suite.** Most tests were written against
 > pre-refactor code and will be invalidated by the ARCH refactors (ARCH-1..5) and the code reviews (QUAL-8/10/12/14).
@@ -486,13 +500,6 @@ _Trace-driven system testing (design `docs/design/trace_system_testing.md`, TEST
       to german" → `greeting.hello` (0.86, keyword beats verb); bare "pause" → `audio.stop` (1.00 — note the
       RU twin «поставь на паузу» routes `smart_home.playback_pause`; decide the intended EN owner before
       fixing). Consumer half unaffected: `expect` stays canonical, the bridge replays language-blind.
-- [ ] **TEST-22** [TEST][CONFIG] `[release]` — **Coherence guard: code↔config↔entry-points agreement**
-      (ARCH-50 §H; owner ruling: full scope). Hermetic test(s) asserting (a) every hand-maintained
-      component→namespace map / analyzer list ≡ pyproject entry-point groups (after ARCH-57 this is the one
-      canonical map vs pyproject), (b) every declared config field has a runtime reader (AST/grep-based with
-      an explicit tiny allowlist — the check that would have caught the ~30 QUAL-83 fields and the ARCH-50
-      seed), (c) config-master ≡ model schema. Sequenced AFTER the deletion tasks (ARCH-52/54, QUAL-83) so
-      the allowlist starts near-empty. Evidence: `docs/review/dynamic_loading_hardcodings_review.md` §H.
 
 ### Build & CI (BUILD)
 _Real English deployment across all three Docker arches (armv7/aarch64/x86_64) + English eval. Design

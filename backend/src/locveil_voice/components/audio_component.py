@@ -23,6 +23,7 @@ from ..intents.ports import AudioPort  # QUAL-24: domain capability port (applic
 # Import audio provider base class and dynamic loader
 from ..providers.audio import AudioProvider
 from ..utils.loader import dynamic_loader
+from ..utils.namespaces import PROVIDER_NAMESPACES
 
 logger = logging.getLogger(__name__)
 
@@ -147,7 +148,7 @@ class AudioComponent(Component, AudioPlugin, WebAPIPlugin, AudioPort):
         # ARCH-55: no force-adds — what the operator enabled IS the loading set.
         configured_providers = list(enabled_providers)
 
-        self._provider_classes = dynamic_loader.discover_providers("locveil_voice.providers.audio", enabled_providers)
+        self._provider_classes = dynamic_loader.discover_providers(PROVIDER_NAMESPACES["audio"], enabled_providers)
         logger.info(f"Discovered {len(self._provider_classes)} enabled audio providers: {list(self._provider_classes.keys())}")
         
         enabled_count = 0
@@ -175,7 +176,7 @@ class AudioComponent(Component, AudioPlugin, WebAPIPlugin, AudioPort):
                 "unavailable; fix the config or the providers (no implicit console fallback anymore)")
 
         # BUG-36 kind 1 (cannot import → fatal) and kind 2 (imported, unavailable → loud, not fatal).
-        self._require_loadable_providers("locveil_voice.providers.audio", configured_providers, self._provider_classes)
+        self._require_loadable_providers(PROVIDER_NAMESPACES["audio"], configured_providers, self._provider_classes)
         self._note_inactive_providers(configured_providers, self.providers)
 
         # The default may fall back to console only when the operator did not name one explicitly.

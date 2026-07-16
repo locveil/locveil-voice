@@ -22,6 +22,7 @@ from ..utils.audio_data import AudioData
 from ..intents.models import IntentResult
 from .interfaces.input import InputPort
 from ..utils.loader import dynamic_loader
+from ..utils.namespaces import WORKFLOWS_NAMESPACE
 
 logger = logging.getLogger(__name__)
 
@@ -72,7 +73,7 @@ class WorkflowManager:
         """
         if self._available_workflows is None:
             try:
-                self._available_workflows = dynamic_loader.discover_providers("locveil_voice.workflows")
+                self._available_workflows = dynamic_loader.discover_providers(WORKFLOWS_NAMESPACE)
                 
                 if not self._available_workflows:
                     logger.warning("No workflows discovered via entry-points. This may indicate a configuration issue.")

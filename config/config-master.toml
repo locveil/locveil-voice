@@ -530,7 +530,6 @@ conversation = 40                   # General conversation (lowest priority)
 
 # Contextual command performance optimization (Phase 4 - TODO16)
 [intent_system.contextual_commands]
-cache_ttl_seconds = 300             # Cache time-to-live in seconds (5 minutes)
 latency_threshold_ms = 5.0          # Alert threshold for disambiguation latency
 
 # Intent handler configuration
@@ -545,32 +544,22 @@ validate_spacy_patterns = false    # Validate spaCy patterns (disabled for runti
 validate_json_schema = true        # Validate JSON schema compliance
 
 # Specific handler configurations
-[intent_system.handlers.conversation]
+[intent_system.conversation]
 session_timeout = 1800             # Session timeout in seconds (30 minutes)
 max_sessions = 50                  # Maximum concurrent sessions
 max_context_length = 10            # Conversation turns kept in the LLM context window (older dropped; system prompt kept)
 default_conversation_confidence = 0.6  # Default confidence threshold
 
 
-[intent_system.handlers.timer]
+[intent_system.timer]
 min_seconds = 1                    # Minimum timer duration in seconds
 max_seconds = 86400                # Maximum timer duration in seconds (24 hours)
 
-[intent_system.handlers.random_handler]
+[intent_system.random_handler]
 default_max_number = 100           # Default maximum for random numbers
 max_range_size = 1000000           # Maximum allowed range size
 default_dice_sides = 6             # Default number of dice sides
-
-[intent_system.handlers.datetime]
-timezone = ""                      # Default timezone (empty = system timezone)
-date_format = "%Y-%m-%d"           # Default date format
-time_format = "%H:%M:%S"           # Default time format
-
-[intent_system.handlers.greetings]
-personalized = true                # Use personalized greetings
-context_aware = true               # Consider time of day for greetings
-
-[intent_system.handlers.system]
+[intent_system.system]
 allow_shutdown = false             # Allow system shutdown commands
 allow_restart = false              # Allow system restart commands
 info_detail_level = "basic"        # Level of system info to provide (basic/detailed)
@@ -680,7 +669,6 @@ pattern_validation_enabled = true    # Enable SpaCy pattern validation
 # Performance settings
 [nlu_analysis.performance]
 max_concurrent_analyses = 3          # Maximum concurrent analyses
-cache_ttl_seconds = 300              # Cache time-to-live (5 minutes)
 
 [trace]
 enabled = false                      # Save a self-contained trace for every request
@@ -720,39 +708,6 @@ intent_execution_enabled = true    # Enable intent execution stage (requires com
 llm_enabled = true                 # Enable LLM processing stage (requires components.llm = true)
 tts_enabled = true                 # Enable TTS output stage (requires components.tts = true)
 audio_enabled = true               # Enable audio playback stage (requires components.audio = true)
-
-# Audio processing configuration
-buffer_size_ms = 100.0             # Audio buffer size in milliseconds
-sample_rate = 16000                # Audio sample rate for processing
-channels = 1                       # Number of audio channels for processing
-validate_audio_compatibility = true # Validate cross-component audio compatibility at startup
-
-# NOTE: Audio flow with automatic resampling:
-# - Microphone: Hardware-dependent sample rate (e.g., 44100 Hz)
-# - Processing: Components use optimized rates (ASR=16000 Hz, Voice Trigger=16000 Hz)  
-# - Resampling: Automatic conversion between microphone input and processing components
-# - TTS/Audio: Output-only components can use different rates as needed
-
-# Request context defaults
-default_source = "voice"           # Default request source
-default_language = "ru"            # Default processing language
-session_timeout_minutes = 30       # Session timeout for context
-
-# Audio compatibility and validation
-[workflows.unified_voice_assistant.audio_validation]
-enabled = true                     # Enable startup audio compatibility validation
-fatal_on_conflicts = true         # Fatal error when configuration contradicts provider requirements  
-auto_resolve_defaults = true      # Use provider defaults when configuration is unspecified
-log_resolution_details = true     # Log audio configuration resolution process
-
-# Global resampling defaults (can be overridden per component)
-[workflows.unified_voice_assistant.resampling]
-default_quality = "medium"        # Default resampling quality: "fast", "medium", "high", "best"
-cache_conversions = true          # Cache resampling conversions for performance
-
-# ============================================================
-# ASSET MANAGEMENT - Comprehensive Configuration
-# ============================================================
 [assets]
 # Directory management
 auto_create_dirs = true            # Automatically create asset directories

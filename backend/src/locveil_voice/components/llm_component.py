@@ -21,6 +21,7 @@ from ..intents.ports import LLMPort  # QUAL-24: domain capability port (applicat
 # Import LLM provider base class and dynamic loader
 from ..providers.llm import LLMProvider, ConsoleLLMProvider
 from ..utils.loader import dynamic_loader
+from ..utils.namespaces import PROVIDER_NAMESPACES
 
 logger = logging.getLogger(__name__)
 
@@ -129,7 +130,7 @@ class LLMComponent(Component, LLMPlugin, WebAPIPlugin, LLMPort):
                                 if (provider_config.get("enabled", False) if isinstance(provider_config, dict) 
                                     else getattr(provider_config, "enabled", False))]
             
-            self._provider_classes = dynamic_loader.discover_providers("locveil_voice.providers.llm", enabled_providers)
+            self._provider_classes = dynamic_loader.discover_providers(PROVIDER_NAMESPACES["llm"], enabled_providers)
             logger.info(f"Discovered {len(self._provider_classes)} enabled LLM providers: {list(self._provider_classes.keys())}")
             
             for provider_name, provider_class in self._provider_classes.items():
@@ -168,7 +169,7 @@ class LLMComponent(Component, LLMPlugin, WebAPIPlugin, LLMPort):
                 self.fallback_providers = list(getattr(config, "fallback_providers", []) or [])
             
             # BUG-36 kind 1 — a configured provider that cannot import is a broken build: fatal.
-            self._require_loadable_providers("locveil_voice.providers.llm", enabled_providers, self._provider_classes)
+            self._require_loadable_providers(PROVIDER_NAMESPACES["llm"], enabled_providers, self._provider_classes)
             # BUG-36 kind 2 — imported but unavailable (no DEEPSEEK_API_KEY, no network). NOT fatal:
             # the profiles ship `fallback_providers = ["console"]` and the install guide promises the
             # assistant still runs fully offline. Logged at ERROR and reported by /health.

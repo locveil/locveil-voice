@@ -20,6 +20,7 @@ from ..intents.context_models import UnifiedConversationContext
 from ..utils.loader import dynamic_loader
 from ..utils.text_processing import all_num_to_text_async
 from ..providers.text_processor.base import TextProcessingProvider
+from ..utils.namespaces import PROVIDER_NAMESPACES
 
 logger = logging.getLogger(__name__)
 
@@ -74,7 +75,7 @@ class TextProcessorComponent(Component, TextProcessorPlugin, WebAPIPlugin):
                 providers_config.get("unified_text_processor", {}).get("enabled", True) is not False:
             enabled_providers.append("unified_text_processor")
 
-        self._provider_classes = dynamic_loader.discover_providers("locveil_voice.providers.text_processor", enabled_providers)
+        self._provider_classes = dynamic_loader.discover_providers(PROVIDER_NAMESPACES["text_processor"], enabled_providers)
         logger.info(f"Discovered {len(self._provider_classes)} enabled text processing providers: {list(self._provider_classes.keys())}")
 
         # Initialize enabled providers
@@ -100,7 +101,7 @@ class TextProcessorComponent(Component, TextProcessorPlugin, WebAPIPlugin):
                     logger.error(f"Failed to load text processing provider {provider_name}: {e}")
         
         # BUG-36: kind 1 cannot import → fatal; kind 2 unavailable → loud, not fatal.
-        self._require_loadable_providers("locveil_voice.providers.text_processor", configured_providers, self._provider_classes)
+        self._require_loadable_providers(PROVIDER_NAMESPACES["text_processor"], configured_providers, self._provider_classes)
         self._note_inactive_providers(configured_providers, self.providers)
 
         # Set default provider if not set
@@ -380,7 +381,7 @@ class TextProcessorComponent(Component, TextProcessorPlugin, WebAPIPlugin):
                                            if provider_config.get("enabled", False)]
 
                         # Discover and initialize providers with new config
-                        self._provider_classes = dynamic_loader.discover_providers("locveil_voice.providers.text_processor", enabled_providers)
+                        self._provider_classes = dynamic_loader.discover_providers(PROVIDER_NAMESPACES["text_processor"], enabled_providers)
 
                         for provider_name, provider_class in self._provider_classes.items():
                             provider_config = providers_config.get(provider_name, {})
