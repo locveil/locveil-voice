@@ -13093,6 +13093,14 @@
             "default": "energy",
             "widget": "provider_select"
           },
+          "fallback_providers": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Fallback Providers",
+            "description": "Providers to fall back to (in order) if the default fails to load or initialize. ARCH-55: resilience is DECLARED here (e.g. [\"energy\"]) — the runtime no longer falls back to a hardcoded engine on its own."
+          },
           "max_segment_duration_s": {
             "type": "integer",
             "maximum": 60.0,

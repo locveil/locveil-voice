@@ -581,6 +581,7 @@ info_detail_level = "basic"        # Level of system info to provide (basic/deta
 [vad]
 enabled = true                     # Enable VAD processing to solve 23ms chunk problem
 default_provider = "energy"        # VAD provider: "energy" (built-in) | "silero" (sherpa-onnx, 64-bit) | "microvad" (pymicro-vad, 64-bit)
+fallback_providers = []           # Declared resilience (ARCH-55): providers tried in order if the default fails, e.g. ["energy"]. Empty = the default must come up or startup fails.
 # Component-level (segmentation / pipeline) — engine knobs live under [vad.providers.*] below.
 max_segment_duration_s = 8         # Maximum voice segment duration in seconds (1-60)
 buffer_size_frames = 300           # Maximum frames to buffer in voice segments (>=10)

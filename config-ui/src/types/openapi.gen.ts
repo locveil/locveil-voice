@@ -8570,6 +8570,11 @@ export interface components {
              */
             default_provider: string;
             /**
+             * Fallback Providers
+             * @description Providers to fall back to (in order) if the default fails to load or initialize. ARCH-55: resilience is DECLARED here (e.g. ["energy"]) — the runtime no longer falls back to a hardcoded engine on its own.
+             */
+            fallback_providers?: string[];
+            /**
              * Max Segment Duration S
              * @description Maximum voice segment duration in seconds
              * @default 10

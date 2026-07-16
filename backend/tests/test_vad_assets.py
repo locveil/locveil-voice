@@ -127,7 +127,7 @@ async def test_provider_do_initialize_downloads_via_asset_manager(monkeypatch):
                     "url_override": "https://mirror/y.onnx"}
 
 
-async def test_segmenter_falls_back_to_energy_when_silero_init_fails(monkeypatch):
+async def test_segmenter_falls_back_only_when_declared_when_silero_init_fails(monkeypatch):
     async def boom(self):
         raise RuntimeError("download failed")
     async def available(self):
@@ -135,11 +135,15 @@ async def test_segmenter_falls_back_to_energy_when_silero_init_fails(monkeypatch
     monkeypatch.setattr(SileroVADProvider, "_do_initialize", boom)
     monkeypatch.setattr(SileroVADProvider, "is_available", available)
 
+    # ARCH-55: no declared fallback -> init failure is fatal, loudly
     segmenter = VoiceSegmenter(VADConfig(default_provider="silero"))
     assert segmenter.vad_engine.get_provider_name() == "silero"
+    with pytest.raises(RuntimeError, match="no configured fallback"):
+        await segmenter.initialize()
 
+    # declared resilience (the standalone profiles do exactly this) -> energy takes over
+    segmenter = VoiceSegmenter(VADConfig(default_provider="silero", fallback_providers=["energy"]))
     await segmenter.initialize()
-
     assert segmenter.vad_engine.get_provider_name() == "energy"
 
 

@@ -721,6 +721,7 @@ export interface IntentHandlerListConfig {
 export interface VADConfig {
   enabled: boolean;
   default_provider: string;
+  fallback_providers: string[];
   max_segment_duration_s: number;
   buffer_size_frames: number;
   normalize_for_asr: boolean;

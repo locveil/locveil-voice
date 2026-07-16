@@ -83,8 +83,9 @@ class TTSComponent(Component, TTSPlugin, WebAPIPlugin, TTSPort):
         super().__init__()
         self.providers: Dict[str, TTSProvider] = {}
         self._loaded_providers: Dict[str, TTSProvider] = {}  # Cache for lazy-loaded providers
-        self.default_provider: Optional[str] = "console"
-        self.fallback_providers: List[str] = ["console"]
+        # ARCH-55: config is the only source of the default/fallback chain — no name literals
+        self.default_provider: Optional[str] = None
+        self.fallback_providers: List[str] = []
         self.core = None
         self._provider_configs: Dict[str, Dict[str, Any]] = {}  # Cache provider configs
         self._lazy_loading_enabled: bool = True  # Feature flag for lazy loading
@@ -124,8 +125,8 @@ class TTSComponent(Component, TTSPlugin, WebAPIPlugin, TTSPort):
         # Use the converted config dict
         config = config_dict
             
-        self.default_provider = config.get("default_provider", "console")
-        self.fallback_providers = config.get("fallback_providers", ["console"])
+        self.default_provider = config.get("default_provider")
+        self.fallback_providers = config.get("fallback_providers", [])
         self._lazy_loading_enabled = config.get("lazy_loading", True)
         concurrent_init = config.get("concurrent_initialization", True)
         
@@ -135,13 +136,8 @@ class TTSComponent(Component, TTSPlugin, WebAPIPlugin, TTSPort):
         # Discover only enabled providers from entry-points (configuration-driven filtering)
         enabled_providers = [name for name, provider_config in self._provider_configs.items()
                             if provider_config.get("enabled", False)]
-        # What the operator EXPLICITLY enabled — the console fallback appended below is implicit, so
-        # its absence must never abort startup (BUG-36 checks below use this list, not the appended one).
+        # ARCH-55: no force-adds — what the operator enabled IS the loading set.
         configured_providers = list(enabled_providers)
-
-        # Always include console as fallback if not already included
-        if "console" not in enabled_providers and self._provider_configs.get("console", {}).get("enabled", True):
-            enabled_providers.append("console")
 
         self._provider_classes = dynamic_loader.discover_providers("locveil_voice.providers.tts", enabled_providers)
         logger.info(f"Discovered {len(self._provider_classes)} enabled TTS providers: {list(self._provider_classes.keys())}")
@@ -160,9 +156,11 @@ class TTSComponent(Component, TTSPlugin, WebAPIPlugin, TTSPort):
             else:
                 await self._initialize_providers_sequential()
         
-        # Ensure we have at least one provider
+        # ARCH-55: nothing configured survived -> fail loud (BUG-36 posture), no silent console
         if not self.providers and not self._lazy_loading_enabled:
-            await self._load_fallback_provider()
+            raise RuntimeError(
+                "No TTS provider initialized — every enabled [tts.providers.*] failed; "
+                "fix the config or the providers (no implicit console fallback anymore)")
 
         if not self._lazy_loading_enabled:
             # Eager path: report anything that imported but could not initialize (kind 2 — loud, not fatal).
@@ -182,16 +180,13 @@ class TTSComponent(Component, TTSPlugin, WebAPIPlugin, TTSPort):
     
     async def _initialize_essential_providers(self) -> None:
         """Initialize only essential providers for lazy loading"""
-        essential_providers = ["console"]  # Always load console as fallback
-        
-        # Add default provider if it's different from console
-        if self.default_provider and self.default_provider not in essential_providers:
-            essential_providers.append(self.default_provider)
-        
-        for provider_name in essential_providers:
+        # ARCH-55: essential = the configured default + fallback chain, nothing implicit
+        essential_providers = [p for p in [self.default_provider, *self.fallback_providers] if p]
+
+        for provider_name in dict.fromkeys(essential_providers):
             if provider_name in self._provider_classes:
                 provider_config = self._provider_configs.get(provider_name, {})
-                if provider_config.get("enabled", provider_name == "console"):  # Console enabled by default
+                if provider_config.get("enabled", False):
                     await self._load_single_provider(provider_name, provider_config)
     
     async def _initialize_providers_concurrent(self) -> None:
@@ -301,20 +296,6 @@ class TTSComponent(Component, TTSPlugin, WebAPIPlugin, TTSPort):
         except Exception as e:
             logger.error(f"Failed to lazy-load TTS provider {provider_name}: {e}")
             return None
-    
-    async def _load_fallback_provider(self) -> None:
-        """Load fallback console provider if no providers are available"""
-        try:
-            # Use entry-points discovery for fallback provider
-            console_class = dynamic_loader.get_provider_class("locveil_voice.providers.tts", "console")
-            if console_class:
-                console_provider = console_class({"enabled": True, "color_output": True})
-                self.providers["console"] = console_provider
-                logger.info("Fallback: Loaded console TTS provider via entry-points")
-            else:
-                logger.error("Console TTS provider not found in entry-points")
-        except Exception as e:
-            logger.error(f"Failed to load fallback console provider: {e}")
     
     async def _conform_to_sink(self, audio_data, rate, channels):
         """Conform synthesized audio DOWN to the streaming caller's sink (its requested rate/channels, CD
@@ -773,7 +754,7 @@ class TTSComponent(Component, TTSPlugin, WebAPIPlugin, TTSPort):
                     logger.error(f"TTS API error: {e}")
                     return TTSResponse(
                         success=False,
-                        provider=request.provider or self.default_provider or "console",
+                        provider=request.provider or self.default_provider,
                         text=request.text,
                         error=str(e)
                     )
@@ -792,7 +773,7 @@ class TTSComponent(Component, TTSPlugin, WebAPIPlugin, TTSPort):
                 return TTSProvidersResponse(
                     success=True,
                     providers=result,
-                    default=self.default_provider or "console"
+                    default=self.default_provider
                 )
             
             @router.post("/configure", response_model=TTSConfigureResponse)

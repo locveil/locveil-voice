@@ -20,6 +20,21 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-16 — ARCH-55 DONE: what the config says is what loads — resilience is declared, not
+  conjured.** The behavioral leg. Six components stopped second-guessing the operator: tts and audio
+  no longer force console into the enabled set, silently conjure it when everything else dies, or
+  seed their defaults with it; voice_trigger no longer materializes an openwakeword engine with a
+  literal `hey_jarvis` wake word (zero usable engines is now a loud inactive state — and wake engines
+  formally have no fallback chain, they're alternatives); asr/llm lost their `"vosk"`/`"openai"` seed
+  literals; the LLM degrade chain is exactly config's `fallback_providers` (the deployment TOMLs
+  already declared console there, so production behavior is unchanged — the difference is that an
+  operator can now actually turn the floor OFF). VAD got the ruling's mechanism in full:
+  `fallback_providers` on `VADConfig`, walked on load-or-init failure, fatal when exhausted — and the
+  standalone profiles declare `["energy"]` explicitly, which converts yesterday's ARCH-54 discovery
+  (silero silently degrading to energy for lack of baked deps) from an invisible substitution into
+  visible, chosen config. Three tests that asserted the old implicit fallbacks now assert the new
+  contract. Suite 1411 green, all profiles valid, armv7 gate green, config-ui green.
+
 - **2026-07-16 — ARCH-56 DONE: the inputs entry-point group is real now; the runners group is gone.**
   The `locveil_voice.inputs` group had been registered since inception and read by nothing —
   InputManager hardcoded three imports and three if-branches. It now discovers adapters from the

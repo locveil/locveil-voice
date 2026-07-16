@@ -81,8 +81,9 @@ class AudioComponent(Component, AudioPlugin, WebAPIPlugin, AudioPort):
     def __init__(self):
         super().__init__()
         self.providers: Dict[str, AudioProvider] = {}
-        self.default_provider: Optional[str] = "console"
-        self.fallback_providers: List[str] = ["console"]
+        # ARCH-55: config is the only source of the default/fallback chain — no name literals
+        self.default_provider: Optional[str] = None
+        self.fallback_providers: List[str] = []
         
         # Dynamic provider discovery from entry-points (replaces hardcoded classes)
         self._provider_classes: Dict[str, type] = {}
@@ -143,14 +144,9 @@ class AudioComponent(Component, AudioPlugin, WebAPIPlugin, AudioPort):
         # Discover only enabled providers from entry-points (configuration-driven filtering)
         enabled_providers = [name for name, provider_config in providers_config.items()
                             if provider_config.get("enabled", False)]
-        # Explicit operator intent — the console fallback appended next is implicit and must never
-        # make startup fatal (BUG-36 check below uses this list).
+        # ARCH-55: no force-adds — what the operator enabled IS the loading set.
         configured_providers = list(enabled_providers)
 
-        # Always include console as fallback if not already included
-        if "console" not in enabled_providers and providers_config.get("console", {}).get("enabled", True):
-            enabled_providers.append("console")
-            
         self._provider_classes = dynamic_loader.discover_providers("locveil_voice.providers.audio", enabled_providers)
         logger.info(f"Discovered {len(self._provider_classes)} enabled audio providers: {list(self._provider_classes.keys())}")
         
@@ -172,25 +168,12 @@ class AudioComponent(Component, AudioPlugin, WebAPIPlugin, AudioPort):
                 except Exception as e:
                     logger.warning(f"Failed to load audio provider {provider_name}: {e}")
         
-        # Ensure we have at least one provider
+        # ARCH-55: nothing configured survived -> fail loud, no silent console conjuring
         if not self.providers:
-            logger.warning("No audio providers available, creating console provider as fallback")
-            try:
-                # Use entry-points discovery for fallback provider
-                console_class = dynamic_loader.get_provider_class("locveil_voice.providers.audio", "console")
-                if console_class:
-                    console_provider = console_class({"enabled": True, "color_output": True})
-                    self.providers["console"] = console_provider
-                    self.default_provider = "console"
-                    self.fallback_providers = ["console"]
-                    enabled_count = 1
-                else:
-                    logger.error("Console audio provider not found in entry-points")
-                    raise RuntimeError("No audio providers available")
-            except Exception as e:
-                logger.error(f"Failed to create fallback console audio provider: {e}")
-                raise RuntimeError("No audio providers available")
-        
+            raise RuntimeError(
+                "No audio provider initialized — every enabled [audio.providers.*] failed or was "
+                "unavailable; fix the config or the providers (no implicit console fallback anymore)")
+
         # BUG-36 kind 1 (cannot import → fatal) and kind 2 (imported, unavailable → loud, not fatal).
         self._require_loadable_providers("locveil_voice.providers.audio", configured_providers, self._provider_classes)
         self._note_inactive_providers(configured_providers, self.providers)
@@ -507,7 +490,7 @@ class AudioComponent(Component, AudioPlugin, WebAPIPlugin, AudioPort):
             return AudioProvidersResponse(
                 success=True,
                 providers=result,
-                default=self.default_provider or "console",
+                default=self.default_provider,
                 fallbacks=self.fallback_providers
             )
         

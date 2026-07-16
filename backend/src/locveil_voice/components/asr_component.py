@@ -76,7 +76,7 @@ class ASRComponent(MetricsPushMixin, Component, ASRPlugin, WebAPIPlugin, ASRPort
     def __init__(self):
         super().__init__()
         self.providers: Dict[str, ASRProvider] = {}  # Proper ABC type hint
-        self.default_provider = "vosk"
+        self.default_provider: Optional[str] = None  # ARCH-55: config-only, no name literal
         self.default_language = "ru"
         self.core = None  # Store core reference for LLM integration
         
@@ -156,10 +156,10 @@ class ASRComponent(MetricsPushMixin, Component, ASRPlugin, WebAPIPlugin, ASRPort
             
             # Set defaults from config
             if isinstance(config, dict):
-                self.default_provider = config.get("default_provider", "vosk")
+                self.default_provider = config.get("default_provider")
                 self.default_language = config.get("default_language", "ru")
             else:
-                self.default_provider = getattr(config, "default_provider", "vosk")
+                self.default_provider = getattr(config, "default_provider", None)
                 self.default_language = getattr(config, "default_language", "ru")
 
             # BUG-36 kind 1 — a configured engine that cannot even import is a broken build: fatal.

@@ -79,7 +79,7 @@ class LLMComponent(Component, LLMPlugin, WebAPIPlugin, LLMPort):
     def __init__(self):
         super().__init__()
         self.providers: Dict[str, LLMProvider] = {}  # Proper ABC type hint
-        self.default_provider = "openai"
+        self.default_provider: Optional[str] = None  # ARCH-55: config-only, no name literal
         self.default_task = "improve"
         self.fallback_providers: List[str] = []  # QUAL-15: real runtime fallback chain
         self._default_language = "ru"  # QUAL-36: canonical default, set from CoreConfig in initialize()
@@ -159,11 +159,11 @@ class LLMComponent(Component, LLMPlugin, WebAPIPlugin, LLMPort):
             
             # Set defaults from config
             if isinstance(config, dict):
-                self.default_provider = config.get("default_provider", "openai")
+                self.default_provider = config.get("default_provider")
                 self.default_task = config.get("default_task", "improve")
                 self.fallback_providers = list(config.get("fallback_providers", []) or [])
             else:
-                self.default_provider = getattr(config, "default_provider", "openai")
+                self.default_provider = getattr(config, "default_provider", None)
                 self.default_task = getattr(config, "default_task", "improve")
                 self.fallback_providers = list(getattr(config, "fallback_providers", []) or [])
             
@@ -250,9 +250,10 @@ class LLMComponent(Component, LLMPlugin, WebAPIPlugin, LLMPort):
                     messages[lang] = msg
             if messages:
                 self._unavailable_messages = messages
-                console = self.providers.get("console")
-                if isinstance(console, ConsoleLLMProvider):
-                    console._responses.update(messages)  # inject into the floor provider
+                # ARCH-55: inject by TYPE, not by name — reaches the floor provider however named
+                for provider in self.providers.values():
+                    if isinstance(provider, ConsoleLLMProvider):
+                        provider._responses.update(messages)
         except Exception as e:
             logger.debug(f"Could not load LLM localization (using last-resort): {e}")
 
@@ -263,16 +264,16 @@ class LLMComponent(Component, LLMPlugin, WebAPIPlugin, LLMPort):
 
     def _provider_chain(self, preferred: Optional[str] = None) -> List[str]:
         """QUAL-15: ordered LOADED provider names to try — preferred/default first, then the configured
-        `fallback_providers`, deduped, filtered to what's actually loaded. The console floor (always
-        loaded when enabled) is appended last so every call has a terminal, non-crashing fallback."""
+        `fallback_providers`, deduped, filtered to what's actually loaded (ARCH-55: nothing implicit)."""
+        # ARCH-55: the chain is EXACTLY what config declares (default + fallback_providers) —
+        # the old implicit console append is gone; an operator wanting the console floor lists
+        # it in fallback_providers (the deployment TOMLs already do).
         order = [preferred or self.default_provider] + list(self.fallback_providers)
         seen, chain = set(), []
         for name in order:
             if name and name in self.providers and name not in seen:
                 seen.add(name)
                 chain.append(name)
-        if "console" in self.providers and "console" not in seen:
-            chain.append("console")
         return chain
 
     async def _chat_with_fallback(self, messages: List[Dict[str, str]], preferred: Optional[str],
@@ -597,7 +598,7 @@ class LLMComponent(Component, LLMPlugin, WebAPIPlugin, LLMPort):
             return LLMProvidersResponse(
                 success=True,
                 providers=result,
-                default=self.default_provider or "openai"
+                default=self.default_provider
             )
         
         @router.post("/configure", response_model=LLMConfigureResponse)

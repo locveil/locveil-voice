@@ -185,35 +185,37 @@ class VoiceSegmenter:
     def _build_vad_provider(self, vad_config: VADConfig):
         """Discover + instantiate the configured VAD provider (ARCH-18 PR-2).
 
-        Selection is `[vad] default_provider` resolved through the `locveil_voice.providers.vad` entry-points,
-        replacing the old engine if-else. Falls back to `energy` (always available) if the named provider
-        isn't registered. The provider config is the (flat) VAD config dict; the chosen provider reads its
-        own fields.
+        Selection is `[vad] default_provider` resolved through the `locveil_voice.providers.vad`
+        entry-points. ARCH-55: resilience is DECLARED — if the default isn't registered, the
+        configured `fallback_providers` are tried in order; nothing configured resolves → fatal
+        (the runtime no longer conjures a hardcoded engine). The provider config is the (flat)
+        VAD config dict; the chosen provider reads its own fields.
         """
-        default = getattr(vad_config, "default_provider", None) or "energy"
+        default = vad_config.default_provider
         all_cfg = vad_config.model_dump() if hasattr(vad_config, "model_dump") else dict(vad_config)
-        classes = dynamic_loader.discover_providers("locveil_voice.providers.vad", [default, "energy"])
-        provider_cls = classes.get(default) or classes.get("energy")
-        if provider_cls is None:
+        self._fallback_providers = list(all_cfg.get("fallback_providers") or [])
+        candidates = list(dict.fromkeys([default, *self._fallback_providers]))
+        classes = dynamic_loader.discover_providers("locveil_voice.providers.vad", candidates)
+        name = next((c for c in candidates if c in classes), None)
+        if name is None:
             raise RuntimeError(
-                f"No VAD provider '{default}' registered and no 'energy' fallback available"
-            )
-        name = default if default in classes else "energy"
-        if default not in classes:
-            logger.warning(f"VAD provider '{default}' not found; falling back to 'energy'")
+                f"No configured VAD provider is registered (tried {candidates}) — fix "
+                f"[vad] default_provider / fallback_providers")
+        if name != default:
+            logger.warning(f"VAD provider '{default}' not found; using configured fallback '{name}'")
         provider_cfg = (all_cfg.get("providers") or {}).get(name, {})
         self._provider_cfg = provider_cfg  # the active provider's block (energy params for calibration)
-        self._all_provider_cfg = all_cfg.get("providers") or {}  # kept for the energy fallback (ASSET-4)
-        provider = provider_cls(provider_cfg)
+        self._all_provider_cfg = all_cfg.get("providers") or {}  # kept for the configured fallback (ASSET-4)
+        provider = classes[name](provider_cfg)
         logger.info(f"VAD provider: {provider.get_provider_name()}")
         return provider
 
     async def initialize(self) -> None:
         """Async provider warmup (ASSET-4). Providers that need assets fetch them HERE — through the
         AssetManager (lock, temp+rename, partial-download healing) — never on the per-frame hot path.
-        If the configured provider can't come up (model download failed, optional dep missing), fall
-        back to `energy` (always available, no assets) so voice detection keeps working instead of
-        silently reporting silence every frame."""
+        ARCH-55: if the active provider can't come up (model download failed, optional dep missing),
+        the CONFIGURED `[vad] fallback_providers` are tried in order; nothing declared left → fatal,
+        loudly — never a silent hardcoded substitute."""
         provider = self.vad_engine
         try:
             if await provider.is_available():
@@ -222,16 +224,31 @@ class VoiceSegmenter:
             reason = "provider reports unavailable (missing optional dependency?)"
         except Exception as e:
             reason = str(e)
-        if provider.get_provider_name() == "energy":
-            raise RuntimeError(f"energy VAD failed to initialize: {reason}")
-        logger.error(
-            f"VAD provider '{provider.get_provider_name()}' failed to initialize ({reason}); "
-            f"falling back to 'energy'"
-        )
-        classes = dynamic_loader.discover_providers("locveil_voice.providers.vad", ["energy"])
-        self._provider_cfg = self._all_provider_cfg.get("energy", {})
-        self.vad_engine = classes["energy"](self._provider_cfg)
-        await self.vad_engine.initialize()
+        active = provider.get_provider_name()
+        remaining = [n for n in self._fallback_providers if n != active]
+        if not remaining:
+            raise RuntimeError(
+                f"VAD provider '{active}' failed to initialize ({reason}) and no configured "
+                f"fallback remains — fix the provider or declare [vad] fallback_providers")
+        logger.error(f"VAD provider '{active}' failed to initialize ({reason}); "
+                     f"trying configured fallbacks {remaining}")
+        classes = dynamic_loader.discover_providers("locveil_voice.providers.vad", remaining)
+        for name in remaining:
+            if name not in classes:
+                continue
+            self._provider_cfg = self._all_provider_cfg.get(name, {})
+            candidate = classes[name](self._provider_cfg)
+            try:
+                if await candidate.is_available():
+                    await candidate.initialize()
+                    self.vad_engine = candidate
+                    logger.info(f"VAD provider (fallback): {name}")
+                    return
+            except Exception as e:
+                logger.error(f"VAD fallback '{name}' failed to initialize: {e}")
+        raise RuntimeError(
+            f"VAD provider '{active}' failed ({reason}) and every configured fallback "
+            f"({remaining}) failed too")
 
     def set_voice_segment_callback(self, callback: Callable[[VoiceSegment], None]):
         """

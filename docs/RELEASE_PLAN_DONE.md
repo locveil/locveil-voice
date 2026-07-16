@@ -148,6 +148,32 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       import contracts 11/11. docs: guides/audio, guides/voice-trigger, guides/howto-new-model — TOML
       examples showing the retired per-section `enabled = true` now show the `[components]` block instead;
       guides/satellite + guides/vad untouched (their `enabled` fields live on).
+- [x] **ARCH-55** [ARCH][QUAL] `[release]` — **✓ DONE 2026-07-16. Provider loading honors config
+      strictly — no force-adds, no name literals** (ARCH-50 §D; strict-config ruling). **tts/audio:**
+      init defaults + config-read literals → config-only (`None`/`[]`); console force-add into the
+      enabled set removed (what the operator enabled IS the loading set); the last-resort console
+      conjuring (`_load_fallback_provider` / the inline audio block) deleted — zero surviving providers
+      now raises with a fix-the-config message; lazy "essential" set = configured default + fallback
+      chain (was `["console"]` + console-enabled-by-default); request-time/schema `or "console"`
+      dropped (BUG-36 guarantees a loaded default). **voice_trigger:** openwakeword init defaults +
+      force-add + the conjured fallback with the literal `hey_jarvis` wake-word deleted (decision point
+      resolved: NO `fallback_providers` field — wake engines are alternatives, not a cascade, per
+      guides/voice-trigger; zero engines → loud error, component stays inactive, BUG-36 reports).
+      **asr/llm:** `"vosk"`/`"openai"` literals → config-only; the LLM chain is EXACTLY config's
+      default+fallbacks — the implicit terminal-console append removed (deployment TOMLs already
+      declare console in `fallback_providers`, verified); console localized-message injection now keys
+      on `isinstance(ConsoleLLMProvider)`, not the name. **vad:** `VADConfig` gains
+      `fallback_providers` (default `[]`) — the ruling's "resilience is DECLARED" mechanism; both
+      energy-literal fallback paths in `audio_processor` (unregistered default + init-failure) now walk
+      the CONFIGURED list and raise when nothing declared remains; the standalone profiles (silero
+      default) declare `["energy"]` explicitly; config-master documents the field
+      (master-completeness gate green). Three tests asserting the old implicit behavior rewritten to
+      the new contract (fatal-without-declaration + declared-fallback-works). Residual name strings
+      audited: only pip package names, Russian speech-alias maps, telemetry keys — none drive loading.
+      Verified: full suite 1411 passed / 7 skipped, `--validate-all-profiles` valid, armv7l gate green,
+      config-validator valid, contracts 11/11, openapi re-dumped + config-ui types updated
+      (check+build green). docs: guides/vad — silero prose now teaches declared fallback +
+      `fallback_providers` table row; guides/audio already documented the declared form.
 - [x] **ARCH-56** [ARCH] `[release]` — **✓ DONE 2026-07-16. InputManager consumes the
       `locveil_voice.inputs` entry-points; the decorative `runners` group is deleted** (ARCH-50
       F-F1/F-F2; owner chose adopt-over-delete for inputs). `_discover_input_sources` is a generic

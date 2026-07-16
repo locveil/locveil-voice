@@ -191,6 +191,7 @@ wake_words = [
 [vad]
 enabled = true
 default_provider = "silero"
+fallback_providers = ["energy"]    # declared resilience (ARCH-55): silero needs onnx assets; energy is dependency-free
 max_segment_duration_s = 8
 buffer_size_frames = 300
 normalize_for_asr = true

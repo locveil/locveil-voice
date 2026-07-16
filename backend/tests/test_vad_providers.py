@@ -38,7 +38,10 @@ def test_segmenter_builds_energy_by_default():
     assert seg.vad_engine.get_provider_name() == "energy"
 
 
-def test_segmenter_falls_back_to_energy_on_unknown_provider():
-    # ARCH-18: an unknown default_provider is config-valid (no enum validator) and resolves to energy.
-    seg = VoiceSegmenter(VADConfig(default_provider="does_not_exist"))
+def test_segmenter_unknown_provider_needs_declared_fallback():
+    # ARCH-55: resilience is DECLARED — an unknown default with no fallback_providers is fatal;
+    # with ["energy"] declared it resolves to energy.
+    with pytest.raises(RuntimeError, match="No configured VAD provider"):
+        VoiceSegmenter(VADConfig(default_provider="does_not_exist"))
+    seg = VoiceSegmenter(VADConfig(default_provider="does_not_exist", fallback_providers=["energy"]))
     assert seg.vad_engine.get_provider_name() == "energy"

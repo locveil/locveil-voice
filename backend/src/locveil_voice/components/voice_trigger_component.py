@@ -39,8 +39,10 @@ class VoiceTriggerComponent(MetricsPushMixin, Component, VoiceTriggerPlugin, Web
         
         # Provider management
         self.providers: Dict[str, VoiceTriggerProvider] = {}
-        self.default_provider = "openwakeword"
-        self.fallback_providers = ["openwakeword"]
+        # ARCH-55: config names the default; wake engines are alternatives, not a cascade
+        # (VoiceTriggerConfig has no fallback_providers field — the chain stays empty).
+        self.default_provider: Optional[str] = None
+        self.fallback_providers: List[str] = []
         
         # Dynamic provider discovery from entry-points (replaces hardcoded classes)
         self._provider_classes: Dict[str, type] = {}
@@ -154,14 +156,9 @@ class VoiceTriggerComponent(MetricsPushMixin, Component, VoiceTriggerPlugin, Web
         # Discover only enabled providers from entry-points (configuration-driven filtering)
         enabled_providers = [name for name, provider_config in providers_config.items()
                             if provider_config.get("enabled", False)]
-        # Explicit operator intent. The openwakeword fallback appended next is implicit and must never
-        # abort startup: it needs numpy + onnxruntime, which 32-bit images do not install (BUG-36).
+        # ARCH-55: no force-adds — what the operator enabled IS the loading set.
         configured_providers = list(enabled_providers)
 
-        # Always include openwakeword as fallback if not already included
-        if "openwakeword" not in enabled_providers and providers_config.get("openwakeword", {}).get("enabled", True):
-            enabled_providers.append("openwakeword")
-            
         self._provider_classes = dynamic_loader.discover_providers("locveil_voice.providers.voice_trigger", enabled_providers)
         logger.info(f"Discovered {len(self._provider_classes)} enabled voice trigger providers: {list(self._provider_classes.keys())}")
         
@@ -191,34 +188,14 @@ class VoiceTriggerComponent(MetricsPushMixin, Component, VoiceTriggerPlugin, Web
                 except Exception as e:
                     logger.warning(f"Failed to load voice trigger provider {provider_name}: {e}")
         
-        # Ensure we have at least one provider
+        # ARCH-55: nothing configured survived -> stay inactive, loudly (no conjured
+        # openwakeword with a literal hey_jarvis wake-word anymore). Not fatal: a config
+        # with voice_trigger enabled but zero usable engines is reported by BUG-36 below,
+        # and `self.active` stays False.
         if not self.providers:
-            logger.warning("No voice trigger providers available, trying to create OpenWakeWord as fallback")
-            try:
-                fallback_config = {
-                    "enabled": True,
-                    # component-level override if set, else a sane built-in default
-                    "wake_words": self.words if self.words else [{"name": "hey_jarvis", "model": "hey_jarvis"}],
-                    "threshold": self.threshold,
-                    "sample_rate": 16000,
-                    "channels": 1,
-                    "inference_framework": "onnx"
-                }
-                # Use entry-points discovery for fallback provider
-                openwakeword_class = dynamic_loader.get_provider_class("locveil_voice.providers.voice_trigger", "openwakeword")
-                if openwakeword_class:
-                    openwakeword_provider = openwakeword_class(fallback_config)
-                    if await openwakeword_provider.is_available():
-                        self.providers["openwakeword"] = openwakeword_provider
-                        self.default_provider = "openwakeword"
-                        self.fallback_providers = ["openwakeword"]
-                        enabled_count = 1
-                    logger.info("Created fallback OpenWakeWord provider")
-                else:
-                    logger.warning("No voice trigger providers available")
-            except Exception as e:
-                logger.error(f"Failed to create fallback voice trigger provider: {e}")
-        
+            logger.error("No voice trigger provider initialized — every enabled "
+                         "[voice_trigger.providers.*] failed or was unavailable")
+
         # BUG-36: kind 1 cannot import → fatal; kind 2 unavailable → loud, not fatal.
         self._require_loadable_providers("locveil_voice.providers.voice_trigger", configured_providers, self._provider_classes)
         self._note_inactive_providers(configured_providers, self.providers)

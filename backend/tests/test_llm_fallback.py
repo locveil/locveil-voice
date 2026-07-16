@@ -65,10 +65,12 @@ def test_provider_chain_orders_preferred_default_then_fallback_then_console():
     assert c._provider_chain("openai") == ["openai", "console"]
 
 
-def test_console_is_appended_as_terminal_floor_even_when_unconfigured():
+def test_chain_is_exactly_what_config_declares():
+    # ARCH-55: no implicit console append — a loaded-but-undeclared console stays out of the chain;
+    # operators wanting the floor list it in fallback_providers (the deployment TOMLs do).
     c = _component({"deepseek": _FakeProvider("deepseek"), "console": _console()},
                    default="deepseek", fallback=[])
-    assert c._provider_chain() == ["deepseek", "console"]
+    assert c._provider_chain() == ["deepseek"]
 
 
 def test_provider_chain_drops_unloaded_names_and_dedupes():

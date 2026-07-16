@@ -296,16 +296,6 @@ See `docs/review/phase1_architecture_map.md` §5.
       UI-17's plugin shell). Deliverable: design doc under `docs/design/` + implementation follow-up(s).
       Refs: board PROD-24 (2)(3)(6), `../locveil-commons/docs/design/workbench.md`,
       `docs/design/python_satellite.md`.
-- [ ] **ARCH-55** [ARCH][QUAL] `[release]` — **Provider loading honors config strictly — no force-adds, no
-      name literals** (ARCH-50 §D; owner ruling: strict config only). Remove the console/openwakeword/vosk/
-      openai/energy literals and force-adds across `tts_component` (:86-87,127-128,143-144,185,194,309-312,776,795),
-      `audio_component` (:84-85,151-152,180-185,510), `voice_trigger_component` (:42-43,162-163,198-214 incl.
-      the literal `hey_jarvis` wake-word), `asr_component` (:79,159,162), `llm_component`
-      (:82,162,166,253,274-275,600), `workflows/audio_processor.py` (:193-233). `default_provider` +
-      `fallback_providers` from config are the entire loading set; nothing configured survives → fail loud
-      (BUG-36 posture). Deployment TOMLs gain explicit console/energy entries where that resilience is wanted
-      (visible config, not code override). `VoiceTriggerConfig` gains the missing `fallback_providers` field
-      or the code path drops it — decide at implementation. Evidence: review doc §D.
 
 ### Code Quality & Review (QUAL)
 

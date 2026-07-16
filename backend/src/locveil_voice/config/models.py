@@ -424,6 +424,11 @@ class VADConfig(BaseModel):
     providers is the `locveil_voice.providers.vad` entry-points (no hand-maintained enum)."""
     enabled: bool = Field(default=True, description="Enable VAD processing")
     default_provider: str = Field(default="energy", json_schema_extra={"widget": "provider_select"}, description="VAD provider: 'energy' (built-in) | 'silero' (sherpa-onnx) | 'microvad' (pymicro-vad). 64-bit for the latter two.")
+    fallback_providers: List[str] = Field(
+        default_factory=list,
+        description="Providers to fall back to (in order) if the default fails to load or initialize. "
+                    "ARCH-55: resilience is DECLARED here (e.g. [\"energy\"]) — the runtime no longer "
+                    "falls back to a hardcoded engine on its own.")
 
     # Segmentation / pipeline (component-level — not engine-specific)
     max_segment_duration_s: int = Field(default=10, description="Maximum voice segment duration in seconds", ge=1, le=60)
