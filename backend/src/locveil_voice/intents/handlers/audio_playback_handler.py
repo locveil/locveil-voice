@@ -34,6 +34,11 @@ class AudioPlaybackIntentHandler(IntentHandler):
         super().__init__()
         self._audio_component: Optional[AudioPort] = None
 
+    @classmethod
+    def get_capability_ports(cls) -> Dict[str, str]:
+        """ARCH-53: audio playback needs the Audio port."""
+        return {"_audio_component": "audio"}
+
     # Build dependency methods (TODO #5 Phase 2)
     @classmethod
     def get_python_dependencies(cls) -> List[str]:

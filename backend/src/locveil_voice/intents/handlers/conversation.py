@@ -36,7 +36,7 @@ class ConversationIntentHandler(IntentHandler):
         super().__init__()
         self.conversation_context: List[Dict[str, str]] = []
 # Session management now handled by UnifiedConversationContext handler_contexts
-        self.llm_component: Optional[LLMPort] = None
+        self.llm_component: Optional[LLMPort] = None  # injected per get_capability_ports (ARCH-53)
         
         # Phase 5: Configuration injection via Pydantic ConversationHandlerConfig
         if config:
@@ -165,6 +165,11 @@ class ConversationIntentHandler(IntentHandler):
                 error=str(e)
             )
     
+    @classmethod
+    def get_capability_ports(cls) -> Dict[str, str]:
+        """ARCH-53: conversation needs the LLM port for dialog generation."""
+        return {"llm_component": "llm"}
+
     def set_llm_component(self, llm_component: Optional[LLMPort]) -> None:
         """Set the injected LLM capability port (QUAL-24)."""
         self.llm_component = llm_component

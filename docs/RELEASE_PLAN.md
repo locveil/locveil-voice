@@ -296,12 +296,6 @@ See `docs/review/phase1_architecture_map.md` §5.
       UI-17's plugin shell). Deliverable: design doc under `docs/design/` + implementation follow-up(s).
       Refs: board PROD-24 (2)(3)(6), `../locveil-commons/docs/design/workbench.md`,
       `docs/design/python_satellite.md`.
-- [ ] **ARCH-53** [ARCH] `[release]` — **Capability ports become handler-declared metadata** (ARCH-50 F-A4).
-      Replace the static `capability_ports` table (`intent_component.py:259-265`) + the
-      `provider_control_handler` special case (:287) with a handler classmethod (the
-      `requires_configuration()`/`EntryPointMetadata` pattern) declaring needed component ports; the injection
-      loop becomes generic; new handlers self-describe. The conversation-context special-casing in
-      `context_models.py` stays — the sanctioned exception (owner, 2026-07-16). Evidence: review doc §A.
 - [ ] **ARCH-55** [ARCH][QUAL] `[release]` — **Provider loading honors config strictly — no force-adds, no
       name literals** (ARCH-50 §D; owner ruling: strict config only). Remove the console/openwakeword/vosk/
       openai/energy literals and force-adds across `tts_component` (:86-87,127-128,143-144,185,194,309-312,776,795),

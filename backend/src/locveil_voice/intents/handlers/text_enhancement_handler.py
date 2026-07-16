@@ -34,6 +34,11 @@ class TextEnhancementIntentHandler(IntentHandler):
         super().__init__()
         self._llm_component: Optional[LLMPort] = None
 
+    @classmethod
+    def get_capability_ports(cls) -> Dict[str, str]:
+        """ARCH-53: text enhancement needs the LLM port."""
+        return {"_llm_component": "llm"}
+
     # Build dependency methods (TODO #5 Phase 2)
     @classmethod
     def get_python_dependencies(cls) -> List[str]:

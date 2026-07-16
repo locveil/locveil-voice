@@ -32,6 +32,18 @@ class IntentHandler(EntryPointMetadata, ABC):
     # Template name `_error_result` renders; handlers override to point at their own error template.
     _error_template: str = "error_general"
 
+    @classmethod
+    def get_capability_ports(cls) -> Dict[str, str]:
+        """Component ports this handler wants injected, as {attribute_name: component_name}.
+
+        ARCH-53: handlers declare their own component needs (the `requires_configuration()`
+        pattern) — the application injects each named component onto the named attribute after
+        initialization, replacing the old central handler-name→port wiring table. A handler that
+        needs the component-manager itself declares `set_component_registry()` instead (injected
+        structurally). Default: no ports.
+        """
+        return {}
+
     def __init__(self):
         """Initialize the intent handler."""
         self.name = self.__class__.__name__

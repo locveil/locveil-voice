@@ -35,6 +35,11 @@ class SpeechRecognitionIntentHandler(IntentHandler):
         super().__init__()
         self._asr_component: Optional[ASRPort] = None
 
+    @classmethod
+    def get_capability_ports(cls) -> Dict[str, str]:
+        """ARCH-53: speech recognition needs the ASR port."""
+        return {"_asr_component": "asr"}
+
     # Build dependency methods (TODO #5 Phase 2)
     @classmethod
     def get_python_dependencies(cls) -> List[str]:

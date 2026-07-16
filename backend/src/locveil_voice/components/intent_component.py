@@ -251,16 +251,10 @@ class IntentComponent(Component, WebAPIPlugin):
         # QUAL-24: handlers depend only on the domain-owned ports in
         # `irene/intents/ports.py`; here the application injects the real
         # components (which satisfy those Protocols structurally) inward, so the
-        # domain never reaches into core via get_core(). Map: handler entry-point
-        # name -> (handler attribute, component name).
-        capability_ports = {
-            'conversation': ('llm_component', 'llm'),
-            'translation_handler': ('_llm_component', 'llm'),
-            'text_enhancement_handler': ('_llm_component', 'llm'),
-            'voice_synthesis_handler': ('_tts_component', 'tts'),
-            'audio_playback_handler': ('_audio_component', 'audio'),
-            'speech_recognition_handler': ('_asr_component', 'asr'),
-        }
+        # domain never reaches into core via get_core(). ARCH-53: each handler
+        # DECLARES its ports via `get_capability_ports()` ({attr: component name})
+        # — no central wiring table; a handler wanting the whole registry declares
+        # `set_component_registry()` and gets it structurally.
         try:
             logger.info("Starting intent handler capability-port injection (post-initialization)...")
 
@@ -275,15 +269,14 @@ class IntentComponent(Component, WebAPIPlugin):
             injection_results = []
 
             for handler_name, handler in handlers.items():
-                if handler_name in capability_ports:
-                    attr, comp_name = capability_ports[handler_name]
+                for attr, comp_name in type(handler).get_capability_ports().items():
                     component = components.get(comp_name)
                     setattr(handler, attr, component)
                     injection_results.append(
                         f"{handler_name}: {comp_name} {'injected' if component else 'unavailable'}"
                     )
-                elif handler_name == 'provider_control_handler' and hasattr(handler, 'set_component_registry'):
-                    # provider_control manages providers across ALL component types -> registry port
+                if hasattr(handler, 'set_component_registry'):
+                    # a registry-declaring handler manages providers across ALL component types
                     handler.set_component_registry(component_manager)
                     injection_results.append(f"{handler_name}: component registry injected")
 

@@ -105,6 +105,18 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       startup (fail-hard ruling). Verified: full suite 1417 passed / 7 skipped, import contracts 11/11,
       config-ui `npm run check` + `build` green. docs: none — the deleted fields appear in no manifest
       node (config-file comments only); no user-visible behavior changed on the happy path.
+- [x] **ARCH-53** [ARCH] `[release]` — **✓ DONE 2026-07-16. Capability ports are handler-declared
+      metadata** (ARCH-50 F-A4). `IntentHandler.get_capability_ports()` classmethod (default `{}`,
+      the `requires_configuration()` pattern) declares `{attribute: component_name}`; the six handlers
+      with component needs override it (conversation→llm, translation/text_enhancement→llm,
+      voice_synthesis→tts, audio_playback→audio, speech_recognition→asr). `intent_component`'s
+      injection loop is now generic — the QUAL-24 central `capability_ports` table is deleted, and the
+      `provider_control_handler` name special-case became structural (`hasattr(set_component_registry)`
+      — verified the only declarer). Runtime assertion at completion: entry-point-loaded declarations
+      across all 15 handlers exactly reproduce the retired table. New handlers self-describe; adding a
+      component need no longer edits intent_component. Verified: full suite 1411 passed / 7 skipped,
+      import contracts 11/11. docs: none — internal wiring mechanics; `howto-new-intent` doesn't teach
+      port injection (a future authoring-doc mention rides the next howto touch).
 - [x] **ARCH-54** [ARCH][CONFIG] `[release]` — **✓ DONE 2026-07-16. `[components]` is the single enable
       authority** (ARCH-50 F-C1). The per-section `enabled` field is deleted from ALL TEN component configs
       (the 8 force-synced + `MonitoringConfig`/`NLUAnalysisConfig`, which had never even been synced) and

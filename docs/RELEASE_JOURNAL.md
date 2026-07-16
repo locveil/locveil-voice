@@ -20,6 +20,17 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-16 — ARCH-53 DONE: handlers declare their own component ports.** First leg of the second
+  unattended batch (53 → 56 → 55 → TEST-22). The QUAL-24 central wiring table in intent_component —
+  six handler names mapped to injected component attributes, plus a by-name special case for
+  provider_control — is gone. Each handler now declares `{attribute: component}` via a
+  `get_capability_ports()` classmethod (the same self-description pattern as
+  `requires_configuration()`), the injection loop is generic, and the registry special-case is
+  structural (any handler declaring `set_component_registry()` gets it — provider_control is the only
+  one, verified). A runtime assertion confirmed the declared ports across all 15 entry-point handlers
+  reproduce the retired table exactly. Adding a handler with component needs no longer touches
+  intent_component. Suite 1411 green, contracts 11/11.
+
 - **2026-07-16 — ARCH-54 DONE: one enablement authority — and the analyzer had three latent bugs under
   the old one.** Final leg of the four-task sweep. The per-section `enabled` flags are deleted from all
   ten component configs and the silent parse-time force-sync with them; `[components]` is now the only

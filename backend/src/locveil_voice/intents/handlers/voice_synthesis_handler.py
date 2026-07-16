@@ -35,6 +35,11 @@ class VoiceSynthesisIntentHandler(IntentHandler):
         super().__init__()
         self._tts_component: Optional[TTSPort] = None
 
+    @classmethod
+    def get_capability_ports(cls) -> Dict[str, str]:
+        """ARCH-53: voice synthesis needs the TTS port."""
+        return {"_tts_component": "tts"}
+
     # Build dependency methods (TODO #5 Phase 2)
     @classmethod
     def get_python_dependencies(cls) -> List[str]:
