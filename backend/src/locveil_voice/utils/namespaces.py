@@ -26,15 +26,14 @@ COMPONENTS_NAMESPACE = "locveil_voice.components"
 WORKFLOWS_NAMESPACE = "locveil_voice.workflows"
 INTENT_HANDLERS_NAMESPACE = "locveil_voice.intents.handlers"
 INPUTS_NAMESPACE = "locveil_voice.inputs"
-RUNNERS_NAMESPACE = "locveil_voice.runners"
 
-# Every group pyproject registers (outputs are composition-registered by ARCH-15
-# design and deliberately have NO entry-point group).
+# Every group pyproject registers (outputs are composition-registered by ARCH-15 design
+# and deliberately have NO entry-point group; the decorative runners group was deleted
+# at ARCH-56 — runners launch via `python -m`, nothing discovers them).
 ALL_NAMESPACES: Tuple[str, ...] = (
     *PROVIDER_NAMESPACES.values(),
     COMPONENTS_NAMESPACE,
     WORKFLOWS_NAMESPACE,
     INTENT_HANDLERS_NAMESPACE,
     INPUTS_NAMESPACE,
-    RUNNERS_NAMESPACE,
 )

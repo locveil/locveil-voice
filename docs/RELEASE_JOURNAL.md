@@ -20,6 +20,18 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-16 — ARCH-56 DONE: the inputs entry-point group is real now; the runners group is gone.**
+  The `locveil_voice.inputs` group had been registered since inception and read by nothing —
+  InputManager hardcoded three imports and three if-branches. It now discovers adapters from the
+  group generically: the `[inputs]` flag matching the entry-point name enables, the
+  `[inputs.<name>_config]` model configures (the microphone adapter learned its config model's field
+  names on the way), and mic-style post-setup is structural via `initialize()`. A third-party input
+  is now a pyproject entry point plus a config flag, no manager edit. The `runners` group went the
+  other way — deleted outright, since runners launch via `python -m` and nothing ever discovered
+  them; the canonical registry re-asserts ≡ pyproject's 12 remaining groups. Parity smoke: same
+  source sets as the old wiring, CLI auto-start intact. Suite 1411 green, contracts 11/11, lockfile
+  clean.
+
 - **2026-07-16 — ARCH-53 DONE: handlers declare their own component ports.** First leg of the second
   unattended batch (53 → 56 → 55 → TEST-22). The QUAL-24 central wiring table in intent_component —
   six handler names mapped to injected component attributes, plus a by-name special case for

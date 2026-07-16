@@ -404,11 +404,8 @@ web = "locveil_voice.inputs.web:WebInput"
 # NOTE: Builtin plugins section removed - no builtin plugins in unified architecture
 # All functionality moved to intent handlers with JSON donations
 
-[project.entry-points."locveil_voice.runners"]
-cli = "locveil_voice.runners.cli:CLIRunner"
-voice = "locveil_voice.runners.voice_runner:VoiceRunner"
-webapi = "locveil_voice.runners.webapi_runner:WebAPIRunner"
-satellite = "locveil_voice.runners.satellite_runner:SatelliteRunner"
+# ARCH-56: the "locveil_voice.runners" entry-point group is deleted — nothing ever read it;
+# runners launch via `python -m locveil_voice.runners.<name>` (Dockerfiles, docs).
 
 # Pull torch/torchaudio from the CPU-only wheel index. The only torch consumer is the x86_64 standalone
 # (Silero TTS + Whisper ASR), and it runs device="cpu" — the default PyPI torch drags in ~3.4 GB of unused

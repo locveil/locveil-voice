@@ -306,11 +306,7 @@ See `docs/review/phase1_architecture_map.md` §5.
       (BUG-36 posture). Deployment TOMLs gain explicit console/energy entries where that resilience is wanted
       (visible config, not code override). `VoiceTriggerConfig` gains the missing `fallback_providers` field
       or the code path drops it — decide at implementation. Evidence: review doc §D.
-- [ ] **ARCH-56** [ARCH] `[release]` — **InputManager consumes the `locveil_voice.inputs` entry-points;
-      `locveil_voice.runners` group deleted** (ARCH-50 F-F1/F-F2; owner chose adopt-over-delete for inputs).
-      `inputs/manager.py:17-19,52-101` drops the direct imports + per-class if-branches for generic
-      group discovery with config-driven enablement/configuration; the decorative `runners` group is removed
-      from pyproject (nothing reads it — runners launch via `python -m`). Evidence: review doc §F.
+
 ### Code Quality & Review (QUAL)
 
 #### Cross-cutting systemic remediation — principles (the Gate 2 lens)

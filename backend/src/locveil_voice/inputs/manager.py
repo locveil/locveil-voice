@@ -2,9 +2,10 @@
 Input-layer orchestrator (InputManager).
 
 Separated from the input PORT (`InputPort`, ARCH-11/S1 now in `core/interfaces/input.py`) so the port no
-longer imports its own concrete adapters — breaking the inputs.base ⇄ {cli,microphone,web} cycle (SCC-2)
-with explicit composition-point wiring, NOT a runtime service-locator (cf. QUAL-24). This module is the
-input layer's composition point: it legitimately depends outward on the concrete adapters it orchestrates.
+longer imports its own concrete adapters — breaking the inputs.base ⇄ {cli,microphone,web} cycle (SCC-2).
+ARCH-56: input adapters are discovered from the `locveil_voice.inputs` entry-point group (the group had
+been registered-but-unread since inception) — enablement comes from the `[inputs]` config flags, each
+adapter's settings from its `[inputs.<name>_config]` section, by naming convention.
 """
 
 import asyncio
@@ -14,9 +15,8 @@ from typing import Any, Dict, List, Optional
 from ..core.interfaces.input import InputPort, InputData
 from .base import ComponentNotAvailable
 from ..core.metadata import SUPPORTED_PLATFORMS
-from .cli import CLIInput
-from .microphone import MicrophoneInput
-from .web import WebInput
+from ..utils.loader import dynamic_loader
+from ..utils.namespaces import INPUTS_NAMESPACE
 
 logger = logging.getLogger(__name__)
 
@@ -50,56 +50,43 @@ class InputManager:
         logger.info("InputManager initialized")
         
     async def _discover_input_sources(self) -> None:
-        """Discover available input sources based on V14 configuration"""
+        """Discover input sources from the `locveil_voice.inputs` entry-point group (ARCH-56).
+
+        Enablement: the `[inputs]` boolean flag matching the entry-point name (all enabled when
+        no config is given). Settings: the `[inputs.<name>_config]` model, passed as kwargs to
+        the adapter's `configure_input`. An adapter with extra post-configure setup exposes
+        `initialize()` (structural — the microphone does).
+        """
         try:
-            # Add CLI input if enabled in configuration
-            if self.input_config is None or self.input_config.cli:
-                cli_input = CLIInput()
-                if self.input_config and self.input_config.cli_config:
-                    await cli_input.configure_input(**self.input_config.cli_config.model_dump())
-                await self.add_source("cli", cli_input)
-                logger.info("Added CLI input source")
-            
-            # Add microphone input if enabled in configuration
-            if self.input_config is None or self.input_config.microphone:
+            available = dynamic_loader.list_available_providers(INPUTS_NAMESPACE)
+            enabled = [name for name in available
+                       if self.input_config is None or getattr(self.input_config, name, False)]
+            classes = dynamic_loader.discover_providers(INPUTS_NAMESPACE, enabled)
+
+            for name in enabled:
+                input_class = classes.get(name)
+                if input_class is None:
+                    logger.error(f"Input '{name}' is enabled but its entry point did not load")
+                    continue
                 try:
-                    mic_input = MicrophoneInput()
-                    if await mic_input.is_available():
-                        # Apply microphone configuration
-                        if self.input_config and self.input_config.microphone_config:
-                            mic_config = self.input_config.microphone_config
-                            await mic_input.configure_input(
-                                device_id=mic_config.device_id,
-                                samplerate=mic_config.sample_rate,
-                                blocksize=mic_config.chunk_size,
-                                buffer_queue_size=getattr(mic_config, 'buffer_queue_size', 50)
-                            )
-                        
-                        # Initialize microphone with the configured settings
-                        await mic_input.initialize()
-                        
-                        await self.add_source("microphone", mic_input)
-                        logger.info("Added microphone input source with V14 configuration")
-                    else:
-                        logger.info("Microphone hardware not available")
+                    source = input_class()
+                    if not await source.is_available():
+                        logger.info(f"Input '{name}' not available on this system")
+                        continue
+                    settings_obj = getattr(self.input_config, f"{name}_config", None) \
+                        if self.input_config else None
+                    if settings_obj is not None:
+                        await source.configure_input(**settings_obj.model_dump())
+                    if hasattr(source, "initialize"):
+                        await source.initialize()
+                    await self.add_source(name, source)
+                    logger.info(f"Added input source: {name}")
                 except (ImportError, ComponentNotAvailable) as e:
-                    logger.info(f"Microphone input not available: {e}")
-                    
-            # Add web input if enabled in configuration
-            if self.input_config is None or self.input_config.web:
-                try:
-                    web_input = WebInput()
-                    if await web_input.is_available():
-                        if self.input_config and self.input_config.web_config:
-                            await web_input.configure_input(**self.input_config.web_config.model_dump())
-                        await self.add_source("web", web_input)
-                        logger.info("Added web input source")
-                except (ImportError, ComponentNotAvailable) as e:
-                    logger.info(f"Web input not available: {e}")
-                    
+                    logger.info(f"Input '{name}' not available: {e}")
+
         except Exception as e:
             logger.error(f"Error discovering input sources: {e}")
-        
+
         # Auto-start input sources based on configuration and deployment context
         await self._auto_start_configured_sources()
     

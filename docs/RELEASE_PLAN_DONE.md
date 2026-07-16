@@ -148,6 +148,20 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       import contracts 11/11. docs: guides/audio, guides/voice-trigger, guides/howto-new-model — TOML
       examples showing the retired per-section `enabled = true` now show the `[components]` block instead;
       guides/satellite + guides/vad untouched (their `enabled` fields live on).
+- [x] **ARCH-56** [ARCH] `[release]` — **✓ DONE 2026-07-16. InputManager consumes the
+      `locveil_voice.inputs` entry-points; the decorative `runners` group is deleted** (ARCH-50
+      F-F1/F-F2; owner chose adopt-over-delete for inputs). `_discover_input_sources` is a generic
+      entry-point loop: enablement from the `[inputs]` boolean flag matching the EP name, settings from
+      the `[inputs.<name>_config]` model passed as `model_dump()` kwargs, availability checked first,
+      post-configure setup structural (`initialize()` — the microphone is the only declarer). The three
+      direct adapter imports + per-class if-branches are gone; `MicrophoneInput.configure_input` learned
+      its config model's field names (`sample_rate`/`chunk_size`) alongside its historical spellings.
+      The `locveil_voice.runners` group is deleted from pyproject (nothing ever read it — runners launch
+      via `python -m`; Dockerfile CMDs unchanged) and `ALL_NAMESPACES` re-asserted ≡ pyproject's now-12
+      groups after an editable-install refresh. Behavior parity smoke: flags on/off produce exactly the
+      old source sets, CLI auto-start intact. Verified: full suite 1411 passed / 7 skipped, import
+      contracts 11/11, `uv lock --check` clean. docs: none — no manifest node describes input discovery
+      mechanics or the runners entry-points.
 - [x] **ARCH-57** [ARCH][QUAL][UI] `[release]` — **✓ DONE 2026-07-16. One canonical component→namespace
       map; analyzer module paths from entry-point values — the live config-ui VAD dropdown 404 fixed**
       (ARCH-50 F-E1/F-E2). New `utils/namespaces.py`: `PROVIDER_NAMESPACES` (8 families incl. `vad`) +

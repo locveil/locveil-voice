@@ -121,11 +121,19 @@ class MicrophoneInput(InputPort):
         }
         
     async def configure_input(self, **settings) -> None:
-        """Configure microphone settings"""
+        """Configure microphone settings.
+
+        Accepts the `MicrophoneInputConfig` field names (`sample_rate`/`chunk_size` — the
+        generic ARCH-56 wiring passes the model's `model_dump()`) plus the adapter's
+        historical spellings (`samplerate`/`blocksize`)."""
         if "device_id" in settings:
             self.device_id = settings["device_id"]
+        if "sample_rate" in settings:
+            self.samplerate = settings["sample_rate"]
         if "samplerate" in settings:
             self.samplerate = settings["samplerate"]
+        if "chunk_size" in settings:
+            self.blocksize = settings["chunk_size"]
         if "blocksize" in settings:
             self.blocksize = settings["blocksize"]
         if "buffer_queue_size" in settings:
