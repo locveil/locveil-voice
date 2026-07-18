@@ -26,7 +26,7 @@ from ..intents.ports import TTSPort  # QUAL-24: domain capability port (applicat
 
 # Import TTS provider base class and dynamic loader
 from ..providers.tts import TTSProvider
-from ..utils.loader import dynamic_loader
+from ..utils.entry_points import dynamic_loader
 from ..utils.audio_stream import PCMStream
 from ..utils.namespaces import PROVIDER_NAMESPACES
 

@@ -12,7 +12,7 @@ from typing import Dict, Any, List, Optional
 from .registry import IntentRegistry
 from .orchestrator import IntentOrchestrator
 from ..core.metrics import get_metrics_collector
-from ..utils.loader import dynamic_loader
+from ..utils.entry_points import dynamic_loader
 from ..utils.namespaces import INTENT_HANDLERS_NAMESPACE
 from ..core.intent_asset_loader import IntentAssetLoader, AssetLoaderConfig, resolve_intent_assets_root
 

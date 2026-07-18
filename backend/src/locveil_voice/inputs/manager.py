@@ -15,7 +15,7 @@ from typing import Any, Dict, List, Optional
 from ..core.interfaces.input import InputPort, InputData
 from .base import ComponentNotAvailable
 from ..core.metadata import SUPPORTED_PLATFORMS
-from ..utils.loader import dynamic_loader
+from ..utils.entry_points import dynamic_loader
 from ..utils.namespaces import INPUTS_NAMESPACE
 
 logger = logging.getLogger(__name__)

@@ -271,7 +271,7 @@ class Component(ComponentPort):
         missing = [name for name in configured if name not in discovered]
         if not missing:
             return
-        from ..utils.loader import dynamic_loader
+        from ..utils.entry_points import dynamic_loader
         why = dynamic_loader.get_discovery_failures(namespace)
         detail = "; ".join(
             f"{name} ({why.get(name, 'no entry point is registered under this name')})" for name in missing

@@ -210,7 +210,7 @@ class ConfigValidator:
         try:
             # ARCH-2: use the low-level loader directly (config -> utils, downward) instead of
             # reaching up into core.components (which doesn't even export discover_providers).
-            from ..utils.loader import dynamic_loader
+            from ..utils.entry_points import dynamic_loader
             # ARCH-57: the canonical registry (the old hand-list here omitted vad + text_processor)
             from ..utils.namespaces import PROVIDER_NAMESPACES
 

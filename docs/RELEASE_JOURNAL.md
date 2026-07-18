@@ -20,6 +20,21 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-18 — ARCH-58 DONE: the estate's first vendored runtime code is live — and the strict pin
+  earned its keep on first contact.** The core-py migration ran exactly as designed two days ago:
+  `.repin.toml` gained the `core-py` family (declared once, in the new format — the PROD-26 sequencing
+  paid off), the engine came back as a byte-identical vendored copy with voice's singleton in the new
+  `utils/entry_points.py`, 18 source files + 2 tests swept, `utils/loader.py` finally shed the
+  DynamicLoader and the fossil py3.8/pkg_resources compat block, and `startup_validation` swapped its
+  hand-rolled entry-point enumeration for the engine's `list_registered`. The story of the day: the
+  VERY FIRST strict pin refused `core-py-v1` — the tag was cut before the STAMP landed, so the tagged
+  tree couldn't satisfy pins-complete-and-verbatim — and commons cut `core-py-v1.1` (packaging
+  correction, artifact bytes unchanged) within the hour. The owner ruling that runtime code needs
+  mechanical discipline, not convention, proved itself before a single line of consumer code ran.
+  Acceptance clean across the board: suite 1433 green, analyzer JSON byte-identical on all 6 profiles,
+  import contracts 11/11, all guards + the staleness gate green. Voice's half of PROD-8 is closed;
+  bridge CORE-7 codes against the same tag next.
+
 - **2026-07-18 — BUILD-44 DONE (answered same day) → ASSET-6 filed [deferred]: the wake-pack promise
   to the satellite is on record.** Voice confirms the satellite's three asks: the multi-model pack
   ships only as a tagged `wake-pack` bump (their publish-refusal on drifted bytes is correct behavior,

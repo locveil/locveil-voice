@@ -23,8 +23,9 @@ from __future__ import annotations
 
 import logging
 import os
-from importlib.metadata import entry_points
 from typing import Any, Dict, List, Set
+
+from ..utils.entry_points import dynamic_loader
 
 # component config key -> provider entry-point namespace: the canonical registry
 # (ARCH-57 — the old hand-copy here had drifted, silently omitting `vad`, so
@@ -38,9 +39,14 @@ _NAME_REF_FIELDS = ("default_provider", "fallback_providers", "provider_cascade_
 
 
 def _registered_provider_names(namespace: str) -> Set[str]:
-    """Registered entry-point names for a namespace (without loading them)."""
+    """Registered entry-point names for a namespace (without loading them).
+
+    ARCH-58: the shared engine's `list_registered` — names WITHOUT importing — replaces
+    the hand-rolled `importlib.metadata.entry_points` enumeration here (rule-of-two:
+    the bridge's `dump_catalog` is the other consumer). Behavior-identical.
+    """
     try:
-        return {ep.name for ep in entry_points(group=namespace)}
+        return set(dynamic_loader.list_registered(namespace))
     except Exception as e:  # pragma: no cover - importlib edge cases
         logger.warning(f"[startup-validation] could not enumerate entry-points for '{namespace}': {e}")
         return set()

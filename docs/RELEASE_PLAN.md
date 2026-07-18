@@ -278,22 +278,6 @@ See `docs/review/phase1_architecture_map.md` §5.
       Refs: board PROD-24 (2)(3)(6), `../locveil-commons/docs/design/workbench.md`,
       `docs/design/python_satellite.md`.
 
-- [ ] **ARCH-58** [ARCH][COMMONS] `[release]` — **Consume core-py's `entry_point_loader` — the voice
-      migration** (ARCH-42 design §4; owner tagged [release]). Gated on commons cutting
-      `packages/core-py` + tag **`core-py-v1`** (PROD-8; unblocked — the design landed 2026-07-16).
-      Scope: vendor `utils/entry_point_loader.py` (never edit; class-only) at the pin
-      `contracts/pins/core-py/` (PIN.json sha256 + registry row + byte-identity conformance test —
-      the first vendored RUNTIME-code contract, strict per the owner ruling); new voice-owned
-      `utils/entry_points.py` holding the `dynamic_loader` singleton; FULL import sweep — all 20
-      call sites move to it, `utils/loader.py` shrinks to the aux helpers; `startup_validation` may
-      adopt `list_registered` (names-without-import) in the same change. DELETE the now-shadowed
-      `DynamicLoader` from `utils/loader.py`. Acceptance: full suite green, analyzer JSON
-      byte-identical across all 6 profiles, coherence guard green, contracts 11/11.
-      Ref: `docs/design/core_py_loader_extraction.md` §3-§4.
-      _(PROD-26 sequencing addendum 2026-07-18: BUILD-43 lands the vendored repin tool FIRST, so this
-      task declares `contracts/pins/core-py/` as a `core-py` family in `.repin.toml` — the strict
-      byte-identity pin — rather than extending the retired FAMILIES dict; its completion entry is the
-      first live test of the `contracts:` verdict line, and the write-back closes voice's half of PROD-8.)_
 ### Code Quality & Review (QUAL)
 
 #### Cross-cutting systemic remediation — principles (the Gate 2 lens)

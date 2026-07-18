@@ -21,7 +21,7 @@ from ..core.metadata import SUPPORTED_PLATFORMS
 from typing import Dict, List, Optional, Set, Any, Tuple
 import json
 
-from locveil_voice.utils.loader import dynamic_loader
+from locveil_voice.utils.entry_points import dynamic_loader
 from locveil_voice.utils.namespaces import (ALL_NAMESPACES, COMPONENTS_NAMESPACE,
                                             INTENT_HANDLERS_NAMESPACE, PROVIDER_NAMESPACES,
                                             WORKFLOWS_NAMESPACE)

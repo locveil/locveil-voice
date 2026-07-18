@@ -166,7 +166,7 @@ class TestIntentHandlerManager:
         mock_config["enabled"] = ["nonexistent_handler"]
         manager = IntentHandlerManager()
         
-        with patch('locveil_voice.utils.loader.dynamic_loader.discover_providers') as mock_discover:
+        with patch('locveil_voice.utils.entry_points.dynamic_loader.discover_providers') as mock_discover:
             mock_discover.return_value = {}  # No handlers found
             
             with pytest.raises(ValueError, match="Intent handlers not found"):

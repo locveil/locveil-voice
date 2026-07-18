@@ -346,7 +346,7 @@ class ConfigurationComponent(Component, WebAPIPlugin):
             """
             try:
                 # Use dynamic loader to discover available providers
-                from ..utils.loader import dynamic_loader
+                from ..utils.entry_points import dynamic_loader
                 # Component names -> provider entry-point groups: the canonical registry
                 # (ARCH-57 — the old hand-copy omitted `vad`, so the config-ui provider
                 # dropdown for vad.default_provider got a 404 and rendered empty).

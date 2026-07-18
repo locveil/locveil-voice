@@ -21,7 +21,8 @@ from ..core.metrics import get_metrics_collector
 
 # Voice trigger provider base class and dynamic loader
 from ..providers.voice_trigger import VoiceTriggerProvider
-from ..utils.loader import DependencyChecker, safe_import, dynamic_loader
+from ..utils.loader import DependencyChecker, safe_import
+from ..utils.entry_points import dynamic_loader
 from ..utils.namespaces import PROVIDER_NAMESPACES
 
 logger = logging.getLogger(__name__)

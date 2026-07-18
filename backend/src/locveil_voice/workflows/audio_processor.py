@@ -18,7 +18,7 @@ from typing import Optional, List, Dict, Any, AsyncIterator, Awaitable, Callable
 from ..intents.models import AudioData
 from ..config.models import VADConfig
 from ..utils.vad import VADResult
-from ..utils.loader import dynamic_loader
+from ..utils.entry_points import dynamic_loader
 from ..utils.audio_helpers import calculate_audio_energy, estimate_optimal_vad_threshold
 from ..core.metrics import get_metrics_collector
 from ..utils.namespaces import PROVIDER_NAMESPACES

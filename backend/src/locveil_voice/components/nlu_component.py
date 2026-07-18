@@ -18,7 +18,7 @@ from ..core.interfaces.nlu import NLUPlugin
 from ..core.trace_context import TraceContext
 from ..intents.models import Intent
 from ..intents.context_models import UnifiedConversationContext
-from ..utils.loader import dynamic_loader
+from ..utils.entry_points import dynamic_loader
 from ..providers.nlu.base import NLUProvider
 from ..core.entity_resolver import ContextualEntityResolver
 from ..utils.namespaces import PROVIDER_NAMESPACES

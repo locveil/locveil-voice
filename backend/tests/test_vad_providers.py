@@ -6,7 +6,7 @@ build/fallback path.
 """
 import pytest
 
-from locveil_voice.utils.loader import dynamic_loader
+from locveil_voice.utils.entry_points import dynamic_loader
 from locveil_voice.providers.vad.energy import EnergyVADProvider
 from locveil_voice.config.models import VADConfig
 from locveil_voice.intents.models import AudioData

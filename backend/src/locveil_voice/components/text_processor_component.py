@@ -17,7 +17,7 @@ from ..core.interfaces.webapi import WebAPIPlugin
 from ..core.interfaces.text_processor import TextProcessorPlugin
 from ..core.trace_context import TraceContext
 from ..intents.context_models import UnifiedConversationContext
-from ..utils.loader import dynamic_loader
+from ..utils.entry_points import dynamic_loader
 from ..utils.text_processing import all_num_to_text_async
 from ..providers.text_processor.base import TextProcessingProvider
 from ..utils.namespaces import PROVIDER_NAMESPACES

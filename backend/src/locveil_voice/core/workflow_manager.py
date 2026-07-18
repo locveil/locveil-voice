@@ -21,7 +21,7 @@ from .event_bus import EventType, PipelineEvent
 from ..utils.audio_data import AudioData
 from ..intents.models import IntentResult
 from .interfaces.input import InputPort
-from ..utils.loader import dynamic_loader
+from ..utils.entry_points import dynamic_loader
 from ..utils.namespaces import WORKFLOWS_NAMESPACE
 
 logger = logging.getLogger(__name__)

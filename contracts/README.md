@@ -24,6 +24,7 @@ re-pin from the owner when it moves.
 | [`catalog`](pins/catalog/README.md) | locveil-bridge (pinned tag: see `pins/catalog/PIN.json`) | LOCAL complete copy for the push-time schema check (`backend/tests/test_catalog_contract_conformance.py`); one `make repin` updates it and the commons crossover copy at the same tag |
 | [`report-protocol`](pins/report-protocol/README.md) | locveil-commons (tag `report-protocol-v1`) | problem-report machine core; conformance: `backend/tests/test_report_protocol_conformance.py` |
 | [`esp32-site`](pins/esp32-site/README.md) | locveil-satellite (tag `esp32-site-v1`) | Plane-B nginx site template; conformance: `backend/tests/test_arch36_tls_e2e.py` |
+| [`core-py`](pins/core-py/README.md) | locveil-commons (pinned tag: see `pins/core-py/PIN.json`) | the shared entry-point discovery engine — the estate's FIRST vendored RUNTIME code (ARCH-58, strict): the importable copy `utils/entry_point_loader.py` must stay byte-identical to the pin; conformance: `backend/tests/test_core_py_pin_identity.py` |
 
 _The shared crossover instruments stay in `../locveil-commons/contracts/pins/`:
 `crossover-fixtures/` (co-owned, both product repos' cross-suites assert against it) and

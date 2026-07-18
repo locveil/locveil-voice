@@ -55,7 +55,7 @@ class AssetManager:
             return self._provider_asset_cache[provider]
         
         # Discover provider class and get asset config
-        from ..utils.loader import dynamic_loader
+        from ..utils.entry_points import dynamic_loader
         from ..utils.namespaces import PROVIDER_NAMESPACES
 
         # Map asset names to namespaces (via the canonical registry, ARCH-57). A tuple value

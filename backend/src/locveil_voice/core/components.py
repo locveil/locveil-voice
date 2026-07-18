@@ -145,7 +145,7 @@ class ComponentManager(ComponentControlRegistryPort):
     def get_available_components(self) -> Dict[str, Type]:
         """Get available components through existing entry-point discovery"""
         # Use EXISTING dynamic_loader instead of hardcoded dictionary
-        from ..utils.loader import dynamic_loader
+        from ..utils.entry_points import dynamic_loader
         return dynamic_loader.discover_providers(COMPONENTS_NAMESPACE)
         
     async def get_system_status(self) -> Dict[str, Any]:
@@ -169,7 +169,7 @@ class ComponentManager(ComponentControlRegistryPort):
         self._dependency_resolver = DependencyResolver(available_components)
 
         # Requested but never loaded: entry point missing, or its module failed to import.
-        from ..utils.loader import dynamic_loader
+        from ..utils.entry_points import dynamic_loader
         why = dynamic_loader.get_discovery_failures(COMPONENTS_NAMESPACE)
         self._missing_components = {
             name: why.get(name, "no `locveil_voice.components` entry point is registered under this name")

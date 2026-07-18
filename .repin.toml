@@ -49,6 +49,20 @@ files = ["provisioning/ansible/templates/esp32-site.conf.j2",
 path = "contracts/pins/esp32-site"
 conformance = "backend/tests/test_arch36_tls_e2e.py"
 
+# ARCH-58: the estate's FIRST vendored RUNTIME code — strict byte-identity pin (owner
+# ruling). The importable copy at backend/src/locveil_voice/utils/entry_point_loader.py must stay
+# byte-identical to the pinned artifact; the conformance test asserts it.
+[[family]]
+name = "core-py"
+owner_repo = "locveil-commons"
+owner_dir = "../locveil-commons"
+owner_url = "https://github.com/locveil/locveil-commons.git"
+files = ["packages/core-py/entry_point_loader.py",
+         "contracts/core-py/STAMP.json"]
+[[family.dest]]
+path = "contracts/pins/core-py"
+conformance = "backend/tests/test_core_py_pin_identity.py"
+
 # Vendored-tools manifest (HK-12): each pinned_tag is checked against the owner's
 # newest family tag on the same ladder — the tag↔vendored-copy relationship stops
 # living in prose. Bump a pinned_tag only in its re-vendor ledger task.

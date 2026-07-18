@@ -22,7 +22,7 @@ from ..intents.ports import AudioPort  # QUAL-24: domain capability port (applic
 
 # Import audio provider base class and dynamic loader
 from ..providers.audio import AudioProvider
-from ..utils.loader import dynamic_loader
+from ..utils.entry_points import dynamic_loader
 from ..utils.namespaces import PROVIDER_NAMESPACES
 
 logger = logging.getLogger(__name__)

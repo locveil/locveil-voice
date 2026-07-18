@@ -26,7 +26,7 @@ from ..utils.audio_helpers import AudioTranscoder
 
 # Import ASR provider base class and dynamic loader
 from ..providers.asr import ASRProvider
-from ..utils.loader import dynamic_loader
+from ..utils.entry_points import dynamic_loader
 from ..utils.namespaces import PROVIDER_NAMESPACES
 
 logger = logging.getLogger(__name__)

@@ -830,7 +830,7 @@ class IntentSystemConfig(BaseModel):
         }
         
         try:
-            from ..utils.loader import dynamic_loader
+            from ..utils.entry_points import dynamic_loader
             from ..utils.namespaces import INTENT_HANDLERS_NAMESPACE
 
             # Discover handler classes to check their configuration requirements
@@ -1309,7 +1309,7 @@ class CoreConfig(BaseSettings):
         try:
             # ARCH-54: use the loader directly (the old ComponentLoader indirection is deleted)
             # and derive the component list from the ComponentConfig model — no hand-list.
-            from ..utils.loader import dynamic_loader
+            from ..utils.entry_points import dynamic_loader
             from ..utils.namespaces import COMPONENTS_NAMESPACE
             available_components = dynamic_loader.discover_providers(COMPONENTS_NAMESPACE)
 

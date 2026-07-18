@@ -237,6 +237,33 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       11/11, pyright delta clean on touched files. docs: none — internal map unification; no manifest
       node describes the providers endpoint's component coverage (the UI fix restores doc-implied
       behavior without changing any documented claim).
+- [x] **ARCH-58** `[release]` [ARCH][COMMONS] — **DONE 2026-07-18 — the voice core-py migration: the
+      estate's first vendored RUNTIME code is live** (ARCH-42 design §4; PROD-8/PROD-26 sequencing held —
+      BUILD-43's `.repin.toml` landed first, so the family was declared once, in the new format).
+      **Owner-side flaw found + fixed at the very first pin:** `core-py-v1` was tagged BEFORE the
+      "PROD-8 amended" commit added `contracts/core-py/STAMP.json`, so the v1 tree carries no STAMP and
+      a pins-complete-and-verbatim pin could not be assembled from it — commons cut **`core-py-v1.1`**
+      (packaging correction, artifact bytes diff-verified UNCHANGED; STAMP note records it; commons
+      journal entry). The strict-pin ruling vindicated by its first mechanical use. Landed voice-side:
+      `core-py` family in `.repin.toml` → `contracts/pins/core-py/` (artifact + owner STAMP verbatim +
+      strict PIN.json @ `core-py-v1.1`) + pin README + registry row; importable copy
+      `utils/entry_point_loader.py` (byte-identical, sha256 `c40438bd…`); voice-owned singleton module
+      `utils/entry_points.py` (`dynamic_loader = DynamicLoader()` — cache + BUG-36 failure-ledger
+      semantics unchanged); **full import sweep** — 18 source files + 2 tests moved to
+      `utils.entry_points` (incl. the mixed voice_trigger import split and the `build_analyzer` seam);
+      `utils/loader.py` shrank to the aux helpers (DynamicLoader + the py3.8/pkg_resources compat block
+      DELETED, ~140 lines); `startup_validation._registered_provider_names` adopted the engine's
+      `list_registered` (names-without-import, rule-of-two); identity test
+      `backend/tests/test_core_py_pin_identity.py` (runtime↔pin byte-identity, PIN sha256, PIN↔STAMP
+      coherence, singleton serves the pinned class). **Acceptance, all green:** full suite 1433 passed /
+      7 skipped; analyzer JSON **byte-identical across all 6 profiles** (before/after capture);
+      import contracts **11/11** (utils stays the bottom layer); `--validate-all-profiles` valid;
+      pyright no new findings (env-only missing-import noise); both guards + `repin --check --fail-on
+      any` green (7 pins/tools + core-py current).
+      docs: none — behavior-neutral engine swap; the architecture/build docs describe entry-point
+      discovery conceptually and no manifest node names the internal module
+      contracts: core-py FIRST CONSUMED @ core-py-v1.1 (strict byte-identity pin — the first vendored
+      RUNTIME code); owner-side v1→v1.1 packaging correction cut in commons as part of this task
 ### Code Quality & Review (QUAL)
 - [x] **QUAL-5** (P2) — **✓ DONE 2026-06-06.** Cruft cleanup. **Reconciled (Invariant #8): counts fell during QUAL-4's
       import churn** (F401 360→237, star-imports 62→5+57 F405, F841 22→15). **Cleared the verifiable cruft to ZERO:**
