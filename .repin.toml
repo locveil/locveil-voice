@@ -1,0 +1,77 @@
+# repin config for locveil-voice (BUILD-43; vendored scripts/repin.py at repin-v1 —
+# never edit the vendored file, re-pin to move). The BUILD-24 FAMILIES dict, converted:
+# families this repo CONSUMES + the HK-12 vendored-tools manifest. Severity ladder:
+# ../locveil-commons/process/contracts.md §5 — pre-commit warns (--fail-on none),
+# ordinary CI majors, release gates run --fail-on any (make -C eval repin-check).
+
+[repin]
+pinned_by = "locveil-voice scripts/repin.py (BUILD-43)"
+default_fail_on = "major"
+
+# BUILD-34/TEST-17: the local push-time pin and the commons crossover copy move together
+# in ONE run at one tag, so they can never diverge (multi-dest; a cross-repo dest is
+# legal ONLY into ../locveil-commons — HK-12 ruling, enforced by the tool).
+[[family]]
+name = "catalog"
+owner_repo = "locveil-bridge"
+owner_dir = "../locveil-bridge"
+owner_url = "https://github.com/locveil/locveil-bridge.git"
+files = ["contracts/catalog/catalog.golden.json",
+         "contracts/catalog/openapi.json",
+         "contracts/catalog/STAMP.json"]
+mirror = ["bridge_commit", "catalog_version"]
+[[family.dest]]
+path = "contracts/pins/catalog"
+conformance = "backend/tests/test_catalog_contract_conformance.py"
+[[family.dest]]
+path = "../locveil-commons/contracts/pins/catalog"
+conformance = "locveil-commons eval/tests/test_contracts_pin.py"
+
+[[family]]
+name = "report-protocol"
+owner_repo = "locveil-commons"
+owner_dir = "../locveil-commons"
+owner_url = "https://github.com/locveil/locveil-commons.git"
+files = ["contracts/report-protocol/report-protocol.json",
+         "contracts/report-protocol/STAMP.json"]
+[[family.dest]]
+path = "contracts/pins/report-protocol"
+conformance = "backend/tests/test_report_protocol_conformance.py"
+
+[[family]]
+name = "esp32-site"
+owner_repo = "locveil-satellite"
+owner_dir = "../locveil-satellite"
+owner_url = "https://github.com/locveil/locveil-satellite.git"
+files = ["provisioning/ansible/templates/esp32-site.conf.j2",
+         "contracts/esp32-site/STAMP.json"]
+[[family.dest]]
+path = "contracts/pins/esp32-site"
+conformance = "backend/tests/test_arch36_tls_e2e.py"
+
+# Vendored-tools manifest (HK-12): each pinned_tag is checked against the owner's
+# newest family tag on the same ladder — the tag↔vendored-copy relationship stops
+# living in prose. Bump a pinned_tag only in its re-vendor ledger task.
+[[tool]]
+name = "scope-guard"
+family = "scope"
+owner_repo = "locveil-commons"
+owner_dir = "../locveil-commons"
+owner_url = "https://github.com/locveil/locveil-commons.git"
+pinned_tag = "scope-v7.1"
+
+[[tool]]
+name = "contract-guard"
+family = "contract-guard"
+owner_repo = "locveil-commons"
+owner_dir = "../locveil-commons"
+owner_url = "https://github.com/locveil/locveil-commons.git"
+pinned_tag = "contract-guard-v3"
+
+[[tool]]
+name = "repin"
+family = "repin"
+owner_repo = "locveil-commons"
+owner_dir = "../locveil-commons"
+owner_url = "https://github.com/locveil/locveil-commons.git"
+pinned_tag = "repin-v1"

@@ -533,19 +533,6 @@ size-matched to the Russian stack; language is a per-config/deployment choice (a
       board** (D-4/D-5), seeded when BUILD-21 lands, not decided unilaterally here. Scope for that design: which
       repo owns the unified compose, health-gated `depends_on` vs. tolerant clients, whether the units collapse
       into one, and how `update.sh` stays per-repo when the compose is not. Related: BUILD-18 (ops conformance).
-- [ ] **BUILD-43** `[release]` [PROCESS][CONTRACTS] — **Adopt the vendored repin tool at `repin-v1`**
-      (PROD-26 / HK-12 — the org promotion of this repo's own BUILD-24 engine coming home; SEQUENCED
-      BEFORE ARCH-58 so the core-py family is declared once, in the new format). Vendor `scripts/repin.py`
-      at `repin-v1` (locveil-commons `packages/repin/`, single stdlib file — replaces the BUILD-24 engine
-      wholesale; **never edit the vendored file**, re-pin to move). The FAMILIES dict converts to
-      **`.repin.toml`**: `catalog` keeps its multi-dest (local pin + the commons crossover copy, ONE run at
-      one tag — the HK-12 commons-only cross-repo-dest carve-out), `report-protocol`, `esp32-site`;
-      `[[tool]]` vendored-tools manifest rows for scope-guard@`scope-v7.1`,
-      contract-guard@`contract-guard-v3`, repin@`repin-v1`. `make repin`/`repin-check` (eval/Makefile) stay
-      wired to the vendored tool via `--config`; `repin-check` runs `--check --fail-on any` (today's
-      release-gate semantics, per the §5 ladder); `hooks/pre-commit` gains the warn stage
-      (`--check --fail-on none || true`). Accept: `--check --fail-on any` reproduces today's gate; a
-      catalog re-pin dry-run writes BOTH dests at one tag.
 - [ ] **BUILD-44** `[deferred]` [CONTRACTS][SATELLITE] — **Wake-pack v1.x bump confirmation** *(not a voice
       release-1 gate — tagged deferred at filing, voice retags at intake if the PROD-26 sweep pulls it sooner;
       repo-to-repo filing by

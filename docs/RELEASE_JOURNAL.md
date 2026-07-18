@@ -20,6 +20,18 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-18 — BUILD-43 DONE: the repin engine this repo invented comes home as a vendored tool.**
+  BUILD-24's `scripts/repin.py` was promoted org-wide by commons (HK-12/PROD-26, `packages/repin/` at
+  `repin-v1`) and voice now consumes its own idea back: the vendored file replaces the local engine, the
+  FAMILIES dict became `.repin.toml` (catalog's two-dest run — local pin + commons crossover — is now
+  tool-enforced as the only legal cross-repo write), and the `[[tool]]` manifest watches the vendored
+  guard tags so "which tag is scripts/X.py at" stops being prose. The pre-commit hook gained the §5 warn
+  stage; `make repin-check` is the `--fail-on any` release gate. Live check green across 4 pin dests +
+  3 tools, including a real tokenless ls-remote against all three owner repos; a catalog dry-run wrote
+  both dests at `catalog-v1.7` and was restored. En route: the registry's consumed table had quietly
+  rotted (`catalog-v1.5` prose vs v1.7 pins) — the row now defers to `PIN.json`. ARCH-58 will declare
+  `core-py` as the next family in the new format, first live test of the strict byte-identity pin.
+
 - **2026-07-18 — BUILD-41 + BUILD-42 DONE (one commit): the HK-12 enforcement sweep lands — voice now
   runs contract-guard v3 and scope-guard v7.1, and carries the contract-triad block.** The PROD-26
   delegation arrived with the commons build already complete (repin-v1 / contract-guard-v3 / scope-v7.1

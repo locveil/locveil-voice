@@ -20,7 +20,7 @@ re-pin from the owner when it moves.
 
 | Pin | Owner | Notes |
 |---|---|---|
-| [`catalog`](pins/catalog/README.md) | locveil-bridge (tag `catalog-v1.5`) | LOCAL complete copy for the push-time schema check (`backend/tests/test_catalog_contract_conformance.py`); one `make repin` updates it and the commons crossover copy at the same tag |
+| [`catalog`](pins/catalog/README.md) | locveil-bridge (pinned tag: see `pins/catalog/PIN.json`) | LOCAL complete copy for the push-time schema check (`backend/tests/test_catalog_contract_conformance.py`); one `make repin` updates it and the commons crossover copy at the same tag |
 | [`report-protocol`](pins/report-protocol/README.md) | locveil-commons (tag `report-protocol-v1`) | problem-report machine core; conformance: `backend/tests/test_report_protocol_conformance.py` |
 | [`esp32-site`](pins/esp32-site/README.md) | locveil-satellite (tag `esp32-site-v1`) | Plane-B nginx site template; conformance: `backend/tests/test_arch36_tls_e2e.py` |
 

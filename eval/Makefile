@@ -94,10 +94,10 @@ device-tests:                 ## regenerate device.tests.yaml from the pinned cr
 # BUILD-24 — scripted re-pin of consumed contracts (contracts.md §5: staleness is a
 # release-time gate + runtime version-reporting, NEVER a cross-repo push gate).
 repin:                        ## re-pin a consumed contract (CONTRACT=catalog|report-protocol|esp32-site [TAG=…])
-	python3 ../scripts/repin.py $(CONTRACT) $(if $(TAG),--tag $(TAG))
+	python3 ../scripts/repin.py $(CONTRACT) $(if $(TAG),--tag $(TAG)) --config ../.repin.toml
 
-repin-check:                  ## release-time staleness gate: red when any pin trails its owner
-	python3 ../scripts/repin.py --check
+repin-check:                  ## release-time staleness gate: red when any pin trails its owner (§5 --fail-on any)
+	python3 ../scripts/repin.py --check --fail-on any --config ../.repin.toml
 
 # -j 1: cases share per-room SUT sessions (room_alias → one session per room), so parallel
 # runs interleave turns of the same conversation — inherent cross-talk, not a flake.

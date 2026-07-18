@@ -2245,6 +2245,26 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       manifest nodes).
       contracts: scope consumed-tool pin bumped v6→v7.1; contract-triad block FIRST CONSUMED (pinned
       into CLAUDE.md between markers + hashed).
+- [x] **BUILD-43** `[release]` [PROCESS][CONTRACTS] — **DONE 2026-07-18 (PROD-26 / HK-12; filed +
+      completed same session; SEQUENCED BEFORE ARCH-58 so the core-py family is declared once, in the
+      new format).** The org promotion of this repo's own BUILD-24 engine came home: `scripts/repin.py`
+      is now the VENDORED commons tool at `repin-v1` (single stdlib file, replaces the local engine
+      wholesale — never edit, re-pin to move). The FAMILIES dict converted to **`.repin.toml`**:
+      `catalog` keeps its multi-dest (local push-time pin + the commons crossover copy, ONE run at one
+      tag — the HK-12 commons-only cross-repo-dest carve-out, now tool-enforced), `report-protocol`,
+      `esp32-site`, plus the `[[tool]]` vendored-tools manifest (scope-guard@`scope-v7.1`,
+      contract-guard@`contract-guard-v3`, repin@`repin-v1` — the tag↔copy relationship out of prose).
+      `make repin`/`repin-check` stay wired via `--config ../.repin.toml`; `repin-check` runs
+      `--fail-on any` (today's release-gate semantics on the §5 ladder); `hooks/pre-commit` gained the
+      warn stage (`--check --fail-on none || true`, offline-safe). Swept en route: the stale
+      `catalog-v1.5` tag in the registry's consumed table (pins were at v1.7; the row now defers to
+      `PIN.json`) and `eval/README.md`'s pre-HK-12 "staleness is checked at release time" prose → the
+      severity ladder. **Verified:** `--check --fail-on any` green live — 4 pin dests + 3 tools all
+      current (real ls-remote); `--fail-on none` exits 0; catalog re-pin DRY-RUN wrote both dests at
+      `catalog-v1.7` (artifact bytes identical, PIN re-stamped), then restored.
+      docs: eval/README (repin/staleness paragraph — caused staleness fixed in the same change).
+      contracts: repin FIRST CONSUMED as a vendored tool @ repin-v1; `.repin.toml` becomes the family
+      registry (no pin content moved — all pins verified current).
 ### Models & Assets (ASSET)
 ### Documentation (DOC)
 - [x] **DOC-5b** (P2) — DONE 2026-06-08: regenerated `guides/DONATION_FILE_SPECIFICATION.md` for the v1.1
