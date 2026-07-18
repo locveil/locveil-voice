@@ -533,29 +533,21 @@ size-matched to the Russian stack; language is a per-config/deployment choice (a
       board** (D-4/D-5), seeded when BUILD-21 lands, not decided unilaterally here. Scope for that design: which
       repo owns the unified compose, health-gated `depends_on` vs. tolerant clients, whether the units collapse
       into one, and how `update.sh` stays per-repo when the compose is not. Related: BUILD-18 (ops conformance).
-- [ ] **BUILD-44** `[deferred]` [CONTRACTS][SATELLITE] — **Wake-pack v1.x bump confirmation** *(not a voice
-      release-1 gate — tagged deferred at filing, voice retags at intake if the PROD-26 sweep pulls it sooner;
-      repo-to-repo filing by
-      locveil-satellite 2026-07-18 — HK-12 round-1 greenlight; answering it is listed in the voice PROD-26
-      delegation; reconcile per task-start-reconciliation at intake)*. The satellite's DES-7 owner rulings made
-      the wake pack **multi-model**: one wake model per unit — 1 today, **≥3 near-term** (three units on hand) —
-      with the WHOLE pack landing unmodified in every device's models partition (hash-verifiability) and the
-      per-unit active model selected at runtime from provisioning-time NVS. Ask voice to CONFIRM: when the
-      additional models are added, the multi-model pack ships as a tagged **`wake-pack` version bump** — v1.x if
-      the sidecar-STAMP shape extends compatibly (files enumerated with per-file sha256; whether a multi-word
-      STAMP reshape is major is voice's call), and never an out-of-band edit of published files — the satellite's
-      `publish_model_pack.py` refuses replacing published bytes until the pin bumps, and its flash-time
-      verification pins the STAMP hashes (the pack stays voice's UNMODIFIED artifact per its `consumer-pins`
-      invariant; satellite never retrains or modifies). On the cut: `re-pin owed: satellite` (it re-pins +
-      re-publishes; its `.repin.toml` watches the family so the staleness nag is automatic). **Addendum
-      (same day, found live by the satellite's OPS-13 smoke test): the published pack has ALREADY drifted
-      upstream** — fetching the STAMP's own URLs today yields an `irina.json` whose sha256 no longer matches
-      the pinned `fc8beb99…` (the `.tflite` still matches), because the STAMP's URLs point at HF
-      `/resolve/main/` — a MUTABLE ref — and the HF repo's main revision has moved. Consequence: the
-      satellite's publish-from-URLs path is correctly refused; only `--from DIR` with the original bytes can
-      publish. The bump should (a) reconcile/re-stamp the current upstream bytes (or restore the original)
-      and (b) switch the STAMP URLs to an immutable `/resolve/<revision>/` ref so a third-party main move can
-      never invalidate a pinned pack again.
+### Models & Assets (ASSET)
+
+- [ ] **ASSET-6** `[deferred]` [ASSET][CONTRACTS][SATELLITE] — **The multi-model wake-pack v1.x cut**
+      (filed 2026-07-18 from the BUILD-44 answer; executes the commitments given to locveil-satellite).
+      When the next RU wake words land from the wakeword-training sibling (Валера/Наташа — one released-
+      catalog addition each): extend `_get_default_model_urls` + the wake-pack STAMP with the new
+      per-file sha256 entries (the flat file→sha256 enumeration stays parse-stable — the BUILD-44 shape
+      ruling; per-word grouping metadata is additive only), and in the SAME cut discharge the drift
+      addendum: (a) reconcile/re-stamp the drifted upstream `irina.json` (HF `main` moved past the
+      pinned `fc8beb99…`; the `.tflite` still matches) or restore the original bytes upstream, and
+      (b) switch STAMP + in-code catalog URLs from mutable `/resolve/main/` to immutable
+      `/resolve/<hf_revision>/` refs (the STAMP already carries `hf_revision`). Bump + tag
+      `wake-pack-v1.x`; the catalog-coherence leg of `test_ws_protocol_version.py` moves in the same
+      change. On the cut: **`re-pin owed: satellite`** (it re-pins + re-publishes; its `.repin.toml`
+      watches the family so the staleness nag is automatic).
 
 ### Documentation (DOC)
 

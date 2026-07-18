@@ -2265,6 +2265,31 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       docs: eval/readme (repin/staleness paragraph — caused staleness fixed in the same change)
       contracts: repin FIRST CONSUMED as a vendored tool @ repin-v1; `.repin.toml` becomes the family
       registry (no pin content moved — all pins verified current).
+- [x] **BUILD-44** `[deferred]` [CONTRACTS][SATELLITE] — **DONE 2026-07-18 (answered the day it was
+      filed — the PROD-26 sweep pulled it, exactly as the filing anticipated; repo-to-repo filing by
+      locveil-satellite, HK-12 round-1 greenlight).** The wake-pack v1.x bump confirmation — voice
+      CONFIRMS, three commitments on record:
+      **(1) Tagged bumps only.** The multi-model pack (one wake model per unit, ≥3 near-term per DES-7)
+      ships as a tagged `wake-pack` version bump, NEVER an out-of-band edit of published files. The
+      satellite's publish-refusal on drifted bytes is correct behavior to keep; the pack stays voice's
+      UNMODIFIED third-party artifact (the wake-pack STAMP's own note already encodes the policy:
+      words added = minor, replacing a published model file = major).
+      **(2) The multi-word STAMP-shape ruling (voice's call, as asked):** the verification surface the
+      satellite parses — files enumerated FLAT with per-file sha256 — stays stable across all of v1.x;
+      adding words extends that enumeration, and any per-word grouping metadata is additive (readers
+      ignore unknown keys). Only a change that breaks the existing flash-time hash-verification parse
+      is major (v2).
+      **(3) The drift addendum:** at the bump voice (a) reconciles/re-stamps the current upstream
+      `irina.json` bytes (or restores the originals on HF), and (b) switches ALL STAMP + in-code
+      catalog URLs (`_get_default_model_urls` builds `/resolve/main/` today) to immutable
+      `/resolve/<hf_revision>/` refs — the STAMP already carries `hf_revision` — so a third-party
+      `main` move can never invalidate a pinned pack again. On the cut: `re-pin owed: satellite`.
+      Execution filed as **ASSET-6** `[deferred]` (the cut waits for the next trained words from the
+      wakeword-training sibling; the answer needed no code today).
+      docs: none — a contract-policy answer; the voice-trigger guide + STAMP move together at the
+      ASSET-6 cut
+      contracts: none moved — this entry COMMITS the wake-pack v1.x versioning policy (owner-side
+      promise); the actual `wake-pack-v1.x` cut with `re-pin owed: satellite` lands via ASSET-6
 ### Models & Assets (ASSET)
 ### Documentation (DOC)
 - [x] **DOC-5b** (P2) — DONE 2026-06-08: regenerated `guides/DONATION_FILE_SPECIFICATION.md` for the v1.1

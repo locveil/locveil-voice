@@ -20,6 +20,18 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-18 — BUILD-44 DONE (answered same day) → ASSET-6 filed [deferred]: the wake-pack promise
+  to the satellite is on record.** Voice confirms the satellite's three asks: the multi-model pack
+  ships only as a tagged `wake-pack` bump (their publish-refusal on drifted bytes is correct behavior,
+  not an obstacle); the STAMP's flat file→sha256 enumeration — the surface their flash-time
+  verification parses — stays stable across v1.x, with per-word grouping strictly additive and major
+  reserved for verification-surface breaks; and the drift their OPS-13 smoke test caught live (HF
+  `main` moved under the pinned `irina.json`) gets discharged AT the bump — re-stamp or restore, plus
+  the switch from mutable `/resolve/main/` to immutable `/resolve/<hf_revision>/` URLs in both the
+  STAMP and the in-code catalog. ASSET-6 holds the execution, gated only on the next trained words
+  (Валера/Наташа) arriving from the wakeword-training sibling. With this, all four PROD-26 build items
+  plus the filing response are done — the board write-back closes voice's half of the sweep.
+
 - **2026-07-18 — DOC-14 DONE: the trace file format is a stamped contract — `trace-format-v1`.** The
   saved-trace JSON has been load-bearing since ARCH-19 (and doubly so since ARCH-38 put a controller
   trace inside every satellite merged file), but its shape lived as a code literal and narrative prose.
