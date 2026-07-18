@@ -15,6 +15,7 @@ re-pin from the owner when it moves.
 | [`wake-pack`](wake-pack/README.md) | sidecar stamp over the unmodified ASSET-5 HF pack (third-party manifest, never forked); in-code catalog is the release list | `wake-pack/STAMP.json` + tag `wake-pack-v1` (URL/catalog coherence in the same test) |
 | [`ui-openapi`](ui-openapi/README.md) | repo-internal GENERATED contract — artifact stays `config-ui/openapi.json` (generator `scripts/dump_openapi.py`, consumer `npm run gen:api-types`) | `ui-openapi/STAMP.json` + tag `ui-openapi-v1`; drift guard `backend/tests/test_openapi_drift.py` |
 | [`docs-manifest`](docs-manifest/README.md) | repo-INTERNAL contract — artifact stays `docs/manifest.json` (the user-facing docs registry; schema is commons-owned) | `docs-manifest/STAMP.json` + tag `docs-manifest-v1`; coherence test `backend/tests/test_docs_manifest.py` |
+| [`trace-format`](trace-format/README.md) | artifact stays `docs/guides/tracing.md` → "The trace file format (reference)" (`trace-format-doc-canonical`); `trace-format/` holds the STAMP + pointer README; written as `trace_version` in every saved trace | `trace-format/STAMP.json` + tag `trace-format-v1` (triple-checked by `backend/tests/test_trace_format_version.py`) |
 
 ## Consumed (pins)
 

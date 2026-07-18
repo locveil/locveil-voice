@@ -559,20 +559,6 @@ size-matched to the Russian stack; language is a per-config/deployment choice (a
 
 ### Documentation (DOC)
 
-- [ ] **DOC-14** `[release]` [DOC][CONTRACTS] — **Stamp the utterance-trace JSON format as a doc-canonical
-      contract** (PROD-26 delegation, filed 2026-07-18 — the sweep's fourth voice task; the ws-protocol
-      model, per the freshly pinned contract-triad block). Intake reconciliation: the board's "the shape
-      today lives only in voice's trace-persistence design doc" is slightly narrow — the format is SHIPPED
-      (`core/trace_context.py` emits `trace_version: 1`, ARCH-19; the satellite merged shape rides on it,
-      ARCH-38) and `docs/guides/tracing.md` documents it narratively, but no doc carries the normative
-      field reference and nothing versions it. Scope: promote the format reference into
-      `docs/guides/tracing.md` (the canonical artifact — a hand-written reference that doubles as the user
-      guide, exactly the `ws-protocol-doc-canonical` shape; the design doc keeps rationale and defers);
-      `contracts/trace-format/` STAMP + pointer README + tag `trace-format-v1` + registry row in the SAME
-      change; version triple asserted by a test (doc's format-version line ↔ the emitted `trace_version`
-      constant ↔ STAMP), the `test_ws_protocol_version.py` pattern. Consumers: the satellite merged-trace
-      writer + `locveil-voice-replay-trace` today; the eval framework's trace scorers when they land.
-
 ### UI / config-ui (UI)
 React/Vite donation+config editor. Front-end feature/UX work (the BUILD-4 build gate stays under Build & CI).
 Governed by `config-ui-stays-functional` (config-ui must stay functional).

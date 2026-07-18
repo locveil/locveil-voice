@@ -31,6 +31,12 @@ but these rules apply to any task). **Single source of truth** (relocated here f
   `ws_audio_provider`). Design docs hold rationale and **defer to it** (e.g. `python_satellite.md` §3 points
   there); never duplicate frame tables elsewhere. Sibling rule: `../locveil-commons/CLAUDE.md` names this
   document as the protocol truth its providers implement.
+- **`trace-format-doc-canonical`** — the "trace file format (reference)" section of `docs/guides/tracing.md`
+  is the single source of truth for the saved utterance-trace JSON (`trace_version`; controller envelope +
+  satellite merged shape). Any change to what `TraceContext.build_envelope` / `satellite/trace.py` write
+  updates that section in the same change; a reader-breaking change bumps the triple (doc line,
+  `TRACE_FORMAT_VERSION`, `contracts/trace-format/STAMP.json` + tag — DOC-14, the ws-protocol model).
+  Additive keys keep the version; readers ignore unknown keys.
 - **`cross-repo-source-of-truth`** — for any artifact **shared with a sibling repo**, know which side *owns* it and
   don't write across the boundary the wrong way.
   - **The Irene↔bridge catalog / canonical-command contract is owned by `../locveil-bridge`** (its generator / source

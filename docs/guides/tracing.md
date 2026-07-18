@@ -122,3 +122,40 @@ for VAD tuning or recognition comparison.
 Traces land in `<assets_root>/traces/` unless you set `[trace] traces_dir`. Each is a plain JSON file with the
 audio inline (base64, no sidecar WAVs), so a trace is portable — copy one off the box and replay it anywhere the
 same models are installed.
+
+## The trace file format (reference)
+
+**Trace format version: 1** (`trace-format-v1`)
+
+This section is the normative reference for the saved-trace JSON — anything that reads a trace file (the
+replay tool, a satellite writing its merged file, an external analyzer) is built against it. Every trace
+carries its format generation as the top-level `trace_version`; **additive keys keep the number** (readers
+must ignore keys they don't know), while a key removed, renamed, or given a new meaning bumps it.
+
+Top-level shape of every trace file:
+
+| Key | What it holds |
+|---|---|
+| `trace_version` | integer format generation — this document describes `1` |
+| `request_id` | the id the file is named after |
+| `saved_at` | UTC ISO-8601 write time |
+| `replay` | the faithful re-run half: `input` (the captured audio, base64, with its format), `request` (who/where it came from), `canonical` (the normalized request), `seed_context` (the conversation context *before* the run — what replay re-seeds), `config_subset` + `config_digest` (the settings that shaped the run, and a hash to spot drift), `provider_models` (which models actually served it) |
+| `execution` | the readable half, sanitized (secrets redacted, large values truncated): `pipeline_stages` (each stage's input/output/timing), `context_evolution`, `performance_metrics` |
+| `logs` | log records at/above `[trace] log_threshold` plus all exception stack traces, each tagged with stage and `t_ms` |
+| `handler_events` | what handlers chose to record (a timer set, an LLM call made), stage-tagged |
+| `recorded_output` | the answer as delivered — what a replay diffs against |
+| `vad_frames` | `segmenter` level only, absent otherwise: per-frame `{t_ms, is_voice, energy, threshold}` |
+
+A **satellite merged trace** is the same envelope written by the room node (its `pipeline_stages` are the
+device story — a `wake_gate` stage with the recent wake/skip decisions, an `uplink` stage with the wire
+exchange and round-trip time), with up to three extra keys:
+
+| Key | What it holds |
+|---|---|
+| `controller_trace` | the controller's own execution trace nested verbatim — or `{"declined": true}` (controller config withholds it) / `{"missing": …}` (the trace frame never arrived) |
+| `raw_mic` | with `--trace-raw-mic` only: the pre-canonical microphone window around the utterance |
+| `reply_audio` | the reply exactly as played (base64 PCM with rate/channels) |
+
+The format is version-stamped as a contract: the version above, the `trace_version` the code writes, and
+`contracts/trace-format/STAMP.json` are asserted equal by a conformance test, and a change that breaks
+readers lands only as a deliberate version bump (`trace-format-vN`).

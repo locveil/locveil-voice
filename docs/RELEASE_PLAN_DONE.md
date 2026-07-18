@@ -2262,7 +2262,7 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       severity ladder. **Verified:** `--check --fail-on any` green live — 4 pin dests + 3 tools all
       current (real ls-remote); `--fail-on none` exits 0; catalog re-pin DRY-RUN wrote both dests at
       `catalog-v1.7` (artifact bytes identical, PIN re-stamped), then restored.
-      docs: eval/README (repin/staleness paragraph — caused staleness fixed in the same change).
+      docs: eval/readme (repin/staleness paragraph — caused staleness fixed in the same change)
       contracts: repin FIRST CONSUMED as a vendored tool @ repin-v1; `.repin.toml` becomes the family
       registry (no pin content moved — all pins verified current).
 ### Models & Assets (ASSET)
@@ -2307,6 +2307,30 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       — kept explicit). Sequencing block's "QUAL-29 remains" corrected (✓ DONE) with a core-complete
       note. One gate verified LIVE and kept as-is: QUAL-82's VWB-33 gate (bridge-side open, PROD-18).
       docs: none — ledger prose only; no manifest node describes individual plan entries.
+- [x] **DOC-14** `[release]` [DOC][CONTRACTS] — **DONE 2026-07-18 (filed + completed same session;
+      PROD-26 delegation — the sweep's fourth voice task; the ws-protocol model, per the freshly pinned
+      contract-triad block).** The utterance-trace JSON format is now a stamped doc-canonical contract.
+      Intake reconciliation HELD (board's "shape lives only in the design doc" was slightly narrow: the
+      format is SHIPPED — `trace_context.py` emits `trace_version: 1` since ARCH-19, the satellite merged
+      shape rides on it since ARCH-38 — and the tracing guide described it narratively, but nothing
+      normative and nothing versioned). Landed: **"The trace file format (reference)"** section in
+      `docs/guides/tracing.md` (top-level field table + the satellite merged additions
+      `controller_trace`/`raw_mic`/`reply_audio` + the compatibility rule: additive keys keep the
+      version, readers ignore unknown keys); code constant `TRACE_FORMAT_VERSION = 1` in
+      `core/trace_context.py` (the envelope literal promoted); `contracts/trace-format/` STAMP + pointer
+      README + registry row + tag **`trace-format-v1`** in the SAME change (no `artifacts`
+      byte-enumeration — prose evolves; the normative surface is the tested triple, ws-protocol's
+      posture); new CLAUDE.md invariant `trace-format-doc-canonical`; manifest `guides/tracing` node
+      gains the canonical{invariant,stamp,guard} carve-out; version-triple test
+      `backend/tests/test_trace_format_version.py` (doc line ↔ constant ↔ STAMP + envelope smoke).
+      NOTE: a dedicated `trace-format` manifest SURFACE hit the commons schema's 10-surface cap —
+      trigger globs deferred to the next docs-manifest schema bump (the canonical carve-out is wired;
+      only the glob-trigger mapping waits). **Verified:** the three conformance suites green
+      (trace-format 3, docs-manifest, ws-protocol — 15 tests); both guards green.
+      docs: guides/tracing (the new reference section IS the artifact)
+      contracts: trace-format-v1 CREATED (STAMP + tag + registry row same change); consumers today are
+      in-repo (replay tool, satellite merged-trace writer) — no re-pin owed yet; the eval framework's
+      trace scorers pin it when they land.
 
 ### UI / config-ui (UI)
 - [x] **UI-1** [DEDITOR] (P2) — **DONE 2026-06-06.** Designed the human-friendly donation/pattern authoring model →

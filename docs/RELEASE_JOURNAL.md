@@ -20,6 +20,18 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-18 — DOC-14 DONE: the trace file format is a stamped contract — `trace-format-v1`.** The
+  saved-trace JSON has been load-bearing since ARCH-19 (and doubly so since ARCH-38 put a controller
+  trace inside every satellite merged file), but its shape lived as a code literal and narrative prose.
+  Now the tracing guide carries the normative field reference ("The trace file format (reference)" —
+  controller envelope, satellite additions, and the compatibility rule: additive keys keep the version,
+  readers ignore unknown keys), the code writes `TRACE_FORMAT_VERSION`, and
+  `contracts/trace-format/STAMP.json` + the tag land in the same change with a version-triple test in
+  the ws-protocol mold. New CLAUDE.md invariant `trace-format-doc-canonical`; the manifest node carries
+  the canonical carve-out. One limit found live: the commons docs-manifest schema caps declared
+  surfaces at 10, so the trace-format glob-trigger mapping waits for the next schema bump. This was the
+  last build item of the PROD-26 sweep — what remains is the BUILD-44 answer and the board write-back.
+
 - **2026-07-18 — BUILD-43 DONE: the repin engine this repo invented comes home as a vendored tool.**
   BUILD-24's `scripts/repin.py` was promoted org-wide by commons (HK-12/PROD-26, `packages/repin/` at
   `repin-v1`) and voice now consumes its own idea back: the vendored file replaces the local engine, the

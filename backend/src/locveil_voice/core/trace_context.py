@@ -31,6 +31,13 @@ from ..intents.context_models import UnifiedConversationContext
 
 logger = logging.getLogger(__name__)
 
+# The trace-file format generation, stamped into every saved envelope as `trace_version`.
+# Version authority is a TRIPLE — this constant, the "Trace format version" line in
+# docs/guides/tracing.md, and contracts/trace-format/STAMP.json — asserted equal by
+# backend/tests/test_trace_format_version.py. Additive keys keep the number; a key
+# removed, renamed, or repurposed bumps it (and the tag) — consumers ignore unknown keys.
+TRACE_FORMAT_VERSION = 1
+
 # ARCH-19 slice 1 — ambient access to the live trace (D-3).
 # A process-global contextvar set at the request boundary (`trace_scope`) so the
 # TraceLogger and handler `trace_event()` can find the active trace without threading
@@ -727,7 +734,7 @@ class TraceContext:
                 "performance_metrics": exported.get("performance_metrics", {}),
             }
         envelope: Dict[str, Any] = {
-            "trace_version": 1,
+            "trace_version": TRACE_FORMAT_VERSION,
             "request_id": self.request_id,
             "saved_at": datetime.now(timezone.utc).isoformat(),
             "replay": {
