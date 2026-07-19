@@ -18,9 +18,14 @@ class ModelCapabilities:
 
 # Documented limits (2026). Extend as models are added.
 _CAPABILITIES: Dict[str, ModelCapabilities] = {
-    # DeepSeek (OpenAI-compatible API)
-    "deepseek-chat":     ModelCapabilities(context_window=64_000, max_output=8_000),
-    "deepseek-reasoner": ModelCapabilities(context_window=64_000, max_output=8_000),
+    # DeepSeek (OpenAI-compatible API) — V4 family (BUG-44): 1M context, 384K max output.
+    "deepseek-v4-flash": ModelCapabilities(context_window=1_048_576, max_output=384_000),
+    "deepseek-v4-pro":   ModelCapabilities(context_window=1_048_576, max_output=384_000),
+    # Legacy aliases — RETIRED by DeepSeek 2026-07-24; until then they serve deepseek-v4-flash
+    # (non-thinking / thinking), so they carry its budgets. Kept so a straggler config gets the
+    # real budgets instead of the conservative fallback during the transition.
+    "deepseek-chat":     ModelCapabilities(context_window=1_048_576, max_output=384_000),
+    "deepseek-reasoner": ModelCapabilities(context_window=1_048_576, max_output=384_000),
     # OpenAI
     "gpt-4o":            ModelCapabilities(context_window=128_000, max_output=16_384),
     "gpt-4o-mini":       ModelCapabilities(context_window=128_000, max_output=16_384),

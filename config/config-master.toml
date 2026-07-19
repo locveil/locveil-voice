@@ -303,9 +303,9 @@ fallback_providers = ["console"]    # Runtime fallback chain (console = offline 
 enabled = true                      # Enable DeepSeek provider
 api_key = "${DEEPSEEK_API_KEY:-}"    # API key from environment variable
 base_url = "https://api.deepseek.com"  # DeepSeek API base URL
-model = "deepseek-chat"            # deepseek-chat (V3) | deepseek-reasoner (R1)
-max_tokens = 8000                   # Maximum response tokens
-context_window = 64000            # Input context window (tokens); default = the model capability (QUAL-52)
+model = "deepseek-v4-flash"        # deepseek-v4-flash | deepseek-v4-pro (legacy -chat/-reasoner aliases retired 2026-07-24; BUG-44)
+max_tokens = 8000                   # Maximum response tokens — deliberate spoken-reply ceiling (model max is 384000)
+context_window = 1048576           # Input context window (tokens); default = the model capability (QUAL-52)
 timeout = 30                       # Per-call timeout (s)
 
 # OpenAI LLM Provider (GPT models)
@@ -426,7 +426,7 @@ en = ["en_core_web_md", "en_core_web_sm"]    # English models in preference orde
 enabled = false                     # Opt-in; enable per deployment that wants the LLM fallback
 confidence_threshold = 0.7         # Provider confidence threshold (consistent with the other NLU tiers)
 max_phrases_per_intent = 3         # Sample phrases per intent in the classifier prompt (taxonomy budget)
-# model = "deepseek/deepseek-chat" # Optional: pin provider/model; omit to use the [llm] default chain
+# model = "deepseek/deepseek-v4-flash" # Optional: pin provider/model; omit to use the [llm] default chain
 # provider = "deepseek"            # Optional: pin the LLM provider; omit to use the [llm] default
 
 # ============================================================

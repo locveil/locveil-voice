@@ -21,17 +21,19 @@ def test_input_budget_reserves_room_for_output():
 
 
 def test_context_window_from_registry_or_config_override():
-    assert context_window_for("deepseek-chat") == 64_000          # from the model registry
-    assert context_window_for("deepseek-chat", 100_000) == 100_000  # config override wins (custom model)
-    assert context_window_for("some-unknown-model") == 8_192       # conservative fallback
+    assert context_window_for("deepseek-v4-flash") == 1_048_576     # from the model registry
+    assert context_window_for("deepseek-v4-flash", 100_000) == 100_000  # config override wins (custom model)
+    assert context_window_for("some-unknown-model") == 8_192        # conservative fallback
 
 
 def test_fit_messages_passthrough_when_within_budget():
     msgs = [{"role": "system", "content": "sys"}, {"role": "user", "content": "hi"}]
-    assert fit_messages(msgs, "deepseek-chat", 100) == msgs
+    assert fit_messages(msgs, "deepseek-v4-flash", 100) == msgs
 
 
 def test_fit_messages_trims_oldest_keeps_system_and_final():
+    # the trim logic is window-size-independent — exercised through a config override so the
+    # test doesn't chase model-capability bumps (BUG-44 moved deepseek to a 1M window)
     big = "x" * 200_000  # ~50k tokens each
     msgs = [
         {"role": "system", "content": "S"},
@@ -39,7 +41,7 @@ def test_fit_messages_trims_oldest_keeps_system_and_final():
         {"role": "assistant", "content": big},
         {"role": "user", "content": "current"},  # final → always kept
     ]
-    kept = fit_messages(msgs, "deepseek-chat", 1000)
+    kept = fit_messages(msgs, "deepseek-v4-flash", 1000, context_window=64_000)
     assert kept[0]["role"] == "system"
     assert kept[-1]["content"] == "current"
     assert len(kept) < len(msgs)
@@ -47,8 +49,8 @@ def test_fit_messages_trims_oldest_keeps_system_and_final():
 
 def test_fit_messages_raises_when_system_prompt_alone_overflows():
     msgs = [
-        {"role": "system", "content": "x" * 2_000_000},  # ~500k tokens > any budget
+        {"role": "system", "content": "x" * 2_000_000},  # ~500k tokens > the overridden budget
         {"role": "user", "content": "hi"},
     ]
     with pytest.raises(ValueError):
-        fit_messages(msgs, "deepseek-chat", 1000)
+        fit_messages(msgs, "deepseek-v4-flash", 1000, context_window=64_000)

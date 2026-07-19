@@ -145,9 +145,9 @@ fallback_providers = ["console"]
 enabled = true
 api_key = "${DEEPSEEK_API_KEY:-}"
 base_url = "https://api.deepseek.com"
-model = "deepseek-chat"
+model = "deepseek-v4-flash"
 max_tokens = 8000
-context_window = 64000
+context_window = 1048576
 timeout = 30
 
 [llm.providers.console]

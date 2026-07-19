@@ -20,6 +20,16 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-19 — BUG-44 DONE: the owner's "budget seems too tiny" question defused a five-day bomb.**
+  What started as a QUAL-60 analysis question («we have DeepSeek v4 pro configured now, right?»)
+  surfaced two facts: the configs pin `deepseek-chat`, which is a rolling alias now serving V4-Flash —
+  and DeepSeek retires that alias on 2026-07-24, after which every deployment's LLM tier would have
+  silently dropped to the console floor. Repointed to the explicit `deepseek-v4-flash` everywhere
+  (6 configs + master + provider + schema), refreshed the QUAL-52 capability table to the V4 reality
+  (1M context / 384K output vs the V3-era 64k/8k), kept `max_tokens = 8000` as a deliberate
+  spoken-reply ceiling, and repointed the commons eval judge riding the same alias. The budget tests
+  now exercise trim logic through explicit window overrides — capability bumps stop breaking them.
+
 - **2026-07-19 — BUILD-46 DONE: staleness sweep #2 — the machinery is now routine.** Same shape as
   BUILD-45, one day later: the nag surfaced two owner-side moves (commons cut scope-v7.2 fixing the
   rotation parser that misread ##-style journals; the bridge cut catalog-v1.9 refining the

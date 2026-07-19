@@ -235,7 +235,7 @@ class DeepSeekProviderSchema(LLMProviderSchema):
     """DeepSeek provider configuration schema (OpenAI-compatible API)"""
     api_key: str = Field(json_schema_extra={"widget": "env_var"}, description="DeepSeek API key (use ${DEEPSEEK_API_KEY})")
     base_url: str = Field(default="https://api.deepseek.com", description="DeepSeek API base URL")
-    model: str = Field(default="deepseek-chat", description="Model: deepseek-chat (V3) | deepseek-reasoner (R1)")
+    model: str = Field(default="deepseek-v4-flash", description="Model: deepseek-v4-flash | deepseek-v4-pro (legacy deepseek-chat/-reasoner aliases retired 2026-07-24)")
     max_tokens: int = Field(default=8000, description="Maximum response tokens")
     context_window: int = Field(default=64000, description="Input context window (tokens); default = the model capability (QUAL-52)")
 

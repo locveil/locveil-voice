@@ -2,8 +2,9 @@
 DeepSeek LLM Provider (QUAL-15).
 
 DeepSeek's API is OpenAI-compatible, so this uses the `openai` AsyncOpenAI client pointed at
-`https://api.deepseek.com` with the `deepseek-chat` model (DeepSeek-V3) — matching the
-`../personal_vpn` monitoring service. Cloud (online) provider; the offline floor is the console stub.
+`https://api.deepseek.com` with the `deepseek-v4-flash` model (BUG-44 — the legacy
+`deepseek-chat`/`deepseek-reasoner` aliases retire 2026-07-24; v4-flash is what they last served).
+Cloud (online) provider; the offline floor is the console stub.
 
 Unlike the old providers, this RAISES on a call failure so the component's fallback chain
 (default → fallback_providers → console) takes over, instead of masking the error by returning a
@@ -30,7 +31,7 @@ class DeepSeekLLMProvider(LLMProvider):
         credentials = self.asset_manager.get_credentials("deepseek")
         self.api_key = credentials.get("deepseek_api_key") or os.getenv(config.get("api_key_env", "DEEPSEEK_API_KEY"))
         self.base_url = config.get("base_url", "https://api.deepseek.com")
-        self.default_model = config.get("default_model") or config.get("model") or "deepseek-chat"
+        self.default_model = config.get("default_model") or config.get("model") or "deepseek-v4-flash"
         self.max_tokens = config.get("max_tokens")  # None → the model's real max_output (QUAL-52)
         self.context_window = config.get("context_window")  # None -> model capability (QUAL-52)
         self.timeout = config.get("timeout", 30)  # per-call timeout (s) — never hang offline
@@ -89,7 +90,7 @@ class DeepSeekLLMProvider(LLMProvider):
         return (response.choices[0].message.content or "").strip()
 
     def get_available_models(self) -> List[str]:
-        return ["deepseek-chat", "deepseek-reasoner"]
+        return ["deepseek-v4-flash", "deepseek-v4-pro"]
 
     # get_supported_tasks() inherited from LLMProvider (identical cloud task set, CR-C7).
 

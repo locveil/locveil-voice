@@ -1726,6 +1726,25 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       also verified live for both languages. Verified: full suite 1426 passed / 7 skipped, guard
       14/14, import contracts 11/11. docs: none — `howto-new-language` already teaches exactly the
       canonical top-level field this fix wires to.
+- [x] **BUG-44** [LLM][CONFIG] `[deferred]` — **✓ DONE 2026-07-19 (filed + completed same session; found
+      answering an owner budget question).** **DeepSeek repoint: the configured `deepseek-chat` id is a
+      legacy alias DeepSeek retires 2026-07-24 15:59 UTC** — five days out; past that date all six
+      deployment configs' LLM tier (conversation + the QUAL-50 LLM NLU tier) would fall to the console
+      floor. The alias last serves deepseek-v4-flash (non-thinking), so the repoint pins that id
+      explicitly: `model = "deepseek-v4-flash"` in config-master + all 6 deployment configs, provider
+      default + `get_available_models` + provider-schema default moved. **Budget refresh rides along**
+      (the owner's "budget seems too tiny" instinct — V4 family is 1M context / 384K max output vs the
+      pinned V3-era 64k/8k): capability table gains `deepseek-v4-flash`/`deepseek-v4-pro` at
+      1_048_576/384_000, the legacy aliases kept mapped to the same budgets until retirement (a
+      straggler config gets real budgets, not the 8k fallback); config `context_window` raised to
+      1048576; `max_tokens` KEPT at 8000 as a deliberate spoken-reply ceiling (comment says so).
+      Budget tests moved to the v4 ids; the fit_messages trim/overflow tests now exercise via explicit
+      `context_window=64_000` overrides so they stop chasing capability bumps. Cross-repo rider: the
+      commons eval judge (`eval/shared/deepseek-judge.yaml` + ARCHITECTURE.md snippet) rode the same
+      retiring alias — repointed in commons (voice co-develops eval). Verified: budget suites 12
+      passed, config-validator ci-mode all 8 configs valid, openapi drift + coherence gates green.
+      docs: none — no manifest doc names the model id (checked guides/README/QUICKSTART/example).
+      contracts: none — provider config + capability data; no versioned surface moved.
 ### Tests (TEST)
 - [x] **TEST-0** (P0) — Minimal end-to-end smoke/integration harness (refactor safety net, Gate 0). **DONE
       2026-06-01** → `irene/tests/test_smoke_e2e.py` (**5 passed / 1 xfailed**, ~21s; boots the WebAPI runner once
