@@ -382,23 +382,6 @@ _Apply to every remediation task below (from the 4 review docs + QUAL-25/26). So
       `report_bundle.py:124` `smart_home` intent-prefix triage derive from donations (e.g. a
       `handler_domain` trait) instead of module-level literals. Not a loading violation — filed to record
       the coupling. Evidence: review doc §G.
-- [ ] **QUAL-85** [QUAL][CONFIG] `[deferred]` — **★ Discovered at QUAL-83 execution: the parallel schema
-      tree + residual dead resampling config.** Filed 2026-07-16 (unattended sweep; needs an owner
-      tag/scope ruling at intake). (a) `config/schemas.py` is a hand-maintained PARALLEL schema tree
-      (provider schemas + component schemas, e.g. `MonitoringComponentSchema` still declaring the
-      QUAL-83-deleted `dashboard_enabled`, `VoiceTriggerComponentSchema` with `buffer_seconds` and a
-      string-list `wake_words` shape that predates `WakeWordSpec`) — the exact models.py-drift pattern
-      ARCH-50 catalogued; audit which of it `AutoSchemaRegistry`/`SchemaValidator` actually need and
-      delete/derive the rest. (b) `ASRConfig.allow_resampling`/`resample_quality` +
-      `VoiceTriggerConfig.allow_resampling`/`resample_quality`: their ONLY reader is
-      `config/validator.py::resolve_audio_config` — which itself has ZERO callers (dead chain); the audio
-      negotiator resamples via `AudioTranscoder` without reading them. Decide honor (wire the negotiator)
-      vs delete (field + validator method + config-master lines + config-ui types). (c) config-ui
-      `api.ts` hand-interface drift beyond the generated types (e.g. `ComponentConfig` missing
-      `intent_system`/`monitoring`/`configuration`/`nlu_analysis`/`vad`... vs models.py's 11) — decide
-      whether api.ts config interfaces should derive from `openapi.gen.ts` instead of hand-maintenance.
-      Ref: `docs/review/dynamic_loading_hardcodings_review.md` (the finding classes; these are
-      post-review instances).
 
 ### Bugs (BUG)
 _Discrete functional defects (distinct from QUAL refactors/quality work). Surfaced from any source; filed before fixing._

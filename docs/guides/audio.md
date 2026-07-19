@@ -60,9 +60,9 @@ the provider's streaming backend. `stream` degrades to `file` automatically for 
 **Input.** Irene derives one **canonical** internal format — 16 kHz / mono for a voice pipeline — and transforms
 the captured audio to it **once** at the input boundary; a 44.1 / 48 kHz mic is downsampled there, and VAD /
 wake / ASR all see the canonical audio. The canonical is computed from what the consumers need, so it's never
-upsampled to invent detail; an impossible combination is a fatal error at startup. Capture-side rate and
-`resample_quality` (`fast` · `medium` · `high` · `best`) live with the microphone input (see
-[configuration](configuration.md)).
+upsampled to invent detail; an impossible combination is a fatal error at startup. The capture-side rate
+lives with the microphone input (see [configuration](configuration.md)); resampling itself is automatic and
+needs no tuning.
 
 **Output.** TTS and other producers conform **down** to the playback **sink** — the output device's capability.
 That capability is the active provider's (e.g. `sounddevice`'s configured `sample_rate` / `channels`), with an

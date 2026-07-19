@@ -94,12 +94,6 @@ from .resolver import (
     get_component_config_by_name
 )
 
-# Schema validation and versioning
-from .schemas import (
-    SchemaValidator, SchemaVersion, CURRENT_SCHEMA_VERSION,
-    get_schema_version, validate_schema_compatibility
-)
-
 __all__ = [
     # Core configuration
     "CoreConfig",
@@ -124,8 +118,4 @@ __all__ = [
     
     # Configuration resolution
     "extract_config_by_path", "is_component_enabled_by_name", "get_component_config_by_name",
-    
-    # Schema validation
-    "SchemaValidator", "SchemaVersion", "CURRENT_SCHEMA_VERSION",
-    "get_schema_version", "validate_schema_compatibility",
-] 
+]

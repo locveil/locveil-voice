@@ -53,6 +53,10 @@ _READER_ALLOWLIST: Dict[str, str] = {
     "cli_config": "ARCH-56 dynamic per-input config lookup",
     "web_config": "ARCH-56 dynamic per-input config lookup",
     "microphone_config": "ARCH-56 dynamic per-input config lookup",
+    # honored by AssetConfig's own model_post_init (models.py — outside the reader corpus,
+    # which deliberately excludes the models file); surfaced when QUAL-85 deleted the dead
+    # config/validator.py, whose read was the one the scan had been counting.
+    "auto_create_dirs": "QUAL-85 self-read in AssetConfig.model_post_init",
 }
 
 

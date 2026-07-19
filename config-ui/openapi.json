@@ -4771,18 +4771,6 @@
             "description": "AUTHORITATIVE: Number of audio channels",
             "default": 1
           },
-          "allow_resampling": {
-            "type": "boolean",
-            "title": "Allow Resampling",
-            "description": "Enable resampling for this component",
-            "default": true
-          },
-          "resample_quality": {
-            "type": "string",
-            "title": "Resample Quality",
-            "description": "Component-specific quality setting (fast/medium/high/best)",
-            "default": "high"
-          },
           "providers": {
             "additionalProperties": {
               "additionalProperties": true,
@@ -13376,18 +13364,6 @@
             "title": "Channels",
             "description": "AUTHORITATIVE: Number of audio channels",
             "default": 1
-          },
-          "allow_resampling": {
-            "type": "boolean",
-            "title": "Allow Resampling",
-            "description": "Enable resampling for voice triggers",
-            "default": true
-          },
-          "resample_quality": {
-            "type": "string",
-            "title": "Resample Quality",
-            "description": "Optimized for low-latency real-time processing (fast/medium/high/best)",
-            "default": "fast"
           },
           "providers": {
             "additionalProperties": {

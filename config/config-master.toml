@@ -252,8 +252,6 @@ default_provider = "vosk"          # Default provider: "whisper", "vosk", "googl
 fallback_providers = ["whisper"]   # Fallback providers in order
 sample_rate = 16000                # AUTHORITATIVE: Component sample rate (overrides provider preferences)
 channels = 1                       # AUTHORITATIVE: Number of audio channels (1=mono, 2=stereo)
-allow_resampling = true            # Enable automatic resampling when rates don't match
-resample_quality = "high"          # Resampling quality for ASR: "fast", "medium", "high", "best"
 
 # Whisper ASR Provider (OpenAI Whisper, recommended)
 [asr.providers.whisper]
@@ -348,8 +346,6 @@ confidence_threshold = 0.8          # Detection confidence threshold (0.0-1.0)
 timeout_seconds = 5.0              # Detection timeout in seconds
 sample_rate = 16000                # AUTHORITATIVE: Component sample rate (configuration takes precedence)
 channels = 1                       # AUTHORITATIVE: Number of audio channels (1=mono, 2=stereo)
-allow_resampling = true            # Enable resampling for voice triggers (with optimized algorithms)
-resample_quality = "fast"          # Resampling quality optimized for low-latency: "fast", "medium", "high"
 
 # OpenWakeWord Provider (recommended, open source). Each wake word: {name, model, threshold, language}.
 # `model` is a built-in catalog name (alexa | hey_jarvis | hey_mycroft) or a path to a custom .onnx/.tflite.
@@ -757,7 +753,6 @@ auto_create_dirs = true            # Automatically create asset directories
 # - Configure providers with API keys
 # - Enable model preloading for faster response: preload_models=true for key providers
 # - Audio config: Set consistent sample_rate across microphone/asr/voice_trigger (e.g., 16000)
-# - Enable resampling: allow_resampling=true with appropriate quality levels per component
 
 # API-ONLY PROFILE (text processing only):
 # - Disable voice components: tts=false, audio=false, asr=false, voice_trigger=false
@@ -777,8 +772,6 @@ auto_create_dirs = true            # Automatically create asset directories
 # - Reduce concurrency: max_concurrent_commands=3
 # - Disable model preloading: preload_models=false for all providers
 # - Reduce cache sizes: assets.max_cache_size_mb=256
-# - Audio optimization: Use "fast" resampling quality, reduce resampling cache size
-# - Disable performance monitoring: workflows.unified_voice_assistant.resampling.performance_monitoring=false
 
 
 # ============================================================

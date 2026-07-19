@@ -46,12 +46,14 @@ class TestSchemaSync:
         assert not extra_sections, f"Extra section models: {extra_sections}"
 
     def test_component_schema_coverage(self):
-        """Verify all components have corresponding schemas"""
+        """Verify all components have corresponding schemas (QUAL-85: minus the ones that
+        have no config section by design)"""
         component_schemas = AutoSchemaRegistry.get_component_schemas()
         component_fields = set(ComponentConfig.model_fields.keys())
         schema_fields = set(component_schemas.keys())
 
-        missing_schemas = component_fields - schema_fields
+        missing_schemas = (component_fields - schema_fields
+                           - AutoSchemaRegistry._SECTIONLESS_COMPONENTS)
         assert not missing_schemas, f"Components without schemas: {missing_schemas}"
 
     def test_no_manual_sync_required(self):
@@ -108,101 +110,52 @@ class TestConfigurationWidgetGeneration:
 
 
 class TestComponentSchemas:
-    """Test specific component schema functionality"""
+    """QUAL-85: component schemas are DERIVED — each component flag maps to its real
+    CoreConfig section model, so drift between the two is structurally impossible."""
 
-    def test_new_component_schemas_exist(self):
-        """Verify that the new component schemas were created"""
-        from locveil_voice.config.schemas import (
-            MonitoringComponentSchema,
-            NLUAnalysisComponentSchema,
-            ConfigurationComponentSchema
-        )
-
-        # Test schema instantiation
-        monitoring_schema = MonitoringComponentSchema()
-        assert monitoring_schema.enabled is True
-        assert monitoring_schema.metrics_enabled is True
-        assert monitoring_schema.dashboard_enabled is True
-
-        nlu_analysis_schema = NLUAnalysisComponentSchema()
-        assert nlu_analysis_schema.enabled is True
-        assert nlu_analysis_schema.conflict_detection_enabled is True
-        assert nlu_analysis_schema.performance_analysis_enabled is True
-
-        config_schema = ConfigurationComponentSchema()
-        assert config_schema.enabled is False  # Disabled by default
-        assert config_schema.web_api_enabled is True
-        assert config_schema.hot_reload_enabled is True
-
-    # NOTE: test_component_schemas_in_registry removed in Phase 4.4.5
-    # Manual COMPONENT_SCHEMAS registry eliminated - only auto-discovery remains
-
-    def test_component_schemas_auto_discovery(self):
-        """Verify new component schemas are auto-discovered"""
+    def test_component_schemas_are_the_section_models(self):
         component_schemas = AutoSchemaRegistry.get_component_schemas()
+        section_models = AutoSchemaRegistry.get_section_models()
 
-        # Test that new schemas are auto-discovered
+        for name, schema in component_schemas.items():
+            assert schema is section_models[name], (
+                f"component '{name}' schema must BE its CoreConfig section model")
+
+        # the ones the old hand-written tree covered are still covered
         assert "monitoring" in component_schemas
         assert "nlu_analysis" in component_schemas
-        assert "configuration" in component_schemas
 
-    def test_component_validation(self):
-        """Test component configuration validation"""
-        from locveil_voice.config.schemas import SchemaValidator
+    def test_sectionless_component_is_deliberate(self):
+        """`configuration` has no config section by design (the flag is its entire config)."""
+        component_schemas = AutoSchemaRegistry.get_component_schemas()
+        assert "configuration" not in component_schemas
+        assert "configuration" in AutoSchemaRegistry._SECTIONLESS_COMPONENTS
 
-        # Test valid configuration
-        valid_config = {
-            "enabled": True,
-            "default_provider": "console",
-            "fallback_providers": ["console"],
-            "metrics_enabled": True,
-            "dashboard_enabled": False
-        }
+    def test_component_validation_uses_real_models(self):
+        """validate_component_config now validates against models.py truth."""
+        assert AutoSchemaRegistry.validate_component_config(
+            "monitoring", {"metrics_enabled": True})
 
-        assert SchemaValidator.validate_component_config("monitoring", valid_config)
+        # a type error the real model catches (a REAL field — the old hand-written stubs
+        # carried fields like dashboard_enabled that models.py deleted long ago)
+        assert not AutoSchemaRegistry.validate_component_config(
+            "monitoring", {"metrics_enabled": "not_a_boolean"})
 
-        # Test invalid configuration
-        invalid_config = {
-            "enabled": "not_a_boolean",  # Invalid type
-            "metrics_enabled": True
-        }
+        # unknown component
+        assert not AutoSchemaRegistry.validate_component_config(
+            "no_such_component", {"enabled": True})
 
-        assert not SchemaValidator.validate_component_config("monitoring", invalid_config)
-
-
-class TestAutoRegistryIntegration:
-    """Test auto-registry integration with SchemaValidator"""
-
-    def test_get_component_schemas_method(self):
-        """Test SchemaValidator.get_component_schemas() uses auto-registry"""
-        from locveil_voice.config.schemas import SchemaValidator
-
-        auto_schemas = AutoSchemaRegistry.get_component_schemas()
-        validator_schemas = SchemaValidator.get_component_schemas()
-
-        # Should be identical
-        assert auto_schemas.keys() == validator_schemas.keys()
-
-        # Should include all new schemas
-        assert "monitoring" in validator_schemas
-        assert "nlu_analysis" in validator_schemas
-        assert "configuration" in validator_schemas
-
-    def test_validate_component_config_uses_auto_registry(self):
-        """Test that component validation uses auto-generated schemas"""
-        from locveil_voice.config.schemas import SchemaValidator
-
-        # This should work for the new schemas
-        test_config = {
-            "enabled": True,
-            "default_provider": "console",
-            "fallback_providers": ["console"],
-            "web_api_enabled": True,
-            "hot_reload_enabled": False
-        }
-
-        # Should validate using auto-discovered schema
-        assert SchemaValidator.validate_component_config("configuration", test_config)
+    def test_voice_trigger_schema_speaks_wake_word_spec(self):
+        """The old hand tree declared wake_words as a string list, predating WakeWordSpec —
+        the derived schema is the real model, so the real shape is enforced."""
+        schema = AutoSchemaRegistry.get_component_schemas()["voice_trigger"]
+        assert not AutoSchemaRegistry.validate_component_config(
+            "voice_trigger", {"wake_words": ["irene", "jarvis"]}), \
+            "bare-string wake words must not validate (WakeWordSpec objects required)"
+        assert AutoSchemaRegistry.validate_component_config(
+            "voice_trigger",
+            {"wake_words": [{"name": "irene", "model": "irina"}]})
+        assert schema.__name__ == "VoiceTriggerConfig"
 
 
 class TestMasterConfigCompleteness:

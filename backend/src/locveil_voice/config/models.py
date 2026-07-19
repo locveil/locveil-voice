@@ -233,33 +233,27 @@ class ASRConfig(BaseModel):
     # Phase 5: Audio configuration enhancements
     sample_rate: Optional[int] = Field(default=16000, description="AUTHORITATIVE: Audio sample rate in Hz (overrides provider preferences)")
     channels: int = Field(default=1, description="AUTHORITATIVE: Number of audio channels")
-    allow_resampling: bool = Field(default=True, description="Enable resampling for this component")
-    resample_quality: str = Field(default="high", description="Component-specific quality setting (fast/medium/high/best)")
-    
+    # QUAL-85: allow_resampling + resample_quality deleted — their only reader was the
+    # zero-caller AudioConfigurationValidator chain; the audio negotiator resamples via
+    # AudioTranscoder unconditionally.
+
     providers: Dict[str, Dict[str, Any]] = Field(
         default_factory=dict,
         description="Provider-specific configurations"
     )
-    
+
     @field_validator('sample_rate')
     @classmethod
     def validate_sample_rate(cls, v):
         if v is not None and (v < 8000 or v > 192000):
             raise ValueError("Sample rate must be between 8000 and 192000 Hz")
         return v
-    
+
     @field_validator('channels')
     @classmethod
     def validate_channels(cls, v):
         if v < 1 or v > 8:
             raise ValueError("Channels must be between 1 and 8")
-        return v
-    
-    @field_validator('resample_quality')
-    @classmethod
-    def validate_resample_quality(cls, v):
-        if v not in ['fast', 'medium', 'high', 'best']:
-            raise ValueError("Resample quality must be one of: fast, medium, high, best")
         return v
 
 
@@ -304,33 +298,25 @@ class VoiceTriggerConfig(BaseModel):
     # Phase 5: Audio configuration enhancements
     sample_rate: Optional[int] = Field(default=16000, description="AUTHORITATIVE: Audio sample rate in Hz (overrides provider preferences)")
     channels: int = Field(default=1, description="AUTHORITATIVE: Number of audio channels")
-    allow_resampling: bool = Field(default=True, description="Enable resampling for voice triggers")
-    resample_quality: str = Field(default="fast", description="Optimized for low-latency real-time processing (fast/medium/high/best)")
+    # QUAL-85: allow_resampling + resample_quality deleted — see ASRConfig note.
 
     providers: Dict[str, Dict[str, Any]] = Field(
         default_factory=dict,
         description="Provider-specific configurations"
     )
-    
+
     @field_validator('sample_rate')
     @classmethod
     def validate_sample_rate(cls, v):
         if v is not None and (v < 8000 or v > 192000):
             raise ValueError("Sample rate must be between 8000 and 192000 Hz")
         return v
-    
+
     @field_validator('channels')
     @classmethod
     def validate_channels(cls, v):
         if v < 1 or v > 8:
             raise ValueError("Channels must be between 1 and 8")
-        return v
-    
-    @field_validator('resample_quality')
-    @classmethod
-    def validate_resample_quality(cls, v):
-        if v not in ['fast', 'medium', 'high', 'best']:
-            raise ValueError("Resample quality must be one of: fast, medium, high, best")
         return v
 
 

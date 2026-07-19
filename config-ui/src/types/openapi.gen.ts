@@ -2359,18 +2359,6 @@ export interface components {
              */
             channels: number;
             /**
-             * Allow Resampling
-             * @description Enable resampling for this component
-             * @default true
-             */
-            allow_resampling: boolean;
-            /**
-             * Resample Quality
-             * @description Component-specific quality setting (fast/medium/high/best)
-             * @default high
-             */
-            resample_quality: string;
-            /**
              * Providers
              * @description Provider-specific configurations
              */
@@ -8757,18 +8745,6 @@ export interface components {
              * @default 1
              */
             channels: number;
-            /**
-             * Allow Resampling
-             * @description Enable resampling for voice triggers
-             * @default true
-             */
-            allow_resampling: boolean;
-            /**
-             * Resample Quality
-             * @description Optimized for low-latency real-time processing (fast/medium/high/best)
-             * @default fast
-             */
-            resample_quality: string;
             /**
              * Providers
              * @description Provider-specific configurations

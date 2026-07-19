@@ -20,6 +20,20 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-19 — QUAL-85 DONE: the drift factory is closed — two schema copies stopped being copies.**
+  The sweep's third task, and the deletions ran deeper than the filing knew. The hand-written component
+  schema tree turned out to be pure fiction (nothing validated against its field content at runtime) —
+  it is now DERIVED: a component's schema IS its CoreConfig section model, so the
+  `dashboard_enabled`-style drift class cannot recur. The "dead chain" behind the resampling fields
+  turned out to be the ENTIRE `config/validator.py` — 956 lines with zero importers, including a whole
+  ArchitectureValidator nobody ever called; deleted whole under the standing dead-code rule, four config
+  fields, two audio_helpers functions and seven config-master lines with it. The coherence guard earned
+  its keep mid-sweep: it flagged `auto_create_dirs` the moment its only visible reader died, and the
+  investigation showed the field is honored by AssetConfig itself (allowlisted with the reason). On the
+  UI side the owner chose the strong fix: all 30 config interfaces in api.ts are now
+  `components['schemas']` aliases over the generated OpenAPI types — check and build passed on the first
+  try, which is the whole argument. Suite 1452 green, config-validator CI-mode clean, pyright 0.
+
 - **2026-07-19 — BUG-37 DONE: the first sentence a user hears from the headline feature now sounds
   like a person said it.** «Сейчас 24.125 градусов» is gone three ways at once. The handler rounds the
   spoken value (metadata keeps the raw reading for machines); the Russian decimal path finally does

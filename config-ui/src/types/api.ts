@@ -472,331 +472,41 @@ export interface LocalizationDomainListResponse extends BaseApiResponse {
 // CONFIGURATION MANAGEMENT TYPES
 // ============================================================
 
-// Core configuration interface (matches CoreConfig from backend)
-export interface CoreConfig {
-  // Core settings
-  name: string;
-  version: string;
-  debug: boolean;
-  log_level: string;
-  
-  // Main configuration sections
-  system: SystemConfig;
-  inputs: InputConfig;
-  outputs: OutputConfig;
-  components: ComponentConfig;
-  assets: AssetConfig;
-  workflows: WorkflowConfig;
-  
-  // Component-specific configurations
-  tts: TTSConfig;
-  audio: AudioConfig;
-  asr: ASRConfig;
-  llm: LLMConfig;
-  voice_trigger: VoiceTriggerConfig;
-  nlu: NLUConfig;
-  nlu_analysis: NLUAnalysisConfig;
-  text_processor: TextProcessorConfig;
-  intent_system: IntentSystemConfig;
-  vad: VADConfig;
-  monitoring: MonitoringConfig;
-  trace: TraceConfig;
-  reports: ReportsConfig;
-  satellite: SatelliteConfig;
+// QUAL-85: config interfaces are DERIVED from the generated OpenAPI types
+// (`npm run gen:api-types` after `scripts/dump_openapi.py`) — the backend's Pydantic
+// models are the single source of truth, so hand-written drift (phantom fields,
+// missing sections) is structurally impossible here.
+type ConfigSchemas = import('./openapi.gen').components['schemas'];
 
-
-  // Language and locale (QUAL-36: default_language + supported_languages are the canonical source of
-  // truth; `language` is the deprecated legacy locale string, retained only for config round-trip).
-  default_language: string;
-  supported_languages: string[];
-  language: string;
-  timezone?: string;
-  
-  // Runtime settings
-  max_concurrent_commands: number;
-  command_timeout_seconds: number;
-  context_timeout_minutes: number;
-}
-
-// Configuration section interfaces (matching backend Pydantic models)
-
-// Output delivery channels (backend OutputConfig).
-export interface OutputConfig {
-  console: boolean;
-  console_prefix: string;
-  web_push: boolean;
-  bridge: BridgeOutputConfig;
-}
-
-// Smart-home bridge actuation channel (backend BridgeOutputConfig, ARCH-8).
-export interface BridgeOutputConfig {
-  enabled: boolean;
-  base_url: string;
-  timeout_seconds: number;
-}
-
-// Trace persistence (backend TraceConfig, ARCH-19; allow_remote_request = ARCH-37).
-export interface TraceConfig {
-  enabled: boolean;
-  capture_level: 'utterance' | 'segmenter' | 'raw';
-  capture_raw_mic: boolean;
-  log_threshold: string;
-  traces_dir?: string | null;
-  max_stages: number;
-  max_data_size_mb: number;
-  max_log_records: number;
-  allow_remote_request: boolean;
-}
-
-// Problem reporting (ARCH-30 — «сообщи о проблеме»); delivery fields arrive with ARCH-32
-export interface ReportsConfig {
-  enabled: boolean;
-  capture_ttl_seconds: number;
-  repo: string;
-  token_env: string;
-  rate_limit_per_hour: number;
-  rate_limit_per_day: number;
-  ring_size: number;
-}
-
-// Fleet TLS plane, device side (backend SatelliteTLSConfig, ARCH-35 S-5/S-6).
-export interface SatelliteTLSConfig {
-  enabled: boolean;
-  bootstrap_url: string;
-  ca_cert?: string | null;
-  client_cert?: string | null;
-  client_key?: string | null;
-}
-
-// Satellite room-node mode (backend SatelliteConfig, ARCH-35/36).
-export interface SatelliteConfig {
-  enabled: boolean;
-  server_url: string;
-  client_id: string;
-  room_name: string;
-  mode: 'single' | 'streaming';
-  wake_word_required: boolean;
-  audio_out_rate: number;
-  audio_out_channels: number;
-  tls: SatelliteTLSConfig;
-}
-
-export interface SystemConfig {
-  microphone_enabled: boolean;
-  audio_playback_enabled: boolean;
-  web_api_enabled: boolean;
-  web_port: number;
-}
-
-export interface InputConfig {
-  microphone: boolean;
-  web: boolean;
-  cli: boolean;
-  default_input: string;
-  microphone_config: MicrophoneInputConfig;
-  web_config: WebInputConfig;
-  cli_config: CLIInputConfig;
-}
-
-export interface MicrophoneInputConfig {
-  enabled: boolean;
-  device_id?: number;
-  sample_rate: number;
-  channels: number;
-  chunk_size: number;
-  buffer_queue_size: number;
-}
-
-export interface WebInputConfig {
-  enabled: boolean;
-}
-
-export interface CLIInputConfig {
-  enabled: boolean;
-}
-
-export interface ComponentConfig {
-  tts: boolean;
-  asr: boolean;
-  audio: boolean;
-  llm: boolean;
-  voice_trigger: boolean;
-  nlu: boolean;
-  text_processor: boolean;
-  intent_system: boolean;
-  vad: boolean;
-  monitoring: boolean;
-}
-
-export interface TTSConfig {
-  default_provider?: string;
-  fallback_providers: string[];
-  providers: Record<string, Record<string, any>>;
-}
-
-export interface AudioConfig {
-  default_provider?: string;
-  fallback_providers: string[];
-  concurrent_playback: boolean;
-  providers: Record<string, Record<string, any>>;
-}
-
-export interface ASRConfig {
-  default_provider?: string;
-  fallback_providers: string[];
-  sample_rate?: number;
-  channels: number;
-  allow_resampling: boolean;
-  resample_quality: string;
-  providers: Record<string, Record<string, any>>;
-}
-
-export interface LLMConfig {
-  default_provider?: string;
-  fallback_providers: string[];
-  providers: Record<string, Record<string, any>>;
-}
-
-export interface VoiceTriggerConfig {
-  default_provider?: string;
-  wake_words: WakeWordSpec[];
-  confidence_threshold: number;
-  timeout_seconds: number;
-  sample_rate?: number;
-  channels: number;
-  allow_resampling: boolean;
-  resample_quality: string;
-  providers: Record<string, Record<string, any>>;
-}
-
-export interface NLUConfig {
-  default_provider?: string;
-  confidence_threshold: number;
-  fallback_intent: string;
-  provider_cascade_order: string[];
-  max_cascade_attempts: number;
-  cascade_timeout_ms: number;
-  cache_recognition_results: boolean;
-  cache_ttl_seconds: number;
-  auto_detect_language: boolean;
-  language_detection_confidence_threshold: number;
-  // QUAL-36: default_language/supported_languages live on CoreConfig (the canonical source), NOT here.
-  providers: Record<string, Record<string, any>>;
-}
-
-export interface TextProcessorConfig {
-  stages: string[];
-  normalizers: Record<string, Record<string, any>>;
-  providers: Record<string, Record<string, any>>;
-}
-
-export interface IntentSystemConfig {
-  confidence_threshold: number;
-  fallback_intent: string;
-  
-  // Phase 1 TODO16: Domain priorities for contextual command disambiguation
-  domain_priorities: Record<string, number>;
-  
-  // Phase 4 TODO16: Contextual command performance optimization
-  contextual_commands: ContextualCommandsConfig;
-  
-  handlers: IntentHandlerListConfig;
-  // Handler-specific configurations would be included here
-  [key: string]: any;
-}
-
-export interface ContextualCommandsConfig {
-  latency_threshold_ms: number;
-}
-
-
-export interface IntentHandlerListConfig {
-  enabled: string[];
-  disabled: string[];
-  asset_validation: Record<string, any>;
-}
-
-// Voice Activity Detection (backend VADConfig, ARCH-18). Per-engine knobs (energy threshold,
-// sensitivity, …) moved under `providers` ([vad.providers.<name>]); they are no longer flat fields.
-export interface VADConfig {
-  enabled: boolean;
-  default_provider: string;
-  fallback_providers: string[];
-  max_segment_duration_s: number;
-  buffer_size_frames: number;
-  normalize_for_asr: boolean;
-  asr_target_rms: number;
-  enable_fallback_to_original: boolean;
-  providers: Record<string, Record<string, any>>;
-}
-
-export interface MonitoringConfig {
-  metrics_enabled: boolean;
-  notifications_enabled: boolean;
-  debug_tools_enabled: boolean;
-  notifications_default_channel: string;
-  notifications_tts_enabled: boolean;
-  notifications_web_enabled: boolean;
-  metrics_monitoring_interval: number;
-  metrics_retention_hours: number;
-  debug_max_history: number;
-  analytics_dashboard_enabled: boolean;
-  analytics_refresh_interval: number;
-}
-
-export interface NLUAnalysisConfig {
-  conflict_detector: {
-    blocker_threshold: number;
-    warning_threshold: number;
-    info_threshold: number;
-  };
-  scope_analyzer: {
-    cross_domain_threshold: number;
-    breadth_threshold: number;
-  };
-  report_generator: {
-    max_suggestions_per_conflict: number;
-    include_technical_details: boolean;
-  };
-  hybrid_analyzer: {
-    fuzzy_threshold: number;
-    pattern_confidence: number;
-    detect_keyword_collisions: boolean;
-    detect_pattern_explosion: boolean;
-    detect_performance_issues: boolean;
-  };
-  spacy_analyzer: {
-    similarity_threshold: number;
-    semantic_analysis_enabled: boolean;
-    entity_analysis_enabled: boolean;
-    pattern_validation_enabled: boolean;
-  };
-  performance: {
-    max_concurrent_analyses: number;
-  };
-}
-
-export interface AssetConfig {
-  assets_root: string;
-  auto_create_dirs: boolean;
-}
-
-export interface WorkflowConfig {
-  enabled: string[];
-  default: string;
-  unified_voice_assistant: UnifiedVoiceAssistantWorkflowConfig;
-}
-
-export interface UnifiedVoiceAssistantWorkflowConfig {
-  voice_trigger_enabled: boolean;
-  asr_enabled: boolean;
-  text_processing_enabled: boolean;
-  nlu_enabled: boolean;
-  intent_execution_enabled: boolean;
-  llm_enabled: boolean;
-  tts_enabled: boolean;
-  audio_enabled: boolean;
-}
+export type CoreConfig = ConfigSchemas['CoreConfig'];
+export type OutputConfig = ConfigSchemas['OutputConfig'];
+export type BridgeOutputConfig = ConfigSchemas['BridgeOutputConfig'];
+export type TraceConfig = ConfigSchemas['TraceConfig'];
+export type ReportsConfig = ConfigSchemas['ReportsConfig'];
+export type SatelliteTLSConfig = ConfigSchemas['SatelliteTLSConfig'];
+export type SatelliteConfig = ConfigSchemas['SatelliteConfig'];
+export type SystemConfig = ConfigSchemas['SystemConfig'];
+export type InputConfig = ConfigSchemas['InputConfig'];
+export type MicrophoneInputConfig = ConfigSchemas['MicrophoneInputConfig'];
+export type WebInputConfig = ConfigSchemas['WebInputConfig'];
+export type CLIInputConfig = ConfigSchemas['CLIInputConfig'];
+export type ComponentConfig = ConfigSchemas['ComponentConfig'];
+export type TTSConfig = ConfigSchemas['TTSConfig'];
+export type AudioConfig = ConfigSchemas['AudioConfig'];
+export type ASRConfig = ConfigSchemas['ASRConfig'];
+export type LLMConfig = ConfigSchemas['LLMConfig'];
+export type VoiceTriggerConfig = ConfigSchemas['VoiceTriggerConfig'];
+export type NLUConfig = ConfigSchemas['NLUConfig'];
+export type TextProcessorConfig = ConfigSchemas['TextProcessorConfig'];
+export type IntentSystemConfig = ConfigSchemas['IntentSystemConfig'];
+export type ContextualCommandsConfig = ConfigSchemas['ContextualCommandsConfig'];
+export type IntentHandlerListConfig = ConfigSchemas['IntentHandlerListConfig'];
+export type VADConfig = ConfigSchemas['VADConfig'];
+export type MonitoringConfig = ConfigSchemas['MonitoringConfig'];
+export type NLUAnalysisConfig = ConfigSchemas['NLUAnalysisConfig'];
+export type AssetConfig = ConfigSchemas['AssetConfig'];
+export type WorkflowConfig = ConfigSchemas['WorkflowConfig'];
+export type UnifiedVoiceAssistantWorkflowConfig = ConfigSchemas['UnifiedVoiceAssistantWorkflowConfig'];
 
 // Configuration schema metadata (from Pydantic introspection)
 export interface ConfigFieldSchema {
@@ -812,13 +522,8 @@ export interface ConfigFieldSchema {
   widget?: string;
 }
 
-// A single wake word, uniform across voice-trigger providers (QUAL-20).
-export interface WakeWordSpec {
-  name: string;
-  model: string;
-  threshold: number;
-  language: string;
-}
+// A single wake word, uniform across voice-trigger providers (QUAL-20; derived — QUAL-85).
+export type WakeWordSpec = ConfigSchemas['WakeWordSpec'];
 
 export interface ConfigSectionSchema {
   fields: Record<string, ConfigFieldSchema>;

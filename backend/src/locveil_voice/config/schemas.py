@@ -1,22 +1,15 @@
 """
-Configuration Schemas - Component-specific configuration schemas
+Configuration Schemas — provider configuration schemas
 
-Phase 1 Implementation: Centralized schemas for component configurations
-that can be imported and used throughout the system for validation and
-type hints.
+The PROVIDER schemas here are the authority behind the config-ui parameter forms
+(`get_provider_parameter_schema`) and the config-validator CLI's provider validation —
+providers have no models.py counterpart, so these are source, not a copy.
 
-Phase 2 Implementation: Integration with AutoSchemaRegistry for auto-generated
-component schema management.
-
-This module provides:
-- Component configuration schemas
-- Provider configuration schemas  
-- Validation utilities
-- Schema versioning support
-- Auto-registry integration
+COMPONENT schemas are no longer defined here (QUAL-85): AutoSchemaRegistry derives them
+from the real CoreConfig section models in `config/models.py`.
 """
 
-from typing import Dict, Any, List, Optional, Type, Literal
+from typing import Dict, Any, List, Optional, Literal
 from pydantic import BaseModel, Field
 
 from .models import WakeWordSpec  # QUAL-20: the uniform per-provider wake-word unit
@@ -404,127 +397,12 @@ class UnifiedTextProcessorProviderSchema(TextProcessorProviderSchema):
     pass
 
 
-# ============================================================
-# COMPONENT CONFIGURATION SCHEMAS
-# ============================================================
-
-class ComponentProviderConfigSchema(BaseModel):
-    """Base schema for component provider configurations"""
-    enabled: bool = Field(default=True, description="Enable component")
-    default_provider: str = Field(json_schema_extra={"widget": "provider_select"}, description="Default provider name")
-    fallback_providers: List[str] = Field(default_factory=list, description="Fallback providers")
-    providers: Dict[str, Dict[str, Any]] = Field(default_factory=dict, description="Provider configurations")
-
-
-class TTSComponentSchema(ComponentProviderConfigSchema):
-    """TTS component configuration schema"""
-    default_provider: str = Field(default="console", description="Default TTS provider")
-    fallback_providers: List[str] = Field(default_factory=lambda: ["console"], description="Fallback TTS providers")
-
-
-class AudioComponentSchema(ComponentProviderConfigSchema):
-    """Audio component configuration schema"""
-    default_provider: str = Field(default="console", description="Default audio provider")
-    fallback_providers: List[str] = Field(default_factory=lambda: ["console"], description="Fallback audio providers")
-    concurrent_playback: bool = Field(default=False, description="Allow concurrent audio playback")
-
-
-class ASRComponentSchema(ComponentProviderConfigSchema):
-    """ASR component configuration schema"""
-    # D (BUG-11): no provider-implying default (was "whisper", which invited configs that named a
-    # provider with no matching [asr.providers.whisper] section → zero providers → every request failed).
-    # Empty = "pick one explicitly"; mirrors the runtime ASRConfig staying off/None until configured.
-    default_provider: str = Field(default="", description="Default ASR provider")
-    fallback_providers: List[str] = Field(default_factory=list, description="Fallback ASR providers")
-
-
-class LLMComponentSchema(ComponentProviderConfigSchema):
-    """LLM component configuration schema"""
-    default_provider: str = Field(default="openai", description="Default LLM provider")
-    fallback_providers: List[str] = Field(default_factory=lambda: ["console"], description="Fallback LLM providers")
-
-
-class VoiceTriggerComponentSchema(ComponentProviderConfigSchema):
-    """Voice trigger component configuration schema"""
-    default_provider: str = Field(default="openwakeword", description="Default voice trigger provider")
-    wake_words: List[str] = Field(default_factory=lambda: ["irene", "jarvis"], description="Wake words to detect")
-    confidence_threshold: float = Field(default=0.8, ge=0.0, le=1.0, description="Detection confidence threshold")
-    buffer_seconds: float = Field(default=1.0, gt=0.0, description="Audio buffer duration in seconds")
-    timeout_seconds: float = Field(default=5.0, gt=0.0, description="Detection timeout in seconds")
-
-
-class NLUComponentSchema(ComponentProviderConfigSchema):
-    """NLU component configuration schema"""
-    default_provider: str = Field(default="hybrid_keyword_matcher", description="Default NLU provider")
-    confidence_threshold: float = Field(default=0.7, ge=0.0, le=1.0, description="Global confidence threshold")
-    fallback_intent: str = Field(default="conversation.general", description="Fallback intent name")
-    provider_cascade_order: List[str] = Field(
-        default_factory=lambda: ["hybrid_keyword_matcher", "spacy_nlu"],
-        description="Provider cascade order (fast to slow)"
-    )
-    max_cascade_attempts: int = Field(default=4, ge=1, description="Maximum cascade attempts")
-    cascade_timeout_ms: int = Field(default=200, gt=0, description="Cascade timeout in milliseconds")
-    cache_recognition_results: bool = Field(default=False, description="Cache recognition results")
-    cache_ttl_seconds: int = Field(default=300, gt=0, description="Cache TTL in seconds")
-
-
-class TextProcessorComponentSchema(BaseModel):
-    """Text processor component configuration schema"""
-    enabled: bool = Field(default=True, description="Enable text processor component")
-    stages: List[str] = Field(
-        default_factory=lambda: ["asr_output", "tts_input", "command_input", "general"],
-        description="Processing stages"
-    )
-    normalizers: Dict[str, Dict[str, Any]] = Field(
-        default_factory=dict,
-        description="Text normalizer configurations"
-    )
-
-
-class IntentSystemComponentSchema(BaseModel):
-    """Intent system component configuration schema"""
-    enabled: bool = Field(default=True, description="Enable intent system component")
-    confidence_threshold: float = Field(
-        default=0.7,
-        ge=0.0,
-        le=1.0,
-        description="Minimum confidence threshold for intent recognition"
-    )
-    fallback_intent: str = Field(
-        default="conversation.general",
-        description="Fallback intent when recognition fails"
-    )
-    handlers: Dict[str, Any] = Field(
-        default_factory=dict,
-        description="Intent handler configuration"
-    )
-
-
-class MonitoringComponentSchema(ComponentProviderConfigSchema):
-    """Monitoring component configuration schema"""
-    enabled: bool = Field(default=True, description="Enable monitoring component")
-    default_provider: str = Field(default="console", description="Default monitoring provider")
-    fallback_providers: List[str] = Field(default_factory=lambda: ["console"], description="Fallback monitoring providers")
-    metrics_enabled: bool = Field(default=True, description="Enable metrics collection")
-    dashboard_enabled: bool = Field(default=True, description="Enable dashboard")
-
-
-class NLUAnalysisComponentSchema(ComponentProviderConfigSchema):
-    """NLU Analysis component configuration schema"""
-    enabled: bool = Field(default=True, description="Enable NLU analysis component")
-    default_provider: str = Field(default="console", description="Default NLU analysis provider")
-    fallback_providers: List[str] = Field(default_factory=lambda: ["console"], description="Fallback NLU analysis providers")
-    conflict_detection_enabled: bool = Field(default=True, description="Enable conflict detection")
-    performance_analysis_enabled: bool = Field(default=True, description="Enable performance analysis")
-
-
-class ConfigurationComponentSchema(ComponentProviderConfigSchema):
-    """Configuration component configuration schema"""
-    enabled: bool = Field(default=False, description="Enable configuration management component")
-    default_provider: str = Field(default="console", description="Default configuration provider")
-    fallback_providers: List[str] = Field(default_factory=lambda: ["console"], description="Fallback configuration providers")
-    web_api_enabled: bool = Field(default=True, description="Enable web API endpoints")
-    hot_reload_enabled: bool = Field(default=True, description="Enable hot configuration reload")
+# QUAL-85: the parallel COMPONENT schema tree (ComponentProviderConfigSchema + one hand-written
+# <Name>ComponentSchema per component) is deleted — it drifted from config/models.py (fields that
+# no longer exist, shapes predating WakeWordSpec) and nothing validated against its field content.
+# Component schemas are now DERIVED: AutoSchemaRegistry maps each component flag to its real
+# CoreConfig section model. SchemaValidator + the SchemaVersion machinery went with it (zero
+# runtime callers).
 
 
 # ============================================================
@@ -546,110 +424,3 @@ class AudioDevicesResponse(BaseModel):
     devices: List[AudioDeviceInfo] = Field(description="List of available audio input devices")
     total_count: int = Field(description="Total number of devices found")
     message: Optional[str] = Field(default=None, description="Optional status message")
-
-
-# ============================================================
-# SCHEMA VALIDATION UTILITIES
-# ============================================================
-
-class SchemaValidator:
-    """Schema validation using auto-generated registries ONLY"""
-    
-    # NOTE: Manual PROVIDER_SCHEMAS registry removed in Phase 4.4.7
-    # Provider discovery now happens ONLY through auto-registry and entry-points
-    
-    @classmethod
-    def validate_provider_config(cls, component_type: str, provider_name: str, config: Dict[str, Any]) -> bool:
-        """Validate using auto-discovery ONLY"""
-        from .auto_registry import AutoSchemaRegistry
-        return AutoSchemaRegistry.validate_provider_config(component_type, provider_name, config)
-    
-    @classmethod
-    def validate_component_config(cls, component_type: str, config: Dict[str, Any]) -> bool:
-        """Validate using auto-discovery ONLY"""
-        from .auto_registry import AutoSchemaRegistry
-        return AutoSchemaRegistry.validate_component_config(component_type, config)
-    
-    @classmethod
-    def get_component_schemas(cls) -> Dict[str, Type[BaseModel]]:
-        """Get component schemas (auto-generated from registry)"""
-        from .auto_registry import AutoSchemaRegistry
-        return AutoSchemaRegistry.get_component_schemas()
-    
-    @classmethod
-    def get_provider_schemas(cls) -> Dict[str, Dict[str, Type[BaseModel]]]:
-        """Get provider schemas (auto-generated from registry)"""
-        from .auto_registry import AutoSchemaRegistry
-        return AutoSchemaRegistry.get_provider_schemas()
-    
-    @classmethod
-    def get_provider_schema(cls, component_type: str, provider_name: str) -> Optional[type]:
-        """Get provider schema class (auto-generated)"""
-        provider_schemas = cls.get_provider_schemas()
-        if component_type not in provider_schemas:
-            return None
-        return provider_schemas[component_type].get(provider_name)
-    
-    @classmethod
-    def get_component_schema(cls, component_type: str) -> Optional[type]:
-        """Get component schema class (auto-generated)"""
-        component_schemas = cls.get_component_schemas()
-        return component_schemas.get(component_type)
-    
-    @classmethod
-    def list_supported_providers(cls, component_type: str) -> List[str]:
-        """List supported providers for a component type (auto-generated)"""
-        provider_schemas = cls.get_provider_schemas()
-        if component_type not in provider_schemas:
-            return []
-        return list(provider_schemas[component_type].keys())
-    
-    @classmethod
-    def list_supported_components(cls) -> List[str]:
-        """List supported component types (auto-generated)"""
-        component_schemas = cls.get_component_schemas()
-        return list(component_schemas.keys())
-
-
-# ============================================================
-# SCHEMA VERSION SUPPORT
-# ============================================================
-
-class SchemaVersion(BaseModel):
-    """Schema version information"""
-    major: int = Field(default=14, description="Major version")
-    minor: int = Field(default=0, description="Minor version")
-    patch: int = Field(default=0, description="Patch version")
-    
-    @property
-    def version_string(self) -> str:
-        """Get version as string"""
-        return f"{self.major}.{self.minor}.{self.patch}"
-    
-    def is_compatible_with(self, other: 'SchemaVersion') -> bool:
-        """Check if this version is compatible with another"""
-        # Same major version is compatible
-        return self.major == other.major
-
-
-# Current schema version
-CURRENT_SCHEMA_VERSION = SchemaVersion(major=14, minor=0, patch=0)
-
-
-def get_schema_version() -> SchemaVersion:
-    """Get current schema version"""
-    return CURRENT_SCHEMA_VERSION
-
-
-def validate_schema_compatibility(config_version: str) -> bool:
-    """Validate if config version is compatible with current schema"""
-    try:
-        parts = config_version.split(".")
-        config_schema_version = SchemaVersion(
-            major=int(parts[0]),
-            minor=int(parts[1]) if len(parts) > 1 else 0,
-            patch=int(parts[2]) if len(parts) > 2 else 0
-        )
-        return CURRENT_SCHEMA_VERSION.is_compatible_with(config_schema_version)
-    except (ValueError, IndexError):
-        return False

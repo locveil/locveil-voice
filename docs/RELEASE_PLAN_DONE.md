@@ -1627,6 +1627,42 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       ASR/VT resampling fields whose only reader (`resolve_audio_config`) is itself caller-less; api.ts
       hand-interface drift. docs: guides/vad — the `processing_timeout_ms` row removed from the [vad]
       field table (the field is gone); no other manifest node describes deleted fields.
+- [x] **QUAL-85** [QUAL][CONFIG] `[deferred]` — **✓ DONE 2026-07-19. The parallel schema tree derived away,
+      the dead resampling chain deleted whole, api.ts config types now generated-only** (filed at QUAL-83;
+      owner intake rulings 2026-07-19: delete the chain / derive api.ts from `openapi.gen.ts`).
+      **(a) component schemas are now DERIVED, not maintained:** the hand-written
+      `<Name>ComponentSchema` tree in `config/schemas.py` (drifted: QUAL-83-deleted `dashboard_enabled`
+      still declared, `wake_words` as bare strings predating `WakeWordSpec`) is deleted;
+      `AutoSchemaRegistry._find_component_schema` now returns the component's REAL CoreConfig section
+      model (components and sections share names), so models.py-drift in component schemas is
+      structurally impossible. `configuration` is the one flag with no section — declared in an explicit
+      `_SECTIONLESS_COMPONENTS` allowlist. `SchemaValidator` + the `SchemaVersion` machinery (major=14
+      relic) deleted with it — zero runtime callers; `config/__init__` exports trimmed;
+      `test_config_schemas.py` rewritten to assert the derivation (schema IS the section model;
+      bare-string wake words now correctly REJECTED). Provider schemas stay hand-written by design —
+      they are the authority behind the parameter forms, with no models.py counterpart to drift from.
+      **(b) the dead chain — BIGGER than filed:** not just `resolve_audio_config` — the ENTIRE
+      `config/validator.py` (956 lines: ArchitectureValidator + AudioConfigurationValidator +
+      ConfigurationError/FatalConfigurationError) had zero importers, zero dynamic references, no entry
+      point; deleted whole per the standing dead-code rule (the live validation paths are
+      `core/startup_validation.py` + the coherence/schema gates). With it: the 4
+      `allow_resampling`/`resample_quality` fields on ASRConfig/VoiceTriggerConfig (+ validators),
+      `audio_helpers.validate_cross_component_compatibility` + `validate_startup_audio_configuration`
+      (only called from the dead class), 5 config-master.toml lines + 2 stale guidance comments.
+      Knock-on caught by the coherence guard: `AssetConfig.auto_create_dirs`'s only *visible* reader was
+      the dead validator — it is honored by AssetConfig's own `model_post_init` (models.py is outside
+      the guard's corpus), allowlisted with that reason.
+      **(c) api.ts config interfaces derive from the generated types:** the 30 hand-written config
+      interfaces (`CoreConfig`…`UnifiedVoiceAssistantWorkflowConfig` + `WakeWordSpec`) replaced with
+      `export type X = components['schemas']['X']` aliases over `openapi.gen.ts` — the phantom `vad`
+      flag and missing `configuration`/`nlu_analysis` drift class is gone for good; `openapi.json`
+      re-dumped + types regenerated (the diff = exactly the 4 deleted resampling fields); `npm run
+      check` (type-check + strict lint + orphans) and `npm run build` green on first pass — proof the
+      derived types are drop-in. Verified: full suite 1452 passed / 7 skipped, config-validator CI-mode,
+      import contracts 11/11, pyright 0 on touched files. docs: guides/audio (stale `resample_quality`
+      sentence — the knob no longer exists anywhere — replaced with "resampling is automatic").
+      contracts: none — repo-internal config/schema surfaces; no stamped family moved (openapi.json is
+      generated, not a contract pin).
 ### Bugs (BUG)
 - [x] **BUG-37** [NLU][TTS][UX] `[deferred]` — **✓ DONE 2026-07-19. Spoken sensor readings were unrounded,
       mis-vocalized and ungrammatical** («Сейчас 24.125 градусов — Тёплый пол»; latent until the bridge's

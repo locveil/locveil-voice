@@ -37,6 +37,10 @@ class AutoSchemaRegistry:
     _section_models_cache: Optional[Dict[str, Type[BaseModel]]] = None
     _component_schemas_cache: Optional[Dict[str, Type[BaseModel]]] = None
     _provider_schemas_cache: Optional[Dict[str, Dict[str, Type[BaseModel]]]] = None
+
+    # QUAL-85: component flags whose component has NO CoreConfig section by design (the
+    # enablement flag is its entire config). Exempt from schema-coverage enforcement.
+    _SECTIONLESS_COMPONENTS = frozenset({"configuration"})
     
     @staticmethod
     def _is_scalar_annotation(annotation: Any) -> bool:
@@ -113,13 +117,15 @@ class AutoSchemaRegistry:
             
             from .models import ComponentConfig
             component_fields = ComponentConfig.model_fields
-            
+
             for component_name, field_info in component_fields.items():
                 if field_info.annotation == bool:  # Component enablement flag
                     schema_class = cls._find_component_schema(component_name)
                     if schema_class:
                         cls._component_schemas_cache[component_name] = schema_class
                         logger.debug(f"Auto-registered component: {component_name} -> {schema_class.__name__}")
+                    elif component_name in cls._SECTIONLESS_COMPONENTS:
+                        logger.debug(f"Component has no config section by design: {component_name}")
                     else:
                         logger.warning(f"No component schema found: {component_name}")
             
@@ -512,55 +518,31 @@ class AutoSchemaRegistry:
         if missing_sections:
             report["warnings"].append(f"Section-model fields missing from registry: {missing_sections}")
         
-        # Validate component schema coverage
+        # Validate component schema coverage (QUAL-85: schemas are the CoreConfig section
+        # models — a component flag without a matching section is an error unless the
+        # component is sectionless by design)
         component_schemas = cls.get_component_schemas()
         from .models import ComponentConfig
         component_fields = set(ComponentConfig.model_fields.keys())
         schema_fields = set(component_schemas.keys())
-        
-        missing_component_schemas = component_fields - schema_fields
+
+        missing_component_schemas = component_fields - schema_fields - cls._SECTIONLESS_COMPONENTS
         if missing_component_schemas:
-            # Phase 2: Missing component schemas are now errors (all schemas should exist)
             report["errors"].append(f"Components without schemas: {missing_component_schemas}")
             report["valid"] = False
-            
+
             for missing in missing_component_schemas:
-                report["recommendations"].append(f"Create {missing.title()}ComponentSchema class")
-        
+                report["recommendations"].append(
+                    f"Add a CoreConfig section model for '{missing}' (or declare it sectionless)")
+
         return report
     
     @classmethod
     def _find_component_schema(cls, component_name: str) -> Optional[Type[BaseModel]]:
-        """Find component schema class by component name (auto-discovery only)"""
-        # Import all component schemas and find by naming convention
-        try:
-            from .schemas import (
-                TTSComponentSchema, AudioComponentSchema, ASRComponentSchema, 
-                LLMComponentSchema, VoiceTriggerComponentSchema, NLUComponentSchema,
-                TextProcessorComponentSchema, IntentSystemComponentSchema,
-                MonitoringComponentSchema, NLUAnalysisComponentSchema, ConfigurationComponentSchema
-            )
-            
-            # Map component names to schema classes
-            component_schema_map = {
-                "tts": TTSComponentSchema,
-                "audio": AudioComponentSchema,
-                "asr": ASRComponentSchema,
-                "llm": LLMComponentSchema,
-                "voice_trigger": VoiceTriggerComponentSchema,
-                "nlu": NLUComponentSchema,
-                "text_processor": TextProcessorComponentSchema,
-                "intent_system": IntentSystemComponentSchema,
-                "monitoring": MonitoringComponentSchema,
-                "nlu_analysis": NLUAnalysisComponentSchema,
-                "configuration": ConfigurationComponentSchema,
-            }
-            
-            return component_schema_map.get(component_name)
-            
-        except ImportError as e:
-            logger.warning(f"Failed to import component schema for {component_name}: {e}")
-            return None
+        """QUAL-85: a component's schema IS its CoreConfig section model — components and their
+        config sections share names (`components.tts` ↔ `[tts]`), so the hand-written parallel
+        <Name>ComponentSchema tree (which drifted from models.py) is derived away entirely."""
+        return cls.get_section_model(component_name)
     
     @classmethod
     def get_master_config_completeness(cls, master_config_path: Optional[Path] = None) -> Dict[str, Any]:
