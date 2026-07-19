@@ -20,6 +20,17 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-07-19 — BUG-39 DONE: the unanswerable clarification, answered.** First of a three-task
+  local-fruit sweep (BUG-39 → BUG-37 → QUAL-85, one commit each; owner intake rulings taken up front).
+  Three same-named ACs used to produce «Какой именно: Кондиционер или Кондиционер или Кондиционер?» —
+  a question whose only answer is repeating yourself. The owner chose the room-led shape: one name in
+  several rooms now asks «Кондиционер есть в нескольких комнатах — в какой: Спальня, Детская или
+  Гостиная?» (rooms spoken in nominative, so no declension machinery), mixed lists qualify only the
+  colliding names, and a genuine within-room collision falls back to the device id rather than lying
+  by omission. Answerability verified against the QUAL-31 resume path: the room answer re-runs
+  combined with the original utterance, and the resolver's existing room scoping picks the right
+  device. Four-case test file added; smart-home guide gained the one sentence a user needs.
+
 - **2026-07-18 — BUILD-45 DONE: the first routine staleness sweep of the new era — checked, filed,
   discharged in one pass.** An owner "check all pins" hours after the PROD-26 rollout found exactly
   what the machinery predicted it would: the bridge's afternoon (VWB-43 catalog-v1.8, commons IMPL-8

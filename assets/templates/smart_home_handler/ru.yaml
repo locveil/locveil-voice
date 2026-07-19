@@ -17,6 +17,8 @@ confirm_scenario: "Включаю «{label}»"
 confirm_scenario_off: "Выключаю сценарий"
 
 clarify_which: "Какой именно: {options}?"
+# BUG-39: all candidates share one name → ask by room (rooms stay nominative, no declension)
+clarify_which_room: "{name} есть в нескольких комнатах — в какой: {options}?"
 clarify_scenario: "Какой сценарий? Есть: {options}"
 
 slot_target: "какое устройство включить или выключить"

@@ -430,19 +430,6 @@ _Discrete functional defects (distinct from QUAL refactors/quality work). Surfac
       touching it. Not release-blocking (v0.5.0 is tagged), but it is the first sentence a user hears from a
       headline feature; worth fixing before the feature is mentioned to anyone.
 
-- [ ] **BUG-39** [MQTT][UX] `[deferred]` — **The ambiguity clarification lists identical names, so it cannot be
-      answered.** «включи кондиционер в гостиной» asks: *«Какой именно: Кондиционер или Кондиционер или
-      Кондиционер?»* `_ambiguous_result` (`smart_home.py:255`) builds the prompt from `c.get("name")` alone,
-      while the candidate payloads carry `room` (`bedroom_hvac`, `children_room_hvac`, `living_room_hvac` — all
-      named «Кондиционер»). The user can only repeat themselves; a clarification they cannot answer is worse
-      than none. Qualify each option by its room («Кондиционер в спальне, в детской или в гостиной?»), falling
-      back to a further distinguishing attribute when the rooms also coincide. **Independent of BUG-38 and
-      survives it:** genuine within-room ambiguity («ночники» = two sconces in one room) still yields identical
-      names. Same code serves the capability-level ambiguity path, so fix once. Related: QUAL-63 (priority rules
-      for ambiguity) may later avoid asking at all in some of these cases; this task is about the question being
-      answerable when it *is* asked.
-
-
 ### Tests (TEST)
 > **Strategy (decided 2026-06-01): do NOT keep repairing the existing suite.** Most tests were written against
 > pre-refactor code and will be invalidated by the ARCH refactors (ARCH-1..5) and the code reviews (QUAL-8/10/12/14).

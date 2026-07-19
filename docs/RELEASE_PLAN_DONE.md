@@ -1628,6 +1628,20 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       hand-interface drift. docs: guides/vad — the `processing_timeout_ms` row removed from the [vad]
       field table (the field is gone); no other manifest node describes deleted fields.
 ### Bugs (BUG)
+- [x] **BUG-39** [MQTT][UX] `[deferred]` — **✓ DONE 2026-07-19. The ambiguity clarification lists identical
+      names, so it cannot be answered.** «включи кондиционер в гостиной» asked: *«Какой именно: Кондиционер
+      или Кондиционер или Кондиционер?»* `_ambiguous_result` (`smart_home.py:253`) built the prompt from
+      `c.get("name")` alone, while the candidate payloads carry `room`. Fix (owner phrasing ruling at intake:
+      room-led): all-candidates-share-one-name asks by room via the new `clarify_which_room` template
+      («Кондиционер есть в нескольких комнатах — в какой: Спальня, Детская или Гостиная?» — rooms stay
+      nominative, no declension machinery); a mixed list qualifies only the colliding names («Кондиционер —
+      Спальня»); when the rooms coincide too (two sconces in one room) the device id is the last honest
+      qualifier. The answer resumes through the QUAL-31 combined re-run, so naming the room resolves the
+      original command — verified answerable by design. Same code serves the capability-level path, fixed
+      once; distinct-name lists unchanged. Tests: new `test_smart_home_ambiguity.py` (4 cases: room-led,
+      mixed, within-room fallback, plain regression); handler + resolution suites green. Related: QUAL-63
+      (priority rules) may later avoid asking at all. docs: guides/smart-home (room-qualified clarification
+      sentence added). contracts: none — spoken-text change only; no versioned surface moved.
 - [x] **BUG-42** [TEST] `[deferred]` — **Order-dependent flake:
       `test_arch36_satellite.py::test_recorder_declined_and_next_utterance_finalizes` fails in the full
       suite, passes in isolation** (its file also passes alone, 14/14). Reproduced identically on

@@ -28,7 +28,8 @@ Commands resolve only as deep as you phrase them:
 
 When a request is genuinely ambiguous — «поставь на паузу» in a room with both a TV and
 an Apple TV — Irene asks which one you meant, and your next reply answers just that
-question. Out-of-range values get corrected before anything is sent («Значение от 5 до
+question. Devices that share a name are told apart by room: «Кондиционер есть в
+нескольких комнатах — в какой: Спальня, Детская или Гостиная?» — answer with the room. Out-of-range values get corrected before anything is sent («Значение от 5 до
 30 °C»), and if a device doesn't respond during a room-wide command, Irene tells you
 which one («…, но не ответили: Бра»).
 

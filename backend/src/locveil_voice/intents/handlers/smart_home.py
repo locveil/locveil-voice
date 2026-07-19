@@ -253,17 +253,55 @@ class SmartHomeIntentHandler(IntentHandler):
     def _ambiguous_result(self, intent: Intent, context: UnifiedConversationContext,
                           candidates: List[Dict[str, Any]], param: str) -> IntentResult:
         """Name-level or capability-level ambiguity → one-shot clarification (v1 policy; QUAL-63
-        adds priority rules later)."""
+        adds priority rules later).
+
+        BUG-39: identical names are qualified by room — an option list the user cannot tell
+        apart is a question they cannot answer. All-same-name-different-rooms asks room-led
+        (rooms stay nominative, so no declension is needed); a mixed list qualifies only the
+        colliding names; when the rooms coincide too, the device id is the last honest
+        distinguishing attribute. The answer resumes through the QUAL-31 combined re-run, so
+        naming the room resolves the original command.
+        """
         language = self._lang(context)
-        options = " или ".join(c.get("name", c.get("device_id", "?")) for c in candidates) \
-            if language == "ru" else \
-            " or ".join(c.get("name", c.get("device_id", "?")) for c in candidates)
+        catalog = self._catalog()
+        sep = " или " if language == "ru" else " or "
+
+        def name_of(c: Dict[str, Any]) -> str:
+            return c.get("name") or c.get("device_id", "?")
+
+        def room_of(c: Dict[str, Any]) -> Optional[str]:
+            room_id = c.get("room")
+            if catalog is None or not room_id:
+                return None
+            return self._room_spoken_name(catalog, room_id, language)
+
         context.set_pending_clarification(intent.name, param, intent.raw_text)
+        metadata = {"clarification": True, "clarification_reason": "ambiguous_device",
+                    "candidates": [c.get("device_id") for c in candidates]}
+
+        names = [name_of(c) for c in candidates]
+        rooms = [room_of(c) for c in candidates]
+        if len(set(names)) == 1 and all(rooms) and len(set(rooms)) == len(rooms):
+            return IntentResult(
+                text=self._get_template("clarify_which_room", language,
+                                        name=names[0], options=sep.join(rooms)),
+                should_speak=True, metadata=metadata)
+
+        def label(c: Dict[str, Any]) -> str:
+            name = name_of(c)
+            if names.count(name) == 1:
+                return name
+            room = room_of(c)
+            same_name_same_room = sum(1 for o in candidates
+                                      if name_of(o) == name and room_of(o) == room)
+            if room is None or same_name_same_room > 1:
+                return f"{name} — {c.get('device_id', '?')}"
+            return f"{name} — {room}"
+
         return IntentResult(
-            text=self._get_template("clarify_which", language, options=options),
-            should_speak=True,
-            metadata={"clarification": True, "clarification_reason": "ambiguous_device",
-                      "candidates": [c.get("device_id") for c in candidates]})
+            text=self._get_template("clarify_which", language,
+                                    options=sep.join(label(c) for c in candidates)),
+            should_speak=True, metadata=metadata)
 
     # --- target selection ------------------------------------------------------------------------
 

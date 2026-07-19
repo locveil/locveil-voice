@@ -16,6 +16,8 @@ confirm_scenario: "Starting “{label}”"
 confirm_scenario_off: "Stopping the scenario"
 
 clarify_which: "Which one: {options}?"
+# BUG-39: all candidates share one name → ask by room
+clarify_which_room: "There is more than one {name} — which room: {options}?"
 clarify_scenario: "Which scenario? Available: {options}"
 
 slot_target: "which device to control"
