@@ -277,6 +277,21 @@ See `docs/review/phase1_architecture_map.md` §5.
       UI-17's plugin shell). Deliverable: design doc under `docs/design/` + implementation follow-up(s).
       Refs: board PROD-24 (2)(3)(6), `../locveil-commons/docs/design/workbench.md`,
       `docs/design/python_satellite.md`.
+- [ ] **ARCH-59** [SATELLITE][TIMERS] `[deferred]` — **Timer-intent behavior verification: completion
+      acknowledgement + initiation timestamp** (filed 2026-07-20 repo-to-repo from
+      `../locveil-satellite`, FW-1 requirements review REQ-33 — verify per
+      `task-start-reconciliation` at intake). The satellite side is planning
+      Alisa/Siri-style timer UX on the ORIGIN device: a tune/announcement when a timer
+      set by voice finishes (v1-capable if the reply channel already carries it), and
+      later a countdown on the device display (post-v1). Verify how `timer.set` behaves
+      TODAY: (a) when a timer finishes, is an acknowledgement/announcement sent to the
+      requesting device, and through what path (reply-channel burst to the origin
+      `client_id`? missed-announcement delivery on reconnect?); (b) does the
+      acknowledgement at timer INITIATION carry the exact launch timestamp (and
+      duration) — the data a future countdown display needs. Deliverable: findings
+      recorded (doc or journal) + follow-up tasks if gaps exist (completion cue not
+      device-addressed, or no timestamp in the initiation ack). Satellite-side contact
+      point: `../locveil-satellite` FW-1 intake record (REQ-33).
 
 ### Code Quality & Review (QUAL)
 
