@@ -1841,7 +1841,7 @@ web-api = [
 [package.metadata]
 requires-dist = [
     { name = "aiohttp", specifier = ">=3.12.15" },
-    { name = "anthropic", marker = "extra == 'llm-anthropic'", specifier = ">=0.25.0" },
+    { name = "anthropic", marker = "extra == 'llm-anthropic'", specifier = ">=0.25.0,<1" },
     { name = "black", marker = "extra == 'dev'", specifier = ">=22.0.0" },
     { name = "elevenlabs", marker = "extra == 'tts-elevenlabs'", specifier = ">=1.0.3" },
     { name = "en-core-web-md", marker = "extra == 'nlu'", url = "https://github.com/explosion/spacy-models/releases/download/en_core_web_md-3.8.0/en_core_web_md-3.8.0-py3-none-any.whl" },

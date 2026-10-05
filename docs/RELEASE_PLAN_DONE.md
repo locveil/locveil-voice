@@ -1199,6 +1199,25 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       docs: none — tracing.md describes stage payloads generically and its additive-keys contract covers
       this. contracts: none — trace-format additive, version stays 1 per the STAMP rule.
 ### Bugs (BUG)
+- [x] **BUG-45** `[release]` [CI][DEPS] — **DONE 2026-10-05 (filed + completed same session; found
+      by BUILD-47's first push — the first `backend-health` run since 2026-07-20).** CI's type gate was
+      red on a tree that had not changed: `py-dev-gates` installs the project with pip (unlocked), and
+      `anthropic>=0.25.0` now resolves to the SDK's 1.x line (1.0.0 released 2026-08-20; 1.11.0 in the
+      failing run 37280384142), whose `messages.create` no longer accepts `temperature` — pyright
+      reported "No overloads for create match" at `providers/llm/anthropic.py:94` and `:134`, the job
+      stopped there, and pytest never ran. Reproduced locally before fixing: pyright on the provider
+      is 0 errors against the locked 0.111.0 and exactly those 2 errors against a scratch 1.11.0 env.
+      Under 1.x the same two calls would also fail at RUNTIME (unexpected keyword), so this is not a
+      typing nit — but every shipped image installs from `uv.lock` (0.111.0) and is unaffected.
+      **Fix (a deliberate version decision, not a migration):** `llm-anthropic` capped to
+      `anthropic>=0.25.0,<1`; `uv.lock` refreshed (specifier-only diff, no version moved). The gate
+      environment is back in the range the lock and the suite actually exercise; the migration itself
+      is filed as QUAL-87. Not from the PROD-28 delegation — fixed because every BUILD-47..50 push
+      triggers `backend-health` by design, and a job that dies before pytest would have made the
+      layer-2 closure decorative. **Verified:** `uv lock --check` clean, dependency validator 60/60
+      both platforms, analyzer profiles valid, suite 1469 passed / 7 skipped.
+      docs: none — a dependency bound; no manifest node documents the SDK version
+      contracts: none — no versioned surface moved (dependency specifier + lockfile only)
 ### Tests (TEST)
 - [x] **TEST-0** (P0) — Minimal end-to-end smoke/integration harness (refactor safety net, Gate 0). **DONE
       2026-06-01** → `irene/tests/test_smoke_e2e.py` (**5 passed / 1 xfailed**, ~21s; boots the WebAPI runner once

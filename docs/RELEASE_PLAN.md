@@ -426,6 +426,18 @@ _Apply to every remediation task below (from the 4 review docs + QUAL-25/26). So
       `handler_domain` trait) instead of module-level literals. Not a loading violation — filed to record
       the coupling. Evidence: review doc §G.
 
+- [ ] **QUAL-87** [LLM][DEPS] `[deferred]` — **Migrate the Anthropic LLM provider to the `anthropic` SDK 1.x**
+      (filed 2026-10-05 from BUG-45, which capped the dependency at `<1` to restore the CI type gate).
+      SDK 1.0 (2026-08-20) removed `temperature` (and the other sampling knobs) from
+      `messages.create`; `providers/llm/anthropic.py` passes `temperature=_LLM_TEMPERATURE` in both
+      `enhance_text` and `chat_completion`, so under 1.x the calls fail at type-check AND at runtime
+      (unexpected keyword). Scope at task start: read the SDK's 1.x migration notes rather than
+      guessing — decide what replaces the fixed-temperature determinism the provider relies on (or
+      whether it is simply dropped for this provider), update the capability table if model ids
+      moved, lift the cap in `backend/pyproject.toml` + re-lock, and re-run the provider against the
+      live API before closing (the suite never calls it). Filed `[deferred]` as a filing default — the
+      cap keeps every shipped image on the locked 0.111.0, so nothing is broken for users; the owner
+      may promote it.
 ### Bugs (BUG)
 _Discrete functional defects (distinct from QUAL refactors/quality work). Surfaced from any source; filed before fixing._
 

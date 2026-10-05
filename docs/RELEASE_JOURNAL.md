@@ -21,6 +21,18 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-10-05 — BUG-45 DONE: the first backend CI run in eleven weeks failed on a tree nobody had
+  touched.** BUILD-47 made every contract push run `backend-health` — and the first such run went red
+  in the type gate, on the Anthropic provider, which no commit since July had changed. Cause: the
+  gate environment is pip-resolved rather than locked, `anthropic>=0.25.0` had no ceiling, and the
+  SDK shipped a 1.x line in August that drops `temperature` from `messages.create`. The lockfile
+  (0.111.0) kept every image and every local run on the old line, so the only place the new major
+  existed was the one job that then refused to reach pytest. Capped at `<1` with a specifier-only
+  re-lock; the real migration is QUAL-87 and needs the SDK's own migration notes plus a live call,
+  not a guess made to quiet a gate. Worth keeping in mind as a class: any unbounded dependency can
+  redden the unlocked gate between two unrelated commits, and a quiet repo will not notice until the
+  next backend push.
+
 - **2026-10-05 — BUILD-49 DONE: `trace-format-v1.0.1` — the refusal to enumerate is withdrawn.**
   DOC-14 stamped the trace format eleven weeks ago and deliberately left the guide un-enumerated: the
   reference section shares a file with ordinary how-to prose, and locking it looked like a tax on
