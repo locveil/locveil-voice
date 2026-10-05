@@ -21,6 +21,18 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-10-05 — BUG-46: the error frame the reply channel never sent.** Three of the four WS
+  endpoints read their first frame inside a `try`; the reply channel read it one line above
+  one. A device that sent garbage there got a dropped socket and nothing to log. The machine
+  core's `not-json` case would have exposed it in the next commit, but a fixture is the wrong
+  place to discover a handler bug, so it is fixed first. The second half is subtler and was
+  found only because the design's claim was re-run instead of re-read: the catch-all paths did
+  send `error`, and then simply returned. On uvicorn that looks like a close, because the
+  server tears down a socket whose handler is gone; in the in-process test client nothing
+  closes it and the peer waits forever. "An error frame is terminal" was a property of the
+  hosting stack, not of the code — the handlers now close themselves, so the sentence can be
+  written into the guide as something the server does rather than something that happens to it.
+
 - **2026-10-05 — ARCH-60: the machine-core design comes back from review, and from its own intake.**
   The satellite side approved the draft with three changes, and all three were about the same
   thing: the draft described fixtures from the owner's chair. A firmware parser needs to know what

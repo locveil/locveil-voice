@@ -91,3 +91,16 @@ def test_ws_observe_rejects_wrong_token():
         ws.send_text(json.dumps({"token": "nope"}))
         msg = ws.receive_json()
         assert msg["type"] == "error" and msg["error"] == "unauthorized"
+
+
+def test_ws_observe_malformed_first_frame_gets_error_then_close():
+    """BUG-46: the catch-all path answers `error` AND closes (an `error` frame is terminal)."""
+    from fastapi.testclient import TestClient
+    from starlette.websockets import WebSocketDisconnect
+    app = _router_app(token="secret", allow_remote=True, bus=EventBus())
+    with TestClient(app).websocket_connect("/ws/observe") as ws:
+        ws.send_text('{"token": ')
+        msg = ws.receive_json()
+        assert msg["type"] == "error" and msg["error"]
+        with pytest.raises(WebSocketDisconnect):
+            ws.receive_json()

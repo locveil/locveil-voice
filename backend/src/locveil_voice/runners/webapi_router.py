@@ -952,8 +952,11 @@ def create_webapi_router(
             logger.debug(f"WS audio driving input disconnected (session {session_id})")
         except Exception as e:
             logger.error(f"WS audio driving input error (session {session_id}): {e}")
+            # BUG-46: an `error` frame is terminal — answer, then close explicitly (returning
+            # alone leaves the close to the ASGI server; the wire contract promises it).
             try:
                 await websocket.send_json({"type": "error", "error": str(e)})
+                await websocket.close()
             except Exception:
                 pass
 
@@ -999,8 +1002,9 @@ def create_webapi_router(
             logger.debug("WS observe tap disconnected")
         except Exception as e:
             logger.error(f"WS observe tap error: {e}")
-            try:
+            try:  # BUG-46: `error` is terminal — answer, then close explicitly
                 await websocket.send_json({"type": "error", "error": str(e)})
+                await websocket.close()
             except Exception:
                 pass
         finally:
@@ -1076,8 +1080,24 @@ def create_webapi_router(
             await websocket.close()
             return
 
-        reg = json.loads(await websocket.receive_text())
-        client_id = reg.get("client_id")
+        # BUG-46: the first frame is parsed INSIDE a handler — a frame that is not JSON, not
+        # an object, binary, or carries an unusable `audio_out` is a protocol violation and
+        # gets the `error` answer the wire contract promises (it used to drop the socket).
+        try:
+            reg = json.loads(await websocket.receive_text())
+            client_id = reg.get("client_id")
+            ao = reg.get("audio_out") or {}
+            rate, ch = int(ao.get("rate", 22050)), int(ao.get("channels", 1))
+        except WebSocketDisconnect:
+            return
+        except Exception as e:
+            try:
+                await websocket.send_json({"type": "error",
+                                           "error": f"malformed register-reply frame: {e}"})
+                await websocket.close()
+            except Exception:
+                pass
+            return
         if reg.get("type") != "register-reply" or not client_id:
             await websocket.send_json({"type": "error",
                                        "error": "first frame must be type=register-reply with client_id"})
@@ -1092,8 +1112,6 @@ def create_webapi_router(
             await websocket.close()
             return
 
-        ao = reg.get("audio_out") or {}
-        rate, ch = int(ao.get("rate", 22050)), int(ao.get("channels", 1))
         contract = AudioContract([rate], rate, ["pcm16"], "pcm16", ch)
         channel = CallbackReplyChannel(contract, websocket.send_json, websocket.send_bytes)
         output = RemoteAudioOutput(client_id, channel, tts, negotiator)

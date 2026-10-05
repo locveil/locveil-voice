@@ -102,3 +102,39 @@ def test_ws_audio_reply_rejects_bad_first_frame():
         ws.send_text(json.dumps({"type": "register", "client_id": "x"}))  # wrong type
         msg = ws.receive_json()
         assert msg["type"] == "error"
+
+
+@pytest.mark.parametrize("first_frame", [
+    '{"type": ',                                                    # not JSON
+    "[1, 2]",                                                       # JSON, but not an object
+    json.dumps({"type": "register-reply", "client_id": "kitchen_node",
+                "audio_out": {"rate": "fast"}}),                    # unusable audio contract
+])
+def test_ws_audio_reply_answers_error_and_closes_on_a_malformed_first_frame(first_frame):
+    """BUG-46: a first frame the handler cannot parse is a protocol violation — it is answered
+    with `error` and the server closes (it used to drop the socket with no frame at all)."""
+    pytest.importorskip("fastapi")
+    from fastapi.testclient import TestClient
+    from starlette.websockets import WebSocketDisconnect
+
+    app, om = _build_app()
+    with TestClient(app).websocket_connect("/ws/audio/reply") as ws:
+        ws.send_text(first_frame)
+        msg = ws.receive_json()
+        assert msg["type"] == "error" and msg["error"]
+        with pytest.raises(WebSocketDisconnect):
+            ws.receive_json()                                       # terminal: the server closed
+    assert om._outputs == {}                                        # nothing was registered
+
+
+def test_ws_audio_reply_answers_error_on_a_binary_first_frame():
+    pytest.importorskip("fastapi")
+    from fastapi.testclient import TestClient
+    from starlette.websockets import WebSocketDisconnect
+
+    app, _ = _build_app()
+    with TestClient(app).websocket_connect("/ws/audio/reply") as ws:
+        ws.send_bytes(b"\x00\x01")
+        assert ws.receive_json()["type"] == "error"
+        with pytest.raises(WebSocketDisconnect):
+            ws.receive_json()

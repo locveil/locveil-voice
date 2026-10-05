@@ -454,16 +454,6 @@ _Apply to every remediation task below (from the 4 review docs + QUAL-25/26). So
 ### Bugs (BUG)
 _Discrete functional defects (distinct from QUAL refactors/quality work). Surfaced from any source; filed before fixing._
 
-- [ ] **BUG-46** [WS] `[release]` — **WS error paths: answer `error`, then close — on every channel** (filed
-      2026-10-05 from the ARCH-60 design findings C-1 + C-2, split out of ARCH-61 at intake). The guide
-      promises an `error` frame on a protocol violation; the machine core is about to state that an
-      `error` frame is terminal. Two places in `webapi_router.py` do neither: (C-1) `/ws/audio/reply`
-      reads and parses its first frame outside any handler, so a first frame that is not JSON, is not
-      an object, is binary, or carries a non-numeric `audio_out` value drops the connection with no
-      `error` frame; (C-2) the catch-all paths of `/ws/audio` and `/ws/observe` send `error` and return
-      without closing — a real ASGI server then closes the socket, the handler never does. Fix: both
-      answer `error` and close explicitly. No guide edit here (the guide is byte-locked; the "terminal"
-      sentence lands with ARCH-61).
 - [ ] **BUG-47** [WS] `[release]` — **Two spoken replies to one device can interleave on the reply channel**
       (filed 2026-10-05, side-find of the ARCH-60 reconciliation — design finding C-4; NOT part of the
       `ws-protocol-v1.1.0` cut). `CallbackReplyChannel.send_audio` awaits between `speak_begin`, each

@@ -1254,6 +1254,28 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       both platforms, analyzer profiles valid, suite 1469 passed / 7 skipped.
       docs: none — a dependency bound; no manifest node documents the SDK version
       contracts: none — no versioned surface moved (dependency specifier + lockfile only)
+- [x] **BUG-46** [WS] `[release]` — **DONE 2026-10-05 — WS error paths: answer `error`, then close — on every
+      channel** (filed and fixed the same day; ARCH-60 design findings C-1 + C-2, split out of ARCH-61;
+      family lead BUILD-47). The guide promises an `error` frame on a protocol violation, and the machine
+      core is about to state that an `error` frame is terminal. Two places in `webapi_router.py` did
+      neither. **C-1:** `/ws/audio/reply` read and parsed its first frame outside any handler, so a
+      first frame that was not JSON, not an object, binary, or carried a non-numeric `audio_out` value
+      dropped the connection with no frame at all — the read, the parse and the `audio_out` contract
+      now sit in one guarded block that answers `{"type": "error", "error": "malformed register-reply
+      frame: …"}` and closes (a client that leaves before registering is a plain disconnect, not an
+      error). **C-2:** the catch-all paths of `/ws/audio` and `/ws/observe` sent `error` and returned;
+      a real ASGI server then closed the socket, the handler never did — under the in-process client
+      the connection stayed open after the error. Both now close explicitly after the frame. Wire
+      effect on a real server: the reply channel gains the promised `error` frame; everything else is
+      the same close the hosting stack already performed, now issued by the handler. **Tests** (in the
+      suites that own the channels): `/ws/audio/reply` — not-JSON, not-an-object, unusable `audio_out`
+      and binary first frames each get `error` then a server close, nothing registered; `/ws/audio` —
+      a malformed first frame and a mid-stream pipeline failure each get `error` then close;
+      `/ws/observe` — a malformed first frame gets `error` then close. No guide edit: the guide is
+      byte-locked and already promises the `error` answer; the "terminal" sentence lands with
+      ARCH-61. **Verified:** suite 1487 passed / 7 skipped (+8), guards green.
+      docs: none — the code is brought to what `guides/websocket-api` already promises (an `error` answer on a protocol violation); the "error is terminal" sentence is byte-locked and lands with the ARCH-61 cut
+      contracts: none — no versioned surface moved (the guide and the STAMP stay at `ws-protocol-v1.0.1`; server behavior now matches the document)
 ### Tests (TEST)
 - [x] **TEST-0** (P0) — Minimal end-to-end smoke/integration harness (refactor safety net, Gate 0). **DONE
       2026-06-01** → `irene/tests/test_smoke_e2e.py` (**5 passed / 1 xfailed**, ~21s; boots the WebAPI runner once

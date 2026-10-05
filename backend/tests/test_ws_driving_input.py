@@ -171,3 +171,61 @@ def test_ws_audio_batch_overflow_force_finalizes(monkeypatch):
     assert calls[0]["metadata"].get("overflow") is True
     assert calls[1]["len"] == 640
     assert "overflow" not in calls[1]["metadata"]
+
+
+def _error_then_close(ws):
+    """BUG-46: an `error` frame is terminal — the server closes right after it."""
+    from starlette.websockets import WebSocketDisconnect
+    msg = ws.receive_json()
+    assert msg["type"] == "error" and msg["error"]
+    with pytest.raises(WebSocketDisconnect):
+        ws.receive_json()
+
+
+def _failing_pipeline_app():
+    from fastapi import FastAPI
+    from locveil_voice.runners.webapi_router import create_webapi_router
+
+    class _WM:
+        async def process_audio_input(self, audio_data, session_id=None, wants_audio=False,
+                                      client_context=None, trace_context=None):
+            raise RuntimeError("pipeline exploded")
+
+    class _Core:
+        def __init__(self):
+            self.workflow_manager = _WM()
+            self.config = None
+            self.component_manager = None
+            self.plugin_manager = None
+
+    app = FastAPI()
+    app.include_router(create_webapi_router(_Core(), asset_loader=None, web_input=None,
+                                            start_time=0.0))
+    return app
+
+
+@pytest.mark.parametrize("first_frame", ['{"type": ', "[1, 2]"])
+def test_ws_audio_malformed_first_frame_gets_error_then_close(first_frame):
+    """A first frame that is not a JSON object lands in the endpoint's catch-all: it must
+    answer `error` AND close — returning alone left the close to the hosting server."""
+    pytest.importorskip("fastapi")
+    from fastapi.testclient import TestClient
+
+    with TestClient(_failing_pipeline_app()).websocket_connect("/ws/audio") as ws:
+        ws.send_text(first_frame)
+        _error_then_close(ws)
+
+
+def test_ws_audio_mid_stream_failure_gets_error_then_close():
+    """A failure after registration (here: the pipeline raises) ends the connection the same
+    way — `error`, then the server closes; the device reconnects and re-registers."""
+    pytest.importorskip("fastapi")
+    from fastapi.testclient import TestClient
+
+    with TestClient(_failing_pipeline_app()).websocket_connect("/ws/audio") as ws:
+        ws.send_text(json.dumps({"type": "register", "client_id": "kitchen_node",
+                                 "room_name": "Кухня", "sample_rate": 16000}))
+        assert ws.receive_json()["type"] == "registered"
+        ws.send_bytes(b"\x00\x01" * 320)
+        ws.send_text(json.dumps({"type": "end"}))
+        _error_then_close(ws)
