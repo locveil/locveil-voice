@@ -3,21 +3,31 @@
 The normative artifact **lives at [`docs/guides/tracing.md`](../../docs/guides/tracing.md) →
 "The trace file format (reference)"** (`trace-format-doc-canonical` — a hand-written reference
 inside the user guide; owned surfaces that legitimately live elsewhere keep their home, per
-`../locveil-commons/process/contracts.md` §2). This folder holds the version authority only.
+`../locveil-commons/process/contracts.md` §2). This folder holds the version authority.
 
-The version exists in a **triple**, asserted equal by
-`backend/tests/test_trace_format_version.py`:
+**The guide is enumerated whole** in `STAMP.json` → `artifacts` (doc-canonical contracts lock
+the whole file — there is no marked-region mechanism): the list is what a consumer pins and
+what the contract guard byte-locks. Any edit to the tracing guide — in the reference section
+or anywhere else in the file — is a version move, cut in the same change.
 
-1. the guide's "Trace format version" line,
-2. the written constant `backend/src/locveil_voice/core/trace_context.py::TRACE_FORMAT_VERSION`
-   (stamped into every saved envelope as `trace_version`),
-3. `STAMP.json` here.
+Versions have three levels (`process/contracts.md` §3):
 
-Compatibility rule (stated in the guide): additive keys keep the version — readers ignore
-unknown keys; a key removed, renamed, or repurposed bumps all three legs together and tags
-`trace-format-vN`. The STAMP deliberately carries no `artifacts` byte-enumeration: the guide's
-prose evolves freely, and the normative surface is the tested triple (same posture as
-`ws-protocol`).
+| Level | When | Written `trace_version` |
+|---|---|---|
+| major | a key removed, renamed, or repurposed (breaks readers) | moves — it IS the major |
+| minor | an additive key (readers ignore unknown keys) | unchanged |
+| patch | the guide's bytes moved, the format did not | unchanged |
+
+`backend/tests/test_trace_format_version.py` keeps the legs in agreement:
+
+1. `STAMP.json` is the authority — a three-part `version`, `tag` = `trace-format-v<version>`;
+2. the guide's "Trace format version" line shows the **major** and names the STAMP's tag exactly;
+3. the written constant `backend/src/locveil_voice/core/trace_context.py::TRACE_FORMAT_VERSION`
+   (stamped into every saved envelope as `trace_version`) equals the **major**.
+
+Cutting a version: edit the guide + bump `STAMP.json` (`version`, `tag`, `date`) + the guide's
+version-line tag in ONE commit, tag that commit `trace-format-vX.Y.Z`, push commit and tag
+together.
 
 Writers: `core/trace_context.py::TraceContext.build_envelope` (controller) and
 `satellite/trace.py` (the merged room-node file — same envelope plus `controller_trace` /

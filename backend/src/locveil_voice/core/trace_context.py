@@ -32,10 +32,11 @@ from ..intents.context_models import UnifiedConversationContext
 logger = logging.getLogger(__name__)
 
 # The trace-file format generation, stamped into every saved envelope as `trace_version`.
-# Version authority is a TRIPLE — this constant, the "Trace format version" line in
-# docs/guides/tracing.md, and contracts/trace-format/STAMP.json — asserted equal by
-# backend/tests/test_trace_format_version.py. Additive keys keep the number; a key
-# removed, renamed, or repurposed bumps it (and the tag) — consumers ignore unknown keys.
+# It is the contract's MAJOR version only: contracts/trace-format/STAMP.json carries the
+# full three-part version (minor = an additive key, patch = a guide edit with the format
+# untouched) and neither moves this number — only a key removed, renamed, or repurposed
+# does (consumers ignore unknown keys). backend/tests/test_trace_format_version.py asserts
+# this constant == the guide's "Trace format version" number == the STAMP version's major.
 TRACE_FORMAT_VERSION = 1
 
 # ARCH-19 slice 1 — ambient access to the live trace (D-3).

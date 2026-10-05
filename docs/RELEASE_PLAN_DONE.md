@@ -1579,6 +1579,26 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       (strict once the tag exists); flow = artifact + STAMP one commit → tag → pushed together.
       docs: guides/websocket-api (header tag + the three-level version sentence)
       contracts: ws-protocol bumped v1 → v1.0.1 (patch: guide enumerated whole, two post-tag drifts absorbed; served major unchanged); re-pin owed: satellite
+- [x] **BUILD-49** `[release]` [CONTRACTS][TRACE] — **DONE 2026-10-05 (owner cut
+      `trace-format-v1.0.1`, bytes-only patch; PROD-28 voice delegation (b); lead BUILD-47).** The
+      utterance-trace format contract now declares and byte-locks its artifact — the DOC-14 choice not
+      to enumerate ("the guide's prose evolves") is remediated per owner ruling HK-13 q3.
+      **STAMP:** `version` `1.0.1`, tag `trace-format-v1.0.1`, `artifacts:
+      ["docs/guides/tracing.md"]` — the WHOLE guide, not the reference section (no marked-region
+      mechanism exists; any edit anywhere in the file now cuts at least a patch); singular `artifact`
+      dropped; the note records the three-level rule. **Guide:** the version line names the new tag,
+      and the closing paragraph of the reference section states the rule for readers — the number in a
+      saved file is the major and moves only on a reader-breaking change; a new key is a minor, a
+      guide edit is a patch. **Written value unchanged:** `TRACE_FORMAT_VERSION` stays `1`; its
+      comment re-truthed. **Test:** `test_trace_format_version.py` rewritten from the equal-triple to
+      the major-only comparison (same shape as BUILD-48: STAMP three-part authority, doc line names
+      the STAMP tag, written constant == major, artifact + `code_constant` pointers resolve, envelope
+      smoke). Registry row + `contracts/trace-format/README.md` re-truthed. Intake check held: guide
+      and STAMP were byte-identical to `trace-format-v1`, so the patch absorbs no hidden drift. No
+      format change. **Verified:** suite 1469 passed / 7 skipped; guard green; artifact + STAMP one
+      commit → tag → pushed together.
+      docs: guides/tracing (version-line tag + the three-level paragraph in the reference section)
+      contracts: trace-format bumped v1 → v1.0.1 (patch: guide enumerated whole; written major unchanged); no re-pin owed — no cross-repo consumer pins it yet
 ### Models & Assets (ASSET)
 ### Documentation (DOC)
 - [x] **DOC-5b** (P2) — DONE 2026-06-08: regenerated `guides/DONATION_FILE_SPECIFICATION.md` for the v1.1

@@ -125,7 +125,7 @@ same models are installed.
 
 ## The trace file format (reference)
 
-**Trace format version: 1** (`trace-format-v1`)
+**Trace format version: 1** (`trace-format-v1.0.1`)
 
 This section is the normative reference for the saved-trace JSON — anything that reads a trace file (the
 replay tool, a satellite writing its merged file, an external analyzer) is built against it. Every trace
@@ -156,6 +156,8 @@ exchange and round-trip time), with up to three extra keys:
 | `raw_mic` | with `--trace-raw-mic` only: the pre-canonical microphone window around the utterance |
 | `reply_audio` | the reply exactly as played (base64 PCM with rate/channels) |
 
-The format is version-stamped as a contract: the version above, the `trace_version` the code writes, and
-`contracts/trace-format/STAMP.json` are asserted equal by a conformance test, and a change that breaks
-readers lands only as a deliberate version bump (`trace-format-vN`).
+The format is version-stamped as a contract. The number above — the `trace_version` every saved file
+carries — is the format's **major** version, and it moves only when a change breaks readers. The contract
+tag carries the full three-part version: a new key is a minor release, an edit to this guide that leaves the
+format untouched is a patch, and neither changes the number written into a file. A conformance test keeps
+the number above, the `trace_version` the code writes, and the contract's version stamp in agreement.

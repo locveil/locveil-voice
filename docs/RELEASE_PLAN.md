@@ -503,15 +503,6 @@ size-matched to the Russian stack; language is a per-config/deployment choice (a
       board** (D-4/D-5), seeded when BUILD-21 lands, not decided unilaterally here. Scope for that design: which
       repo owns the unified compose, health-gated `depends_on` vs. tolerant clients, whether the units collapse
       into one, and how `update.sh` stays per-repo when the compose is not. Related: BUILD-18 (ops conformance).
-- [ ] **BUILD-49** `[release]` [CONTRACTS][TRACE] — **Owner cut `trace-format-v1.0.1` (bytes-only
-      patch): `docs/guides/tracing.md` enumerated whole** (filed 2026-10-05 at PROD-28 intake,
-      delegation (b); lead BUILD-47). Owner ruling q3 remediates the DOC-14 refusal to enumerate
-      ("prose evolves" — from now an edit to the guide cuts a patch). Verified at intake: the guide and
-      the STAMP are byte-identical to `trace-format-v1` (no hidden drift to absorb). Scope: STAMP gains
-      `artifacts: ["docs/guides/tracing.md"]`, version `1.0.1`, new tag; the guide's version line names
-      the tag and its closing paragraph states the three-level rule (`trace_version` = the major);
-      `TRACE_FORMAT_VERSION` stays `1`; `test_trace_format_version.py` goes major-only; registry row +
-      `contracts/trace-format/README.md` re-truthed. No cross-repo consumer pins it yet — no re-pin owed.
 - [ ] **BUILD-50** `[release]` [CONTRACTS] — **`ui-openapi` + `wake-pack` STAMPs declare `artifacts`
       (empty list + resolving `guard`): patch cuts `ui-openapi-v1.1.1` + `wake-pack-v1.0.1`** (filed
       2026-10-05 at PROD-28 intake, delegation (b); lead BUILD-47). Both are the legal empty-list

@@ -21,6 +21,16 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-10-05 — BUILD-49 DONE: `trace-format-v1.0.1` — the refusal to enumerate is withdrawn.**
+  DOC-14 stamped the trace format eleven weeks ago and deliberately left the guide un-enumerated: the
+  reference section shares a file with ordinary how-to prose, and locking it looked like a tax on
+  every wording fix. HK-13 answered the objection instead of overruling it — with a patch level that
+  no reader can observe, the lock costs one tag per edit and nothing else, and an owner who still
+  finds it too wide splits the file rather than asking for a marked region. So the whole of
+  `tracing.md` is now the enumerated artifact, `trace_version` stays `1` as the major, and the
+  version test went major-only on the BUILD-48 pattern. Nothing had drifted since the first tag;
+  this cut is pure declaration.
+
 - **2026-10-05 — BUILD-48 DONE: `ws-protocol-v1.0.1` — the guide is locked, and the version test
   stops asserting an equality that could no longer be true.** The first three-part tag in this repo.
   The old test wanted doc number == served constant == STAMP version; with three-level versions that

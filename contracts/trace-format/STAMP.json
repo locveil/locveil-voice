@@ -1,10 +1,12 @@
 {
   "contract": "trace-format",
-  "version": "1",
-  "tag": "trace-format-v1",
-  "date": "2026-07-18",
+  "version": "1.0.1",
+  "tag": "trace-format-v1.0.1",
+  "date": "2026-10-05",
   "owner_repo": "locveil-voice",
-  "artifact": "docs/guides/tracing.md",
+  "artifacts": [
+    "docs/guides/tracing.md"
+  ],
   "code_constant": "backend/src/locveil_voice/core/trace_context.py::TRACE_FORMAT_VERSION",
-  "note": "First tag stamps the utterance-trace JSON format as already shipped and proven (ARCH-19 controller envelope + the ARCH-38 satellite merged shape). Doc-canonical per the ws-protocol model: the artifact is the hand-written reference section in the tracing guide; no `artifacts` byte-enumeration because the guide's prose evolves — the normative surface is versioned by the triple (doc line, TRACE_FORMAT_VERSION, this STAMP) under test. Additive keys keep the version; a key removed, renamed, or repurposed bumps it."
+  "note": "Major 1 is the utterance-trace JSON format as shipped and proven (ARCH-19 controller envelope + the ARCH-38 satellite merged shape). Doc-canonical per the ws-protocol model: the normative text is the hand-written reference section of the tracing guide. Three-level versions (process/contracts.md §3): the WRITTEN trace_version carries the major only (1) and moves only when a key is removed, renamed, or repurposed; an additive key is a minor cut (readers ignore unknown keys); a byte edit to the guide with the format untouched is a patch. v1.0.1 (2026-10-05, HK-13/BUILD-49) is a bytes-only patch: the guide is enumerated WHOLE from this cut on (owner ruling HK-13 q3 — doc-canonical contracts lock the whole file; this supersedes the DOC-14 choice not to enumerate). No format change."
 }
