@@ -2007,6 +2007,33 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       contract-guard strict 0 failures / 0 warnings; `repin --check --fail-on any` exit 0.
       docs: none — lockfile only; no manifest node documents a dependency version
       contracts: none — no versioned surface moved (lockfile only; every enumerated artifact byte-identical)
+- [x] **BUILD-55** `[release]` [DEPS][SECURITY] — **DONE 2026-10-05 (filed + completed same session,
+      with BUILD-54).** **torch** 2.12.1 → 2.14.1 (`+cpu` on Linux/Windows, plain on macOS — the
+      CPU-index pin is unchanged) and **setuptools** 81.0.0 → 84.0.0, in `backend/uv.lock` only;
+      `pyproject.toml` untouched (`torch>=1.13.0` already admits it). One move, as filed: torch
+      2.12.1 declared `setuptools<82`, 2.14.1 does not, so the setuptools alert could not close
+      without the torch one. **The installability question, answered from the lock itself:** the
+      2.14.1 wheel set covers every platform tag the 2.12.1 set did — manylinux_2_28 x86_64 and
+      aarch64, macOS arm64, win_amd64, s390x, cp311–cp314 — nothing lost, six tags gained
+      (cp315, win_arm64); the locked **torchaudio** stays 2.11.0 (still the newest on the index,
+      and it carries no torch pin). There is no armv7 torch wheel before or after — the armv7
+      profile is torch-free by gate, and that gate still passes. 2.14.1 rather than the minimum
+      2.13.0 because it is what `--upgrade-package` resolves, and what the unlocked CI gate and a
+      fresh standalone image build already install (today's green CI runs were on torch 2.14.1).
+      **setuptools 82 removed `pkg_resources`:** nothing in `backend/` imports it, and the three
+      locked packages that declare setuptools (spaCy, thinc, pymorphy3) import and run without it.
+      **Verified on a scratch environment synced from the new lock:** a real Silero v4 synthesis
+      through the provider's own load path (`torch.package.PackageImporter(...).load_pickle` →
+      `apply_tts`, 35 400 samples at 24 kHz), torchaudio resample + mel transform, Whisper's
+      log-mel front end; the `backend-health` job replayed step for step — pyright 0 errors,
+      `uv lock --check`, analyzer profiles, config validation, donations 0 errors / 0 warnings,
+      dependency validator 60/60 both platforms, armv7 torch-free gate — suite **1811 passed /
+      7 skipped** (the baseline); `config-ui/openapi.json` unchanged; contract-guard strict
+      0 failures / 0 warnings; `repin --check --fail-on any` exit 0. Not built here: the x86_64
+      standalone image (the only torch consumer) — its build is unlocked and resolves the same
+      wheel from the same index.
+      docs: none — lockfile only; no manifest node documents the torch or setuptools version
+      contracts: none — no versioned surface moved (lockfile only; every enumerated artifact byte-identical)
 ### Models & Assets (ASSET)
 ### Documentation (DOC)
 - [x] **DOC-5b** (P2) — DONE 2026-06-08: regenerated `guides/DONATION_FILE_SPECIFICATION.md` for the v1.1

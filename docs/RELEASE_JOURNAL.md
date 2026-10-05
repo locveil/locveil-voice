@@ -21,6 +21,17 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-10-05 — BUILD-55: two alerts that were one.** setuptools would not move on its own, and
+  the reason was sitting in another package's metadata: the locked torch capped it below 82.
+  So the low-severity torch alert turned out to be the key to a medium one, and the question
+  stopped being "should a heavy runtime dependency move for a low alert" and became "can it".
+  It can: the newer wheel set is a superset of the old one on every platform the lock carries,
+  torchaudio does not need to follow, and the controller image never had torch to begin with.
+  The part that could have bitten is quieter — setuptools 82 dropped `pkg_resources`, and three
+  locked packages still list setuptools as a dependency out of habit. They were imported and
+  exercised rather than trusted. The proof for torch is a sentence actually synthesized through
+  the provider's own load path on the locked stack, because the suite mocks the model and a
+  green suite alone would have said nothing about the wheel. contracts: none. docs: none.
 - **2026-10-05 — BUILD-54: forty-seven alerts, and which file they were about.** The owner asked
   for the open Dependabot alerts to be cleared. Fifteen of them named a lockfile at the repo
   root that has not existed since the backend moved under `backend/` in July — GitHub's
