@@ -3,15 +3,15 @@
   "roots": ["README.md", "CONTRIBUTING.md", "docs/QUICKSTART.md", "docs/guides",
             "docs/architecture", "docs/images", "ops/INSTALL.md", "eval/README.md"],
   "surfaces": {
-    "ws-protocol": ["irene/runners/webapi_router.py", "irene/satellite/**", "irene/core/ws_protocol.py", "contracts/ws-protocol/**"],
-    "rest-api": ["irene/components/**", "config-ui/openapi.json", "scripts/dump_openapi.py"],
-    "config": ["irene/config/**", "configs/**"],
+    "ws-protocol": ["backend/src/locveil_voice/runners/webapi_router.py", "backend/src/locveil_voice/satellite/**", "backend/src/locveil_voice/core/ws_protocol.py", "contracts/ws-protocol/**"],
+    "rest-api": ["backend/src/locveil_voice/components/**", "config-ui/openapi.json", "scripts/dump_openapi.py"],
+    "config": ["backend/src/locveil_voice/config/**", "config/**"],
     "donations": ["assets/donations/**", "assets/donation_*.json"],
-    "providers": ["irene/providers/**", "contracts/wake-pack/**"],
-    "intents": ["irene/intents/**", "irene/core/intent_*.py"],
-    "smart-home": ["irene/intents/device_commands.py", "contracts/pins/catalog/**"],
-    "deployment": ["docker/**", "ops/**", "pyproject.toml"],
-    "reports": ["irene/core/report_*.py", "contracts/pins/report-protocol/**"],
+    "providers": ["backend/src/locveil_voice/providers/**", "contracts/wake-pack/**"],
+    "intents": ["backend/src/locveil_voice/intents/**", "backend/src/locveil_voice/core/intent_*.py"],
+    "smart-home": ["backend/src/locveil_voice/intents/device_commands.py", "contracts/pins/catalog/**"],
+    "deployment": ["docker/**", "ops/**", "backend/pyproject.toml"],
+    "reports": ["backend/src/locveil_voice/core/report_*.py", "contracts/pins/report-protocol/**"],
     "eval": ["eval/**"]
   },
   "nodes": [

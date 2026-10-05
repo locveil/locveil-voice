@@ -21,6 +21,18 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-10-05 — BUILD-52 DONE: the docs manifest stops being a contract and starts being checked.**
+  HK-6 had given every repo an internal `docs-manifest` stamp, which versioned the wrong thing: the
+  manifest is this repo's own list of docs, edited weekly; what the repos actually share is the
+  schema, and three repos were consuming that schema three different ways. Here the way was a
+  relative read into the commons checkout guarded by a `skipif` — so the schema leg ran on a
+  developer machine and never once in CI. Now the schema is a pinned family like any other and the
+  test reads the pin unconditionally. The stale surface globs filed at intake turned out to be the
+  whole map, not a few entries: every code glob still pointed at the pre-layout-move `irene/` tree,
+  so for three months no source change could have flagged a doc. Fixed, with a test that fails on
+  a glob matching nothing. Ordering note for the sweep: this had to land before guard v4 is
+  vendored, because v4's STAMP-equals-its-tag rule fails on the very stamp retired here.
+
 - **2026-10-05 — PROD-28 sweep GO: BUILD-53 filed, BUILD-51/52 reconciled against the tags as
   actually cut.** The commons tag set landed the same day, with two differences from the filing
   text worth recording: the scope tag to pin is `scope-v7.3.1` (a block-only cut — the guard's

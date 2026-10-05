@@ -5,8 +5,12 @@
 normal suite: a doc committed under a manifest root without a node fails (registration IS
 the manifest edit), a node whose file vanished fails (removal is by tombstone or a filed
 supersession), the floor classes can't silently empty, and the docs-verdict lines the DONE
-ledger records must name real nodes. Schema validation runs when the commons schema is
-reachable (sibling checkout); everything else is hermetic.
+ledger records must name real nodes.
+
+The manifest is INSTANCE DATA (HK-13 / BUILD-52); the contract is the commons-owned schema,
+family `docs-manifest-schema`, PINNED at `contracts/pins/docs-manifest-schema/`. This file is
+that pin's conformance test: schema validation reads the pinned copy — fully hermetic, no
+sibling checkout, never skipped.
 
 Diagram rule: a node's path is the `.dot` source; the same-basename render is the same
 unit — both must exist, and neither may exist without the node.
@@ -15,22 +19,44 @@ import json
 import re
 from pathlib import Path
 
-import pytest
+import jsonschema
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 MANIFEST = json.loads((_REPO_ROOT / "docs" / "manifest.json").read_text(encoding="utf-8"))
 NODES = MANIFEST["nodes"]
-_COMMONS_SCHEMA = _REPO_ROOT / "../locveil-commons/process/user-docs/manifest.schema.json"
+_PIN_DIR = _REPO_ROOT / "contracts" / "pins" / "docs-manifest-schema"
 
 FLOOR_CLASSES = ("front-door", "quickstart", "contributor")
 
 
-@pytest.mark.skipif(not _COMMONS_SCHEMA.is_file(),
-                    reason="commons sibling checkout not present (schema lives there)")
-def test_manifest_validates_against_commons_schema():
-    jsonschema = pytest.importorskip("jsonschema")
-    schema = json.loads(_COMMONS_SCHEMA.read_text(encoding="utf-8"))
+def test_manifest_validates_against_pinned_schema():
+    schema = json.loads((_PIN_DIR / "manifest.schema.json").read_text(encoding="utf-8"))
+    jsonschema.Draft202012Validator.check_schema(schema)
     jsonschema.validate(MANIFEST, schema)
+
+
+def test_schema_pin_is_the_stamped_family():
+    pin = json.loads((_PIN_DIR / "PIN.json").read_text(encoding="utf-8"))
+    stamp = json.loads((_PIN_DIR / "STAMP.json").read_text(encoding="utf-8"))
+    assert pin["contract"] == stamp["contract"] == "docs-manifest-schema"
+    assert pin["owner_repo"] == stamp["owner_repo"] == "locveil-commons"
+    assert pin["tag"] == stamp["tag"]
+    assert "manifest.schema.json" in pin["files"]
+
+
+def test_surface_globs_match_real_files():
+    """A surface is a trigger map (glob → "a doc covering this may be stale"); a glob that
+    matches nothing triggers nothing. The whole map named pre-layout-move paths for three
+    months unnoticed (BUILD-52)."""
+    def _matches(pattern: str) -> bool:
+        # pathlib's trailing `**` yields directories only — `dir/**` means "anything under dir"
+        walk = pattern + "/*" if pattern.endswith("**") else pattern
+        return any(p.is_file() for p in _REPO_ROOT.glob(walk))
+
+    dead = [f"{surface}: {pattern}"
+            for surface, patterns in MANIFEST["surfaces"].items()
+            for pattern in patterns if not _matches(pattern)]
+    assert not dead, f"manifest surface globs that match no file: {dead}"
 
 
 def test_ids_and_paths_unique():

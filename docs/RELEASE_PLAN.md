@@ -552,23 +552,6 @@ size-matched to the Russian stack; language is a per-config/deployment choice (a
       commons at `scope-v7.3.1`, the `trace-format-doc-canonical` sentence re-truthed to the
       three-level rule, vendored-tool tag mentions moved — minimal, listed for the owner; the
       `ws-protocol-doc-canonical` amendment is NOT here (ARCH-61).
-- [ ] **BUILD-52** `[release]` [DOC][CONTRACTS] — **docs-manifest remodel: retire the internal
-      `contracts/docs-manifest/` STAMP for a `docs-manifest-schema` pin; the manifest test goes
-      hermetic** (filed 2026-10-05 at PROD-28 intake, delegation (b) tail; lead BUILD-47; **WAITS on
-      commons** cutting the `docs-manifest-schema` family, first tag `docs-manifest-schema-v1.0.0`;
-      executes in the BUILD-51 sweep session as its own commit). HK-13 decision 6 (partially reversing
-      HK-6): `docs/manifest.json` is instance data; the contract is the commons-owned schema. Scope:
-      delete `contracts/docs-manifest/` (the `docs-manifest-v1` tag stays as frozen history), drop its
-      registry row, pin `docs-manifest-schema` under `contracts/pins/` via repin, and point
-      `test_docs_manifest.py`'s schema leg at the pin (today it reads `../locveil-commons/…` and SKIPS
-      when the sibling is absent — i.e. never runs in CI). Discovered at intake, rides here: the
-      manifest's `surfaces` trigger globs still name pre-BUILD-36 paths (`irene/**`, `configs/**`,
-      root `pyproject.toml`) — re-truth to `backend/src/locveil_voice/**`, `config/**`,
-      `backend/pyproject.toml`.
-      **SWEEP-GO RECONCILIATION 2026-10-05:** `docs-manifest-schema-v1.0.0` is cut (artifact
-      `process/user-docs/manifest.schema.json`). Executes BEFORE BUILD-51 (see there) with the
-      still-vendored repin v1 — the family entry therefore carries a `files` list for one commit;
-      BUILD-51 drops it and re-stamps the pin with v2.
 - [ ] **BUILD-53** `[release]` [CONTRACTS][UI] — **Pin the `workbench` family: config-ui builds
       against the commons plugin contract through a live `file:` link with NO pin** (filed 2026-10-05
       at the PROD-28 sweep-GO, coordinator-assigned; lead BUILD-47). Commons cut `workbench-v1.3.0`

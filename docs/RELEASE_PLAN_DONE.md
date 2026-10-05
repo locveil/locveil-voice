@@ -1643,6 +1643,27 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       guard green; STAMPs one commit → both tags on it → pushed together.
       docs: none — STAMP metadata, contract READMEs and tests; no manifest node describes the stamps
       contracts: ui-openapi bumped v1.1 → v1.1.1 (patch: declaration only; repo-internal, no re-pin); wake-pack bumped v1 → v1.0.1 (patch: declaration only, pack hashes/URLs untouched); re-pin owed: satellite (wake-pack)
+- [x] **BUILD-52** `[release]` [DOC][CONTRACTS] — **DONE 2026-10-05 (docs-manifest remodel; HK-13
+      decision 6, PROD-28 voice delegation (b) tail; lead BUILD-47; executed first in the sweep
+      session because guard v4 refuses the STAMP it retires).** `docs/manifest.json` is instance
+      data; the contract is the commons-owned schema. **Pinned:** new consumed family
+      `docs-manifest-schema` @ `docs-manifest-schema-v1.0.0` at `contracts/pins/docs-manifest-schema/`
+      (`manifest.schema.json` + owner STAMP verbatim + PIN.json; stamped with the still-vendored
+      repin v1, so the `.repin.toml` family carries a `files` list for this one commit — BUILD-51
+      drops it and re-stamps with v2). **Retired:** `contracts/docs-manifest/` (STAMP + README) and
+      its registry row; the `docs-manifest-v1` git tag stays as frozen history. **Test hermetic:**
+      `test_docs_manifest.py` validates the manifest against the PINNED schema — the
+      `../locveil-commons/…` read and its `skipif` are gone (that leg had never run in CI, where no
+      sibling exists); plus a pin-coherence leg (PIN ↔ owner STAMP). **Surfaces re-truthed:** the
+      trigger globs named pre-BUILD-36 paths (`irene/**`, `configs/**`, root `pyproject.toml`) —
+      now `backend/src/locveil_voice/**`, `config/**`, `backend/pyproject.toml`; new
+      `test_surface_globs_match_real_files` fails on any glob that matches nothing, so the map
+      cannot rot silently again. Registry gained the pin row; pin README written (why the
+      manifest is not a contract). **Verified:** suite 1473 passed / 7 skipped; guard v3.1 green,
+      and a dry run of guard v4 against the tree now reports 0 failures (the STAMP-DRIFT it raised
+      on the retired stamp was the only one).
+      docs: none — manifest metadata (surface globs) + pin + test; no node's content changed
+      contracts: docs-manifest-schema first consumed (pin @ v1.0.0); internal docs-manifest stamp retired
 ### Models & Assets (ASSET)
 ### Documentation (DOC)
 - [x] **DOC-5b** (P2) — DONE 2026-06-08: regenerated `guides/DONATION_FILE_SPECIFICATION.md` for the v1.1

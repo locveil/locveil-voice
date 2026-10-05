@@ -63,6 +63,20 @@ files = ["packages/core-py/entry_point_loader.py",
 path = "contracts/pins/core-py"
 conformance = "backend/tests/test_core_py_pin_identity.py"
 
+# BUILD-52 (HK-13 decision 6): docs/manifest.json is instance data; the CONTRACT is the
+# commons-owned schema it validates against. The manifest test reads the pinned copy —
+# hermetic, no sibling checkout, no skip in CI.
+[[family]]
+name = "docs-manifest-schema"
+owner_repo = "locveil-commons"
+owner_dir = "../locveil-commons"
+owner_url = "https://github.com/locveil/locveil-commons.git"
+files = ["process/user-docs/manifest.schema.json",
+         "contracts/docs-manifest-schema/STAMP.json"]
+[[family.dest]]
+path = "contracts/pins/docs-manifest-schema"
+conformance = "backend/tests/test_docs_manifest.py"
+
 # Vendored-tools manifest (HK-12): each pinned_tag is checked against the owner's
 # newest family tag on the same ladder — the tag↔vendored-copy relationship stops
 # living in prose. Bump a pinned_tag only in its re-vendor ledger task.
