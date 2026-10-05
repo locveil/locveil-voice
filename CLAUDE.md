@@ -31,6 +31,10 @@ but these rules apply to any task). **Single source of truth** (relocated here f
   `ws_audio_provider`). Design docs hold rationale and **defer to it** (e.g. `python_satellite.md` §3 points
   there); never duplicate frame tables elsewhere. Sibling rule: `../locveil-commons/CLAUDE.md` names this
   document as the protocol truth its providers implement.
+  `contracts/ws-protocol/` additionally holds the protocol's hand-written machine core (golden
+  frames, transcripts, schema). It is subordinate to the document: on disagreement the document
+  wins and the core is fixed. Never generated from code; a wire change updates document and core
+  in the same change.
 - **`trace-format-doc-canonical`** — the "trace file format (reference)" section of `docs/guides/tracing.md`
   is the single source of truth for the saved utterance-trace JSON (`trace_version`; controller envelope +
   satellite merged shape). Any change to what `TraceContext.build_envelope` / `satellite/trace.py` write

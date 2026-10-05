@@ -21,6 +21,13 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-10-05 — ARCH-65: the invariant says what the folder holds.** The machine core went live
+  at `ws-protocol-v1.1.0` with `ws-protocol-doc-canonical` still describing only the document; the
+  session that made the cut handed the amendment back as a patch rather than edit repo law on a
+  relayed instruction. The owner had approved the wording in council (HK-13 round 2) and confirmed
+  during execution that the invariant updates belong to this run; the coordinator session applied
+  the patch as written. Four lines, verbatim: the core exists, it is subordinate to the document,
+  it is never generated, and a wire change moves both together. contracts: none. docs: none.
 - **2026-10-05 — ARCH-61: the cut, and why the guide grew more than the folder did.** Eleven files
   became contract in one commit, but the larger change is in the document they answer to. Every
   time a fixture needed a verdict the guide could not support, the guide had to say something

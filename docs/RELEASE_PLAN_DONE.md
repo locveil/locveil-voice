@@ -175,6 +175,22 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       **Verified:** suite 1806 passed / 7 skipped (+115), guards green.
       docs: none — the schema is named and scoped in `guides/websocket-api`, which is byte-locked; that section lands with the ARCH-61 cut
       contracts: none — no versioned surface moved yet (the schema is not enumerated; the STAMP stays at `ws-protocol-v1.0.1` until ARCH-61)
+- [x] **ARCH-65** [WS][CONTRACTS] `[release]` — **DONE 2026-10-05 — the owner-approved amendment to
+      `ws-protocol-doc-canonical` is in `CLAUDE.md`** (filed at the ARCH-61 cut; PROD-28 voice
+      delegation (d); council HK-13, round 2 q3 — the owner approved the wording on the dossier and
+      re-confirmed during execution, 2026-10-05, on the coordinator's direct question about the
+      invariant edits: "I want these updates as a part of this run"). The four lines are appended to
+      the `ws-protocol-doc-canonical` bullet VERBATIM, and nothing else in the invariant moved:
+      "`contracts/ws-protocol/` additionally holds the protocol's hand-written machine core (golden
+      frames, transcripts, schema). It is subordinate to the document: on disagreement the document
+      wins and the core is fixed. Never generated from code; a wire change updates document and core
+      in the same change." Applied from the patch the ARCH-61 session prepared and declined to apply
+      itself (an agent session does not edit an instruction file on relayed authority); the commons
+      coordinator session, which holds the owner's approval first-hand, read the patch and applied
+      it. docs: none — `CLAUDE.md` is agent-facing law, not a `docs/manifest.json` node. contracts:
+      none — no contract bytes move (`CLAUDE.md` is not an enumerated artifact; the machine core
+      itself was cut by ARCH-61 at `ws-protocol-v1.1.0`).
+
 ### Code Quality & Review (QUAL)
 - [x] **QUAL-19** [ESP32] (P2, last pre-release) — **DONE 2026-06-09** (interactive review session + upstream study).
       **★ ARCH-22 (2026-06-14):** the **device-side** of the micro stack is now designed in `docs/design/esp32_satellite.md`

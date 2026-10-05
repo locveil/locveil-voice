@@ -301,18 +301,6 @@ See `docs/review/phase1_architecture_map.md` §5.
       recorded (doc or journal) + follow-up tasks if gaps exist (completion cue not
       device-addressed, or no timestamp in the initiation ack). Satellite-side contact
       point: `../locveil-satellite` FW-1 intake record (REQ-33).
-- [ ] **ARCH-65** [WS][CONTRACTS] `[release]` — **Apply the owner-approved amendment to
-      `ws-protocol-doc-canonical` in `CLAUDE.md`** (filed 2026-10-05 at the ARCH-61 cut; PROD-28 voice
-      delegation (d), owner approval recorded on the commons board — council HK-13, round 2 q3). The
-      machine core is live at `ws-protocol-v1.1.0`; the invariant still describes only the document.
-      Append to the `ws-protocol-doc-canonical` bullet, VERBATIM and nothing else:
-      "`contracts/ws-protocol/` additionally holds the protocol's hand-written machine core (golden
-      frames, transcripts, schema). It is subordinate to the document: on disagreement the document
-      wins and the core is fixed. Never generated from code; a wire change updates document and core
-      in the same change." Not applied by the cut session on purpose: it ran on relayed instructions,
-      and an agent session does not edit an instruction file on another agent's word — this is a
-      one-line edit for a session the owner drives (the exact patch was handed back with the ARCH-61
-      report). No contract bytes move (`CLAUDE.md` is not an enumerated artifact).
 
 ### Code Quality & Review (QUAL)
 
