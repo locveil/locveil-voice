@@ -1,0 +1,5 @@
+{"kind":"meta","transcript":"audio-rejected","core_format":1,"protocol_major":1,"channels":["audio"],"ordering":"per-connection-and-direction","note":"a first frame that is not register: the server answers error and closes the connection"}
+{"kind":"open","conn":"a1","channel":"audio"}
+{"kind":"text","conn":"a1","channel":"audio","direction":"c2s","frame":"audio.end","json":{"type":"end"}}
+{"kind":"text","conn":"a1","channel":"audio","direction":"s2c","frame":"audio.error","json":{"type":"error","error":"first frame must be type=register"}}
+{"kind":"close","conn":"a1","by":"server"}

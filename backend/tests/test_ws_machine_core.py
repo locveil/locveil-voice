@@ -557,3 +557,269 @@ def test_l4b_unknown_frame_after_the_handshake_is_ignored_on_reply(server):
         server.client.portal.call(server.outputs.deliver, IntentResult(text="готово"), ctx,
                                   OutputModality.SPEECH)
         assert _receive_frame(ws, "reply")[0] == "reply.speak_begin"   # still served
+
+
+# ------------------------------------------------------------------------------------------
+# Slice 2 — the transcripts: `contracts/ws-protocol/transcript.<scenario>.jsonl`
+# ------------------------------------------------------------------------------------------
+
+TRANSCRIPT_NAMES = [
+    "audio-batch", "audio-streaming", "audio-trace", "audio-rejected",
+    "reply-burst", "satellite-pair", "reconnect", "output-push", "observe-tap",
+]
+ORDERING = "per-connection-and-direction"
+LINE_KEYS = {
+    "meta": {"kind", "transcript", "core_format", "protocol_major", "channels", "ordering", "note"},
+    "open": {"kind", "conn", "channel"},
+    "text": {"kind", "conn", "channel", "direction", "frame", "json", "repeat"},
+    "binary": {"kind", "conn", "channel", "direction", "content", "bytes"},
+    "close": {"kind", "conn", "by"},
+}
+CLOSED_BY = {"client", "server", "network"}
+
+
+def transcript_path(name: str) -> Path:
+    return CORE_DIR / f"transcript.{name}.jsonl"
+
+
+def transcript_connections(name: str) -> List[Conn]:
+    """A golden transcript as connections — the same shape `connections()` gives a capture
+    (here every text line already NAMES its frame)."""
+    by_label: Dict[str, Conn] = {}
+    for line in load_jsonl(transcript_path(name))[1:]:
+        if line["kind"] == "open":
+            by_label[line["conn"]] = Conn(line["conn"], line["channel"], f"transcript.{name}")
+        elif line["kind"] == "close":
+            by_label[line["conn"]].closed_by = line["by"]
+        else:
+            by_label[line["conn"]].lines.append(line)
+    return list(by_label.values())
+
+
+def rule_violations(conn: Conn, *, cap_tolerant: bool) -> List[str]:
+    """Rules T-1..T-4 and T-6..T-8 on ONE connection (T-5 spans connections). `cap_tolerant`
+    admits what a recording may legitimately contain and a golden transcript does not: a batch
+    `response` forced by the utterance cap instead of an `end` frame."""
+    out: List[str] = []
+    entry = CHANNELS[conn.channel]
+    s2c = [ln for ln in conn.lines if ln["direction"] == "s2c"]
+    s2c_known = [ln for ln in s2c if ln["kind"] == "text" and ln.get("frame")]
+
+    # T-1: ignoring frames of unknown type, the first server frame is the ack or an error
+    if s2c_known and s2c_known[0]["frame"] not in (entry["ack"], entry["error"]):
+        out.append(f"T-1: the first server frame is {s2c_known[0]['frame']}")
+
+    # T-2: an error frame is the last server frame, and the server closes after it
+    for index, line in enumerate(s2c):
+        if line.get("frame") == entry["error"]:
+            if index != len(s2c) - 1:
+                out.append("T-2: a server frame follows an error frame")
+            if conn.closed_by != "server":
+                out.append(f"T-2: after an error frame the connection was closed by {conn.closed_by}")
+
+    # T-3 / T-4: bursts pair by seq, seq counts from 1; binary only inside a burst
+    if conn.channel == "reply":
+        open_bursts: List[int] = []
+        begun = 0
+        for line in s2c:
+            if line["kind"] == "binary":
+                if not open_bursts:
+                    out.append("T-4: binary outside a speak_begin … speak_end bracket")
+            elif line.get("frame") == "reply.speak_begin":
+                begun += 1
+                if line["json"]["seq"] != begun:
+                    out.append(f"T-3: burst {begun} of the connection carries seq {line['json']['seq']}")
+                open_bursts.append(line["json"]["seq"])
+            elif line.get("frame") == "reply.speak_end":
+                if line["json"]["seq"] not in open_bursts:
+                    out.append(f"T-3: speak_end seq {line['json']['seq']} closes no open burst")
+                else:
+                    open_bursts.remove(line["json"]["seq"])
+
+    if conn.channel == "audio":
+        ack = next((ln for ln in s2c_known if ln["frame"] == "audio.registered"), None)
+        frames = [ln.get("frame") for ln in s2c if ln["kind"] == "text"]
+        # T-6: traces granted → exactly one trace after each response; not granted → none
+        if ack is not None and ack["json"]["trace"]:
+            for index, frame in enumerate(frames):
+                if frame == "audio.response":
+                    following = frames[index + 1:index + 3]
+                    if following[:1] != ["audio.trace"] or following[1:2] == ["audio.trace"]:
+                        out.append("T-6: a response is not followed by exactly one trace")
+        elif "audio.trace" in frames:
+            out.append("T-6: a trace frame on a connection that was not granted traces")
+        # T-8: in batch mode a response follows the end frame that closed its utterance
+        register = next((ln for ln in conn.lines if ln.get("frame") == "audio.register"), None)
+        if register is not None and register["json"].get("mode") != "streaming":
+            ends = responses = 0
+            audio_since_response = False
+            for line in conn.lines:
+                if line["kind"] == "binary" and line["direction"] == "c2s":
+                    audio_since_response = True
+                elif line.get("frame") == "audio.end":
+                    ends += 1
+                elif line.get("frame") == "audio.response":
+                    responses += 1
+                    if responses > ends:
+                        if cap_tolerant and audio_since_response:
+                            ends = responses          # force-finalized at the utterance cap
+                        else:
+                            out.append("T-8: a batch response precedes the end frame of its utterance")
+                    audio_since_response = False
+
+    # T-7: the ack is sent only after the client's opening frame was received
+    seen_client_text = False
+    for line in conn.lines:
+        if line["kind"] == "text" and line["direction"] == "c2s":
+            seen_client_text = True
+        elif line.get("frame") == entry["ack"] and not seen_client_text:
+            out.append("T-7: the ack precedes the client's opening frame")
+    return out
+
+
+def session_ids(conns: List[Conn]) -> List[str]:
+    return [ln["json"]["session_id"] for conn in conns for ln in conn.lines
+            if ln.get("frame") == "audio.registered"]
+
+
+def test_l5_the_transcript_set_is_exactly_the_documented_one():
+    on_disk = sorted(p.name for p in CORE_DIR.glob("transcript.*"))
+    assert on_disk == sorted(f"transcript.{name}.jsonl" for name in TRANSCRIPT_NAMES)
+
+
+@pytest.mark.parametrize("name", TRANSCRIPT_NAMES)
+def test_l5_transcript_is_well_formed_and_obeys_the_rules(name):
+    raw = transcript_path(name).read_text(encoding="utf-8")
+    assert raw.endswith("\n") and "\n\n" not in raw and not raw.startswith("﻿")
+    lines = load_jsonl(transcript_path(name))
+
+    meta = lines[0]
+    assert meta["kind"] == "meta" and all(line["kind"] != "meta" for line in lines[1:])
+    assert meta["transcript"] == name and NAME_RE.fullmatch(name)
+    assert meta["core_format"] == GOLDEN["core_format"]
+    assert meta["protocol_major"] == GOLDEN["protocol_major"]
+    assert meta["ordering"] == ORDERING
+
+    alive: Dict[str, str] = {}
+    ever: Dict[str, str] = {}
+    for number, line in enumerate(lines, start=1):
+        where = f"transcript.{name}.jsonl:{number}"
+        kind = line["kind"]
+        assert set(line) <= LINE_KEYS[kind], f"{where}: unknown key {set(line) - LINE_KEYS[kind]}"
+        if kind == "meta":
+            continue
+        label = line["conn"]
+        if kind == "open":
+            assert label not in ever, f"{where}: a reconnect takes a NEW conn label"
+            assert line["channel"] in CHANNELS
+            alive[label] = ever[label] = line["channel"]
+            continue
+        assert label in alive, f"{where}: {label} is not open"
+        if kind == "close":
+            assert line["by"] in CLOSED_BY
+            del alive[label]
+            continue
+        assert line["channel"] == alive[label], f"{where}: channel disagrees with the open line"
+        assert line["direction"] in ("c2s", "s2c")
+        if kind == "binary":
+            assert f"{line['channel']}.{line['direction']}" in GOLDEN["binary"], where
+            assert line["content"] == GOLDEN["binary"][f"{line['channel']}.{line['direction']}"]["content"]
+            assert isinstance(line["bytes"], int) and line["bytes"] > 0 and line["bytes"] % 2 == 0
+        else:
+            defn = FRAMES[line["frame"]]
+            assert (defn["channel"], defn["direction"]) == (line["channel"], line["direction"]), where
+            assert problems(defn, line["json"], strict_keys=True) == [], where
+            assert line.get("repeat", True) is True, f"{where}: `repeat` is only ever true"
+    assert not alive, f"{name}: connections left open: {sorted(alive)}"
+    assert meta["channels"] == sorted(set(ever.values())), "meta.channels lists the channels used"
+
+    conns = transcript_connections(name)
+    for conn in conns:
+        assert rule_violations(conn, cap_tolerant=False) == [], conn
+    ids = session_ids(conns)
+    assert len(ids) == len(set(ids)), "T-5: a new connection gets a new session_id"
+
+
+def test_l5_the_rules_hold_on_every_recorded_connection(capture):
+    """T-1..T-8 are stated in the document as facts about the server. Here they are checked
+    against everything the real handlers did in the witness suites — not just the fixtures."""
+    wrong = [f"{conn}: {violation}" for conn in capture
+             for violation in rule_violations(conn, cap_tolerant=True)]
+    assert not wrong, "\n".join(wrong)
+    ids = session_ids(capture)
+    assert len(ids) == len(set(ids)), "T-5: two connections shared a session_id"
+
+
+# ------------------------------------------------------------------------------------------
+# L6 — every transcript is witnessed by a real recording
+# ------------------------------------------------------------------------------------------
+
+def _direction_tokens(conn: Conn, direction: str) -> List[Dict[str, Any]]:
+    """One direction of a connection as comparable tokens; a run of binary frames is one token."""
+    tokens: List[Dict[str, Any]] = []
+    for line in conn.lines:
+        if line["direction"] != direction:
+            continue
+        if line["kind"] == "binary":
+            if not (tokens and tokens[-1]["kind"] == "binary"):
+                tokens.append({"kind": "binary"})
+            continue
+        frame = line.get("frame")
+        tokens.append({"kind": "text", "frame": frame, "repeat": bool(line.get("repeat")),
+                       "json": masked(FRAMES[frame], line["json"]) if frame else line.get("json")})
+    return tokens
+
+
+def _sequence_matches(golden: List[Dict[str, Any]], recorded: List[Dict[str, Any]]) -> bool:
+    """`recorded` equals `golden`, where a golden `repeat` line stands for zero or more frames
+    of that type (its own value is one example and is not compared)."""
+    if not golden:
+        return not recorded
+    head, rest = golden[0], golden[1:]
+    if head.get("repeat"):
+        if _sequence_matches(rest, recorded):
+            return True
+        return bool(recorded) and recorded[0]["kind"] == "text" \
+            and recorded[0]["frame"] == head["frame"] and _sequence_matches(golden, recorded[1:])
+    if not recorded or recorded[0]["kind"] != head["kind"]:
+        return False
+    if head["kind"] == "text" and (recorded[0]["frame"], recorded[0]["json"]) != (head["frame"], head["json"]):
+        return False
+    return _sequence_matches(rest, recorded[1:])
+
+
+def _connection_matches(golden: Conn, recorded: Conn) -> bool:
+    if golden.channel != recorded.channel:
+        return False
+    # the tap sits at the server: a handler parked on something other than the socket never
+    # observes the client leaving, so a recording may lack its close line — never contradict it
+    if recorded.closed_by is not None and recorded.closed_by != golden.closed_by:
+        return False
+    return all(_sequence_matches(_direction_tokens(golden, d), _direction_tokens(recorded, d))
+               for d in ("c2s", "s2c"))
+
+
+def _assign(golden: List[Conn], recorded: List[Conn]) -> bool:
+    """Is there a one-to-one assignment of ALL the test's connections to the transcript's?"""
+    if not golden:
+        return not recorded
+    return any(_connection_matches(golden[0], candidate)
+               and _assign(golden[1:], recorded[:i] + recorded[i + 1:])
+               for i, candidate in enumerate(recorded))
+
+
+@pytest.mark.parametrize("name", TRANSCRIPT_NAMES)
+def test_l6_transcript_is_a_real_recording(capture, name):
+    """Per connection and per direction the golden sequence equals what ONE witness test
+    really put on the wire — same frames in the same order, same values (volatile keys and
+    opaque values by JSON type), binary runs collapsed, `repeat` lines matching any number
+    of frames. The order of one direction against the other is not compared here (rules
+    T-7/T-8 cover what the document promises about it)."""
+    golden = transcript_connections(name)
+    by_test: Dict[str, List[Conn]] = {}
+    for conn in capture:
+        by_test.setdefault(conn.test, []).append(conn)
+    witnesses = [test for test, conns in by_test.items() if _assign(golden, conns)]
+    assert witnesses, (
+        f"transcript.{name}.jsonl: no witness test produced exactly this conversation — "
+        "the transcript must be a real recording, not an illustration")

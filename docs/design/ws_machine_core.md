@@ -302,8 +302,9 @@ One scenario per file; one JSON object per line; lines are in wire order.
   not asserted — except for the two causal pairs the document does promise (T-7, T-8). A
   transcript never asserts ordering between two sockets either (the reply burst and the
   `response` frame travel on different connections and may be observed in either order).
-  The LINE order of a file is still one order the wire really produced, so a harness may
-  replay a file top to bottom.
+  The LINE order of a file is still an order the wire can produce, so a harness may replay
+  a file top to bottom (it is the recorded order, except that a streaming transcript shows a
+  binary run and its `repeat` line once where the real interleaving is finer).
 - **`repeat`** (text lines, optional, `true`) — the frame may occur any number of times at
   this point, including not at all (the `partial` frames of a streaming utterance: their
   count depends on the recognizer). Added before the key names freeze (§6.2), as the review

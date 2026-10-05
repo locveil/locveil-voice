@@ -21,6 +21,19 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-10-05 — ARCH-63: nine conversations, each one a recording.** A transcript is easy to
+  write plausibly and hard to write truthfully, so the test does not ask whether a file looks
+  like the protocol; it asks which single witness test produced exactly this conversation, and
+  fails if none did. That is what forced the scenarios to be driven the way a device drives
+  them — a reconnect transcript that says `by: network` exists only because a test really
+  aborts both transports and the server really reports the abnormal close. The reviewer's point
+  about streaming is visible in the comparison itself: it runs per connection and per direction,
+  with the partial lines matching any number of frames, because the order of the recognizer's
+  partials against the device's audio is not something the server promises. What the document
+  does promise across directions is small enough to state as two rules and check everywhere —
+  including on every connection of every witness suite, not just on the nine files, so the
+  rules are claims about the server rather than about the fixtures.
+
 - **2026-10-05 — ARCH-62: the golden frames, and a test that cannot be satisfied by agreeing with
   itself.** The risk with a hand-written fixture file is that its author also writes the test
   and both encode the same misreading. So the test is built around a witness that is neither:

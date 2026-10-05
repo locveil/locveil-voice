@@ -1,0 +1,12 @@
+{"kind":"meta","transcript":"audio-streaming","core_format":1,"protocol_major":1,"channels":["audio"],"ordering":"per-connection-and-direction","note":"streaming mode: the server ends the first utterance from the audio itself (no end frame), the device hard-finalizes the second with end; partial frames interleave with the audio and their number varies"}
+{"kind":"open","conn":"a1","channel":"audio"}
+{"kind":"text","conn":"a1","channel":"audio","direction":"c2s","frame":"audio.register","json":{"type":"register","client_id":"kitchen_node","room_name":"Кухня","sample_rate":16000,"wants_audio":true,"mode":"streaming"}}
+{"kind":"text","conn":"a1","channel":"audio","direction":"s2c","frame":"audio.registered","json":{"type":"registered","client_id":"kitchen_node","session_id":"6fd6d53b3ed3478284a04b9d53e264fc","trace":false,"protocol_version":"1"}}
+{"kind":"binary","conn":"a1","channel":"audio","direction":"c2s","content":"pcm_s16le","bytes":3072}
+{"kind":"text","conn":"a1","channel":"audio","direction":"s2c","frame":"audio.partial","repeat":true,"json":{"type":"partial","text":"включи свет"}}
+{"kind":"text","conn":"a1","channel":"audio","direction":"s2c","frame":"audio.response","json":{"type":"response","text":"ответ: включи свет на кухне","success":true,"error":null,"confidence":1.0,"intent_name":null,"timestamp":1791190743.976964,"metadata":{}}}
+{"kind":"binary","conn":"a1","channel":"audio","direction":"c2s","content":"pcm_s16le","bytes":1024}
+{"kind":"text","conn":"a1","channel":"audio","direction":"s2c","frame":"audio.partial","repeat":true,"json":{"type":"partial","text":"спасибо"}}
+{"kind":"text","conn":"a1","channel":"audio","direction":"c2s","frame":"audio.end","json":{"type":"end"}}
+{"kind":"text","conn":"a1","channel":"audio","direction":"s2c","frame":"audio.response","json":{"type":"response","text":"ответ: спасибо","success":true,"error":null,"confidence":1.0,"intent_name":null,"timestamp":1791190743.9774077,"metadata":{}}}
+{"kind":"close","conn":"a1","by":"client"}

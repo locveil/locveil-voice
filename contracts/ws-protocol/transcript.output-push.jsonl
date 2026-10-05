@@ -1,0 +1,6 @@
+{"kind":"meta","transcript":"output-push","core_format":1,"protocol_major":1,"channels":["output"],"ordering":"per-connection-and-direction","note":"the push channel for text clients: identify, then a deferred result arrives as a message"}
+{"kind":"open","conn":"o1","channel":"output"}
+{"kind":"text","conn":"o1","channel":"output","direction":"c2s","frame":"output.hello","json":{"client_id":"web_abc123"}}
+{"kind":"text","conn":"o1","channel":"output","direction":"s2c","frame":"output.connected","json":{"type":"connected","client_id":"web_abc123"}}
+{"kind":"text","conn":"o1","channel":"output","direction":"s2c","frame":"output.message","json":{"type":"message","text":"Таймер на 10 минут завершён"}}
+{"kind":"close","conn":"o1","by":"client"}

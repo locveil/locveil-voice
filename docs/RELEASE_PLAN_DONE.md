@@ -79,6 +79,33 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       red. **Verified:** suite 1671 passed / 7 skipped (+171), guards green.
       docs: none — the fixture format is described in `guides/websocket-api`, which is byte-locked; that section lands with the ARCH-61 cut (until then the file is a draft no STAMP enumerates)
       contracts: none — no versioned surface moved yet (`frames.golden.json` is not enumerated; the STAMP stays at `ws-protocol-v1.0.1` until ARCH-61)
+- [x] **ARCH-63** [WS][CONTRACTS] `[release]` — **DONE 2026-10-05 — WS machine core, slice 2: JSONL
+      transcripts** (split out of ARCH-61; design §4, §5; family lead BUILD-47). Nine hand-written
+      one-scenario files under `contracts/ws-protocol/` (NOT yet enumerated — contract at the ARCH-61
+      cut): `transcript.audio-batch.jsonl` (two utterances on one connection, the second a failed
+      command), `…audio-streaming…` (the server endpoints the first utterance, the device
+      hard-finalizes the second; `partial` lines marked `"repeat": true`), `…audio-trace…` (response
+      then exactly one trace), `…audio-rejected…` (`end` before `register` → `error` → closed by the
+      server), `…reply-burst…` (two bracketed bursts, `seq` 1 and 2), `…satellite-pair…` (both voice
+      channels of one device: utterance, response, spoken reply), `…reconnect…` (both sockets closed
+      `by: network`, re-registered on new connections with a new session id, the missed announcement
+      spoken on the new reply channel with `seq` back at 1), `…output-push…`, `…observe-tap…`. One
+      `meta` line (`ordering: per-connection-and-direction`), then `open` / `text` / `binary` /
+      `close` lines; a binary run is one line; every `text` line names its frame from
+      `frames.golden.json`. **Owner test:** **L5** — line shape, known keys only, `meta` first,
+      connection lifecycle (a reconnect takes a new label), every text line a strictly valid instance
+      of the frame it names, rules T-1..T-8 on every golden transcript AND on every connection the
+      tap recorded in the six witness suites (T-8 admits a cap-forced response in recordings only);
+      **L6** — every transcript equals what ONE witness test really put on the wire: per connection
+      and per direction the same frames in the same order with the same values (volatile keys and
+      opaque values by JSON type), binary runs collapsed, a `repeat` line matching zero or more
+      frames, `close.by` never contradicting the recording. Mutation-checked: a dropped `repeat`
+      mark, a falsified `seq`, a wrong `close.by`, a response moved before its `end` and a reused
+      session id each turn a leg red. Design doc: one sentence corrected (a streaming transcript's
+      line order is a producible order, not the literal interleaving). **Verified:** suite 1691
+      passed / 7 skipped (+20), guards green.
+      docs: none — the transcript format and rules T-1..T-8 are described in `guides/websocket-api`, which is byte-locked; that section lands with the ARCH-61 cut
+      contracts: none — no versioned surface moved yet (the transcripts are not enumerated; the STAMP stays at `ws-protocol-v1.0.1` until ARCH-61)
 ### Code Quality & Review (QUAL)
 - [x] **QUAL-19** [ESP32] (P2, last pre-release) — **DONE 2026-06-09** (interactive review session + upstream study).
       **★ ARCH-22 (2026-06-14):** the **device-side** of the micro stack is now designed in `docs/design/esp32_satellite.md`

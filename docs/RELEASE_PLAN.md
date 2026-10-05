@@ -321,13 +321,6 @@ See `docs/review/phase1_architecture_map.md` §5.
       served `protocol_version` stays `"1"`. On the cut: `re-pin owed: satellite` (FW-1a's conformance
       test consumes the pinned fixtures from the day they exist, never gated on them) and commons
       (PROD-28 build item 6 — its eval WS provider pins `ws-protocol` when the core lands).
-- [ ] **ARCH-63** [WS][CONTRACTS] `[release]` — **WS machine core, slice 2: JSONL transcripts** (filed
-      2026-10-05, split out of ARCH-61 at intake; design §4, §5). Nine hand-written one-scenario files
-      `contracts/ws-protocol/transcript.<scenario>.jsonl` (audio-batch, audio-streaming, audio-trace,
-      audio-rejected, reply-burst, satellite-pair, reconnect, output-push, observe-tap); owner-test legs
-      L5 (well-formed; rules T-1..T-8 hold on every golden transcript and on every recorded
-      connection) and L6 (each transcript equals a real recording — per connection and direction,
-      `repeat` lines matching zero or more frames). Not enumerated until ARCH-61. Needs ARCH-62.
 - [ ] **ARCH-64** [WS][CONTRACTS] `[release]` — **WS machine core, slice 3: the JSON Schema** (filed
       2026-10-05, split out of ARCH-61 at intake; design §8). Hand-written
       `contracts/ws-protocol/ws-protocol.schema.json` (draft 2020-12, `$defs` keyed by frame name plus

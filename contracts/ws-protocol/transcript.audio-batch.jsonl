@@ -1,0 +1,11 @@
+{"kind":"meta","transcript":"audio-batch","core_format":1,"protocol_major":1,"channels":["audio"],"ordering":"per-connection-and-direction","note":"batch mode: two utterances on one connection; the second command fails and is still a response"}
+{"kind":"open","conn":"a1","channel":"audio"}
+{"kind":"text","conn":"a1","channel":"audio","direction":"c2s","frame":"audio.register","json":{"type":"register","client_id":"kitchen_node","room_name":"Кухня","sample_rate":16000,"wants_audio":true}}
+{"kind":"text","conn":"a1","channel":"audio","direction":"s2c","frame":"audio.registered","json":{"type":"registered","client_id":"kitchen_node","session_id":"77831f2ac76a4036966af40d95a5c7d3","trace":false,"protocol_version":"1"}}
+{"kind":"binary","conn":"a1","channel":"audio","direction":"c2s","content":"pcm_s16le","bytes":2048}
+{"kind":"text","conn":"a1","channel":"audio","direction":"c2s","frame":"audio.end","json":{"type":"end"}}
+{"kind":"text","conn":"a1","channel":"audio","direction":"s2c","frame":"audio.response","json":{"type":"response","text":"Таймер на 5 минут запущен","success":true,"error":null,"confidence":1.0,"intent_name":"timer.set","timestamp":1791190742.4075792,"metadata":{"original_intent":"timer.set"}}}
+{"kind":"binary","conn":"a1","channel":"audio","direction":"c2s","content":"pcm_s16le","bytes":1024}
+{"kind":"text","conn":"a1","channel":"audio","direction":"c2s","frame":"audio.end","json":{"type":"end"}}
+{"kind":"text","conn":"a1","channel":"audio","direction":"s2c","frame":"audio.response","json":{"type":"response","text":"Не удалось включить свет","success":false,"error":"device unreachable","confidence":1.0,"intent_name":"smart_home.switch_on","timestamp":1791190742.407581,"metadata":{"original_intent":"smart_home.switch_on"}}}
+{"kind":"close","conn":"a1","by":"client"}

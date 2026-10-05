@@ -1,0 +1,11 @@
+{"kind":"meta","transcript":"reply-burst","core_format":1,"protocol_major":1,"channels":["reply"],"ordering":"per-connection-and-direction","note":"the reply channel: two spoken replies, each a bracketed binary burst; seq counts the bursts of the connection"}
+{"kind":"open","conn":"r1","channel":"reply"}
+{"kind":"text","conn":"r1","channel":"reply","direction":"c2s","frame":"reply.register-reply","json":{"type":"register-reply","client_id":"kitchen_node","audio_out":{"rate":22050,"channels":1}}}
+{"kind":"text","conn":"r1","channel":"reply","direction":"s2c","frame":"reply.registered","json":{"type":"registered","client_id":"kitchen_node","protocol_version":"1"}}
+{"kind":"text","conn":"r1","channel":"reply","direction":"s2c","frame":"reply.speak_begin","json":{"type":"speak_begin","rate":22050,"channels":1,"width":16,"seq":1}}
+{"kind":"binary","conn":"r1","channel":"reply","direction":"s2c","content":"pcm_s16le","bytes":10000}
+{"kind":"text","conn":"r1","channel":"reply","direction":"s2c","frame":"reply.speak_end","json":{"type":"speak_end","seq":1}}
+{"kind":"text","conn":"r1","channel":"reply","direction":"s2c","frame":"reply.speak_begin","json":{"type":"speak_begin","rate":22050,"channels":1,"width":16,"seq":2}}
+{"kind":"binary","conn":"r1","channel":"reply","direction":"s2c","content":"pcm_s16le","bytes":10000}
+{"kind":"text","conn":"r1","channel":"reply","direction":"s2c","frame":"reply.speak_end","json":{"type":"speak_end","seq":2}}
+{"kind":"close","conn":"r1","by":"client"}

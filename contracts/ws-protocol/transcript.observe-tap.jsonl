@@ -1,0 +1,6 @@
+{"kind":"meta","transcript":"observe-tap","core_format":1,"protocol_major":1,"channels":["observe"],"ordering":"per-connection-and-direction","note":"the live pipeline tap: authenticate and filter in the first frame, then matching events stream in"}
+{"kind":"open","conn":"t1","channel":"observe"}
+{"kind":"text","conn":"t1","channel":"observe","direction":"c2s","frame":"observe.subscribe","json":{"token":"observe-secret","filter":{"room_name":"Кухня","types":["result.produced"]}}}
+{"kind":"text","conn":"t1","channel":"observe","direction":"s2c","frame":"observe.subscribed","json":{"type":"subscribed"}}
+{"kind":"text","conn":"t1","channel":"observe","direction":"s2c","frame":"observe.event","json":{"type":"event","event":"result.produced","session_id":"5f0c1d7a9b3e4c62a8d4e1f0b7c39a25","client_id":"kitchen_node","room_name":"Кухня","source":"ws_audio","payload":{"text":"Таймер на 5 минут запущен","success":true},"timestamp":1791190744.0289161}}
+{"kind":"close","conn":"t1","by":"client"}

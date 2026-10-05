@@ -1,0 +1,15 @@
+{"kind":"meta","transcript":"satellite-pair","core_format":1,"protocol_major":1,"channels":["audio","reply"],"ordering":"per-connection-and-direction","note":"both voice channels of one device: the utterance goes up the audio channel, its response comes back there, the spoken reply arrives as a burst on the reply channel"}
+{"kind":"open","conn":"r1","channel":"reply"}
+{"kind":"text","conn":"r1","channel":"reply","direction":"c2s","frame":"reply.register-reply","json":{"type":"register-reply","client_id":"kitchen_node","audio_out":{"rate":22050,"channels":1}}}
+{"kind":"text","conn":"r1","channel":"reply","direction":"s2c","frame":"reply.registered","json":{"type":"registered","client_id":"kitchen_node","protocol_version":"1"}}
+{"kind":"open","conn":"a1","channel":"audio"}
+{"kind":"text","conn":"a1","channel":"audio","direction":"c2s","frame":"audio.register","json":{"type":"register","client_id":"kitchen_node","room_name":"Кухня","sample_rate":16000,"wants_audio":true}}
+{"kind":"text","conn":"a1","channel":"audio","direction":"s2c","frame":"audio.registered","json":{"type":"registered","client_id":"kitchen_node","session_id":"77da1c35aaa94f55a5f84df70057fce1","trace":false,"protocol_version":"1"}}
+{"kind":"binary","conn":"a1","channel":"audio","direction":"c2s","content":"pcm_s16le","bytes":3072}
+{"kind":"text","conn":"a1","channel":"audio","direction":"c2s","frame":"audio.end","json":{"type":"end"}}
+{"kind":"text","conn":"a1","channel":"audio","direction":"s2c","frame":"audio.response","json":{"type":"response","text":"Таймер на 5 минут запущен","success":true,"error":null,"confidence":1.0,"intent_name":"timer.set","timestamp":1791190745.1524248,"metadata":{"original_intent":"timer.set"}}}
+{"kind":"text","conn":"r1","channel":"reply","direction":"s2c","frame":"reply.speak_begin","json":{"type":"speak_begin","rate":22050,"channels":1,"width":16,"seq":1}}
+{"kind":"binary","conn":"r1","channel":"reply","direction":"s2c","content":"pcm_s16le","bytes":10000}
+{"kind":"text","conn":"r1","channel":"reply","direction":"s2c","frame":"reply.speak_end","json":{"type":"speak_end","seq":1}}
+{"kind":"close","conn":"a1","by":"client"}
+{"kind":"close","conn":"r1","by":"client"}
