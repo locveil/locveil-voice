@@ -21,6 +21,25 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-10-05 — ARCH-60: the machine-core design comes back from review, and from its own intake.**
+  The satellite side approved the draft with three changes, and all three were about the same
+  thing: the draft described fixtures from the owner's chair. A firmware parser needs to know what
+  it OWES each verdict (the draft said what a frame is, never what a receiver does with an invalid
+  one), a streaming transcript cannot fix the order of server partials against client audio (the
+  draft's "per connection" would have made the first real recognizer fail the fixture), and the
+  pinned guide is the only document the firmware ever sees — so everything a harness relies on has
+  to be in it, not here. The second source of changes was less comfortable. The draft's findings
+  table says "verified in the router"; re-running each row against the live handlers before
+  building on it showed four that were read off the code rather than observed. The one that
+  matters: "an error frame is terminal" is true on a real server only because the ASGI server
+  closes a socket whose handler returned — the handler itself sends `error` and walks away, and
+  under the in-process client the connection simply stays open. A sentence that was about to go
+  into a byte-locked guide as shipped behavior was an accident of the hosting stack. It becomes a
+  code fix before it becomes a sentence. The plan changed shape too: the draft insisted on one
+  commit so that no half-built file could be mistaken for contract, but the STAMP already answers
+  that — nothing is contract until a tagged STAMP enumerates it — so the work is split into six
+  tasks, with every guide edit still held back for the single cut.
+
 - **2026-10-05 — BUILD-53 DONE: the last unpinned edge — config-ui against the Workbench contract.**
   The graph HK-13 drew had one edge on this side that was declared nowhere: config-ui imports the
   plugin contract from a sibling checkout, so the contract could move under the build with no tag,

@@ -9,6 +9,42 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
 ---
 
 ### Architecture & Refactor (ARCH)
+- [x] **ARCH-60** [WS][CONTRACTS] `[release]` — **DONE 2026-10-05 — ★ DESIGN AGREED: the WS machine core
+      (golden frames, JSONL transcripts, JSON Schema) → `docs/design/ws_machine_core.md`** (council HK-13
+      decision 9, PROD-28 voice delegation (d); family lead BUILD-47; `design-then-implement`). The
+      REQUIRED satellite-side review returned **approve-with-changes, no blocking objection**; every
+      answer and requested change is folded into the body and recorded in the doc's §10. **Accepted as
+      proposed:** one `frames.golden.json` keyed by frame name (Q1); `test_arch36_satellite` joins the
+      witness suites and its non-conforming fake reply server is fixed (Q2); the fixture format lives in
+      a SECTION of the guide — on the condition that everything a harness relies on is in it, because
+      the pinned guide is the firmware's only contract (Q3); the forward-compatibility rule binds
+      clients from `v1.1.0`, in EVERY connection state including before the ack (Q4); F-2..F-6 as guide
+      edits, F-7 excluded (Q5); the handshake cases are replayed against the real handlers (Q6);
+      negative transcripts wait for a later minor (Q7); names as proposed plus one rule — only
+      `[a-z0-9._/-]`, unique after mapping every other character to `_` (Q8). **Changes folded in:**
+      (1) the receiver's duty per verdict is stated — `valid` MUST be accepted, `unknown` MUST be
+      ignored, malformed MUST be survived, `invalid` MAY be rejected or tolerated and must never fault
+      (the reviewer's question (a): confirmed); (2) transcript order is normative per connection AND
+      direction plus two causal rules (T-7 ack after the opening frame, T-8 batch `response` after its
+      `end`), repeatable lines carry `"repeat": true` — so the owner test tolerates a variable number
+      of `partial` frames (question (b): yes); (3) fixture values are real, and the owner test compares
+      them with recorded frames. **Task-start reconciliation of the draft's own claims** (every row of
+      its findings table re-run against the handlers) corrected four of them: "error is terminal" is
+      not literally shipped — the catch-all paths send `error` and return without closing (new code
+      finding C-2); C-1 is wider than "a first frame that is not JSON" (any first-frame failure on
+      `/ws/audio/reply`, a bad `audio_out` included); `/ws/output` never rejects its opening frame by
+      design (F-8, a document edit, not a code fix); the server ignores unknown frame types only AFTER
+      the handshake (F-1 reworded). Added: a per-key `types` list in the frame definitions and a frame
+      reference table in the guide (F-9 — field types were stated only through examples), the
+      `audio_out` default (F-10). Two side-finds are filed as NOT part of the cut: BUG-47 (C-4 — two
+      reply bursts can interleave) and BUG-48 (C-3 — handshake values are not type-checked).
+      **Execution (§9):** the draft's "one task, one commit" is replaced by a six-step split, filed
+      in this change — BUG-46, TEST-23, ARCH-62, ARCH-63, ARCH-64, then ARCH-61 narrowed to the cut;
+      every guide sentence still lands in that single cut commit, because the guide and the STAMP
+      are byte-locked.
+      No code, no wire change, no contract bytes moved.
+      docs: none — a design document under `docs/design/` (not a manifest root); the user-facing guide changes only at the cut
+      contracts: none — design only; no versioned surface moved (the guide and the STAMP stay at `ws-protocol-v1.0.1`)
 ### Code Quality & Review (QUAL)
 - [x] **QUAL-19** [ESP32] (P2, last pre-release) — **DONE 2026-06-09** (interactive review session + upstream study).
       **★ ARCH-22 (2026-06-14):** the **device-side** of the micro stack is now designed in `docs/design/esp32_satellite.md`

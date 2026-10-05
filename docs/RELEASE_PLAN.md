@@ -95,7 +95,7 @@ Living findings behind the tasks (`read-at-start-record-at-completion`). `[x]` =
 | `docs/design/multilingual_deployment.md` `[x]` (2026-07-01; design, no code) | real English deployment across all 3 Docker arches + English eval — slim cross-arch model set size-matched to Russian (armv7 EN ASR spike zipformer-en-20M vs moonshine-tiny-en; EN Piper amy; whisper multilingual on 64-bit); one-bulk-per-language eval; auto-detect NOT wired to ASR/TTS so language is a per-config choice | I18N-1 ✓ → I18N-2..6 |
 | `../locveil-commons/docs/design/productization.md` `[x]` (AGREED 2026-07-08, joint session, both repos; MIGRATED to the commons 2026-07-11 per D-2 — local file is a pointer; name executed as **Locveil**) | BUILD-20 — the productization umbrella (written as "Domovoy"): product name (D-1), ONE commons repo = eval-commons renamed `locveil-commons` with three ownership regimes (D-2/D-3), PROD-board cross-repo idea discipline + board-as-outbox (D-4/D-5), `locveil-satellite` third product repo + ESP32 estate relocation (D-6/D-7), rule-of-two extractions loader+logging (D-8), two-apps-shared-kit config UI (D-9), ledgers kept over trackers (D-10), semver components + calver suite manifests + contract tagging/scripted re-pin (D-11), normative ops spec + CLAUDE.md invariant blocks/drift guard + landing page + report-policy spec (D-12), drift inventory (§2), commons seed backlog (§3) | BUILD-20 ✓ → BUILD-21/22/23/24, ARCH-42/43, BUILD-18 (narrowed); bridge intake VWB-29, CORE-7, OPS-14/15/16 |
 | `docs/design/core_py_loader_extraction.md` `[x]` (AGREED 2026-07-16, interactive owner session, 2 rounds) | ARCH-42 — extract the entry-point discovery engine to commons `packages/core-py` (module `entry_point_loader`, class-only — consumers own their singleton): faithful surface + `base_class=` validation (bridge's DevicePort check natively), single-EP `get_provider_class`, names-without-import `list_registered`; consumption = vendored module at `core-py-vN` tags with STRICT pin (contracts/pins/core-py + byte-identity test — first vendored RUNTIME code); voice migration = full 20-file sweep to a new `utils/entry_points.py` singleton; §5 = the bridge CORE-7 adoption contract; metadata quartet/namespaces/aux stay put | ARCH-42 ✓ → ARCH-58; commons skeleton via PROD-8; bridge CORE-7 |
-| `docs/design/ws_machine_core.md` `[x]` (DRAFT 2026-10-05 — awaiting satellite-side review; HK-13 decision 9 / PROD-28) | ARCH-60 — the WS protocol's hand-written machine core, subordinate to `websocket-api.md`: one `frames.golden.json` (20 frame definitions; valid / invalid / unknown-type cases, closed violation vocabulary), nine one-scenario JSONL transcripts (`kind`/`conn`/`channel`/`direction`, binary runs as markers, rules T-1..T-6), `ws-protocol.schema.json` (2020-12, open `additionalProperties`); owner test = a server-side frame tap over the WS suites with seven legs (real frames conform strictly, every frame + transcript witnessed, schema ≡ fixtures); three-level versioning sharpened (a corrected case is a minor; names never renamed inside a major; `core_format`); document findings F-1..F-7 (F-1 forward-compatibility rule is the design's precondition) + code finding C-1; eight open questions for the review | ARCH-60 → ARCH-61 |
+| `docs/design/ws_machine_core.md` `[x]` (AGREED 2026-10-05 — satellite-side review: approve-with-changes, folded in; HK-13 decision 9 / PROD-28) | ARCH-60 — the WS protocol's hand-written machine core, subordinate to `websocket-api.md`: one `frames.golden.json` (20 frame definitions with key lists + JSON types; valid / invalid / unknown-type cases, closed violation vocabulary, c2s invalid cases carry the server's proven `expect`), nine one-scenario JSONL transcripts (`kind`/`conn`/`channel`/`direction`, binary runs as markers, `repeat` lines, order normative per connection AND direction, rules T-1..T-8), `ws-protocol.schema.json` (2020-12, open `additionalProperties`); owner test = a server-side frame tap over six WS suites (real frames conform strictly, every frame + transcript witnessed with real values, handshake cases replayed, schema ≡ fixtures, document ≡ core); receiver obligations per verdict (valid MUST accept · unknown MUST ignore in every state · invalid MAY reject, never fault); three-level versioning sharpened (a corrected case is a minor; names never renamed inside a major; `core_format`); document findings F-1..F-10 + code findings C-1..C-4; review record §10; execution split §9 | ARCH-60 ✓ → BUG-46, TEST-23, ARCH-62, ARCH-63, ARCH-64, ARCH-61 |
 | `config-ui/docs/donation_editor_ux.md` | human-friendly donations editor design | UI-1/2/3 |
 | `docs/review/test7_triage.md` (2026-06-15) | TEST-7 Phase-B worklist — 82-failure triage (delete/rewrite/fix) + risk-ranked coverage tiers + fix-code suspects | TEST-7 ✓ |
 | `docs/review/api_result_contract_review.md` `[x]` (2026-06-27) | API execution-result response-contract consistency — 5 findings (reply field name, 3-way intent split, divergent metadata under one model, confidence placement, live `None` internal misread); root cause = no shared serializer | QUAL-54 ✓, QUAL-55 |
@@ -301,38 +301,48 @@ See `docs/review/phase1_architecture_map.md` §5.
       recorded (doc or journal) + follow-up tasks if gaps exist (completion cue not
       device-addressed, or no timestamp in the initiation ack). Satellite-side contact
       point: `../locveil-satellite` FW-1 intake record (REQ-33).
-- [~] **ARCH-60** [WS][CONTRACTS] `[release]` — **★ DESIGN: the WS machine core — golden frames, JSONL
-      transcripts, JSON Schema** **— DRAFT LANDED 2026-10-05 → `docs/design/ws_machine_core.md`; AWAITING
-      the satellite-side review (open questions Q1–Q8 in its §10). Closes when the review feedback is
-      folded in and the doc's status flips to AGREED; ARCH-61 does not start before that.** (`design-then-implement`; filed 2026-10-05 at PROD-28 intake — council
-      HK-13 decision 9, voice delegation (d); family lead BUILD-47). Owner ruling: design AND
-      implementation now, all three slices in order, never gating the satellite's FW-1a. The core is
-      hand-written, subordinate to `docs/guides/websocket-api.md` (`ws-protocol-doc-canonical` — on
-      disagreement the document wins and the core is fixed), never generated from code, and validated
-      by an owner-side test against REAL frames from the existing WS suites (`test_ws_driving_input`,
-      `test_ws_reply`, `test_ws_streaming_asr`, `test_observe_tap`, `test_web_push_output`). Consumer
-      constraints the design must answer: pins are FLAT — every file needs a unique basename and is
-      enumerated individually (no globs; never `README.md`/`PIN.json`/`STAMP.json`); the C++ firmware
-      consumer wants valid AND invalid cases per frame type (unknown-type frames included), transcripts
-      as JSONL with direction/channel/kind and binary frames as markers (register → PCM → end →
-      response, the reply channel, reconnect), stable language-neutral names, additions = minor, byte
-      edits = patch; one frames file vs one per frame type is the open layout question. Deliverable:
-      design doc under `docs/design/`, reviewed by the satellite side BEFORE any implementation
-      (ARCH-61).
-- [ ] **ARCH-61** [WS][CONTRACTS] `[release]` — **WS machine core — implementation, ONE cut
-      `ws-protocol-v1.1.0`** (filed 2026-10-05 at PROD-28 intake; GATED on ARCH-60's design passing the
-      satellite-side review; family lead BUILD-47). Slices in order per the reviewed design: (1) golden
-      frame fixtures + the owner test validating real frames from the five WS suites, (2) JSONL
-      transcripts, (3) the JSON Schema — all under `contracts/ws-protocol/`, every file enumerated in
-      the STAMP's `artifacts`, landing as one minor cut (the pinned set gains files; the served
-      `protocol_version` stays `"1"`). Same change: the owner-approved amendment to
-      `ws-protocol-doc-canonical`, verbatim — "`contracts/ws-protocol/` additionally holds the
-      protocol's hand-written machine core (golden frames, transcripts, schema). It is subordinate to
-      the document: on disagreement the document wins and the core is fixed. Never generated from code;
-      a wire change updates document and core in the same change." On the cut: `re-pin owed: satellite`
-      (FW-1a's conformance test consumes the pinned fixtures from the day they exist, never gated on
-      them) and commons (PROD-28 build item 6 — its eval WS provider pins `ws-protocol` when the core
-      lands).
+- [ ] **ARCH-61** [WS][CONTRACTS] `[release]` — **WS machine core — THE CUT `ws-protocol-v1.1.0`** (filed
+      2026-10-05 at PROD-28 intake; family lead BUILD-47; design `docs/design/ws_machine_core.md`, AGREED
+      via ARCH-60). **Split at intake 2026-10-05 (design §9):** the build is six separable changes and
+      `one task = one commit` wins — BUG-46 (error paths), TEST-23 (witness tests), ARCH-62 (slice 1),
+      ARCH-63 (slice 2), ARCH-64 (slice 3) land first, each leaving the suite green with the core files
+      NOT yet enumerated; this task is the single commit that makes them contract. **Scope:** every
+      guide edit at once (`docs/guides/websocket-api.md` is byte-locked — the forward-compatibility rule
+      and the receiver obligations, findings F-2..F-6 and F-8..F-10, the "machine-readable core"
+      section carrying everything a harness relies on, the frame reference table, the header line
+      naming the new tag); the document leg of the owner test (document ≡ core); `STAMP.json` →
+      version `1.1.0`, tag `ws-protocol-v1.1.0`, `artifacts` enumerating the guide plus each of the
+      eleven core files individually (repo-root-relative, unique basenames); the registry row and
+      `contracts/ws-protocol/README.md`; the owner-approved amendment to `ws-protocol-doc-canonical`,
+      verbatim — "`contracts/ws-protocol/` additionally holds the protocol's hand-written machine core
+      (golden frames, transcripts, schema). It is subordinate to the document: on disagreement the
+      document wins and the core is fixed. Never generated from code; a wire change updates document
+      and core in the same change." Flow: cut commit → tag on it → commit and tag pushed together. The
+      served `protocol_version` stays `"1"`. On the cut: `re-pin owed: satellite` (FW-1a's conformance
+      test consumes the pinned fixtures from the day they exist, never gated on them) and commons
+      (PROD-28 build item 6 — its eval WS provider pins `ws-protocol` when the core lands).
+- [ ] **ARCH-62** [WS][CONTRACTS] `[release]` — **WS machine core, slice 1: golden frames + the owner test's
+      frame tap** (filed 2026-10-05, split out of ARCH-61 at intake; design §3, §5). Hand-written
+      `contracts/ws-protocol/frames.golden.json` — twenty frame definitions (key lists, JSON types,
+      opaque/volatile marks), valid / invalid / unknown-type / malformed cases with real values, c2s
+      invalid cases carrying the server's `expect`; the pytest tap plugin recording every frame at the
+      server side of the socket; `backend/tests/test_ws_machine_core.py` legs L1 (self-consistency +
+      the naming rule), L3 (real s2c frames conform strictly), L4 (every frame witnessed, first valid
+      cases equal recorded frames), L4b (handshake cases replayed against the real handlers). The file
+      is NOT enumerated until ARCH-61. Needs BUG-46 and TEST-23 first.
+- [ ] **ARCH-63** [WS][CONTRACTS] `[release]` — **WS machine core, slice 2: JSONL transcripts** (filed
+      2026-10-05, split out of ARCH-61 at intake; design §4, §5). Nine hand-written one-scenario files
+      `contracts/ws-protocol/transcript.<scenario>.jsonl` (audio-batch, audio-streaming, audio-trace,
+      audio-rejected, reply-burst, satellite-pair, reconnect, output-push, observe-tap); owner-test legs
+      L5 (well-formed; rules T-1..T-8 hold on every golden transcript and on every recorded
+      connection) and L6 (each transcript equals a real recording — per connection and direction,
+      `repeat` lines matching zero or more frames). Not enumerated until ARCH-61. Needs ARCH-62.
+- [ ] **ARCH-64** [WS][CONTRACTS] `[release]` — **WS machine core, slice 3: the JSON Schema** (filed
+      2026-10-05, split out of ARCH-61 at intake; design §8). Hand-written
+      `contracts/ws-protocol/ws-protocol.schema.json` (draft 2020-12, `$defs` keyed by frame name plus
+      one union per channel/direction, `additionalProperties` open everywhere); owner-test leg L7
+      (every valid case validates, every invalid and unknown case fails, every recorded frame
+      validates). Not enumerated until ARCH-61. Needs ARCH-63.
 
 ### Code Quality & Review (QUAL)
 
@@ -444,6 +454,37 @@ _Apply to every remediation task below (from the 4 review docs + QUAL-25/26). So
 ### Bugs (BUG)
 _Discrete functional defects (distinct from QUAL refactors/quality work). Surfaced from any source; filed before fixing._
 
+- [ ] **BUG-46** [WS] `[release]` — **WS error paths: answer `error`, then close — on every channel** (filed
+      2026-10-05 from the ARCH-60 design findings C-1 + C-2, split out of ARCH-61 at intake). The guide
+      promises an `error` frame on a protocol violation; the machine core is about to state that an
+      `error` frame is terminal. Two places in `webapi_router.py` do neither: (C-1) `/ws/audio/reply`
+      reads and parses its first frame outside any handler, so a first frame that is not JSON, is not
+      an object, is binary, or carries a non-numeric `audio_out` value drops the connection with no
+      `error` frame; (C-2) the catch-all paths of `/ws/audio` and `/ws/observe` send `error` and return
+      without closing — a real ASGI server then closes the socket, the handler never does. Fix: both
+      answer `error` and close explicitly. No guide edit here (the guide is byte-locked; the "terminal"
+      sentence lands with ARCH-61).
+- [ ] **BUG-47** [WS] `[release]` — **Two spoken replies to one device can interleave on the reply channel**
+      (filed 2026-10-05, side-find of the ARCH-60 reconciliation — design finding C-4; NOT part of the
+      `ws-protocol-v1.1.0` cut). `CallbackReplyChannel.send_audio` awaits between `speak_begin`, each
+      PCM chunk and `speak_end`, and nothing serializes deliveries per channel: a deferred announcement
+      (a timer ringing) delivered by the notification loop while `/ws/audio` is routing a reply to the
+      same device can open a second burst inside the first — interleaved PCM on the speaker. The guide
+      says each reply arrives as a bracketed burst; the transcript rules deliberately do not assert
+      "bursts never overlap" until the code guarantees it. Expected fix: one lock per reply channel
+      around the whole burst, a test with two concurrent deliveries, then the rule + a transcript in a
+      later `ws-protocol` minor. _Tag is the filer's default (a device-audible defect on the release
+      path) — the owner may re-tag._
+- [ ] **BUG-48** [WS] `[deferred]` — **WS handshakes do not type-check registration values** (filed
+      2026-10-05, side-find of the ARCH-60 reconciliation — design finding C-3; NOT part of the
+      `ws-protocol-v1.1.0` cut). `{"type": "register", "client_id": 5, "room_name": "r"}` is
+      registered and the ack echoes the number; `/ws/output` likewise echoes a numeric `client_id`;
+      a string `sample_rate` is coerced or fails with a raw Python exception text in the `error`
+      frame. No conforming client sends these, so the machine core asserts no c2s `wrong-json-type`
+      case; hardening = validate the documented types at the three handshakes and answer a readable
+      `error`, then add the cases in a later minor. _Tag is the filer's default (no conforming client
+      is affected) — the owner may re-tag._
+
 ### Tests (TEST)
 > **Strategy (decided 2026-06-01): do NOT keep repairing the existing suite.** Most tests were written against
 > pre-refactor code and will be invalidated by the ARCH refactors (ARCH-1..5) and the code reviews (QUAL-8/10/12/14).
@@ -469,6 +510,19 @@ _Trace-driven system testing (design `docs/design/trace_system_testing.md`, TEST
       to german" → `greeting.hello` (0.86, keyword beats verb); bare "pause" → `audio.stop` (1.00 — note the
       RU twin «поставь на паузу» routes `smart_home.playback_pause`; decide the intended EN owner before
       fixing). Consumer half unaffected: `expect` stays canonical, the bridge replays language-blind.
+- [ ] **TEST-23** `[release]` [TEST][WS] — **Real-socket witness tests for the WS frames and flows no suite
+      drives through an endpoint** (filed 2026-10-05, split out of ARCH-61 at intake; design
+      `docs/design/ws_machine_core.md` §5, review answer Q2). The machine core's owner test validates the
+      fixtures against frames the real handlers emit in the WS suites, and several documented frames
+      never cross a real socket there: `speak_begin` / `speak_end` and the reply PCM run (asserted only
+      at callback level), `/ws/output` `message` + `error`, `/ws/observe` `subscribed` + `event`; nor do
+      these flows: two utterances on one batch connection, a streaming utterance endpointed by the
+      server with partials, a granted trace and a rejected first frame with explicit device frames,
+      the satellite pair (both voice channels of one device, an utterance and its spoken reply), a
+      reconnect of both channels with a missed announcement delivered on the new reply channel.
+      Ordinary endpoint tests, added to the suites that own the channels; plus the fake reply server
+      in `test_arch36_satellite` made protocol-conforming (it omits `protocol_version` and `width`).
+      Needs BUG-46 (the rejected-first-frame flow asserts the close).
 
 ### Build & CI (BUILD)
 _Real English deployment across all three Docker arches (armv7/aarch64/x86_64) + English eval. Design
