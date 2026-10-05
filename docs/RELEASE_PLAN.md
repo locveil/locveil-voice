@@ -397,7 +397,7 @@ _Apply to every remediation task below (from the 4 review docs + QUAL-25/26). So
       `handler_domain` trait) instead of module-level literals. Not a loading violation — filed to record
       the coupling. Evidence: review doc §G.
 
-- [ ] **QUAL-87** [LLM][DEPS] `[deferred]` — **Migrate the Anthropic LLM provider to the `anthropic` SDK 1.x**
+- [ ] **QUAL-87** [LLM][DEPS] `[release]` — **Migrate the Anthropic LLM provider to the `anthropic` SDK 1.x**
       (filed 2026-10-05 from BUG-45, which capped the dependency at `<1` to restore the CI type gate).
       SDK 1.0 (2026-08-20) removed `temperature` (and the other sampling knobs) from
       `messages.create`; `providers/llm/anthropic.py` passes `temperature=_LLM_TEMPERATURE` in both
@@ -409,8 +409,36 @@ _Apply to every remediation task below (from the 4 review docs + QUAL-25/26). So
       live API before closing (the suite never calls it). Filed `[deferred]` as a filing default — the
       cap keeps every shipped image on the locked 0.111.0, so nothing is broken for users; the owner
       may promote it.
+      **RE-TRUTHED 2026-10-05 (intake, owner directive: fix now — re-tagged `[release]`):** checked
+      against the SDK's own `MIGRATION.md` and a scratch 1.11.0 install. (1) The sampling knobs left
+      the method SIGNATURES, not the API: the SDK's stated route for a model that still honours them
+      is `extra_body={"temperature": …}`; models from Opus 4.7 on answer 400 to any request carrying
+      one. So the determinism is neither "replaced" nor "dropped" wholesale — it is kept for the
+      model families that accept it (the default, Haiku 4.5, is one) and omitted for the rest.
+      (2) Nothing else in the 0.x → 1.x change list touches this repo: no raw-response, Text
+      Completions, `output_format`, Bedrock or `httpx`-object use on the SDK boundary; the Python
+      floor (3.11) already clears 1.x's 3.10. (3) The "live API before closing" clause is withdrawn
+      by the owner for this run (no network calls) — replaced by a hermetic test that drives the
+      real SDK through a mock transport and reads the request it would have sent. (4) No model id is
+      changed here; what the intake found beside the SDK question is filed as BUG-51.
 ### Bugs (BUG)
 _Discrete functional defects (distinct from QUAL refactors/quality work). Surfaced from any source; filed before fixing._
+
+- [ ] **BUG-51** `[deferred]` [LLM][CONFIG] — **The Anthropic and OpenAI providers ignore the
+      configured `model`** (filed 2026-10-05 at the QUAL-87 intake; found by reading, not by a
+      failing run). Both read `config.get("default_model", <built-in>)` while the config key —
+      schema, `config-master.toml`, config-ui — is `model` (DeepSeek reads both), so
+      `[llm.providers.anthropic] model = …` changes nothing: the provider always uses its built-in
+      `claude-haiku-4-5-20251001` unless a caller passes `model=` per request. Same section, same
+      cause: `base_url` under `[llm.providers.anthropic]` is never read. Stale beside it:
+      `AnthropicProviderSchema.model` defaults to `claude-3-haiku-20240307` (retired upstream;
+      never reaches the API today only because of the bug above), `get_available_models()` still
+      lists the retired `claude-3-5-*` ids, and the Claude rows of `utils/llm_capabilities.py`
+      carry 200K / 8K budgets for models that now document 1M / 128K (64K for Haiku 4.5).
+      Fixing the key CHANGES which model a deployment calls (the configured one starts to count),
+      so it is a decision, not a cleanup; the schema default moves `config-ui/openapi.json`
+      (a `ui-openapi` cut). Filed `[deferred]` as a filing default — the shipped default provider
+      is DeepSeek and Anthropic is disabled in the master config; the owner may promote it.
 
 ### Tests (TEST)
 > **Strategy (decided 2026-06-01): do NOT keep repairing the existing suite.** Most tests were written against
@@ -486,6 +514,20 @@ size-matched to the Russian stack; language is a per-config/deployment choice (a
       board** (D-4/D-5), seeded when BUILD-21 lands, not decided unilaterally here. Scope for that design: which
       repo owns the unified compose, health-gated `depends_on` vs. tolerant clients, whether the units collapse
       into one, and how `update.sh` stays per-repo when the compose is not. Related: BUILD-18 (ops conformance).
+- [ ] **BUILD-57** `[release]` [CONTRACTS][UI] — **config-ui type-checks against the PINNED
+      workbench contract** (filed 2026-10-05, owner directive: fix now; closes the limit BUILD-53
+      recorded in the pin README). `tsc` still resolves `locveil-workbench/contract` through the
+      `file:` devDependency into the commons working copy, so the pin records what was verified
+      without being what is compiled. Shape (the bridge's UI-23, commons recipe in
+      `packages/workbench/README.md` "For plugin authors"): a tsconfig `paths` mapping of
+      `locveil-workbench/contract` → `../contracts/pins/workbench/contract.ts` (+ a `react` types
+      entry for the pinned file's own React import); the `file:` dependency removed if nothing
+      else uses it (intake: one `import type` in `src/plugin.tsx`, no vite alias, no script);
+      `locveil-ui-kit` stays linked. Guards: the pin conformance test fails if the mapping stops
+      pointing at the pin or a `locveil-workbench` dependency reappears; a compiler-side CI step
+      (`tsc --listFilesOnly` contains the pinned file and nothing from the commons checkout but
+      ui-kit). Proof in a throwaway copy (renamed member → `tsc` fails); built `dist/`
+      byte-identical. No surface moves.
 ### Models & Assets (ASSET)
 
 - [ ] **ASSET-6** `[deferred]` [ASSET][CONTRACTS][SATELLITE] — **The multi-model wake-pack v1.x cut**

@@ -21,6 +21,18 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-10-05 — Intake: QUAL-87 promoted, BUILD-57 and BUG-51 filed.** The owner asked for the
+  two loose ends of today's sweep to be closed now: the SDK cap BUG-45 put on `anthropic`, and
+  the limit BUILD-53 wrote into the workbench pin README. Reading before touching changed the
+  first one. QUAL-87 was filed on the understanding that SDK 1.x "removed `temperature`"; the
+  SDK's migration notes say the parameter left the method signatures only, and name the route
+  for a model that still honours it. That turns a question of principle (what replaces
+  determinism?) into a table lookup (which models still take it), and it is why the live-call
+  clause could be traded for a test that reads the request the real SDK builds. The same
+  reading turned up something unrelated and older — the Anthropic and OpenAI providers never
+  read the `model` key the config offers — which is filed as BUG-51 and deliberately not fixed
+  on the way past: making a configured model start to count is a behaviour change of its own.
+
 - **2026-10-05 — ARCH-66: `ws-protocol-v1.2.0`, and the first retirement.** Three fixes, one cut.
   What they have in common is direction: each makes the server keep something the document
   already implied, so the guide changes by getting firmer, not longer. The interesting part is
