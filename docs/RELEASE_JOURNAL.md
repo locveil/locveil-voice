@@ -21,6 +21,24 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-10-05 — ARCH-60: the WS machine-core design is drafted and parked for the satellite's
+  review — and writing it found more in the document than in the code.** The draft
+  (`docs/design/ws_machine_core.md`) proposes one golden-frames file, nine one-scenario JSONL
+  transcripts and a hand-written schema, tied to reality by a tap on the server side of the socket
+  rather than a second copy of the suites: the witness suites run once more in a child process, the
+  tap writes their traffic in the transcript line format, and seven legs check that real frames
+  conform strictly, that every golden frame and transcript was actually seen, and that the schema
+  agrees with both. The useful surprise is what "subordinate to the document" forces into the open.
+  The three-level rule quietly assumes receivers tolerate additions, and the guide never says so —
+  without that sentence an unknown-`type` frame has no verdict and no minor is safe (F-1, the one
+  finding the design depends on). The guide also claims every frame carries a `type` while its own
+  operator-channel examples do not, never says which `register` keys are required, and never says
+  an `error` is terminal. One discrepancy runs the other way: the reply channel drops a non-JSON
+  first frame without the `error` frame the guide promises. Coverage was checked against the tree,
+  not assumed: eight of the twenty frame types are never witnessed on a real socket by the five
+  named suites, so the implementation carries about six small endpoint tests that were simply
+  missing. Nothing is implemented; ARCH-61 waits for the review's answers (Q1–Q8).
+
 - **2026-10-05 — BUILD-50 DONE: the two contracts that must NOT be byte-locked now say so, with
   a pointer that has to resolve.** HK-13 replaced both "enumerate if you like" and the proposed
   "byte-lock everything" with one rule — every STAMP declares `artifacts`, and an empty list is only
