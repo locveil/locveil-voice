@@ -823,3 +823,118 @@ def test_l6_transcript_is_a_real_recording(capture, name):
     assert witnesses, (
         f"transcript.{name}.jsonl: no witness test produced exactly this conversation — "
         "the transcript must be a real recording, not an illustration")
+
+
+# ------------------------------------------------------------------------------------------
+# Slice 3 — the schema: `contracts/ws-protocol/ws-protocol.schema.json`
+# L7 — schema ≡ fixtures, and every real frame validates
+# ------------------------------------------------------------------------------------------
+
+SCHEMA_FILE = CORE_DIR / "ws-protocol.schema.json"
+SCHEMA = json.loads(SCHEMA_FILE.read_text(encoding="utf-8"))
+DIRECTIONS = sorted({f"{d['channel']}.{d['direction']}" for d in FRAMES.values()})
+
+
+def _validator(def_name: str):
+    """A validator for ONE `$defs` entry (a frame name, or `<channel>.<direction>`)."""
+    import jsonschema
+    return jsonschema.Draft202012Validator({"$ref": f"#/$defs/{def_name}", "$defs": SCHEMA["$defs"]})
+
+
+def _accepts(def_name: str, instance: Any) -> bool:
+    return _validator(def_name).is_valid(instance)
+
+
+def _walk(node: Any) -> Iterator[Dict[str, Any]]:
+    if isinstance(node, dict):
+        yield node
+        for value in node.values():
+            yield from _walk(value)
+    elif isinstance(node, list):
+        for value in node:
+            yield from _walk(value)
+
+
+def test_l7_schema_is_a_valid_2020_12_schema_open_everywhere():
+    import jsonschema
+    assert SCHEMA["$schema"] == "https://json-schema.org/draft/2020-12/schema"
+    jsonschema.Draft202012Validator.check_schema(SCHEMA)
+    assert SCHEMA["type"] == "object", "the one thing true of every frame: it is a JSON object"
+    for node in _walk(SCHEMA):
+        # the schema encodes the RECEIVER's obligation — unknown keys are ignored, never rejected
+        assert "additionalProperties" not in node and "unevaluatedProperties" not in node
+
+
+def test_l7_schema_mirrors_the_frame_definitions_key_for_key():
+    """Hand-written, like the fixtures — and mechanically the same statement: same frames,
+    same required keys, same JSON type per key, one union per channel and direction."""
+    assert set(SCHEMA["$defs"]) == set(FRAMES) | set(DIRECTIONS)
+    for name, defn in FRAMES.items():
+        entry = SCHEMA["$defs"][name]
+        assert entry["type"] == "object", name
+        assert entry["required"] == defn["required"], name
+        assert list(entry["properties"]) == defn["required"] + defn["optional"], name
+        for key, spec in defn["types"].items():
+            prop = entry["properties"][key]
+            if key == "type":
+                assert prop == {"const": defn["type"]}, name
+            else:
+                assert prop["type"] == spec, f"{name}.{key}"
+    for key in DIRECTIONS:
+        channel, direction = key.split(".")
+        members = [ref["$ref"].rsplit("/", 1)[-1] for ref in SCHEMA["$defs"][key]["anyOf"]]
+        assert members == [n for n, d in FRAMES.items()
+                           if (d["channel"], d["direction"]) == (channel, direction)], key
+
+
+@pytest.mark.parametrize("frame,case",
+                         [pytest.param(n, c, id=c["id"]) for n, c in all_cases() if n])
+def test_l7_schema_gives_every_case_its_verdict(frame, case):
+    defn = FRAMES[frame]
+    union = f"{defn['channel']}.{defn['direction']}"
+    if case["verdict"] == "valid":
+        assert _accepts(frame, case["json"])
+        assert _accepts(union, case["json"])
+        return
+    if case["violation"] == "not-json":
+        return                                           # not JSON at all: nothing to validate
+    instance = json.loads(case["raw"]) if "raw" in case else case["json"]
+    errors = list(_validator(frame).iter_errors(instance))
+    assert errors, f"{case['id']}: the schema accepts an invalid case"
+
+
+def test_l7_schema_rejects_unknown_types_and_non_objects():
+    for case in GOLDEN["unknown"]:
+        key = f"{case['channel']}.{case['direction']}"
+        assert not _accepts(key, case["json"]), f"{case['id']} is accepted as a {key} frame"
+    for case in GOLDEN["malformed"]:
+        if case["violation"] == "not-an-object":
+            for def_name in SCHEMA["$defs"]:
+                assert not _accepts(def_name, json.loads(case["raw"])), (case["id"], def_name)
+
+
+def test_l7_schema_accepts_every_transcript_line():
+    for name in TRANSCRIPT_NAMES:
+        for line in load_jsonl(transcript_path(name)):
+            if line["kind"] == "text":
+                assert _accepts(line["frame"], line["json"]), (name, line)
+
+
+def test_l7_schema_accepts_every_real_frame(capture):
+    """The generalization must hold for the server's actual output, and for every client
+    frame the server ACCEPTED (the suites also send deliberately bad ones: those are the
+    frames of a connection that never got its ack)."""
+    wrong: List[str] = []
+    for conn in capture:
+        entry = CHANNELS[conn.channel]
+        accepted = any(line.get("frame") == entry["ack"] for line in conn.lines)
+        for line in conn.lines:
+            frame = line.get("frame")
+            if line["kind"] != "text" or frame is None:
+                continue
+            if line["direction"] == "c2s" and not accepted:
+                continue
+            for def_name in (frame, f"{conn.channel}.{line['direction']}"):
+                if not _accepts(def_name, line["json"]):
+                    wrong.append(f"{conn}: not a valid {def_name}: {line['json']}")
+    assert not wrong, "\n".join(wrong)

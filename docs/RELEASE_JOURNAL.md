@@ -21,6 +21,17 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-10-05 — ARCH-64: a schema that is allowed to say less than the owner's test.** The
+  temptation with a schema is to make it the strict one — close every object, enumerate every
+  value. That would have encoded the wrong party's obligation: a consumer validating captured
+  traffic against a closed schema would reject the first frame of the next minor, which is
+  exactly what the forward-compatibility rule forbids a receiver to do. So the schema is open
+  everywhere and the strictness stays where it belongs, in the owner's leg that fails when the
+  server grows a key the core does not list. Being hand-written next to hand-written
+  definitions, the two could drift silently; a mirror check makes them one statement in two
+  notations — same frames, same required keys, same type per key — and the recorded traffic
+  validates against both.
+
 - **2026-10-05 — ARCH-63: nine conversations, each one a recording.** A transcript is easy to
   write plausibly and hard to write truthfully, so the test does not ask whether a file looks
   like the protocol; it asks which single witness test produced exactly this conversation, and

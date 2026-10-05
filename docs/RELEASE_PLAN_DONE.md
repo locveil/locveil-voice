@@ -106,6 +106,29 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       passed / 7 skipped (+20), guards green.
       docs: none — the transcript format and rules T-1..T-8 are described in `guides/websocket-api`, which is byte-locked; that section lands with the ARCH-61 cut
       contracts: none — no versioned surface moved yet (the transcripts are not enumerated; the STAMP stays at `ws-protocol-v1.0.1` until ARCH-61)
+- [x] **ARCH-64** [WS][CONTRACTS] `[release]` — **DONE 2026-10-05 — WS machine core, slice 3: the JSON Schema**
+      (split out of ARCH-61; design §8; family lead BUILD-47). Hand-written
+      `contracts/ws-protocol/ws-protocol.schema.json` (NOT yet enumerated — contract at the ARCH-61
+      cut): JSON Schema draft 2020-12; `$defs` keyed by the twenty frame names plus one `anyOf` union
+      per channel and direction (`audio.s2c`, `reply.c2s`, … — "any frame legal here");
+      `additionalProperties` nowhere, because the schema states the RECEIVER's obligation (unknown
+      keys are ignored); opaque values are `{"type": "object"}` and nothing more; the documented
+      nested objects (`audio_out`, the observe `filter`, `covered_rooms`) carry their inner types.
+      The root says only what is true of every frame (it is a JSON object) — a frame is validated
+      against one `$defs` entry. **Owner test, L7:** the file is a valid 2020-12 schema and open
+      everywhere; it mirrors the golden definitions key for key (same frames, same `required`, same
+      JSON type per key, union membership = the frames of that channel/direction) — so the
+      generalization is hand-written twice and mechanically one statement; every valid case
+      validates against its frame and its union, every invalid case fails, every unknown-type case
+      fails its union, a non-object fails every entry; every transcript line validates; every frame
+      the server really sent validates, and so does every client frame it accepted. One divergence
+      surfaced and was kept: a `register-reply` whose `audio_out.rate` is not a number is shallowly
+      "an object" to slice 1 but invalid to the schema — and the server does reject it; the leg
+      therefore checks client frames the server ACCEPTED, not all that were sent. Mutation-checked:
+      a retyped key, a union missing a member and a relaxed `required` each turn the leg red.
+      **Verified:** suite 1806 passed / 7 skipped (+115), guards green.
+      docs: none — the schema is named and scoped in `guides/websocket-api`, which is byte-locked; that section lands with the ARCH-61 cut
+      contracts: none — no versioned surface moved yet (the schema is not enumerated; the STAMP stays at `ws-protocol-v1.0.1` until ARCH-61)
 ### Code Quality & Review (QUAL)
 - [x] **QUAL-19** [ESP32] (P2, last pre-release) — **DONE 2026-06-09** (interactive review session + upstream study).
       **★ ARCH-22 (2026-06-14):** the **device-side** of the micro stack is now designed in `docs/design/esp32_satellite.md`

@@ -321,12 +321,6 @@ See `docs/review/phase1_architecture_map.md` §5.
       served `protocol_version` stays `"1"`. On the cut: `re-pin owed: satellite` (FW-1a's conformance
       test consumes the pinned fixtures from the day they exist, never gated on them) and commons
       (PROD-28 build item 6 — its eval WS provider pins `ws-protocol` when the core lands).
-- [ ] **ARCH-64** [WS][CONTRACTS] `[release]` — **WS machine core, slice 3: the JSON Schema** (filed
-      2026-10-05, split out of ARCH-61 at intake; design §8). Hand-written
-      `contracts/ws-protocol/ws-protocol.schema.json` (draft 2020-12, `$defs` keyed by frame name plus
-      one union per channel/direction, `additionalProperties` open everywhere); owner-test leg L7
-      (every valid case validates, every invalid and unknown case fails, every recorded frame
-      validates). Not enumerated until ARCH-61. Needs ARCH-63.
 
 ### Code Quality & Review (QUAL)
 

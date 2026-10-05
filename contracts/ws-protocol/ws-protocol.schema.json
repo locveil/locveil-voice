@@ -1,0 +1,265 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/locveil/locveil-voice/contracts/ws-protocol/ws-protocol.schema.json",
+  "title": "Locveil WebSocket wire protocol, major 1 — the JSON text frames",
+  "description": "A hand-written generalization of contracts/ws-protocol/frames.golden.json. Normative text: docs/guides/websocket-api.md — on disagreement the document wins. Validate a frame against one $defs entry: a frame name (\"audio.registered\") or a channel and direction (\"audio.s2c\" = any frame the server may send on /ws/audio). Unknown keys are accepted everywhere on purpose: receivers ignore keys they do not know. Binary frames are raw PCM and have no schema.",
+  "type": "object",
+  "$defs": {
+    "audio.register": {
+      "type": "object",
+      "required": ["type", "client_id", "room_name"],
+      "properties": {
+        "type": { "const": "register" },
+        "client_id": { "type": "string" },
+        "room_name": { "type": "string" },
+        "sample_rate": { "type": "integer" },
+        "wants_audio": { "type": "boolean" },
+        "mode": { "type": "string" },
+        "wants_trace": { "type": "boolean" },
+        "covered_rooms": { "type": "array", "items": { "type": "string" } },
+        "name": { "type": "string" },
+        "available_devices": { "type": "array", "items": { "type": "object" } },
+        "protocol_version": { "type": "string" },
+        "firmware_version": { "type": "string" },
+        "wake_pack_version": { "type": "string" }
+      }
+    },
+    "audio.end": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": { "const": "end" }
+      }
+    },
+    "audio.registered": {
+      "type": "object",
+      "required": ["type", "client_id", "session_id", "trace", "protocol_version"],
+      "properties": {
+        "type": { "const": "registered" },
+        "client_id": { "type": "string" },
+        "session_id": { "type": "string" },
+        "trace": { "type": "boolean" },
+        "protocol_version": { "type": "string" }
+      }
+    },
+    "audio.partial": {
+      "type": "object",
+      "required": ["type", "text"],
+      "properties": {
+        "type": { "const": "partial" },
+        "text": { "type": "string" }
+      }
+    },
+    "audio.response": {
+      "type": "object",
+      "required": ["type", "text", "success", "error", "confidence", "intent_name", "timestamp", "metadata"],
+      "properties": {
+        "type": { "const": "response" },
+        "text": { "type": "string" },
+        "success": { "type": "boolean" },
+        "error": { "type": ["string", "null"] },
+        "confidence": { "type": "number" },
+        "intent_name": { "type": ["string", "null"] },
+        "timestamp": { "type": "number" },
+        "metadata": { "type": "object" }
+      }
+    },
+    "audio.trace": {
+      "type": "object",
+      "required": ["type", "request_id", "trace"],
+      "properties": {
+        "type": { "const": "trace" },
+        "request_id": { "type": "string" },
+        "trace": { "type": "object" }
+      }
+    },
+    "audio.error": {
+      "type": "object",
+      "required": ["type", "error"],
+      "properties": {
+        "type": { "const": "error" },
+        "error": { "type": "string" }
+      }
+    },
+    "reply.register-reply": {
+      "type": "object",
+      "required": ["type", "client_id"],
+      "properties": {
+        "type": { "const": "register-reply" },
+        "client_id": { "type": "string" },
+        "audio_out": {
+          "type": "object",
+          "properties": {
+            "rate": { "type": "integer" },
+            "channels": { "type": "integer" }
+          }
+        }
+      }
+    },
+    "reply.registered": {
+      "type": "object",
+      "required": ["type", "client_id", "protocol_version"],
+      "properties": {
+        "type": { "const": "registered" },
+        "client_id": { "type": "string" },
+        "protocol_version": { "type": "string" }
+      }
+    },
+    "reply.speak_begin": {
+      "type": "object",
+      "required": ["type", "rate", "channels", "width", "seq"],
+      "properties": {
+        "type": { "const": "speak_begin" },
+        "rate": { "type": "integer" },
+        "channels": { "type": "integer" },
+        "width": { "type": "integer" },
+        "seq": { "type": "integer" }
+      }
+    },
+    "reply.speak_end": {
+      "type": "object",
+      "required": ["type", "seq"],
+      "properties": {
+        "type": { "const": "speak_end" },
+        "seq": { "type": "integer" }
+      }
+    },
+    "reply.error": {
+      "type": "object",
+      "required": ["type", "error"],
+      "properties": {
+        "type": { "const": "error" },
+        "error": { "type": "string" }
+      }
+    },
+    "output.hello": {
+      "type": "object",
+      "required": [],
+      "properties": {
+        "client_id": { "type": "string" }
+      }
+    },
+    "output.connected": {
+      "type": "object",
+      "required": ["type", "client_id"],
+      "properties": {
+        "type": { "const": "connected" },
+        "client_id": { "type": "string" }
+      }
+    },
+    "output.message": {
+      "type": "object",
+      "required": ["type", "text"],
+      "properties": {
+        "type": { "const": "message" },
+        "text": { "type": "string" }
+      }
+    },
+    "output.error": {
+      "type": "object",
+      "required": ["type", "error"],
+      "properties": {
+        "type": { "const": "error" },
+        "error": { "type": "string" }
+      }
+    },
+    "observe.subscribe": {
+      "type": "object",
+      "required": ["token"],
+      "properties": {
+        "token": { "type": "string" },
+        "filter": {
+          "type": "object",
+          "properties": {
+            "types": { "type": "array", "items": { "type": "string" } },
+            "session_id": { "type": "string" },
+            "client_id": { "type": "string" },
+            "room_name": { "type": "string" },
+            "source": { "type": "string" }
+          }
+        }
+      }
+    },
+    "observe.subscribed": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": { "const": "subscribed" }
+      }
+    },
+    "observe.event": {
+      "type": "object",
+      "required": ["type", "event", "session_id", "client_id", "room_name", "source", "payload", "timestamp"],
+      "properties": {
+        "type": { "const": "event" },
+        "event": { "type": "string" },
+        "session_id": { "type": ["string", "null"] },
+        "client_id": { "type": ["string", "null"] },
+        "room_name": { "type": ["string", "null"] },
+        "source": { "type": ["string", "null"] },
+        "payload": { "type": "object" },
+        "timestamp": { "type": "number" }
+      }
+    },
+    "observe.error": {
+      "type": "object",
+      "required": ["type", "error"],
+      "properties": {
+        "type": { "const": "error" },
+        "error": { "type": "string" }
+      }
+    },
+    "audio.c2s": {
+      "anyOf": [
+        { "$ref": "#/$defs/audio.register" },
+        { "$ref": "#/$defs/audio.end" }
+      ]
+    },
+    "audio.s2c": {
+      "anyOf": [
+        { "$ref": "#/$defs/audio.registered" },
+        { "$ref": "#/$defs/audio.partial" },
+        { "$ref": "#/$defs/audio.response" },
+        { "$ref": "#/$defs/audio.trace" },
+        { "$ref": "#/$defs/audio.error" }
+      ]
+    },
+    "reply.c2s": {
+      "anyOf": [
+        { "$ref": "#/$defs/reply.register-reply" }
+      ]
+    },
+    "reply.s2c": {
+      "anyOf": [
+        { "$ref": "#/$defs/reply.registered" },
+        { "$ref": "#/$defs/reply.speak_begin" },
+        { "$ref": "#/$defs/reply.speak_end" },
+        { "$ref": "#/$defs/reply.error" }
+      ]
+    },
+    "output.c2s": {
+      "anyOf": [
+        { "$ref": "#/$defs/output.hello" }
+      ]
+    },
+    "output.s2c": {
+      "anyOf": [
+        { "$ref": "#/$defs/output.connected" },
+        { "$ref": "#/$defs/output.message" },
+        { "$ref": "#/$defs/output.error" }
+      ]
+    },
+    "observe.c2s": {
+      "anyOf": [
+        { "$ref": "#/$defs/observe.subscribe" }
+      ]
+    },
+    "observe.s2c": {
+      "anyOf": [
+        { "$ref": "#/$defs/observe.subscribed" },
+        { "$ref": "#/$defs/observe.event" },
+        { "$ref": "#/$defs/observe.error" }
+      ]
+    }
+  }
+}
