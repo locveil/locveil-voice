@@ -86,6 +86,10 @@ jobs:
               - 'docs/manifest.json'
               - 'config-ui/openapi.json'
               - 'scripts/dump_openapi.py'
+              # workbench pin conformance (BUILD-53) reads the manifest-fragment source
+              - 'config-ui/manifest.fragment.json'
+              - 'config-ui/package.json'
+              - 'config-ui/vite.config.ts'
             ui:
               - 'config-ui/**'
               - '.github/workflows/ci.yml'

@@ -27,7 +27,9 @@ port 8080 (override by setting `window.__IRENE_API_BASE__` before the plugin loa
 ## How the bundle fits the Workbench
 
 - `dist/manifest.json` is the build-emitted manifest fragment: entry, styles, and the
-  peer majors the shell verifies before loading.
+  peer majors the shell verifies before loading. Its content comes from
+  `manifest.fragment.json` (plus the `version` in `package.json`) — edit the fragment
+  there; the backend test suite validates it against the pinned Workbench schema.
 - React, react-dom, react-router-dom and `locveil-ui-kit` are **not bundled** — the
   shell serves them through its import map, so every plugin shares one copy.
 - Everything else (i18next, the editors, Monaco wrapper) bundles into `dist/index.js`;

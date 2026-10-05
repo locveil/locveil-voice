@@ -1700,6 +1700,32 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       on the retired stamp was the only one).
       docs: none — manifest metadata (surface globs) + pin + test; no node's content changed
       contracts: docs-manifest-schema first consumed (pin @ v1.0.0); internal docs-manifest stamp retired
+- [x] **BUILD-53** `[release]` [CONTRACTS][UI] — **DONE 2026-10-05 (workbench family pinned;
+      coordinator-assigned at the PROD-28 sweep-GO; lead BUILD-47).** config-ui compiled against
+      the commons plugin contract through a live `file:` link with no pin and no conformance test;
+      commons' `workbench-v1.3.0` made the consumed surface enumerable. **Pinned:**
+      `contracts/pins/workbench/` @ `workbench-v1.3.0` — `contract.ts`,
+      `manifest-fragment.schema.json`, `runtime-config.schema.json` + owner STAMP + PIN.json
+      (repin v2, set derived from the owner STAMP); `.repin.toml` family, registry row, pin README.
+      **Fragment source extracted so it can be tested hermetically:** the manifest fragment's
+      fields (`id`, `entry`, `styles`, `peers`) moved from inline literals in
+      `config-ui/vite.config.ts` to `config-ui/manifest.fragment.json`; the vite plugin assembles
+      the same object from it + `package.json` `version` — the emitted `dist/manifest.json` is
+      byte-identical to before (verified by a build). **Conformance test**
+      `backend/tests/test_workbench_pin_conformance.py` (6): the fragment assembled the way the
+      build assembles it validates against the PINNED schema; the schema demonstrably rejects a
+      fragment without `peers`; a peer major is declared for every shell singleton; pin ↔ owner
+      STAMP coherence incl. completeness; and a tripwire asserting the vite config takes every
+      fragment field from the source file (so the build cannot emit something the test does not
+      see). No build, no Node, no sibling — it runs in `backend-health`, whose trigger gained the
+      three files it reads. `config-ui-stays-functional`: `npm run check` + `build` + `test` (44)
+      green. **NOT here, recorded in the pin README:** the TypeScript build still resolves the
+      contract TYPES through the `file:` link, not the pinned `contract.ts` — the pin makes a
+      commons move visible and diffable, it does not yet isolate the type-check from the live
+      sibling (no task filed; owner's call). **Verified:** suite 1479 passed / 7 skipped;
+      contract-guard 4.0.0 strict 0 failures / 0 warnings; `repin --check --fail-on any` exit 0.
+      docs: none — no manifest node describes the fragment's source; the non-root `config-ui/README.md` (not a node) gained the pointer
+      contracts: workbench first consumed (pin @ v1.3.0)
 ### Models & Assets (ASSET)
 ### Documentation (DOC)
 - [x] **DOC-5b** (P2) — DONE 2026-06-08: regenerated `guides/DONATION_FILE_SPECIFICATION.md` for the v1.1

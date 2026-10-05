@@ -21,6 +21,19 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-10-05 — BUILD-53 DONE: the last unpinned edge — config-ui against the Workbench contract.**
+  The graph HK-13 drew had one edge on this side that was declared nowhere: config-ui imports the
+  plugin contract from a sibling checkout, so the contract could move under the build with no tag,
+  no pin and no test noticing. Commons enumerating the surface (`workbench-v1.3.0`, types plus two
+  machine schemas) made it pinnable. The interesting part was the conformance test. The obvious
+  version — build the plugin, validate `dist/manifest.json` — would have tied a contract check to
+  a Node build that the backend CI job does not run. Instead the fragment's fields were lifted out
+  of the vite config into a small JSON file the build now reads, which lets a plain Python test
+  assemble the fragment the same way and validate it against the pinned schema; a tripwire on the
+  vite config keeps "the same way" true. The emitted manifest did not change by a byte. What the
+  pin does not do is stated in its README rather than left to be discovered: types still resolve
+  through the live link.
+
 - **2026-10-05 — BUILD-51 DONE: the sweep — two sources of truth, everything else derived.** The
   point of HK-13 becomes visible in what this commit DELETES: five hand-kept `files` lists in
   `.repin.toml`, a manual `git show` re-pin recipe, version strings scattered through pin READMEs.

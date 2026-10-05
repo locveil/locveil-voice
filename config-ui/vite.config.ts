@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react'
 import path from 'path'
 import { writeFile } from 'node:fs/promises'
 import pkg from './package.json' with { type: 'json' }
+import fragmentSource from './manifest.fragment.json' with { type: 'json' }
 
 /* UI-17: config-ui builds as the VOICE WORKBENCH PLUGIN (HK-11 runtime assembly) —
    an ESM library with the frozen singleton set external (the shell serves those via
@@ -18,24 +19,22 @@ const SINGLETONS = [
   'locveil-ui-kit',
 ]
 
-/** Peer majors the shell refuses-and-surfaces on (contract: ManifestFragment.peers). */
-const PEERS = {
-  react: '^18',
-  'react-dom': '^18',
-  'react-router-dom': '^6',
-  'locveil-ui-kit': '^0.1',
-}
-
+/* The manifest fragment's SOURCE is ./manifest.fragment.json — id, entry, styles and the
+   peer majors the shell refuses-and-surfaces on (contract: ManifestFragment.peers). Only
+   `version` is added here, from package.json. Keeping the source as data is what lets the
+   workbench pin's conformance test (backend/tests/test_workbench_pin_conformance.py)
+   validate exactly what this build emits against the pinned manifest-fragment schema,
+   with no build and no Node — change the fragment there, never inline here. */
 function emitManifestFragment(): Plugin {
   return {
     name: 'voice-manifest-fragment',
     async writeBundle() {
       const fragment = {
-        id: 'voice',
+        id: fragmentSource.id,
         version: pkg.version,
-        entry: './index.js',
-        styles: ['./style.css'],
-        peers: PEERS,
+        entry: fragmentSource.entry,
+        styles: fragmentSource.styles,
+        peers: fragmentSource.peers,
       }
       await writeFile(
         path.resolve(__dirname, 'dist/manifest.json'),

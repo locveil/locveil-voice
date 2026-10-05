@@ -518,18 +518,6 @@ size-matched to the Russian stack; language is a per-config/deployment choice (a
       board** (D-4/D-5), seeded when BUILD-21 lands, not decided unilaterally here. Scope for that design: which
       repo owns the unified compose, health-gated `depends_on` vs. tolerant clients, whether the units collapse
       into one, and how `update.sh` stays per-repo when the compose is not. Related: BUILD-18 (ops conformance).
-- [ ] **BUILD-53** `[release]` [CONTRACTS][UI] — **Pin the `workbench` family: config-ui builds
-      against the commons plugin contract through a live `file:` link with NO pin** (filed 2026-10-05
-      at the PROD-28 sweep-GO, coordinator-assigned; lead BUILD-47). Commons cut `workbench-v1.3.0`
-      as a NEW enumerated surface — `packages/workbench/src/contract.ts`,
-      `schemas/manifest-fragment.schema.json`, `schemas/runtime-config.schema.json` (the machine
-      schemas owed since HK-12). Scope: `[[family]] workbench` in `.repin.toml`, dest
-      `contracts/pins/workbench`, registry row + pin README; a conformance test proving the
-      manifest fragment the plugin build emits validates against the PINNED
-      `manifest-fragment.schema.json` — tested at the SOURCE of the emitted manifest,
-      hermetically (no built `dist/` in CI unless CI already builds it). Executes after BUILD-51
-      (needs repin v2: the pin set derives from the owner STAMP). Verdict to record:
-      `contracts: workbench first consumed (pin @ v1.3.0)`.
 ### Models & Assets (ASSET)
 
 - [ ] **ASSET-6** `[deferred]` [ASSET][CONTRACTS][SATELLITE] — **The multi-model wake-pack v1.x cut**

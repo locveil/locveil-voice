@@ -69,6 +69,19 @@ owner_url = "https://github.com/locveil/locveil-commons.git"
 path = "contracts/pins/docs-manifest-schema"
 conformance = "backend/tests/test_docs_manifest.py"
 
+# BUILD-53: config-ui is the Voice Workbench plugin — it compiles against the commons
+# plugin contract through a `file:` link. The pin holds the consumed surface (contract.ts +
+# the two machine schemas); the conformance test validates the manifest fragment this
+# repo's build emits against the PINNED manifest-fragment schema, at its source.
+[[family]]
+name = "workbench"
+owner_repo = "locveil-commons"
+owner_dir = "../locveil-commons"
+owner_url = "https://github.com/locveil/locveil-commons.git"
+[[family.dest]]
+path = "contracts/pins/workbench"
+conformance = "backend/tests/test_workbench_pin_conformance.py"
+
 # Vendored-tools manifest (HK-12; v2 shape HK-13): `path` is where the vendored copy
 # lives; `pinned_tag` + `sha256` are WRITTEN by `repin.py tool <name>` in a re-vendor
 # ledger task — the copy is verified against the recorded hash (a locally edited tool
