@@ -21,6 +21,20 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-10-05 — BUILD-56: the plugin that lists a router it never calls.** Seventeen alerts on
+  the config-ui lock; fifteen closed by moving packages inside ranges the manifest already
+  declared. The one that resisted was js-yaml: a tool two levels down pinned it to an exact
+  version, so the honest fix was to move the tool to the release that pins the patched one —
+  not an override that would have papered over the pin. The two that stay open are the
+  react-router advisories fixed only in v7, and the interesting part is why they are harmless
+  here: config-ui does not import the router. It hands the shell six static route names and
+  nothing else; the router is an external singleton that the shell supplies at runtime, which
+  is why the built bundle did not change by a single byte when the locked version did. So the
+  lock entry Dependabot is looking at is a build-time shadow of a decision made in commons —
+  the version that executes in a browser, and any exposure it carries, belong to the shell.
+  Also on record: the stock npm crashed updating vitest, a newer npm did that one step, and
+  the two packages it refreshed on its own initiative were put back. contracts: none.
+  docs: none.
 - **2026-10-05 — BUILD-55: two alerts that were one.** setuptools would not move on its own, and
   the reason was sitting in another package's metadata: the locked torch capped it below 82.
   So the low-severity torch alert turned out to be the key to a medium one, and the question

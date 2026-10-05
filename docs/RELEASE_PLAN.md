@@ -507,21 +507,6 @@ size-matched to the Russian stack; language is a per-config/deployment choice (a
       board** (D-4/D-5), seeded when BUILD-21 lands, not decided unilaterally here. Scope for that design: which
       repo owns the unified compose, health-gated `depends_on` vs. tolerant clients, whether the units collapse
       into one, and how `update.sh` stays per-repo when the compose is not. Related: BUILD-18 (ops conformance).
-- [ ] **BUILD-56** `[release]` [DEPS][SECURITY][UI] — **config-ui npm lock: the alerted packages**
-      (filed 2026-10-05 with BUILD-54). 17 alerts on `config-ui/package-lock.json`, all but two
-      reachable inside the ranges `package.json` already declares: **react-router-dom** 6.30.4 →
-      ≥ 6.30.6, **postcss** 8.5.15 → ≥ 8.5.23, **vitest** + **@vitest/mocker** 4.1.8 → ≥ 4.1.11
-      (a patch — `package.json` is already on `^4.1.8`, not a major), **js-yaml** 4.2.0 / 4.3.0 →
-      ≥ 4.3.2, **brace-expansion** 1.1.15/1.1.16 → ≥ 1.1.21, 2.1.1 → ≥ 2.1.7, 5.0.7 → ≥ 5.0.12,
-      **browserslist** 4.25.2 → ≥ 4.28.7, **postcss-selector-parser** 6.1.2 → ≥ 6.1.3. Targeted
-      `npm update <pkg>` only; no `--force`; an `overrides` entry only if a transitive cannot
-      otherwise reach its patched version. **Deliberately NOT fixed here:** the two **react-router**
-      alerts patched only in 7.18.0 — the Workbench plugin contract freezes the `react-router-dom`
-      singleton at major 6, so a v7 move is a cross-repo contract major, not a dependency bump;
-      the alerts stay open (not dismissed) and the completion entry records whether the vulnerable
-      paths are reachable in config-ui. **Acceptance** (`config-ui-stays-functional`):
-      `npm run check`, `npm run build`, `npm run test` green; the emitted manifest fragment and
-      `config-ui/openapi.json` unchanged.
 ### Models & Assets (ASSET)
 
 - [ ] **ASSET-6** `[deferred]` [ASSET][CONTRACTS][SATELLITE] — **The multi-model wake-pack v1.x cut**

@@ -2034,6 +2034,47 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       wheel from the same index.
       docs: none — lockfile only; no manifest node documents the torch or setuptools version
       contracts: none — no versioned surface moved (lockfile only; every enumerated artifact byte-identical)
+- [x] **BUILD-56** `[release]` [DEPS][SECURITY][UI] — **DONE 2026-10-05 (filed + completed same session,
+      with BUILD-54).** `config-ui/package-lock.json` only — `package.json` untouched, no
+      `overrides`, no `--force`; every patched version was reachable inside a declared range.
+      **Moved:** **react-router-dom** / **react-router** 6.30.4 → 6.30.6 (+ `@remix-run/router`
+      1.23.3 → 1.23.4, pinned by it); **postcss** 8.5.15 → 8.5.29 (+ its own floors: `nanoid`
+      3.3.12 → 3.3.20, `source-map-js` 1.2.1 → 1.2.2); **vitest** and the seven `@vitest/*`
+      packages incl. **@vitest/mocker** 4.1.8 → 4.1.11; **js-yaml** 4.2.0 and 4.3.0 → one copy at
+      4.3.2 — the hoisted copy was pinned EXACTLY by `@redocly/openapi-core` (under
+      `openapi-typescript`), so that moved 1.34.16 → 1.34.20, the release that pins 4.3.2;
+      **brace-expansion** 1.1.15/1.1.16 → 1.1.21, 2.1.1 → 2.1.7, 5.0.7 → 5.0.12; **browserslist**
+      4.25.2 → 4.29.3 (+ the data packages it floors: `caniuse-lite`, `electron-to-chromium`,
+      `node-releases`, `update-browserslist-db`, new `baseline-browser-mapping`);
+      **postcss-selector-parser** 6.1.2 → 6.1.4. Also rewritten by npm, not by choice: the
+      `locveil-workbench` link stub's version 0.1.0 → 0.1.1 (the sibling's current
+      `package.json`). **Tooling note:** `npm update vitest` crashes npm 10.9.2 (arborist,
+      `Cannot read properties of null (reading 'edgesOut')` in the peer-set loader); that one
+      step ran under npm 11.21.0, which also refreshed two unrelated transitives (`chai`,
+      `tinyrainbow`) — both put back to their previous locked entries. The result is still
+      lockfile v3 and `npm ci` under CI's npm 10.9.2 installs it cleanly.
+      **Deliberately left open (not dismissed):** the two **react-router** alerts patched only in
+      7.18.0 — a v7 move is a Workbench contract major. Neither path is reachable from this
+      plugin, because config-ui does not import react-router at all: `src/plugin.tsx` declares
+      six static route segments to the shell and says so in its header ("no router"); there is no
+      router construction, no hydration data and no server rendering anywhere under `src/`
+      (GHSA-337j-9hxr-rhxg, `deserializeErrors` on SSR hydration), and no `<Link>`, `<NavLink>`,
+      `useNavigate` or `navigate(` call that a target could be passed to (GHSA-wrjc-x8rr-h8h6).
+      `react-router-dom` is an external singleton in `vite.config.ts` — the built `dist/index.js`
+      is byte-identical before and after this bump — so the copy that actually runs is the
+      Workbench shell's, in commons; that is where both the exposure and the fix live.
+      **Not a Dependabot alert, seen in `npm audit`:** `braces` ≤ 3.0.3 (GHSA-vfj7-8cjw-p6xm) has
+      no patched release; it arrives through tailwindcss 3 (`chokidar`, `micromatch`,
+      `fast-glob`) and leaves only with a tailwind major. Not filed.
+      **Verified** after `npm ci` from the new lock: `npm run check` (types + strict ESLint +
+      orphans), `npm run build`, `npm run test` 44 passed on vitest 4.1.11;
+      `dist/manifest.json`, `dist/index.js` and `dist/style.css` byte-identical to the pre-bump
+      build; `npm run gen:api-types` regenerates the three generated type files with no diff
+      (the bumped redocly core sits under that generator); `config-ui/openapi.json` untouched;
+      the sibling packages' `node_modules` untouched; backend suite 1811 passed / 7 skipped;
+      contract-guard strict 0 failures / 0 warnings; `repin --check --fail-on any` exit 0.
+      docs: none — lockfile only; the non-root `config-ui/README.md` names no dependency version
+      contracts: none — no versioned surface moved (the manifest fragment's `react-router-dom` peer stays `^6`; emitted fragment byte-identical)
 ### Models & Assets (ASSET)
 ### Documentation (DOC)
 - [x] **DOC-5b** (P2) — DONE 2026-06-08: regenerated `guides/DONATION_FILE_SPECIFICATION.md` for the v1.1
