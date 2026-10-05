@@ -21,6 +21,19 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-10-05 — BUILD-57: the pin becomes what is compiled.** BUILD-53 pinned the Workbench
+  contract and said plainly what the pin did not do: the type-check still walked a link into
+  the neighbouring checkout, so the pinned bytes were a record of what had been verified, not
+  the thing verified. Closing that took one line of compiler configuration and one line removed
+  from the package manifest — and a second line nobody would guess: the pinned file imports
+  React's types, and a file that lives under `contracts/` has no `node_modules` above it, so
+  it has to be told where they are. Under the link that question never came up, because the
+  file sat inside a package that had its own. The bundle did not change by a byte, which is
+  what "type-only import" promises and is worth seeing once. The useful consequence is the
+  uncomfortable one: a re-pin of this family can now fail the plugin's type-check. That is the
+  contract change arriving where it should — in a task that chose to move the pin — instead of
+  in whichever unrelated push happened to follow a commit next door.
+
 - **2026-10-05 — QUAL-87: the parameter that left the signature and stayed in the API.**
   BUG-45 capped the SDK because the type gate said `messages.create` no longer takes
   `temperature`, and the natural reading was that the knob was gone. It is not: the SDK removed

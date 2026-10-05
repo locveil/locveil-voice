@@ -30,6 +30,11 @@ port 8080 (override by setting `window.__IRENE_API_BASE__` before the plugin loa
   peer majors the shell verifies before loading. Its content comes from
   `manifest.fragment.json` (plus the `version` in `package.json`) — edit the fragment
   there; the backend test suite validates it against the pinned Workbench schema.
+- The plugin contract types (`import type … from 'locveil-workbench/contract'`) compile
+  from the pinned copy at `../contracts/pins/workbench/contract.ts` — `tsconfig.json` maps
+  the specifier there, and there is no `locveil-workbench` package to install. A change to
+  the contract in the Workbench checkout reaches this type-check only when the pin is
+  moved (`python3 scripts/repin.py workbench`, from the repository root).
 - React, react-dom, react-router-dom and `locveil-ui-kit` are **not bundled** — the
   shell serves them through its import map, so every plugin shares one copy.
 - Everything else (i18next, the editors, Monaco wrapper) bundles into `dist/index.js`;

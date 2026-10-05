@@ -69,10 +69,12 @@ owner_url = "https://github.com/locveil/locveil-commons.git"
 path = "contracts/pins/docs-manifest-schema"
 conformance = "backend/tests/test_docs_manifest.py"
 
-# BUILD-53: config-ui is the Voice Workbench plugin — it compiles against the commons
-# plugin contract through a `file:` link. The pin holds the consumed surface (contract.ts +
-# the two machine schemas); the conformance test validates the manifest fragment this
-# repo's build emits against the PINNED manifest-fragment schema, at its source.
+# BUILD-53: config-ui is the Voice Workbench plugin. The pin holds the consumed surface
+# (contract.ts + the two machine schemas); the conformance test validates the manifest
+# fragment this repo's build emits against the PINNED manifest-fragment schema, at its
+# source. BUILD-57: the pinned contract.ts is also what config-ui COMPILES against
+# (tsconfig `paths`; no `locveil-workbench` package installed) — the same test holds that
+# mapping in place, so a re-pin of this family re-runs the plugin's type-check.
 [[family]]
 name = "workbench"
 owner_repo = "locveil-commons"

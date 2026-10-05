@@ -490,20 +490,6 @@ size-matched to the Russian stack; language is a per-config/deployment choice (a
       board** (D-4/D-5), seeded when BUILD-21 lands, not decided unilaterally here. Scope for that design: which
       repo owns the unified compose, health-gated `depends_on` vs. tolerant clients, whether the units collapse
       into one, and how `update.sh` stays per-repo when the compose is not. Related: BUILD-18 (ops conformance).
-- [ ] **BUILD-57** `[release]` [CONTRACTS][UI] — **config-ui type-checks against the PINNED
-      workbench contract** (filed 2026-10-05, owner directive: fix now; closes the limit BUILD-53
-      recorded in the pin README). `tsc` still resolves `locveil-workbench/contract` through the
-      `file:` devDependency into the commons working copy, so the pin records what was verified
-      without being what is compiled. Shape (the bridge's UI-23, commons recipe in
-      `packages/workbench/README.md` "For plugin authors"): a tsconfig `paths` mapping of
-      `locveil-workbench/contract` → `../contracts/pins/workbench/contract.ts` (+ a `react` types
-      entry for the pinned file's own React import); the `file:` dependency removed if nothing
-      else uses it (intake: one `import type` in `src/plugin.tsx`, no vite alias, no script);
-      `locveil-ui-kit` stays linked. Guards: the pin conformance test fails if the mapping stops
-      pointing at the pin or a `locveil-workbench` dependency reappears; a compiler-side CI step
-      (`tsc --listFilesOnly` contains the pinned file and nothing from the commons checkout but
-      ui-kit). Proof in a throwaway copy (renamed member → `tsc` fails); built `dist/`
-      byte-identical. No surface moves.
 ### Models & Assets (ASSET)
 
 - [ ] **ASSET-6** `[deferred]` [ASSET][CONTRACTS][SATELLITE] — **The multi-model wake-pack v1.x cut**

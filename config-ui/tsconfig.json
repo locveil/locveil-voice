@@ -23,7 +23,15 @@
     /* Path mapping */
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      /* The Workbench plugin contract compiles from the PINNED bytes
+         (../contracts/pins/workbench/, moved only by a deliberate re-pin) — never
+         from a commons checkout. No `locveil-workbench` package is installed: the
+         one import is type-only and erased at build. The pinned file imports React
+         types and sits outside any node_modules, so `react` is mapped to this
+         package's own copy. Guarded by backend/tests/test_workbench_pin_conformance.py. */
+      "locveil-workbench/contract": ["../contracts/pins/workbench/contract.ts"],
+      "react": ["./node_modules/@types/react"]
     }
   },
   "include": ["src"],
