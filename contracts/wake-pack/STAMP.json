@@ -1,9 +1,11 @@
 {
   "contract": "wake-pack",
-  "version": "1",
-  "tag": "wake-pack-v1",
-  "date": "2026-07-12",
+  "version": "1.0.1",
+  "tag": "wake-pack-v1.0.1",
+  "date": "2026-10-05",
   "owner_repo": "locveil-voice",
+  "artifacts": [],
+  "guard": "backend/tests/test_ws_protocol_version.py::test_wake_pack_stamp_mirrors_released_catalog",
   "pack": {
     "word": "irina",
     "display": "Ирина (ru)",
@@ -20,5 +22,5 @@
       }
     }
   },
-  "note": "Sidecar stamp over the UNMODIFIED third-party v2 pack format (microWakeWord manifest + sibling .tflite) — the manifest is never forked; this stamp adds the version/hash surface the flash-time pin verifies. Words are added by extending pack (a minor bump); replacing a published model file is a breaking change (major bump) because flashed hashes stop verifying."
+  "note": "Sidecar stamp over the UNMODIFIED third-party v2 pack format (microWakeWord manifest + sibling .tflite) — the manifest is never forked; this stamp adds the version/hash surface the flash-time pin verifies. Three-level versions (process/contracts.md §3): a new word extends `pack` (a MINOR cut); replacing a published model file is breaking (a MAJOR cut) because flashed hashes stop verifying; stamp metadata with `pack` untouched is a patch. v1.0.1 (HK-13/BUILD-50, 2026-10-05): a declaration-only patch — `artifacts` is declared EMPTY with a `guard` pointer (the binary-pack sidecar shape: this STAMP is the whole pinned set, the pack bytes live on Hugging Face and never enter a repo). `pack` is byte-for-byte the wake-pack-v1 content — no hash, URL or revision moved."
 }

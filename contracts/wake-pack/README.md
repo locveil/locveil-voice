@@ -13,7 +13,13 @@ bytes without this repo re-hosting them.
 - **Consumer:** `../locveil-satellite` — the ESP32 flashes the pack and verifies the hashes
   at flash time (its OPS-1 carries the hash-at-publish requirement); the flashed tag comes
   back as the `wake_pack_version` register field (ARCH-47).
-- **Versioning:** adding a validated word extends `pack` (minor bump, new tag); replacing a
-  published model file is breaking (major bump) — flashed hashes stop verifying. Training
-  lives in the `~/development/wakeword-training` factory; each new word lands as its own
-  consume-task (`docs/design/wakeword_models.md`).
+- **Declaration:** `STAMP.json` declares `artifacts: []` with `guard` → the catalog-mirror
+  test above. This is the binary-pack sidecar shape (`process/contracts.md` §2): the STAMP is
+  the whole pinned set — it travels with every pin implicitly — and the pack bytes are
+  verified by the sha256 values it carries, not by a repo byte-lock.
+- **Versioning (three levels):** adding a validated word extends `pack` (a minor cut);
+  replacing a published model file is breaking (a major cut) — flashed hashes stop
+  verifying; stamp metadata with `pack` untouched is a patch. Every level is a `version` +
+  `date` bump and a `wake-pack-vX.Y.Z` tag on the same commit. Training lives in the
+  `~/development/wakeword-training` factory; each new word lands as its own consume-task
+  (`docs/design/wakeword_models.md`).

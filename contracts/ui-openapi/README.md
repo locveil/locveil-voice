@@ -13,6 +13,14 @@ contract: the backend generates it, config-ui consumes it.
 - **Drift guard (layer 2):** `backend/tests/test_openapi_drift.py` rebuilds the schema
   in-process and fails on any byte of semantic drift — a schema change that isn't
   re-dumped can no longer ship silently.
-- **Versioning:** the STAMP versions the convention surface, not each regeneration —
-  content moves with the code under the drift guard; bump + re-tag (`ui-openapi-vN`)
-  only on a deliberate breaking reshape of the REST surface.
+- **Declaration:** `STAMP.json` declares `artifacts: []` with `guard` →
+  `backend/tests/test_openapi_drift.py`. The generated file is deliberately NOT
+  byte-enumerated (`../locveil-commons/process/contracts.md` §2 — a repo-internal generated
+  artifact whose regenerate-and-compare test is the stronger check): its content moves with
+  the code on every endpoint change, and the drift guard, not a byte-lock, keeps the
+  committed copy exact.
+- **Versioning (three levels):** the STAMP versions the convention surface, not each
+  regeneration. Major = a deliberate breaking reshape of the REST surface convention;
+  minor = a consumer-visible reshape of the generated surface (e.g. the package rename that
+  moved every generated schema name); patch = stamp metadata. Every level is a `version` +
+  `date` bump and a `ui-openapi-vX.Y.Z` tag on the same commit.

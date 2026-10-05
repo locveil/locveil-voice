@@ -79,5 +79,17 @@ def test_wake_pack_stamp_mirrors_released_catalog():
 
 def test_wake_pack_stamp_core():
     assert PACK_STAMP["contract"] == "wake-pack"
+    assert re.fullmatch(r"\d+\.\d+\.\d+", PACK_STAMP["version"]), (
+        "STAMP version must be three-part (major.minor.patch)")
     assert PACK_STAMP["tag"] == f"wake-pack-v{PACK_STAMP['version']}"
     assert PACK_STAMP["owner_repo"] == "locveil-voice"
+
+
+def test_wake_pack_stamp_declares_empty_artifacts_with_a_resolving_guard():
+    # Binary-pack sidecar shape: the STAMP is the whole pinned set, so `artifacts` is
+    # declared EMPTY — legal only with a `guard` pointer that resolves (path[::name]).
+    assert PACK_STAMP["artifacts"] == []
+    guard_file, _, guard_name = PACK_STAMP["guard"].partition("::")
+    assert (_REPO_ROOT / guard_file).is_file()
+    assert Path(guard_file).name == Path(__file__).name, "the guard pointer names this file"
+    assert guard_name == test_wake_pack_stamp_mirrors_released_catalog.__name__

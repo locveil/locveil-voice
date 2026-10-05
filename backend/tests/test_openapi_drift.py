@@ -39,3 +39,17 @@ def test_committed_openapi_matches_served_schema():
     assert served == committed, (
         "config-ui/openapi.json drifted from the schema the backend serves — "
         "regenerate: uv run python scripts/dump_openapi.py (+ config-ui gen:api-types)")
+
+
+def test_ui_openapi_stamp_declares_empty_artifacts_with_this_guard():
+    """BUILD-50 (HK-13): a repo-internal GENERATED contract declares `artifacts: []` — legal
+    only with a `guard` pointer that resolves. The pointer must name THIS drift test, and
+    the informational `artifact`/`generator` pointers must name the real files."""
+    stamp = json.loads(
+        (_REPO_ROOT / "contracts" / "ui-openapi" / "STAMP.json").read_text(encoding="utf-8"))
+    assert stamp["artifacts"] == []
+    assert (_REPO_ROOT / stamp["guard"]).resolve() == Path(__file__).resolve()
+    assert (_REPO_ROOT / stamp["artifact"]).resolve() == _COMMITTED.resolve()
+    assert (_REPO_ROOT / stamp["generator"]).is_file()
+    assert stamp["tag"] == f"ui-openapi-v{stamp['version']}"
+    assert len(stamp["version"].split(".")) == 3, "STAMP version must be three-part"

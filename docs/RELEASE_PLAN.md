@@ -515,19 +515,6 @@ size-matched to the Russian stack; language is a per-config/deployment choice (a
       board** (D-4/D-5), seeded when BUILD-21 lands, not decided unilaterally here. Scope for that design: which
       repo owns the unified compose, health-gated `depends_on` vs. tolerant clients, whether the units collapse
       into one, and how `update.sh` stays per-repo when the compose is not. Related: BUILD-18 (ops conformance).
-- [ ] **BUILD-50** `[release]` [CONTRACTS] — **`ui-openapi` + `wake-pack` STAMPs declare `artifacts`
-      (empty list + resolving `guard`): patch cuts `ui-openapi-v1.1.1` + `wake-pack-v1.0.1`** (filed
-      2026-10-05 at PROD-28 intake, delegation (b); lead BUILD-47). Both are the legal empty-list
-      shapes of contracts.md §2: `ui-openapi` is a repo-internal GENERATED artifact whose
-      regenerate-and-compare test is the stronger check (`guard` →
-      `backend/tests/test_openapi_drift.py`, replacing the ad-hoc `drift_guard` field); `wake-pack` is
-      a binary-pack sidecar where the STAMP is the whole pinned set (`guard` → the test asserting the
-      STAMP mirrors the released catalog). STAMP-metadata-only = patch. Intake redefinition: the board
-      allowed wake-pack to ride ASSET-6; it is cut NOW instead — ASSET-6 is gated on new wake words
-      and must not hold a declaration; the pack hashes/URLs are NOT touched here (ASSET-6 keeps the
-      drift re-stamp and the immutable-URL switch). Also found at intake: the registry row still says
-      `ui-openapi-v1` against a STAMP at `ui-openapi-v1.1` — fixed by this cut's row.
-      `re-pin owed: satellite` (wake-pack).
 - [ ] **BUILD-51** `[release]` [PROCESS][CONTRACTS][CI] — **The HK-13 sweep (ONE pass, after the commons
       tag set): re-vendor contract-guard v4 / repin v2 / scope-guard, migrate `.repin.toml`, re-stamp
       every pin, CI `repin --check` + dispatch gate** (filed 2026-10-05 at PROD-28 intake, delegation

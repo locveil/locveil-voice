@@ -21,6 +21,19 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-10-05 — BUILD-50 DONE: the two contracts that must NOT be byte-locked now say so, with
+  a pointer that has to resolve.** HK-13 replaced both "enumerate if you like" and the proposed
+  "byte-lock everything" with one rule — every STAMP declares `artifacts`, and an empty list is only
+  legal next to a named guard. That turns two silent omissions into two explicit statements:
+  `ui-openapi`'s generated schema is guarded by regenerate-and-compare (a byte-lock would cut a
+  version on every endpoint change), and `wake-pack`'s STAMP is itself the whole pinned set (the
+  model bytes live on Hugging Face and are verified by the hashes the STAMP carries). Each pointer
+  is asserted from the test it names, so it cannot quietly dangle. The wake-pack cut touched no
+  hash or URL: the known upstream drift of `irina.json` and the mutable `/resolve/main/` URLs remain
+  ASSET-6's business, and a declaration-only patch was the reason not to ride that gated task. One
+  registry lie died on the way: the `ui-openapi` row had named `ui-openapi-v1` since the day the
+  STAMP moved to v1.1 — exactly the mismatch guard v4 will refuse.
+
 - **2026-10-05 — BUG-45 DONE: the first backend CI run in eleven weeks failed on a tree nobody had
   touched.** BUILD-47 made every contract push run `backend-health` — and the first such run went red
   in the type gate, on the Anthropic provider, which no commit since July had changed. Cause: the

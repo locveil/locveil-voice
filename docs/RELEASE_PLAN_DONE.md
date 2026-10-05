@@ -1618,6 +1618,31 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       commit → tag → pushed together.
       docs: guides/tracing (version-line tag + the three-level paragraph in the reference section)
       contracts: trace-format bumped v1 → v1.0.1 (patch: guide enumerated whole; written major unchanged); no re-pin owed — no cross-repo consumer pins it yet
+- [x] **BUILD-50** `[release]` [CONTRACTS] — **DONE 2026-10-05 (declaration-only patch cuts
+      `ui-openapi-v1.1.1` + `wake-pack-v1.0.1`; PROD-28 voice delegation (b); lead BUILD-47).** The
+      two remaining owned contracts now declare `artifacts` — both as the legal EMPTY list with a
+      resolving `guard` pointer (contracts.md §2), each for its own reason. **`ui-openapi`:**
+      `artifacts: []`, `guard: backend/tests/test_openapi_drift.py` (replaces the ad-hoc `drift_guard`
+      field; `artifact`/`generator`/`consumer` stay as informational pointers). The generated
+      `config-ui/openapi.json` is deliberately not byte-enumerated — it moves with the code on every
+      endpoint change and the regenerate-and-compare test is the stronger check; enumerating it would
+      force a version cut on every REST change. **`wake-pack`:** `artifacts: []`, `guard:
+      backend/tests/test_ws_protocol_version.py::test_wake_pack_stamp_mirrors_released_catalog` — the
+      binary-pack sidecar shape, where the STAMP is the whole pinned set. **The `pack` block is
+      byte-for-byte the `wake-pack-v1` content** (asserted while writing the file): no hash, URL or
+      `hf_revision` moved — the drift re-stamp and the immutable-URL switch stay in the gated ASSET-6.
+      Both STAMPs: three-part `version`, new tag, `date`, notes stating the three-level meaning for
+      that contract. **Tests:** `test_openapi_drift.py` gained a STAMP leg (empty list, `guard`
+      resolves to that very file, `artifact`/`generator` pointers resolve, three-part tag);
+      the wake-pack tests gained the empty-list + guard-resolves assertion and the three-part form.
+      Registry rows re-truthed — incl. the `ui-openapi-v1` string that had trailed the STAMP's
+      `ui-openapi-v1.1` since BUILD-36 — and both contract READMEs gained Declaration + three-level
+      Versioning paragraphs. Intake redefinition recorded: the board allowed wake-pack to ride ASSET-6;
+      cut now so a declaration does not wait on new wake words. Left alone by instruction:
+      `contracts/docs-manifest/` (retires in BUILD-52). **Verified:** suite 1471 passed / 7 skipped;
+      guard green; STAMPs one commit → both tags on it → pushed together.
+      docs: none — STAMP metadata, contract READMEs and tests; no manifest node describes the stamps
+      contracts: ui-openapi bumped v1.1 → v1.1.1 (patch: declaration only; repo-internal, no re-pin); wake-pack bumped v1 → v1.0.1 (patch: declaration only, pack hashes/URLs untouched); re-pin owed: satellite (wake-pack)
 ### Models & Assets (ASSET)
 ### Documentation (DOC)
 - [x] **DOC-5b** (P2) — DONE 2026-06-08: regenerated `guides/DONATION_FILE_SPECIFICATION.md` for the v1.1
