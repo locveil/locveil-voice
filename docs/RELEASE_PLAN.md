@@ -397,30 +397,6 @@ _Apply to every remediation task below (from the 4 review docs + QUAL-25/26). So
       `handler_domain` trait) instead of module-level literals. Not a loading violation — filed to record
       the coupling. Evidence: review doc §G.
 
-- [ ] **QUAL-87** [LLM][DEPS] `[release]` — **Migrate the Anthropic LLM provider to the `anthropic` SDK 1.x**
-      (filed 2026-10-05 from BUG-45, which capped the dependency at `<1` to restore the CI type gate).
-      SDK 1.0 (2026-08-20) removed `temperature` (and the other sampling knobs) from
-      `messages.create`; `providers/llm/anthropic.py` passes `temperature=_LLM_TEMPERATURE` in both
-      `enhance_text` and `chat_completion`, so under 1.x the calls fail at type-check AND at runtime
-      (unexpected keyword). Scope at task start: read the SDK's 1.x migration notes rather than
-      guessing — decide what replaces the fixed-temperature determinism the provider relies on (or
-      whether it is simply dropped for this provider), update the capability table if model ids
-      moved, lift the cap in `backend/pyproject.toml` + re-lock, and re-run the provider against the
-      live API before closing (the suite never calls it). Filed `[deferred]` as a filing default — the
-      cap keeps every shipped image on the locked 0.111.0, so nothing is broken for users; the owner
-      may promote it.
-      **RE-TRUTHED 2026-10-05 (intake, owner directive: fix now — re-tagged `[release]`):** checked
-      against the SDK's own `MIGRATION.md` and a scratch 1.11.0 install. (1) The sampling knobs left
-      the method SIGNATURES, not the API: the SDK's stated route for a model that still honours them
-      is `extra_body={"temperature": …}`; models from Opus 4.7 on answer 400 to any request carrying
-      one. So the determinism is neither "replaced" nor "dropped" wholesale — it is kept for the
-      model families that accept it (the default, Haiku 4.5, is one) and omitted for the rest.
-      (2) Nothing else in the 0.x → 1.x change list touches this repo: no raw-response, Text
-      Completions, `output_format`, Bedrock or `httpx`-object use on the SDK boundary; the Python
-      floor (3.11) already clears 1.x's 3.10. (3) The "live API before closing" clause is withdrawn
-      by the owner for this run (no network calls) — replaced by a hermetic test that drives the
-      real SDK through a mock transport and reads the request it would have sent. (4) No model id is
-      changed here; what the intake found beside the SDK question is filed as BUG-51.
 ### Bugs (BUG)
 _Discrete functional defects (distinct from QUAL refactors/quality work). Surfaced from any source; filed before fixing._
 

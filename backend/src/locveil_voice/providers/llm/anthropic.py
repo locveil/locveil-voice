@@ -6,13 +6,36 @@ Provides high-quality text enhancement and chat capabilities.
 """
 
 import os
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 import logging
 
 from .base import LLMProvider, _GENERIC_SYSTEM_FALLBACK, _LLM_TEMPERATURE
 from ...utils.llm_capabilities import output_budget, fit_messages
 
 logger = logging.getLogger(__name__)
+
+# QUAL-87 (SDK 1.x): `temperature` is no longer a parameter of `messages.create`, but it is still
+# part of the API for the models that predate its removal — the SDK's own route for those is
+# `extra_body`, merged into the request JSON as-is. Models from Opus 4.7 on (and every Claude 5
+# model) answer 400 to a request that carries it. So the fixed-temperature determinism this
+# provider is built on (`_LLM_TEMPERATURE`, QUAL-52) is sent to exactly the families listed here
+# — the still-served ones that accept sampling parameters — and to nothing else: an id that is
+# newer, or simply unknown, gets no sampling parameter, and a model released tomorrow can never
+# be refused because of one. Matched by prefix, so dated ids (`claude-haiku-4-5-20251001`)
+# resolve to their family.
+_SAMPLING_MODEL_FAMILIES = (
+    "claude-haiku-4-5",
+    "claude-sonnet-4-6", "claude-opus-4-6",
+    "claude-sonnet-4-5", "claude-opus-4-5",
+)
+
+
+def _sampling_extra_body(model: str) -> Optional[Dict[str, Any]]:
+    """The request-body extras that carry the fixed temperature for `model`, or None when the
+    model does not accept sampling parameters (see `_SAMPLING_MODEL_FAMILIES`)."""
+    if model.startswith(_SAMPLING_MODEL_FAMILIES):
+        return {"temperature": _LLM_TEMPERATURE}
+    return None
 
 
 class AnthropicLLMProvider(LLMProvider):
@@ -94,11 +117,11 @@ class AnthropicLLMProvider(LLMProvider):
             response = await client.messages.create(
                 model=model,
                 max_tokens=max_tokens,
-                temperature=_LLM_TEMPERATURE,
                 system=system_prompt,
                 messages=[
                     {"role": "user", "content": text}
-                ]
+                ],
+                extra_body=_sampling_extra_body(model),
             )
 
             # `content` is a discriminated union of blocks; take the first text block
@@ -134,9 +157,9 @@ class AnthropicLLMProvider(LLMProvider):
             response = await client.messages.create(
                 model=model,
                 max_tokens=max_tokens,
-                temperature=_LLM_TEMPERATURE,
                 system=system_message if system_message else _GENERIC_SYSTEM_FALLBACK,
-                messages=user_messages
+                messages=user_messages,
+                extra_body=_sampling_extra_body(model),
             )
             
             # `content` is a discriminated union of blocks; take the first text block

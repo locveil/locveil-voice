@@ -1420,6 +1420,60 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       strip; `test_cascading_nlu` harness reused). Suite 1464 green; pyright 0.
       docs: none — tracing.md describes stage payloads generically and its additive-keys contract covers
       this. contracts: none — trace-format additive, version stays 1 per the STAMP rule.
+- [x] **QUAL-87** `[release]` [LLM][DEPS] — **DONE 2026-10-05 (owner directive: fix now; filed from
+      BUG-45).** The Anthropic provider runs on the `anthropic` SDK 1.x and the `<1` cap is gone.
+      **SDK:** 0.111.0 → **1.11.0** in `backend/uv.lock` by a targeted
+      `uv lock --upgrade-package anthropic` — one version moved, four packages arrive with it
+      (`httpx2` 2.13.1, `httpcore2` 2.13.1, `truststore` 0.10.4, the emscripten-only
+      `httpx2-jsfetch` 1.0); 365 packages resolved, 361 before. `llm-anthropic` is now
+      `anthropic>=1.0.0` (floor = the major the suite exercises; no ceiling, as for every other
+      dependency here). **What the SDK actually changed** (its `MIGRATION.md` + the installed
+      1.11.0 signatures, not memory): `temperature` / `top_p` / `top_k` left the SIGNATURE of
+      `messages.create` — passing one is a `TypeError` — but not the API; the SDK's stated route
+      for a model that still honours them is `extra_body`, merged into the request JSON as-is.
+      Models from Opus 4.7 on, and every Claude 5 model, answer 400 to a request that carries one.
+      **Call sites — both in `providers/llm/anthropic.py`** (`enhance_text`, `chat_completion`):
+      `temperature=_LLM_TEMPERATURE` → `extra_body=_sampling_extra_body(model)`, which returns
+      `{"temperature": 0.0}` for the still-served families that accept sampling parameters
+      (`claude-haiku-4-5`, `claude-sonnet-4-6`, `claude-opus-4-6`, `claude-sonnet-4-5`,
+      `claude-opus-4-5`, prefix-matched so dated ids resolve) and `None` for every other id.
+      So nothing was replaced and nothing was dropped for the default: on
+      `claude-haiku-4-5-20251001` the request body is the same as before, fixed temperature
+      included. What changes is a model the old code could not use at all — `claude-opus-4-8`,
+      which the master config's comment offers, was sent `temperature` and would have been refused
+      under 0.111.0 as well; it now gets none. An unknown or future id is treated as "newer", so
+      a new model can never be refused because of this. Nothing else from the 0.x → 1.x list
+      applies (no raw responses, Text Completions, `output_format`, Bedrock, or `httpx` objects
+      crossing the SDK boundary; ElevenLabs' own `httpx` use is unrelated). **Config:** no key
+      removed or changed — the temperature was never a config knob (a fixed constant, QUAL-52);
+      `config-master.toml`, the schemas and `config-ui/openapi.json` are untouched
+      (`test_openapi_drift` green). **Default model:** `claude-haiku-4-5-20251001` before and
+      after; it is in the 1.11.0 SDK's own model list. **Test:**
+      `backend/tests/test_anthropic_provider_sdk.py` (20) — the first test to reach the two SDK
+      calls: the provider on the real SDK with only the HTTP transport replaced
+      (`httpx2.MockTransport`, no network), reading back the request the SDK built — model,
+      `system` vs messages, `max_tokens`, temperature present for each listed family and absent
+      for eight ids that refuse it, first text block returned past a thinking block, an API 400
+      raised to the caller; plus a guard that every listed family is still an id the installed
+      SDK names. `httpx2>=2.0` is declared in `dev` because the test imports it (the SDK's own
+      HTTP layer, the maintained `httpx` fork, github.com/pydantic/httpx2). Mutations tried: the
+      old keyword → 17 fail on the SDK's `TypeError`; `extra_body` dropped → 7 fail.
+      **Verified, before and after the code change:** pyright on the provider against 1.11.0 —
+      2 errors before (the two BUG-45 saw), 0 after. Then `backend-health` replayed step for step
+      on TWO environments — synced from the new lock, and pip-resolved unlocked the way CI's gate
+      installs (`pip install -e ".[all,dev]"`; anthropic 1.11.0 in both, uvicorn 0.54 /
+      websockets 17 / openai 3.24 in the unlocked one): import-linter 11 kept,
+      check-no-type-checking, **pyright 0 errors in both**, `uv lock --check`, analyzer
+      profiles, config validation, donations 0 / 0, dependency validator 60/60 on both
+      platforms, armv7 torch-free gate, and the suite **1986 passed / 7 skipped in both**
+      (1966 + these 20). **Not done, by the owner's instruction for this run:** no call to the
+      live API (the filed scope asked for one). What that leaves unproven is only what a mock
+      cannot show — that the service still accepts `temperature` on the five listed families;
+      the SDK's migration notes say it does. **Images:** the Dockerfiles resolve unlocked inside
+      the `pyproject.toml` range, so the next build of any image that carries `llm-anthropic`
+      installs 1.x; before this change such a build would have picked 0.x.
+      docs: none — no manifest node names the SDK version or the sampling setting
+      contracts: none — no versioned surface moved (dependency range, lockfile, one provider, one test; `config-ui/openapi.json` byte-identical)
 ### Bugs (BUG)
 - [x] **BUG-45** `[release]` [CI][DEPS] — **DONE 2026-10-05 (filed + completed same session; found
       by BUILD-47's first push — the first `backend-health` run since 2026-07-20).** CI's type gate was

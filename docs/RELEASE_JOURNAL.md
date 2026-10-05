@@ -21,6 +21,21 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-10-05 — QUAL-87: the parameter that left the signature and stayed in the API.**
+  BUG-45 capped the SDK because the type gate said `messages.create` no longer takes
+  `temperature`, and the natural reading was that the knob was gone. It is not: the SDK removed
+  the keyword because current models refuse sampling parameters, and kept a documented side
+  door for the older ones that still take them. The provider's default model is one of those,
+  and every use of it here is correction, translation or classification, where the fixed
+  temperature is the point. So the migration became a short list — which families still accept
+  it — with the safe default on the other side: an id not on the list gets nothing, because
+  being refused is worse than being a little less repeatable. That also quietly repairs
+  something that was already broken under the old SDK: a config pointing at a newer Opus was
+  sending a parameter the service would reject. The provider had no test at all; the new one
+  runs the real client against a transport that answers from memory and reads back what would
+  have gone over the wire, which is the only way the cap could have been lifted without either
+  a live call or a guess.
+
 - **2026-10-05 — Intake: QUAL-87 promoted, BUILD-57 and BUG-51 filed.** The owner asked for the
   two loose ends of today's sweep to be closed now: the SDK cap BUG-45 put on `anthropic`, and
   the limit BUILD-53 wrote into the workbench pin README. Reading before touching changed the
