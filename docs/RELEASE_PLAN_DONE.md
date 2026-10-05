@@ -1526,7 +1526,7 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       upsamples" is replaced. Owner test green against the `v1.1.0` fixtures (a device that
       registers 16 kHz still receives the 16 kHz `speak_begin` those fixtures record).
       **Verified:** suite 1890 passed / 7 skipped (+15), pyright 0 errors, import contracts 11 kept.
-      docs: guides/audio, arch/dataflow (replies to a satellite are converted to exactly the registered format — the exception to "never upsampled"); guides/websocket-api is byte-locked — its restored sentence lands with the ARCH-66 cut
+      docs: guides/audio, arch/dataflow (replies to a satellite are converted to exactly the registered format — the exception to "never upsampled"; the WebSocket guide is byte-locked — its restored sentence lands with the ARCH-66 cut)
       contracts: none — no versioned surface moved yet (code + tests; the restored guarantee and the retired case land in `ws-protocol-v1.2.0`, ARCH-66)
 ### Tests (TEST)
 - [x] **TEST-0** (P0) — Minimal end-to-end smoke/integration harness (refactor safety net, Gate 0). **DONE

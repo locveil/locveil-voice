@@ -21,6 +21,14 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-10-05 — BUG-50, the record repaired: a docs-verdict line the manifest test could not
+  read.** The push was red in CI on one test, and not a code test: the completion entry's
+  `docs:` line named its two nodes and then carried on after the closing parenthesis, and the
+  manifest check reads everything outside parentheses as node ids. The entry was written after
+  the suite had been run, so the one test that reads the ledger never saw it — the suite is the
+  last step before a commit, after the ledger edit, not before it. The line is reshaped (the
+  remark moved inside the parentheses); nothing else in the entry changed.
+
 - **2026-10-05 — BUG-50: the guarantee goes back to the server, and two older bugs come out with
   it.** `v1.1.0` had resolved the gap between "converted to what you registered" and a server
   that only converts down by correcting the sentence. The owner resolved it the other way: the
