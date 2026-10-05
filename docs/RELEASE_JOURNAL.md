@@ -21,6 +21,23 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-10-05 — BUILD-51 DONE: the sweep — two sources of truth, everything else derived.** The
+  point of HK-13 becomes visible in what this commit DELETES: five hand-kept `files` lists in
+  `.repin.toml`, a manual `git show` re-pin recipe, version strings scattered through pin READMEs.
+  Each was a second copy of something an owner already declares, and each had drifted or could.
+  With repin v2 the pin set is read from the owner's STAMP at the tag — which is how the catalog
+  pin picked up `catalog-contract.md` without anyone here deciding to: the bridge enumerated its
+  guide, the re-pin carried it. The tools now re-vendor through the same mechanism they implement
+  (`repin.py tool …`), recording a hash, so "never edit the vendored file" stops being an honor
+  rule. Guard v4 went from one failure to zero findings in a single pass because BUILD-52 had
+  already retired the one stamp it refused. CI gained the two rungs of the ladder that had been
+  decided at HK-12 and wired nowhere: touch-the-family on every push, and a minor-or-major gate in
+  front of image publishing. The repo-local invariant text was brought in line by the owner's
+  explicit decision relayed during the run — one sentence on trace-format versioning and one tool
+  tag; the pinned block was re-pinned from its commons source, never edited. One cross-repo write,
+  as the convention provides: the commons crossover copy of the catalog moved in the same run and
+  is committed there under this task's name.
+
 - **2026-10-05 — BUILD-52 DONE: the docs manifest stops being a contract and starts being checked.**
   HK-6 had given every repo an internal `docs-manifest` stamp, which versioned the wrong thing: the
   manifest is this repo's own list of docs, edited weekly; what the repos actually share is the

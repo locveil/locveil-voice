@@ -3,11 +3,13 @@
 #
 # Shape (bridge-aligned):
 #   push/PR   → path-filtered fast gates: ledger-guard / backend-health / frontend-health —
-#               plus contract-guard on EVERY push (no path gate, BUILD-47/HK-13).
+#               plus contract-guard + pin staleness on EVERY push (no path gate, HK-13).
 #   dispatch  → the SAME gates (forced for the areas being published) + image publishing:
 #               a targets × languages matrix for the backend images (default: all 6) and the
-#               multi-arch config-ui image — each publish job `needs:` its green health job,
-#               so an image can never be published from a red tree.
+#               multi-arch config-ui image — each publish job `needs:` its green health job
+#               AND the contract-guard job (release staleness gate: a pin trailing its owner
+#               by a minor or major blocks the publish), so an image can never be published
+#               from a red or contract-stale tree.
 #
 # Naming (D-2): RU images keep the unsuffixed names (locveil-voice-armv7 …); EN adds `-en`.
 # Guards (D-6): a published image FAILS the run if /app/assets is non-empty (models must
@@ -103,7 +105,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Ledger discipline guard (scope-guard, vendored at scope-v7.2)
+      - name: Ledger discipline guard (scope-guard, vendored at scope-v7.3.1)
         run: python3 scripts/scope_guard.py --config .scope-guard.toml --check
 
   # ------------------------------------------------------------------ #
@@ -116,15 +118,47 @@ jobs:
   contract-guard:
     runs-on: ubuntu-latest
     steps:
+      # Full history: repin's touch-the-family diffs HEAD against the push/PR base.
       - uses: actions/checkout@v4
-      # The TAG-MISSING rule resolves owned STAMP tags via `git tag -l`, and the
-      # default checkout is tag-less. `fetch-tags: true` is NOT enough: checkout@v4
-      # ignores it on its shallow fetch-by-SHA path (run 29417879036 proved it — the
-      # fetch carried no tag refspec). The explicit fetch is version-proof; shallow stays.
-      - name: Fetch tags (checkout@v4 ignores fetch-tags on the shallow SHA path)
-        run: git fetch --tags --depth=1 origin
-      - name: Contract coherence guard (contract-guard, vendored at contract-guard-v3.1; strict — no --relax-tags, the pushed tag must exist)
+        with:
+          fetch-depth: 0
+      # The TAG-MISSING / STAMP-DRIFT rules resolve owned STAMP tags via `git tag -l` /
+      # `git show <tag>:…`. `fetch-tags: true` is NOT enough: checkout@v4 ignores it on
+      # its fetch-by-SHA path (run 29417879036 proved it — the fetch carried no tag
+      # refspec). The explicit fetch is version-proof.
+      - name: Fetch tags (checkout@v4 ignores fetch-tags on the SHA path)
+        run: git fetch --tags origin
+      - name: "Contract coherence guard (contract-guard v4.0.0, vendored; strict: no --relax-tags, the pushed tag must exist)"
         run: python3 scripts/contract_guard.py --check
+      # Staleness ladder (process/contracts.md §5, BUILD-51). Ordinary pushes fail only on
+      # a MAJOR family gap or on touch-the-family: a commit that edits a pin folder or
+      # its conformance test while that pin trails its owner. Tag lookup is tokenless
+      # `git ls-remote` on the owners' public repos; the commons catalog destination is
+      # skipped here (no sibling checkout in CI), never counted never-pinned.
+      - name: "Pin staleness (repin v2.0.0, vendored): fail-on major + touch-the-family"
+        if: github.event_name != 'workflow_dispatch'
+        env:
+          PUSH_BASE: ${{ github.event.before }}
+          PR_BASE: ${{ github.base_ref }}
+        run: |
+          if [ -n "$PR_BASE" ]; then
+            BASE="origin/$PR_BASE"
+          else
+            BASE="$PUSH_BASE"
+          fi
+          # A branch's first push has an all-zero `before`: nothing to diff against.
+          if [ -n "$BASE" ] && [ -z "$(printf '%s' "$BASE" | tr -d '0')" ]; then BASE=""; fi
+          if [ -n "$BASE" ] && git rev-parse --verify --quiet "$BASE^{commit}" >/dev/null; then
+            python3 scripts/repin.py --check --fail-on major --touched "$BASE"
+          else
+            python3 scripts/repin.py --check --fail-on major
+          fi
+      # Image dispatch = a release act: a family trailing by a MINOR or MAJOR blocks the
+      # publish (publish-backend `needs:` this job); patch and vendored-tool gaps warn —
+      # a commons tool tag must never block a hotfix image (HK-13 q6).
+      - name: "Release staleness gate (image dispatch): fail-on minor"
+        if: github.event_name == 'workflow_dispatch'
+        run: python3 scripts/repin.py --check --fail-on minor
 
   # ------------------------------------------------------------------ #
   # Backend health — shared py-dev-gates trio + the voice-specific      #
@@ -286,7 +320,7 @@ jobs:
   # Backend images — manual only, gated on green backend-health.        #
   # ------------------------------------------------------------------ #
   publish-backend:
-    needs: [backend-health, plan]
+    needs: [backend-health, contract-guard, plan]
     if: github.event_name == 'workflow_dispatch' && inputs.build_backend
     runs-on: ubuntu-latest
     strategy:

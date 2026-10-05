@@ -2,8 +2,9 @@
 
 A **pinned, one-way-inward copy** of the `locveil-commons`-owned problem-report machine
 core (HK-3/PROD-6). Commons is the source of truth: artifact
-`contracts/report-protocol/report-protocol.json` (tag `report-protocol-v1`), normative
-prose `process/problem-reports.md`. Never hand-edit any file here — re-pin on a vN bump.
+`contracts/report-protocol/report-protocol.json` (the pinned tag is recorded in
+`PIN.json`), normative prose `process/problem-reports.md`. Never hand-edit any file here —
+the pin moves only by a re-pin task.
 
 | File | Origin | What it is |
 |---|---|---|
@@ -16,13 +17,10 @@ collector's emitted labels, title prefix, and bundle path, plus the deployment p
 `[reports].repo`, are asserted against this pin (a label mismatch makes tickets silently
 invisible to the triage queue).
 
-Re-pin:
+Re-pin (a deliberate ledger task; the tool copies the owner's enumerated set and stamps
+`PIN.json` — nothing here is ever written by hand):
 
 ```bash
-git -C ../locveil-commons show report-protocol-vN:contracts/report-protocol/report-protocol.json \
-  > contracts/pins/report-protocol/report-protocol.json
-git -C ../locveil-commons show report-protocol-vN:contracts/report-protocol/STAMP.json \
-  > contracts/pins/report-protocol/STAMP.json
-# update PIN.json (version, tag, owner_commit, files sha256s, pin_date), then:
+make -C eval repin CONTRACT=report-protocol
 uv run pytest backend/tests/test_report_protocol_conformance.py -q
 ```

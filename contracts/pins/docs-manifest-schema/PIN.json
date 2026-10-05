@@ -4,7 +4,7 @@
   "tag": "docs-manifest-schema-v1.0.0",
   "owner_repo": "locveil-commons",
   "owner_commit": "99e0d38aa2cfa8358ea0189f27ba38cb450388d3",
-  "pinned_by": "locveil-voice scripts/repin.py (BUILD-43)",
+  "pinned_by": "locveil-voice scripts/repin.py (BUILD-51)",
   "pin_date": "2026-10-05",
   "files": {
     "manifest.schema.json": "755ab6a7c6b11fcdbf72123596f61b1030bcc4f7073cd0a8abf01e8e57e6160e",

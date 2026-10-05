@@ -2,9 +2,11 @@
 
 A **pinned, one-way-inward copy** of the `locveil-satellite`-owned nginx site template
 (owned surface `contracts/esp32-site/` there; artifact
-`provisioning/ansible/templates/esp32-site.conf.j2`, tag **`esp32-site-v1`**). The
+`provisioning/ansible/templates/esp32-site.conf.j2`; the pinned tag is recorded in
+`PIN.json`). The
 satellite provisions the real thing; voice pins it because its hermetic TLS e2e proves the
-provisioning dance against exactly this template. Never hand-edit — re-pin on a vN bump.
+provisioning dance against exactly this template. Never hand-edit — it moves only by a
+re-pin task.
 
 | File | Origin | What it is |
 |---|---|---|
@@ -19,6 +21,6 @@ that breaks the voice contract surfaces at the next re-pin, not on a rack.
 Re-pin:
 
 ```bash
-make -C eval repin CONTRACT=esp32-site       # newest satellite esp32-site-vN tag
+make -C eval repin CONTRACT=esp32-site       # newest satellite esp32-site tag
 uv run pytest backend/tests/test_arch36_tls_e2e.py -q
 ```

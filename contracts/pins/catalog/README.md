@@ -1,8 +1,9 @@
 # catalog — the Irene ↔ bridge contract pin (consumed, local complete copy)
 
-A **pinned, one-way-inward copy** of the `locveil-bridge` catalog contract artifacts at a
-`catalog-vN` tag — the owner's FULL tagged set, byte-identical (a pin is always complete;
-usage never shapes it — `../locveil-commons/process/contracts.md` §2). Never hand-edit.
+A **pinned, one-way-inward copy** of the `locveil-bridge` catalog contract artifacts at the
+tag `PIN.json` records — exactly the set the owner's STAMP enumerates, byte-identical (a pin
+is always complete; usage never shapes it — `../locveil-commons/process/contracts.md` §2).
+Never hand-edit.
 
 This is the **push-time** copy (PROD-16 follow-up, BUILD-34): voice consumes the catalog
 REST API at runtime (`parse_catalog` reads `CatalogResponse`; emitted canonical commands
@@ -15,6 +16,7 @@ framework's mock bridge and the release-cadence cross-suite run against it.
 |---|---|---|
 | `catalog.golden.json` | bridge (byte-identical) | The golden catalog instance |
 | `openapi.json` | bridge (byte-identical) | The API schema of record |
+| `catalog-contract.md` | bridge (byte-identical) | The owner's normative guide — param semantics and the versioning rule; read it before relying on a field |
 | `STAMP.json` | bridge (byte-identical) | The bridge's version stamp |
 | `PIN.json` | **voice-stamped** | The pin record (tag, owner commit, sha256s) |
 

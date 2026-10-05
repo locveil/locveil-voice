@@ -34,9 +34,13 @@ but these rules apply to any task). **Single source of truth** (relocated here f
 - **`trace-format-doc-canonical`** — the "trace file format (reference)" section of `docs/guides/tracing.md`
   is the single source of truth for the saved utterance-trace JSON (`trace_version`; controller envelope +
   satellite merged shape). Any change to what `TraceContext.build_envelope` / `satellite/trace.py` write
-  updates that section in the same change; a reader-breaking change bumps the triple (doc line,
-  `TRACE_FORMAT_VERSION`, `contracts/trace-format/STAMP.json` + tag — DOC-14, the ws-protocol model).
-  Additive keys keep the version; readers ignore unknown keys.
+  updates that section in the same change. Versions are three-level (`contracts/trace-format/STAMP.json`
+  + tag `trace-format-vX.Y.Z` — DOC-14, the ws-protocol model): the WRITTEN `trace_version`
+  (`TRACE_FORMAT_VERSION`) carries the **major** only and moves only on a reader-breaking change (a key
+  removed, renamed, or repurposed); an additive key is a **minor** of the family tag (readers ignore
+  unknown keys); a bytes-only edit to the guide is a **patch**. The whole guide file is the enumerated
+  artifact, so ANY edit to `docs/guides/tracing.md` cuts at least a patch (STAMP + doc version line + tag
+  in the same change).
 - **`cross-repo-source-of-truth`** — for any artifact **shared with a sibling repo**, know which side *owns* it and
   don't write across the boundary the wrong way.
   - **The Irene↔bridge catalog / canonical-command contract is owned by `../locveil-bridge`** (its generator / source
@@ -53,8 +57,8 @@ but these rules apply to any task). **Single source of truth** (relocated here f
     the pin folder's README) and validates the collector's emitted surface against the pin in
     `backend/tests/test_report_protocol_conformance.py`.
   - **Contract layout/coherence is guarded by the vendored `scripts/contract_guard.py`** (commons
-    `packages/contract-guard/`, pinned `contract-guard-v3.1`, BUILD-33/BUILD-37/BUILD-41/BUILD-45) — same consumption model as the
-    scope guard: **never edit the vendored file**, re-pin to move. Registry + per-pin mechanics:
+    `packages/contract-guard/`, pinned `contract-guard-v4.0.0`, BUILD-33/BUILD-37/BUILD-41/BUILD-45/BUILD-51) — same consumption model as the
+    scope guard: **never edit the vendored file**, re-pin to move (`scripts/repin.py tool contract-guard`). Registry + per-pin mechanics:
     `contracts/README.md`; convention: `../locveil-commons/process/contracts.md`.
   - **`../locveil-commons/eval` is the shared test framework** — test *execution logic* (providers/scorers/judge) lives there,
     changed **there not here** (this repo carries only eval YAML + the thin `eval/Makefile`; see *Testing &
@@ -161,24 +165,31 @@ locveil-commons (convention: `../locveil-commons/process/council.md`); decisions
 the board, never in chat.
 <!-- locveil:end cross-repo-board -->
 
-<!-- locveil:begin contract-triad scope-v7.1 -->
+<!-- locveil:begin contract-triad scope-v7.3.1 -->
 **Locveil contract triad** — digest; normative: `../locveil-commons/process/contracts.md`
-(§2–§5) + `process/ledger-discipline.md` §7 (HK-12). On disagreement those files win.
-Never edit this block in place — edit in commons, then re-pin (`process/claude-md.md` §3).
+(§2–§5; HK-5, HK-12, HK-13) + `process/ledger-discipline.md` §7. On disagreement those
+files win. Never edit this block in place — edit in commons, then re-pin
+(`process/claude-md.md` §3).
 
 - **surface-with-the-artifact** — creating or bumping a versioned surface cuts its owned
-  `contracts/<name>/` STAMP + `<family>-vN` tag + registry row in the SAME change; new
-  stamps enumerate `artifacts`; an enumerated artifact edited without a version move
-  fails at commit (contract-guard v3 CONTENT-DRIFT/ORPHAN-TAG).
-- **pins-complete-and-verbatim** — a pin = the owner's full tagged artifact set,
-  byte-identical + owner STAMP verbatim + strict PIN.json; it moves ONLY by a deliberate
-  re-pin ledger task (the vendored repin tool) — never hand-edits, never auto-fetch.
+  `contracts/<name>/` STAMP + tag + registry row in the SAME change. Every STAMP declares
+  `artifacts` — what consumers pin AND what is byte-locked (empty only with a `guard`
+  pointer; never a `README.md`); an enumerated file, or the STAMP itself, edited without
+  a version move fails at commit.
+- **three-level versions** — tags are `<family>-vX.Y.Z`: major = breaking, minor = the
+  surface changed, patch = bytes only; runtime-served versions carry the major only.
+- **pins-complete-and-verbatim** — a pin = exactly the owner's enumerated set at the tag,
+  flat and byte-identical, + owner STAMP verbatim + strict PIN.json; only `PIN.json` and
+  `README.md` in a pin folder are the consumer's. It moves ONLY by a deliberate re-pin
+  ledger task (vendored repin derives the set from the owner's STAMP) — never
+  hand-edits, never auto-fetch.
 - **contracts-verdict** — every completion entry records `contracts: <what moved>` or
   `contracts: none — <why>`; "moved" = created, bumped, or FIRST CONSUMED a cross-repo
   surface; owner-side bumps add `re-pin owed: <consumers>`.
-- **staleness ladder (§5)** — pre-commit `repin --check` warns (offline-safe, tokenless
-  remote-first); push CI fails only on touch-the-family / release workflows / major-gap
-  (per-repo config); the `.repin.toml` `[[tool]]` manifest watches vendored guard tags.
+- **enforcement (§4–§5)** — contract-guard and repin run in the hook and on EVERY push,
+  no path gate (the ledger guard keeps its own); layer-2 tests run when contracts move; pre-commit staleness only warns; push CI fails
+  on a major gap or touch-the-family, release/dispatch gates on minor-or-major; the
+  `.repin.toml` `[[tool]]` manifest pins vendored tools by tag + sha256.
 <!-- locveil:end contract-triad -->
 
 **Legend — historical numbers → names.** Frozen journal/ledger archives and review docs reference these invariants by

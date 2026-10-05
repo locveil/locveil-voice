@@ -20,9 +20,9 @@ re-pin from the owner when it moves.
 
 | Pin | Owner | Notes |
 |---|---|---|
-| [`catalog`](pins/catalog/README.md) | locveil-bridge (pinned tag: see `pins/catalog/PIN.json`) | LOCAL complete copy for the push-time schema check (`backend/tests/test_catalog_contract_conformance.py`); one `make repin` updates it and the commons crossover copy at the same tag |
-| [`report-protocol`](pins/report-protocol/README.md) | locveil-commons (tag `report-protocol-v1`) | problem-report machine core; conformance: `backend/tests/test_report_protocol_conformance.py` |
-| [`esp32-site`](pins/esp32-site/README.md) | locveil-satellite (tag `esp32-site-v1`) | Plane-B nginx site template; conformance: `backend/tests/test_arch36_tls_e2e.py` |
+| [`catalog`](pins/catalog/README.md) | locveil-bridge (pinned tag: see `pins/catalog/PIN.json`) | LOCAL complete copy (golden + openapi + the owner's normative guide `catalog-contract.md`) for the push-time schema check (`backend/tests/test_catalog_contract_conformance.py`); one `make repin` updates it and the commons crossover copy at the same tag |
+| [`report-protocol`](pins/report-protocol/README.md) | locveil-commons (tag `report-protocol-v1.0.1`) | problem-report machine core; conformance: `backend/tests/test_report_protocol_conformance.py` |
+| [`esp32-site`](pins/esp32-site/README.md) | locveil-satellite (tag `esp32-site-v1.1.0`) | Plane-B nginx site template; conformance: `backend/tests/test_arch36_tls_e2e.py` |
 | [`docs-manifest-schema`](pins/docs-manifest-schema/README.md) | locveil-commons (tag `docs-manifest-schema-v1.0.0`) | the JSON Schema `docs/manifest.json` validates against — the manifest itself is instance data, not a contract; conformance: `backend/tests/test_docs_manifest.py` (hermetic, reads the pinned copy) |
 | [`core-py`](pins/core-py/README.md) | locveil-commons (pinned tag: see `pins/core-py/PIN.json`) | the shared entry-point discovery engine — the estate's FIRST vendored RUNTIME code (ARCH-58, strict): the importable copy `utils/entry_point_loader.py` must stay byte-identical to the pin; conformance: `backend/tests/test_core_py_pin_identity.py` |
 
@@ -32,10 +32,14 @@ the commons `catalog/` copy the eval framework's mock bridge serves (voice stamp
 catalog PIN.jsons via `scripts/repin.py` — the two copies move together or not at all)._
 
 Guards: layer 1 is the vendored `scripts/contract_guard.py` (commons
-`packages/contract-guard/`, pinned at tag **`contract-guard-v3.1`** — never edit the
-vendored file, re-pin to move; runs in `hooks/pre-commit` with `--relax-tags` (mid-bump
-tolerance) and strict in the `contract-guard` CI job on every push — no path gate —
-`--check` only); layer 2 is the per-contract version/drift tests and per-pin conformance
-tests listed above, which CI runs whenever `contracts/**` or an owned artifact path moves. Staleness (a pin trailing its owner) is
-the vendored repin tool's job — `.repin.toml` + the `process/contracts.md` §5 severity
-ladder (BUILD-43).
+`packages/contract-guard/`, pinned at tag **`contract-guard-v4.0.0`** — never edit the
+vendored file, `scripts/repin.py tool contract-guard` to move; runs in `hooks/pre-commit`
+with `--relax-tags` (mid-bump tolerance) and strict in the `contract-guard` CI job on every
+push — no path gate — `--check` only); layer 2 is the per-contract version/drift tests and
+per-pin conformance tests listed above, which CI runs whenever `contracts/**` or an owned
+artifact path moves. Staleness (a pin or vendored tool trailing its owner) is the vendored
+repin tool's job — `.repin.toml` + the `process/contracts.md` §5 severity ladder: the hook
+warns, push CI fails on a major gap or on touch-the-family, the image-dispatch gate and
+`make -C eval repin-check` fail on a minor-or-major gap. A pin's file set is whatever the
+owner's STAMP enumerates at the tag; this repo's `.repin.toml` names only the family, the
+destination and the conformance test.

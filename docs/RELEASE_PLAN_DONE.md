@@ -1643,6 +1643,42 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       guard green; STAMPs one commit → both tags on it → pushed together.
       docs: none — STAMP metadata, contract READMEs and tests; no manifest node describes the stamps
       contracts: ui-openapi bumped v1.1 → v1.1.1 (patch: declaration only; repo-internal, no re-pin); wake-pack bumped v1 → v1.0.1 (patch: declaration only, pack hashes/URLs untouched); re-pin owed: satellite (wake-pack)
+- [x] **BUILD-51** `[release]` [PROCESS][CONTRACTS][CI] — **DONE 2026-10-05 (the HK-13 sweep, one
+      pass, one commit here + one in commons for the catalog crossover copy; PROD-28 voice
+      delegation (c); lead BUILD-47).** **Tools re-vendored via repin itself:** `repin` v1 →
+      `repin-v2.0.0` (bootstrapped from the commons copy), `contract-guard` v3.1 →
+      `contract-guard-v4.0.0`, `scope-guard` v7.2 → `scope-v7.3.1` (block-only cut — script bytes
+      identical); each `[[tool]]` entry now records `path` + `pinned_tag` + `sha256`, so a locally
+      edited vendored file fails the check. **`.repin.toml` migrated:** every `files` list dropped
+      (five families — the pin set is what the owner's STAMP enumerates at the tag); the commons
+      catalog destination's `conformance` is a real path in the dest repo
+      (`eval/tests/test_contracts_pin.py`, was prose). **Every pin re-stamped with v2:** `catalog`
+      v1.9 → `catalog-v1.10.0` at BOTH destinations in one run (the set gains the owner's normative
+      guide `catalog-contract.md`; golden + openapi bytes unchanged), `report-protocol` v1 →
+      `report-protocol-v1.0.1`, `esp32-site` v1 → `esp32-site-v1.1.0` (template comment path only),
+      `core-py` re-stamped at `core-py-v1.1`, `docs-manifest-schema` re-stamped at v1.0.0 (BUILD-52
+      had pinned it with v1). The re-stamp repaired the two rotted `irene/tests/…` `conformance`
+      pointers (esp32-site, report-protocol) and makes every pin strict under guard v4. **Block
+      re-pin:** `contract-triad` copied verbatim from commons at `scope-v7.3.1`, hash updated in
+      `.scope-guard.toml` (identical to the hash the three sibling repos pin). **CI:** the un-gated
+      `contract-guard` job gained `repin --check --fail-on major --touched <base>` (push: the
+      `before` SHA; PR: the base branch; `fetch-depth: 0` + explicit tag fetch) and, on
+      `workflow_dispatch`, the release gate `--fail-on minor`; `publish-backend` now `needs:` that
+      job, so a pin trailing by a minor or major blocks an image publish while patch and tool gaps
+      only warn. `make -C eval repin-check` moved `--fail-on any` → `minor` (owner ruling q6).
+      **Prose:** registry rows + Guards paragraph (current tags only — guard v4 REGISTRY-VERSION);
+      pin READMEs (catalog file table gains the guide; the manual `git show` re-pin recipe in the
+      report-protocol README deleted; version strings replaced by "see PIN.json"); `eval/README.md`
+      ladder wording. **CLAUDE.md (owner decision relayed verbatim by the coordinator 2026-10-05:
+      "I want these updates as a part of this run"):** `trace-format-doc-canonical` re-worded to
+      the three-level rule; the contract-guard tag mention moved to v4.0.0; nothing else — the
+      `ws-protocol-doc-canonical` amendment stays with ARCH-61. No conformance test needed
+      adapting: none lists pin files, and guard v4 owns pin completeness. **Verified:** contract-guard
+      4.0.0 strict — 0 failures, 0 warnings; `repin --check --fail-on any` exit 0 (6 pin rows + 3
+      tools current); suite 1473 passed / 7 skipped; in commons, contract-guard green and
+      `eval/tests` 65 passed against the re-pinned crossover copy, with no commons test changed.
+      docs: eval/readme (the staleness-ladder paragraph + the `repin-check` gloss)
+      contracts: catalog pin bumped v1.9 → v1.10.0 (both dests, one run — bridge's `re-pin owed` discharged); report-protocol pin bumped v1 → v1.0.1 (commons' owed discharged); esp32-site pin bumped v1 → v1.1.0 (satellite's owed discharged); core-py + docs-manifest-schema re-stamped at unchanged tags (strict v2 PIN.json); consumed tools bumped: contract-guard v3.1 → v4.0.0, repin v1 → v2.0.0, scope-guard v7.2 → v7.3.1
 - [x] **BUILD-52** `[release]` [DOC][CONTRACTS] — **DONE 2026-10-05 (docs-manifest remodel; HK-13
       decision 6, PROD-28 voice delegation (b) tail; lead BUILD-47; executed first in the sweep
       session because guard v4 refuses the STAMP it retires).** `docs/manifest.json` is instance

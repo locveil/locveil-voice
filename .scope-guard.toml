@@ -1,4 +1,4 @@
-# scope-guard config for locveil-voice (BUILD-30; vendored scripts/scope_guard.py at scope-v7.2 per BUILD-46).
+# scope-guard config for locveil-voice (BUILD-30; vendored scripts/scope_guard.py at scope-v7.3.1 per BUILD-51).
 # Normative convention: ../locveil-commons/process/ledger-discipline.md (HK-1 / PROD-13).
 # Behavior changes happen in locveil-commons, never here — re-pin to move.
 
@@ -44,4 +44,4 @@ name = "cross-repo-board"
 sha256 = "0f5e8f63b55c752ddfd542e112f06dd1a6d615c38f1b6f1d57dbeaee7dbdb86a"
 [[claude.blocks]]
 name = "contract-triad"
-sha256 = "a3fe8d6b58d86fd997ef8e17bf8b8216aba09ad4f4978b0bb56fd05ce12d1fc2"
+sha256 = "eb3a35f535467a9a6bb61ba7ceea0b02d7fe8415b9865930ea5a2c8d96e43807"

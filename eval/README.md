@@ -81,7 +81,7 @@ make serve CONFIG=embedded-armv7                 # bring Irene up locally with a
 make compare CONFIGS="embedded-armv7 standalone" # WER/UX comparison across configs (local bring-up loop)
 make view                                        # results UI
 make repin CONTRACT=catalog                      # re-pin a consumed contract from its owner's newest family tag
-make repin-check                                 # release-time staleness gate: red when a pin trails its owner
+make repin-check                                 # release-time staleness gate: red when a pin trails its owner by a minor or major version
 ```
 
 The device suite asserts against **pinned** contract copies (the bridge catalog + the
@@ -90,9 +90,11 @@ a local push-time copy at `../contracts/pins/catalog/` — one `make repin` upda
 the same tag). `make repin` / `make repin-check` (backed by the vendored
 `../scripts/repin.py`; families declared in `../.repin.toml`) are how those pins move: a
 re-pin is a deliberate act followed by the conformance tests. Staleness runs on a
-severity ladder — the pre-commit hook warns (offline-safe, never blocks a commit),
-`make repin-check` is the release-time hard gate — so an owner tagging a new contract
-version never breaks this repo's CI on its own.
+severity ladder — the pre-commit hook warns (offline-safe, never blocks a commit); a push
+fails only when a pin trails by a major version, or when the commit itself edits a pin or
+its conformance test while that pin is behind; `make repin-check` is the release-time
+gate and fails on a minor-or-major gap (a patch gap only warns). So an owner tagging a
+new contract version never breaks this repo's CI on its own.
 
 For model comparison, `make compare` writes `results-ws-<target>-<config>.json` per config so you
 can diff WER side by side. Keep the `reference:` fixed; expect WER to differ per model — that's the

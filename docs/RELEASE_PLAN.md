@@ -518,40 +518,6 @@ size-matched to the Russian stack; language is a per-config/deployment choice (a
       board** (D-4/D-5), seeded when BUILD-21 lands, not decided unilaterally here. Scope for that design: which
       repo owns the unified compose, health-gated `depends_on` vs. tolerant clients, whether the units collapse
       into one, and how `update.sh` stays per-repo when the compose is not. Related: BUILD-18 (ops conformance).
-- [ ] **BUILD-51** `[release]` [PROCESS][CONTRACTS][CI] — **The HK-13 sweep (ONE pass, after the commons
-      tag set): re-vendor contract-guard v4 / repin v2 / scope-guard, migrate `.repin.toml`, re-stamp
-      every pin, CI `repin --check` + dispatch gate** (filed 2026-10-05 at PROD-28 intake, delegation
-      (c); lead BUILD-47; **WAITS on commons**: `contract-guard-v4.0.0`, `repin-v2.0.0`, the next scope
-      tag carrying the re-worded contract-triad block, `report-protocol-v1.0.1` — and on the bridge's
-      `catalog-v1.10.0` + satellite's `esp32-site-v1.1.0`). Scope: re-vendor the tag set (`[[tool]]`
-      entries gain path + sha256; CLAUDE.md block re-pin; registry/CLAUDE.md/CI guard-tag mentions
-      move); drop `files` from `.repin.toml` (pin sets derive from the owner STAMP's `artifacts`) and
-      make every `conformance` a real file path (the commons-dest catalog entry is prose today);
-      re-stamp every pin — catalog BOTH dests at `catalog-v1.10.0` (gains the enumerated
-      `catalog-contract.md`), `report-protocol-v1.0.1`, `esp32-site-v1.1.0`, `core-py` at its current
-      tag — which also fixes the two rotted `irene/tests/…` `conformance` pointers in the
-      `esp32-site` + `report-protocol` PIN.json (verified at intake; pins are never hand-edited, so
-      they wait for the re-stamp); delete the manual re-pin recipe in
-      `contracts/pins/report-protocol/README.md`; add the CI `repin --check` step (touch-the-family
-      from the diff base) and the image-dispatch gate (families fail on minor+, patch/tool gaps warn);
-      re-truth the own-dialect invariant wording that HK-13 outdated (`trace-format-doc-canonical`'s "additive keys
-      keep the version" → keep the SERVED major, cut a minor; guard-tag mentions) — CLAUDE.md edits
-      held for this owner-visible sweep rather than made piecemeal.
-      **SWEEP-GO RECONCILIATION 2026-10-05 (all owner tags verified on their origins):** the tag set
-      as actually cut — `contract-guard-v4.0.0`, `repin-v2.0.0`, **`scope-v7.3.1`** (block-only:
-      `scope_guard.py` bytes identical to v7.2; the contract-triad block text changed — pin v7.3.1,
-      not v7.3.0), `report-protocol-v1.0.1`, `catalog-v1.10.0`, `esp32-site-v1.1.0`; `core-py` stays
-      at `core-py-v1.1` (re-stamped for a strict v2 PIN.json). Ordering: guard v4's STAMP-DRIFT
-      fails on `contracts/docs-manifest/STAMP.json` (it moved after its tag), so **BUILD-52 lands
-      FIRST** (it retires that STAMP; pinned with the still-vendored repin v1) and this sweep
-      re-stamps its pin with v2 along with the rest. The commons catalog copy is the one write
-      outside this repo: committed in commons as its own commit naming this task. CI wiring as
-      ruled: `repin --check --fail-on major --touched <base>` in the un-gated contract-guard job;
-      release/dispatch path + `make -C eval repin-check` at `--fail-on minor`. CLAUDE.md scope
-      (coordinator ruling relayed 2026-10-05): the contract-triad block re-pinned verbatim from
-      commons at `scope-v7.3.1`, the `trace-format-doc-canonical` sentence re-truthed to the
-      three-level rule, vendored-tool tag mentions moved — minimal, listed for the owner; the
-      `ws-protocol-doc-canonical` amendment is NOT here (ARCH-61).
 - [ ] **BUILD-53** `[release]` [CONTRACTS][UI] — **Pin the `workbench` family: config-ui builds
       against the commons plugin contract through a live `file:` link with NO pin** (filed 2026-10-05
       at the PROD-28 sweep-GO, coordinator-assigned; lead BUILD-47). Commons cut `workbench-v1.3.0`
