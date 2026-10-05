@@ -507,22 +507,6 @@ size-matched to the Russian stack; language is a per-config/deployment choice (a
       board** (D-4/D-5), seeded when BUILD-21 lands, not decided unilaterally here. Scope for that design: which
       repo owns the unified compose, health-gated `depends_on` vs. tolerant clients, whether the units collapse
       into one, and how `update.sh` stays per-repo when the compose is not. Related: BUILD-18 (ops conformance).
-- [ ] **BUILD-54** `[release]` [DEPS][SECURITY] — **Python lock: the five patch-level security bumps**
-      (filed 2026-10-05, owner request: clear the open Dependabot alerts; 47 open at intake — 15 on
-      `backend/uv.lock`, 15 on a root `uv.lock`, 17 on `config-ui/package-lock.json`). Targeted
-      `uv lock --upgrade-package` only, no blanket upgrade, `pyproject.toml` untouched (every range
-      already admits the patched version; `anthropic<1` from BUG-45 stays): **aiohttp** 3.14.1 →
-      ≥ 3.14.3, **anyio** 4.14.0 → ≥ 4.14.2 (critical), **cryptography** 49.0.0 → ≥ 50.0.0,
-      **pyasn1** 0.6.3 → ≥ 0.6.4, **urllib3** 2.7.0 → ≥ 2.8.0. **Intake finding — there is one
-      lockfile, not two:** the root `uv.lock` moved to `backend/uv.lock` at BUILD-36 (2026-07-13)
-      and no longer exists on `main`, yet GitHub's dependency graph still lists a `uv.lock`
-      manifest at the repo root and keeps raising alerts against it (its newest are dated today);
-      whether those 15 close once `backend/uv.lock` is patched is observed after the push, not
-      assumed. **Acceptance:** the full backend suite + the CI gate set green on an environment
-      synced from the new lock — in particular the WS machine-core owner test, which records real
-      frames through the anyio/websocket stack; `config-ui/openapi.json` regenerates byte-identical;
-      contract-guard strict and `repin --check --fail-on any` clean; no enumerated contract
-      artifact moves. torch and setuptools are BUILD-55 (coupled, and a heavier decision).
 - [ ] **BUILD-55** `[release]` [DEPS][SECURITY] — **torch ≥ 2.13.0, and with it setuptools ≥ 83.0.0**
       (filed 2026-10-05 with BUILD-54). Two alerts that are one move: the locked **torch** 2.12.1
       declares `setuptools<82`, which is what holds **setuptools** at 81.0.0 —

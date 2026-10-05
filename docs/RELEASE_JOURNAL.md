@@ -21,6 +21,21 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-10-05 — BUILD-54: forty-seven alerts, and which file they were about.** The owner asked
+  for the open Dependabot alerts to be cleared. Fifteen of them named a lockfile at the repo
+  root that has not existed since the backend moved under `backend/` in July — GitHub's
+  dependency graph kept the old manifest and went on matching advisories against it, so every
+  Python advisory was counted twice. The real lock took five targeted bumps (aiohttp, anyio,
+  cryptography, pyasn1, urllib3) and nothing else moved; anyio stopped at 4.14.2 because the
+  next line wants a newer `typing-extensions`, and widening the blast radius to chase a version
+  the alert does not ask for was not the job. Worth writing down because it changes what
+  "fixed" means here: the lock is not what the images are built from. The Dockerfiles copy it
+  and then install with the pip interface, which ignores it, and CI's gate environment is
+  resolved by pip as well — so CI had already been running today's suite on the patched
+  versions, and a controller image is patched by rebuilding it, not by this commit. Verified
+  the other way round for that reason: a scratch environment synced from the lock itself, the
+  whole health job replayed on it, the WS owner test recording real frames through the bumped
+  stack, and the OpenAPI snapshot regenerated to the same bytes. contracts: none. docs: none.
 - **2026-10-05 — ARCH-65: the invariant says what the folder holds.** The machine core went live
   at `ws-protocol-v1.1.0` with `ws-protocol-doc-canonical` still describing only the document; the
   session that made the cut handed the amendment back as a patch rather than edit repo law on a
