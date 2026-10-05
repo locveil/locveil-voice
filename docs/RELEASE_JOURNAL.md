@@ -21,6 +21,23 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-10-05 — ARCH-61: the cut, and why the guide grew more than the folder did.** Eleven files
+  became contract in one commit, but the larger change is in the document they answer to. Every
+  time a fixture needed a verdict the guide could not support, the guide had to say something
+  first — and several of those things turned out to be true of the server and simply never
+  written: an error ends the connection; a registration needs exactly two keys; a mode nobody
+  documented selects batch; reply audio is brought down to a device's contract and never up. The
+  last one was written wrong, not just missing. The one genuinely new obligation is the quiet
+  one: a client must ignore what it does not know, before the ack as well as after. Everything
+  the three-level version rule promises about minors rests on that sentence, and until today no
+  device was bound by it. The section describing the files is deliberately in the guide and
+  nowhere else, and a test now holds it to that: a key the fixture files use and the guide does
+  not name fails the build, because a key nobody outside this repo can look up is not part of a
+  contract. One thing did not land with the cut: the invariant amendment in CLAUDE.md. The text
+  is approved and recorded on the board, but the session doing the work could verify only that
+  it was told so — and "an agent said the owner agreed" is not a reason to rewrite the file that
+  instructs agents. It is filed with the exact wording instead of being applied on trust.
+
 - **2026-10-05 — BUG-49: the first CI run of the owner test, and what "network" means.** One
   leg failed in CI that passes locally, on the one transcript that pulls the plug. The cause was
   not in the fixture and not in the server: the tap had hard-coded the close code by which the

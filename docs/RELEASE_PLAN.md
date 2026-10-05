@@ -95,7 +95,7 @@ Living findings behind the tasks (`read-at-start-record-at-completion`). `[x]` =
 | `docs/design/multilingual_deployment.md` `[x]` (2026-07-01; design, no code) | real English deployment across all 3 Docker arches + English eval — slim cross-arch model set size-matched to Russian (armv7 EN ASR spike zipformer-en-20M vs moonshine-tiny-en; EN Piper amy; whisper multilingual on 64-bit); one-bulk-per-language eval; auto-detect NOT wired to ASR/TTS so language is a per-config choice | I18N-1 ✓ → I18N-2..6 |
 | `../locveil-commons/docs/design/productization.md` `[x]` (AGREED 2026-07-08, joint session, both repos; MIGRATED to the commons 2026-07-11 per D-2 — local file is a pointer; name executed as **Locveil**) | BUILD-20 — the productization umbrella (written as "Domovoy"): product name (D-1), ONE commons repo = eval-commons renamed `locveil-commons` with three ownership regimes (D-2/D-3), PROD-board cross-repo idea discipline + board-as-outbox (D-4/D-5), `locveil-satellite` third product repo + ESP32 estate relocation (D-6/D-7), rule-of-two extractions loader+logging (D-8), two-apps-shared-kit config UI (D-9), ledgers kept over trackers (D-10), semver components + calver suite manifests + contract tagging/scripted re-pin (D-11), normative ops spec + CLAUDE.md invariant blocks/drift guard + landing page + report-policy spec (D-12), drift inventory (§2), commons seed backlog (§3) | BUILD-20 ✓ → BUILD-21/22/23/24, ARCH-42/43, BUILD-18 (narrowed); bridge intake VWB-29, CORE-7, OPS-14/15/16 |
 | `docs/design/core_py_loader_extraction.md` `[x]` (AGREED 2026-07-16, interactive owner session, 2 rounds) | ARCH-42 — extract the entry-point discovery engine to commons `packages/core-py` (module `entry_point_loader`, class-only — consumers own their singleton): faithful surface + `base_class=` validation (bridge's DevicePort check natively), single-EP `get_provider_class`, names-without-import `list_registered`; consumption = vendored module at `core-py-vN` tags with STRICT pin (contracts/pins/core-py + byte-identity test — first vendored RUNTIME code); voice migration = full 20-file sweep to a new `utils/entry_points.py` singleton; §5 = the bridge CORE-7 adoption contract; metadata quartet/namespaces/aux stay put | ARCH-42 ✓ → ARCH-58; commons skeleton via PROD-8; bridge CORE-7 |
-| `docs/design/ws_machine_core.md` `[x]` (AGREED 2026-10-05 — satellite-side review: approve-with-changes, folded in; HK-13 decision 9 / PROD-28) | ARCH-60 — the WS protocol's hand-written machine core, subordinate to `websocket-api.md`: one `frames.golden.json` (20 frame definitions with key lists + JSON types; valid / invalid / unknown-type cases, closed violation vocabulary, c2s invalid cases carry the server's proven `expect`), nine one-scenario JSONL transcripts (`kind`/`conn`/`channel`/`direction`, binary runs as markers, `repeat` lines, order normative per connection AND direction, rules T-1..T-8), `ws-protocol.schema.json` (2020-12, open `additionalProperties`); owner test = a server-side frame tap over six WS suites (real frames conform strictly, every frame + transcript witnessed with real values, handshake cases replayed, schema ≡ fixtures, document ≡ core); receiver obligations per verdict (valid MUST accept · unknown MUST ignore in every state · invalid MAY reject, never fault); three-level versioning sharpened (a corrected case is a minor; names never renamed inside a major; `core_format`); document findings F-1..F-10 + code findings C-1..C-4; review record §10; execution split §9 | ARCH-60 ✓ → BUG-46, TEST-23, ARCH-62, ARCH-63, ARCH-64, ARCH-61 |
+| `docs/design/ws_machine_core.md` `[x]` (AGREED 2026-10-05 — satellite-side review: approve-with-changes, folded in; IMPLEMENTED same day, §11; HK-13 decision 9 / PROD-28) | ARCH-60 — the WS protocol's hand-written machine core, subordinate to `websocket-api.md`: one `frames.golden.json` (20 frame definitions with key lists + JSON types; valid / invalid / unknown-type cases, closed violation vocabulary, c2s invalid cases carry the server's proven `expect`), nine one-scenario JSONL transcripts (`kind`/`conn`/`channel`/`direction`, binary runs as markers, `repeat` lines, order normative per connection AND direction, rules T-1..T-8), `ws-protocol.schema.json` (2020-12, open `additionalProperties`); owner test = a server-side frame tap over six WS suites (real frames conform strictly, every frame + transcript witnessed with real values, handshake cases replayed, schema ≡ fixtures, document ≡ core); receiver obligations per verdict (valid MUST accept · unknown MUST ignore in every state · invalid MAY reject, never fault); three-level versioning sharpened (a corrected case is a minor; names never renamed inside a major; `core_format`); document findings F-1..F-10 + code findings C-1..C-4; review record §10; execution split §9 | ARCH-60 ✓ → BUG-46 ✓, TEST-23 ✓, ARCH-62 ✓, ARCH-63 ✓, ARCH-64 ✓, ARCH-61 ✓ (cut `ws-protocol-v1.1.0`); ARCH-65 (the CLAUDE.md amendment) |
 | `config-ui/docs/donation_editor_ux.md` | human-friendly donations editor design | UI-1/2/3 |
 | `docs/review/test7_triage.md` (2026-06-15) | TEST-7 Phase-B worklist — 82-failure triage (delete/rewrite/fix) + risk-ranked coverage tiers + fix-code suspects | TEST-7 ✓ |
 | `docs/review/api_result_contract_review.md` `[x]` (2026-06-27) | API execution-result response-contract consistency — 5 findings (reply field name, 3-way intent split, divergent metadata under one model, confidence placement, live `None` internal misread); root cause = no shared serializer | QUAL-54 ✓, QUAL-55 |
@@ -301,26 +301,18 @@ See `docs/review/phase1_architecture_map.md` §5.
       recorded (doc or journal) + follow-up tasks if gaps exist (completion cue not
       device-addressed, or no timestamp in the initiation ack). Satellite-side contact
       point: `../locveil-satellite` FW-1 intake record (REQ-33).
-- [ ] **ARCH-61** [WS][CONTRACTS] `[release]` — **WS machine core — THE CUT `ws-protocol-v1.1.0`** (filed
-      2026-10-05 at PROD-28 intake; family lead BUILD-47; design `docs/design/ws_machine_core.md`, AGREED
-      via ARCH-60). **Split at intake 2026-10-05 (design §9):** the build is six separable changes and
-      `one task = one commit` wins — BUG-46 (error paths), TEST-23 (witness tests), ARCH-62 (slice 1),
-      ARCH-63 (slice 2), ARCH-64 (slice 3) land first, each leaving the suite green with the core files
-      NOT yet enumerated; this task is the single commit that makes them contract. **Scope:** every
-      guide edit at once (`docs/guides/websocket-api.md` is byte-locked — the forward-compatibility rule
-      and the receiver obligations, findings F-2..F-6 and F-8..F-10, the "machine-readable core"
-      section carrying everything a harness relies on, the frame reference table, the header line
-      naming the new tag); the document leg of the owner test (document ≡ core); `STAMP.json` →
-      version `1.1.0`, tag `ws-protocol-v1.1.0`, `artifacts` enumerating the guide plus each of the
-      eleven core files individually (repo-root-relative, unique basenames); the registry row and
-      `contracts/ws-protocol/README.md`; the owner-approved amendment to `ws-protocol-doc-canonical`,
-      verbatim — "`contracts/ws-protocol/` additionally holds the protocol's hand-written machine core
-      (golden frames, transcripts, schema). It is subordinate to the document: on disagreement the
-      document wins and the core is fixed. Never generated from code; a wire change updates document
-      and core in the same change." Flow: cut commit → tag on it → commit and tag pushed together. The
-      served `protocol_version` stays `"1"`. On the cut: `re-pin owed: satellite` (FW-1a's conformance
-      test consumes the pinned fixtures from the day they exist, never gated on them) and commons
-      (PROD-28 build item 6 — its eval WS provider pins `ws-protocol` when the core lands).
+- [ ] **ARCH-65** [WS][CONTRACTS] `[release]` — **Apply the owner-approved amendment to
+      `ws-protocol-doc-canonical` in `CLAUDE.md`** (filed 2026-10-05 at the ARCH-61 cut; PROD-28 voice
+      delegation (d), owner approval recorded on the commons board — council HK-13, round 2 q3). The
+      machine core is live at `ws-protocol-v1.1.0`; the invariant still describes only the document.
+      Append to the `ws-protocol-doc-canonical` bullet, VERBATIM and nothing else:
+      "`contracts/ws-protocol/` additionally holds the protocol's hand-written machine core (golden
+      frames, transcripts, schema). It is subordinate to the document: on disagreement the document
+      wins and the core is fixed. Never generated from code; a wire change updates document and core
+      in the same change." Not applied by the cut session on purpose: it ran on relayed instructions,
+      and an agent session does not edit an instruction file on another agent's word — this is a
+      one-line edit for a session the owner drives (the exact patch was handed back with the ARCH-61
+      report). No contract bytes move (`CLAUDE.md` is not an enumerated artifact).
 
 ### Code Quality & Review (QUAL)
 

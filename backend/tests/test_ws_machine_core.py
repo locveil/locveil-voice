@@ -938,3 +938,181 @@ def test_l7_schema_accepts_every_real_frame(capture):
                 if not _accepts(def_name, line["json"]):
                     wrong.append(f"{conn}: not a valid {def_name}: {line['json']}")
     assert not wrong, "\n".join(wrong)
+
+
+# ------------------------------------------------------------------------------------------
+# L2 — document ≡ core. The guide is the only normative text and the only thing a consumer's
+# pin gives a firmware author to read, so (a) nothing in it may contradict the core, and
+# (b) everything a harness relies on must be IN it.
+# ------------------------------------------------------------------------------------------
+
+GUIDE_FILE = REPO_ROOT / "docs" / "guides" / "websocket-api.md"
+GUIDE = GUIDE_FILE.read_text(encoding="utf-8")
+STAMP = json.loads((CORE_DIR / "STAMP.json").read_text(encoding="utf-8"))
+CORE_SECTION_TITLE = "The machine-readable core"
+
+
+def guide_sections() -> Dict[str, str]:
+    """The guide split at its `## ` headings; the text before the first one is ''."""
+    sections: Dict[str, str] = {}
+    title = ""
+    for line in GUIDE.splitlines(keepends=True):
+        if line.startswith("## "):
+            title = line[3:].strip()
+            sections[title] = ""
+        else:
+            sections[title] = sections.get(title, "") + line
+    return sections
+
+
+def _section_channel(title: str) -> Optional[str]:
+    match = re.match(r"`(/ws/[a-z/]+)`", title)
+    if not match:
+        return None
+    return next(ch for ch, entry in CHANNELS.items() if entry["path"] == match.group(1))
+
+
+def _frame_examples(text: str) -> List[Dict[str, Any]]:
+    """Every frame the prose shows: fenced json blocks, frames on their own line in a plain
+    fenced block, and `{…}` snippets inline (which may wrap across lines)."""
+    found: List[Any] = []
+    for lang, body in re.findall(r"```(\w*)\n(.*?)```", text, re.S):
+        if lang == "json":
+            found.append(json.loads(body))
+        elif lang == "":
+            found.extend(json.loads(line) for line in body.splitlines() if line.startswith("{"))
+    prose = re.sub(r"```.*?```", "", text, flags=re.S)
+    for snippet in re.findall(r"`(\{.*?\})`", prose, re.S):
+        found.append(json.loads(" ".join(snippet.split())))
+    assert all(isinstance(obj, dict) for obj in found)
+    return found
+
+
+def _is_valid_frame_of(obj: Dict[str, Any], channel: Optional[str]) -> bool:
+    for defn in FRAMES.values():
+        if channel is not None and defn["channel"] != channel:
+            continue
+        if defn["type"] is None and "type" in obj:
+            continue
+        if problems(defn, obj, strict_keys=True) == []:
+            return True
+    return False
+
+
+def test_l2_every_frame_the_guide_shows_is_a_valid_instance():
+    """An example in the prose that the core would call invalid — or a key the core does not
+    list — means document and core disagree. The document wins: fix the core (or the typo)."""
+    shown = 0
+    for title, text in guide_sections().items():
+        channel = _section_channel(title)
+        if title and channel is None:
+            continue                      # the Python sample; the core's own section
+        for obj in _frame_examples(text):
+            shown += 1
+            assert _is_valid_frame_of(obj, channel), (
+                f"guide section {title or '(introduction)'!r} shows a frame the core rejects: {obj}")
+    assert shown >= 15, "the guide lost its frame examples (or this parser lost the guide)"
+
+
+def _core_section() -> str:
+    return guide_sections()[CORE_SECTION_TITLE]
+
+
+def _table_rows(text: str, heading: Optional[str] = None) -> List[List[str]]:
+    """The body rows of the first markdown table after `heading` (or in `text`)."""
+    if heading is not None:
+        text = text.split(heading, 1)[1]
+    rows: List[List[str]] = []
+    started = False
+    for line in text.splitlines():
+        if line.startswith("|"):
+            started = True
+            cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
+            if not set(cells[0]) <= set("-: ") and cells[0] not in ("File", "Frame"):
+                rows.append(cells)
+        elif started:
+            break
+    return rows
+
+
+def _typed_keys(cell: str) -> List[Tuple[str, Any]]:
+    out = []
+    for key, spec in re.findall(r"`([a-z_]+):([a-z/]+)`", cell):
+        names = spec.split("/")
+        out.append((key, names if len(names) > 1 else names[0]))
+    return out
+
+
+def test_l2_frame_reference_table_equals_the_definitions():
+    """The table in the guide is the normative statement of every frame's keys and types;
+    the definitions in frames.golden.json instantiate it. Same frames in the same order,
+    same keys, same types, same opaque and volatile marks."""
+    rows = _table_rows(_core_section(), "### Frame reference")
+    assert [row[0].strip("`") for row in rows] == list(FRAMES)
+    for name, direction, required, optional, opaque, volatile in rows:
+        defn = FRAMES[name.strip("`")]
+        assert direction == defn["direction"], name
+        assert [k for k, _ in _typed_keys(required)] == defn["required"], name
+        assert [k for k, _ in _typed_keys(optional)] == defn["optional"], name
+        assert dict(_typed_keys(required) + _typed_keys(optional)) == defn["types"], name
+        assert re.findall(r"`([a-z_]+)`", opaque) == defn["opaque"], name
+        assert re.findall(r"`([a-z_]+)`", volatile) == defn["volatile"], name
+
+
+def _core_files() -> List[str]:
+    return sorted(p.name for p in CORE_DIR.iterdir() if p.name not in ("README.md", "STAMP.json"))
+
+
+def test_l2_the_guide_lists_exactly_the_core_files_and_the_stamp_enumerates_them():
+    listed = sorted(row[0].strip("`") for row in _table_rows(_core_section()))
+    assert listed == _core_files(), "the guide's file table and contracts/ws-protocol/ disagree"
+    guide_rel = GUIDE_FILE.relative_to(REPO_ROOT).as_posix()
+    assert sorted(STAMP["artifacts"]) == sorted(
+        [guide_rel] + [f"contracts/ws-protocol/{name}" for name in _core_files()]), (
+        "STAMP.json must enumerate the guide and every core file — each one individually")
+    basenames = [artifact.rsplit("/", 1)[-1] for artifact in STAMP["artifacts"]]
+    assert len(basenames) == len(set(basenames)), "pins are flat: basenames must be unique"
+    assert not {"README.md", "PIN.json", "STAMP.json"} & set(basenames)
+    assert STAMP["guard"].endswith(Path(__file__).name)
+
+
+def _named_in_core_section(word: str) -> bool:
+    """Is `word` named — as code, inside backticks — in the guide's core section?"""
+    return re.search(r"`[^`\n]*(?<![A-Za-z0-9_-])" + re.escape(word) + r"(?![A-Za-z0-9_-])[^`\n]*`",
+                     _core_section()) is not None
+
+
+def test_l2_the_guide_defines_everything_a_harness_relies_on():
+    """The review's condition: a firmware author holds the pinned guide and nothing else. So
+    every key name the fixture files use, and every value of their closed vocabularies, must
+    be named in the guide's section — a key the guide never mentions is a key nobody outside
+    this repo can know the meaning of."""
+    keys = set(GOLDEN) | {"retired", "note"}
+    for entry in CHANNELS.values():
+        keys |= set(entry)
+    for entry in GOLDEN["binary"].values():
+        keys |= set(entry)
+    for defn in FRAMES.values():
+        keys |= set(defn)
+    for _, case in all_cases():
+        keys |= set(case)
+        keys |= set(case.get("expect", {}))
+    for name in TRANSCRIPT_NAMES:
+        for line in load_jsonl(transcript_path(name)):
+            keys |= set(line)
+    vocabulary = (VERDICTS | VIOLATIONS | set(LINE_KEYS) | CLOSED_BY | {ORDERING}
+                  | {"c2s", "s2c", "pcm_s16le", "close"}
+                  | {"string", "integer", "number", "boolean", "object", "array", "null"}
+                  | set(CHANNELS) | {f"transcript.{n}.jsonl" for n in TRANSCRIPT_NAMES})
+    missing = sorted(word for word in keys | vocabulary if not _named_in_core_section(word))
+    assert not missing, f"used by the fixture files but never named in the guide's section: {missing}"
+    for number in range(1, 9):
+        assert f"**T-{number}**" in _core_section(), f"rule T-{number} is not stated in the guide"
+    for obligation in ("must accept", "must ignore", "must survive", "may reject", "must not fault"):
+        assert f"**{obligation}**" in _core_section(), obligation
+
+
+def test_l2_core_and_stamp_agree_on_the_version():
+    major = STAMP["version"].split(".")[0]
+    assert str(GOLDEN["protocol_major"]) == major
+    assert f"`{STAMP['tag']}`" in GUIDE.split("\n## ", 1)[0], "the guide's header names the STAMP tag"

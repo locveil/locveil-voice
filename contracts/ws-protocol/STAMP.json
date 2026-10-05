@@ -1,12 +1,24 @@
 {
   "contract": "ws-protocol",
-  "version": "1.0.1",
-  "tag": "ws-protocol-v1.0.1",
+  "version": "1.1.0",
+  "tag": "ws-protocol-v1.1.0",
   "date": "2026-10-05",
   "owner_repo": "locveil-voice",
   "artifacts": [
-    "docs/guides/websocket-api.md"
+    "docs/guides/websocket-api.md",
+    "contracts/ws-protocol/frames.golden.json",
+    "contracts/ws-protocol/transcript.audio-batch.jsonl",
+    "contracts/ws-protocol/transcript.audio-streaming.jsonl",
+    "contracts/ws-protocol/transcript.audio-trace.jsonl",
+    "contracts/ws-protocol/transcript.audio-rejected.jsonl",
+    "contracts/ws-protocol/transcript.reply-burst.jsonl",
+    "contracts/ws-protocol/transcript.satellite-pair.jsonl",
+    "contracts/ws-protocol/transcript.reconnect.jsonl",
+    "contracts/ws-protocol/transcript.output-push.jsonl",
+    "contracts/ws-protocol/transcript.observe-tap.jsonl",
+    "contracts/ws-protocol/ws-protocol.schema.json"
   ],
   "code_constant": "backend/src/locveil_voice/core/ws_protocol.py::WS_PROTOCOL_VERSION",
-  "note": "Major 1 is the four-channel dialect the guide describes, as shipped and proven (ARCH-36/38, the eval WS suite), including the ARCH-47 version-reporting register fields and the protocol_version field in every registered ack. Three-level versions (process/contracts.md §3): the SERVED protocol_version carries the major only (\"1\") and moves only on a breaking wire change; an additive wire change is a minor cut, a byte edit to an enumerated artifact with the wire untouched is a patch. v1.0.1 (2026-10-05, HK-13/BUILD-48) is a bytes-only patch: the guide is enumerated WHOLE from this cut on (doc-canonical contracts lock the whole file), and the cut absorbs the two edits that landed after ws-protocol-v1 without a version move (the guide's Python sample port 6000 -> 8080; this stamp's code_constant path after the backend/ layout move). No wire change."
+  "guard": "backend/tests/test_ws_machine_core.py",
+  "note": "Major 1 is the four-channel dialect the guide describes, as shipped and proven (ARCH-36/38, the eval WS suite), including the ARCH-47 version-reporting register fields and the protocol_version field in every registered ack. Three-level versions (process/contracts.md §3): the SERVED protocol_version carries the major only (\"1\") and moves only on a breaking wire change; an additive change to the surface is a minor cut, a byte edit to an enumerated artifact with the surface untouched is a patch. v1.1.0 (2026-10-05, HK-13 decision 9 / PROD-28, ARCH-61) is a MINOR: the surface gains the hand-written machine core — golden frames, nine JSONL transcripts, a JSON Schema — eleven files enumerated beside the guide, all subordinate to it (on disagreement the document wins and the core is fixed; never generated from code). The guide gains the section that defines the core's format and the receiver obligations, the forward-compatibility rule (clients ignore unknown keys and unknown frame types — binding from this version), and plain statements of what the reference server does (error frames are terminal, the required register keys and the defaults, reply audio is converted down and never up). No frame and no key was added, removed or changed on the wire; the server was brought to the document in two error paths first (BUG-46). v1.0.1 (2026-10-05, HK-13/BUILD-48) was a bytes-only patch: the guide enumerated whole."
 }

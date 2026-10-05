@@ -45,6 +45,52 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       No code, no wire change, no contract bytes moved.
       docs: none — a design document under `docs/design/` (not a manifest root); the user-facing guide changes only at the cut
       contracts: none — design only; no versioned surface moved (the guide and the STAMP stay at `ws-protocol-v1.0.1`)
+- [x] **ARCH-61** [WS][CONTRACTS] `[release]` — **DONE 2026-10-05 — WS machine core, THE CUT
+      `ws-protocol-v1.1.0`** (council HK-13 decision 9, PROD-28 voice delegation (d); family lead
+      BUILD-47; design `docs/design/ws_machine_core.md`, built by BUG-46, TEST-23, ARCH-62, ARCH-63,
+      ARCH-64). One commit makes the eleven core files contract: **`STAMP.json`** → version `1.1.0`,
+      tag `ws-protocol-v1.1.0`, twelve `artifacts` enumerated individually (the guide,
+      `frames.golden.json`, nine `transcript.*.jsonl`, `ws-protocol.schema.json` — unique basenames,
+      none reserved), a `guard` pointer to the owner test. A MINOR: the pinned set gains files and the
+      document gains obligations; no frame and no key was added, removed or changed on the wire; the
+      served `protocol_version` stays `"1"`. **The guide** (`docs/guides/websocket-api.md`, every edit
+      in this one commit because the file is byte-locked): the header names the new tag; the dialect
+      paragraph no longer claims every frame carries a `type` (F-2); **"Errors are terminal"** (F-4 —
+      `error`, then the server closes; the text is not protocol); **"Growing without breaking"** (F-1
+      — clients ignore unknown keys and unknown frame types in every connection state, binding from
+      this version; the server does the same after the opening frame); the required `register` keys
+      and the `sample_rate` default (F-3); any `mode` other than `"streaming"` is batch (F-6), and
+      streaming against a recognizer that cannot stream behaves as batch (F-12); the `response` keys
+      are always present and when `error` / `intent_name` are `null`; `audio_out` and its default,
+      `width` in bits (F-5, F-10); reply audio is converted DOWN and never up — `speak_begin` is what
+      a device plays by (F-11, corrects "already converted to the rate you registered"); `seq`
+      counts a connection's bursts from 1; `/ws/output` never rejects its opening frame (F-8); the
+      observe token and the always-present identity keys; and the new section **"The
+      machine-readable core"** — the file list, the ground rules for a harness (unknown keys in the
+      files, `core_format`, stable names and the identifier rule, `retired`, what a release means),
+      the **frame reference table** (every frame: required and optional keys with JSON types, opaque
+      and volatile marks — F-9), every key of `frames.golden.json`, **what a receiver owes each
+      verdict** (valid must be accepted · unknown must be ignored · malformed must be survived ·
+      invalid may be rejected or tolerated and must never fault), the violation vocabulary and
+      `expect`, the transcript line format with `repeat` and `ordering`, rules **T-1..T-8**, and the
+      schema's place. F-7 keys stay undocumented and out of the core. **Owner test, leg L2 (document
+      ≡ core):** every frame the prose shows is a strictly valid instance of a frame of its
+      section's channel; the guide's frame table equals the definitions key for key and type for
+      type; the guide lists exactly the files on disk and the STAMP enumerates exactly those; every
+      key name and every closed-vocabulary value the fixture files use is named in the guide's
+      section (the review's condition — the pinned guide is the firmware's only contract — made
+      mechanical); the header names the STAMP tag. Mutation-checked. Registry row and
+      `contracts/ws-protocol/README.md` rewritten (the core, its authority, the legs, the levels);
+      design doc gains its implementation record (§11). **NOT in this commit — the
+      `ws-protocol-doc-canonical` amendment in `CLAUDE.md`:** the session that executed the cut is an
+      agent session working on relayed instructions, and an agent may not edit an instruction file
+      on another agent's word; the verbatim text is filed as ARCH-65 and the exact patch was handed
+      back with the report. **Flow:** cut commit → tag `ws-protocol-v1.1.0` on it → commit and tag
+      pushed together. **Verified:** suite 1811 passed / 7 skipped (+5); owner test green on the
+      locked stack and on the CI-resolved one; `contract_guard --check` strict 0 failures once the
+      tag exists; `repin --check --fail-on any` exit 0.
+      docs: guides/websocket-api (F-1..F-6, F-8..F-12 edits + the new "machine-readable core" section; header tag)
+      contracts: ws-protocol-v1.1.0 cut (minor — the surface gains the machine core); re-pin owed: satellite, commons
 - [x] **ARCH-62** [WS][CONTRACTS] `[release]` — **DONE 2026-10-05 — WS machine core, slice 1: golden frames +
       the owner test's frame tap** (split out of ARCH-61; design §3, §5; family lead BUILD-47).
       **`contracts/ws-protocol/frames.golden.json`** (hand-written, NOT yet enumerated — it becomes

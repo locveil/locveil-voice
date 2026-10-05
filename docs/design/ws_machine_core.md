@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-05 · **Status:** AGREED 2026-10-05 — the satellite-side review returned
 **approve-with-changes, no blocking objection**; every accepted answer and requested change is
-folded in below and recorded in §10 (nothing below is implemented yet) · **Owner:** locveil-voice
+folded in below and recorded in §10 · **IMPLEMENTED 2026-10-05** as `ws-protocol-v1.1.0` (§11 records what changed while building) · **Owner:** locveil-voice
 (`ws-protocol` family) · **Consumers:**
 locveil-satellite (ESP32 firmware, C++ / ESP-IDF — the FW-1a conformance test), locveil-commons
 (the eval WS provider, hermetic conformance), in-repo `satellite/link.py`
@@ -566,3 +566,28 @@ inside a major, `core_format` accepted as written.
 **The reviewer's two questions back:** (a) the MAY-reject wording for s2c `invalid` —
 **confirmed** (§3.4); (b) will L6 tolerate a variable number of `partial` frames — **yes**
 (§5: per-direction comparison, a `repeat` line matches zero or more).
+
+---
+
+## 11. Implementation record (ARCH-61..64, 2026-10-05)
+
+Built as §9 planned; `ws-protocol-v1.1.0` enumerates the guide and the eleven files. What
+changed against the text above while building, and why:
+
+- **`channels` in `frames.golden.json` names each channel's `opening`, `ack` and `error`
+  frame** (not in §3.1). A data-driven harness applies T-1/T-7 without a table of its own.
+- **Every s2c valid case is a recorded frame**, not only the first (§5 L4 is stricter than
+  planned); the one synthetic valid case per frame is `…/unknown-field`, derived from `plain`.
+- **F-11 (found by the witness tests): reply audio is conformed DOWN only.** The guide said
+  the burst is "already converted to the rate/channel count you registered"; a lower-rate
+  voice arrives at its own rate, and `speak_begin` is what a device plays by. Guide corrected;
+  case `reply.speak_begin/lower-rate-than-registered`.
+- **F-12: `mode: "streaming"` against a recognizer that cannot stream behaves as batch.**
+  Shipped and tested since ARCH-10, never stated. Guide sentence added.
+- **L7 checks client frames the server ACCEPTED**, not all that were sent: the schema types
+  `audio_out.rate`, the shallow definitions do not, and the server does reject a non-numeric
+  one.
+- **L2 landed with the cut and gained a fourth check** — every key name and vocabulary value
+  the files use must be named in the guide's section (the mechanical form of review
+  condition Q3).
+- **The CLAUDE.md amendment is NOT in the cut commit** — see ARCH-65.
