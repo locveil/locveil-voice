@@ -1,6 +1,6 @@
 # WebSocket API
 
-**Protocol version: 1** (`ws-protocol-v1.1.0`) — the server confirms it as `protocol_version` in
+**Protocol version: 1** (`ws-protocol-v1.2.0`) — the server confirms it as `protocol_version` in
 every `registered` ack, so a client can check what it was built against instead of trusting
 prose. That served number is the protocol's **major** version: it moves only on a breaking wire
 change. The contract tag carries the full three-part version — an additive change to the wire is
@@ -18,9 +18,10 @@ at `/docs`; this guide is the equivalent reference for the sockets.
 Every channel speaks the same dialect: **JSON text frames** for control and **raw binary
 frames** for audio. Every frame the server sends carries a `type` field, and so does every
 client frame on the two voice channels; the opening frames of the two operator channels carry
-none and are recognized by their position. Audio is always **16-bit little-endian PCM, mono**;
-16 kHz is the pipeline's canonical rate — declare your real rate at registration and keep it
-honest, the server does not guess.
+none and are recognized by their position. Audio is always **16-bit little-endian PCM**. What
+a device sends is **mono**; 16 kHz is the pipeline's canonical rate — declare your real rate at
+registration and keep it honest, the server does not guess. What a device receives is in the
+format it registered for its reply channel.
 
 **Errors are terminal.** On a protocol violation the server answers
 `{"type": "error", "error": "..."}` and then closes the connection: an `error` frame is always
@@ -57,8 +58,11 @@ conversation continuity — lives as long as the socket.
 
 `client_id` is the device's stable identity — replies, timers and missed announcements are
 addressed to it. `room_name` is the device's primary room. These two and `type` are the only
-required keys: a registration without either is refused with an `error`. `sample_rate` is the
-rate of the PCM you are about to send; if you leave it out the server assumes 16000.
+required keys: a registration without either is refused with an `error`. So is one in which a
+key has the wrong JSON type — a `client_id` that is a number, a `sample_rate` written as a
+string: the types are listed in the frame reference at the end of this document, and the server
+checks them instead of guessing what was meant. `sample_rate` is the rate of the PCM you are
+about to send, a positive integer; if you leave it out the server assumes 16000.
 `covered_rooms` (optional list) adds rooms the device also manages. `wants_audio: true` asks for
 spoken replies — which arrive on the **reply channel** (below), never on this socket.
 `wants_trace: true` (default `false`) asks for the server's execution trace after each response
@@ -146,9 +150,11 @@ Register with the device's *output* audio contract:
 ```
 
 `type` and `client_id` are required. `audio_out` states what the device can play: `rate` in Hz
-and `channels`. It may be left out — the server then assumes 22050 Hz mono — but a device
-should always state it. After this opening frame the device has nothing more to say: the
-server ignores anything else it sends on this socket.
+and `channels`, both positive integers. It may be left out — the server then assumes 22050 Hz
+mono — but a device should always state it. As on `/ws/audio`, a key of the wrong JSON type —
+a numeric `client_id`, a `rate` written as a string — is refused with an `error`. After this
+opening frame the device has nothing more to say: the server ignores anything else it sends
+on this socket.
 
 The same certificate rule as `/ws/audio` applies behind the mutual-TLS gate: a device can only
 claim its own reply channel — otherwise it would receive another room's speech.
@@ -162,15 +168,19 @@ reply arrives as a bracketed binary burst:
 {"type": "speak_end", "seq": 1}
 ```
 
-The audio never exceeds the rate and channel count you registered: a richer voice is converted
-down to your contract, a plainer one is sent as it is — the server never upsamples. So
-`speak_begin` states what this burst actually carries — `rate` in Hz, `channels`, and `width`,
-the sample size in bits, which is always 16 — and a device plays by that, not by what it
-registered. `seq` pairs the begin/end brackets and counts the bursts of the connection: 1, 2,
-3, … (a new connection starts again at 1). Binary frames arrive only between a `speak_begin`
-and its `speak_end`. One more thing happens at connect time: if anything fired while the device
-was offline — a timer that rang during a reboot — the missed announcement is spoken to the
-device as soon as the channel is up.
+The audio is already converted to the rate/channel count you registered — play it as it comes.
+The server converts in both directions: a voice recorded at a lower rate is brought up to your
+rate, a richer one down, and a mono voice is spread over the channels you asked for; a reply
+that cannot be converted is not sent at all. `speak_begin` states what is being sent — `rate`
+in Hz, `channels`, and `width`, the sample size in bits, which is always 16 — and its `rate`
+and `channels` always equal what you registered. `seq` pairs the begin/end brackets and counts
+the bursts of the connection: 1, 2, 3, … (a new connection starts again at 1). Bursts never
+overlap: when two replies are due at the same moment — a spoken answer and a timer
+announcement — the second waits, and its `speak_begin` comes only after the first one's
+`speak_end`. Binary frames arrive only between a `speak_begin` and its `speak_end`. One more
+thing happens at connect time: if anything fired while the device was offline — a timer that
+rang during a reboot — the missed announcement is spoken to the device as soon as the channel
+is up.
 
 ## `/ws/output` — pushed text results
 
@@ -191,7 +201,8 @@ arrive here as `{"type": "message", "text": "..."}` frames. Requires `[outputs] 
 (on by default).
 
 This channel never rejects its opening frame: a first frame without a usable `client_id` — an
-empty object, even text that is not JSON — simply gets a minted identity. The one `error` you
+empty object, a `client_id` that is not a string, even text that is not JSON — simply gets a
+minted identity. The one `error` you
 can meet here is sent before your frame is read, when the push channel is switched off. After
 the opening frame the server ignores whatever the client sends.
 
@@ -209,15 +220,16 @@ Authenticate and optionally filter in the first frame:
 ```
 
 `token` is required — a missing or wrong one is answered with an `error` — and `filter` is
-optional. After `{"type": "subscribed"}`, events stream in:
+optional; a `filter` that is not an object, or one of whose keys has the wrong type, is refused
+the same way. After `{"type": "subscribed"}`, events stream in:
 
 ```json
 { "type": "event", "event": "result.produced", "session_id": "...", "client_id": "kitchen_node",
   "room_name": "Кухня", "source": "ws_audio", "payload": { "...": "..." }, "timestamp": 1750000000.0 }
 ```
 
-The filter accepts `types`, `session_id`, `client_id`, `room_name` and `source`; omit it to see
-everything. In an event the four identity keys are always present and are `null` when the event
+The filter accepts `types` (a list of event names) and the strings `session_id`, `client_id`,
+`room_name` and `source`; omit it to see everything. In an event the four identity keys are always present and are `null` when the event
 has no such origin. After the opening frame the server ignores whatever the client sends. See
 [the workflow guide](../architecture/workflow.md) for what the events mean.
 
@@ -284,7 +296,9 @@ under the same version tag.
   only the characters `a`–`z`, `0`–`9`, `.`, `_`, `/` and `-`, and stay unique when every
   character other than a letter or digit is replaced by `_` — so they can be turned into
   identifiers in generated code. A case that should no longer be checked is kept and marked
-  `"retired": true`; skip it.
+  `"retired": true`; skip it. A retired case states nothing any more — the server no longer
+  sends such a frame (or no longer answers that way) and a receiver owes it nothing, whatever
+  its `verdict` still says; its `note` says which release retired it and why.
 - **What a release of the core means.** Anything a harness can observe — a case, a transcript
   or a file added, a case corrected — is a minor release. A patch release never changes what a
   harness sees.
@@ -380,8 +394,11 @@ is one the server accepts as far as its shape goes: unless something else stands
 An invalid one carries `expect` — what the server does with it: `frame`, the name of the
 frame it answers with, and `then`, which is `close`. The core marks a client frame invalid
 only where this document promises that reaction, so every such case has an `expect`; cases of
-frames the server sends never have one. An `unknown` frame from the client is ignored by the
-server once the opening frame has been accepted.
+frames the server sends never have one. From `ws-protocol-v1.2.0` on that covers an opening
+frame in which a key has the wrong JSON type (`wrong-json-type`), on the three channels that
+refuse one; `output.hello` has no invalid cases, because `/ws/output` answers an unusable
+opening frame with a minted identity instead of an `error`. An `unknown` frame from the client
+is ignored by the server once the opening frame has been accepted.
 
 ### Transcripts
 
@@ -431,6 +448,8 @@ The rules below hold on every connection. A harness applies them to every transc
 - **T-8** — in batch mode a `response` follows the `end` frame that closed its utterance
   (or the 60-second safety net). In streaming mode `partial` and `response` frames may arrive
   at any time after the `ack`.
+- **T-9** — bursts on the reply channel never overlap: the server sends no `speak_begin`
+  while a burst is open, that is, before the `speak_end` of the previous one.
 
 ### The schema
 

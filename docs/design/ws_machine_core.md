@@ -591,3 +591,28 @@ changed against the text above while building, and why:
   the files use must be named in the guide's section (the mechanical form of review
   condition Q3).
 - **The CLAUDE.md amendment is NOT in the cut commit** — see ARCH-65.
+
+---
+
+## 12. `ws-protocol-v1.2.0` (ARCH-66, 2026-10-05) — the side-finds fixed, one decision reversed
+
+The two code findings this design recorded as "not part of the cut" (§7) were fixed on the
+owner's directive, and F-11 was decided the other way. One minor, same twelve artifacts.
+
+- **C-4 → BUG-47.** One lock per reply channel around the whole bracket. The rule §4
+  deliberately withheld is now stated: **T-9**, bursts on the reply channel never overlap. No
+  new transcript — two serialized bursts are exactly `transcript.reply-burst.jsonl`.
+- **C-3 → BUG-48.** The server type-checks opening frames against the guide's frame reference
+  (`core/ws_protocol.py::OPENING_FRAMES`, held to the golden definitions by the owner test).
+  §3.3's exclusion ("a c2s `wrong-json-type` case would be a guess") is lifted: eighteen such
+  cases, each with `expect`, each proven by replay. They are top-level keys only — the shallow
+  `types` map cannot express `audio_out.rate`; the guide's prose and the schema state the inner
+  types, and the server enforces them. `/ws/output` keeps F-8: it mints an identity instead of
+  refusing, so `output.hello` still has no invalid case.
+- **F-11 reversed → BUG-50.** `v1.1.0` corrected the guide to "converted down, never up"; the
+  owner decided to restore the original guarantee server-side instead (the satellite never
+  resamples). Reply audio is converted to exactly the registered rate and channel count. The
+  case `reply.speak_begin/lower-rate-than-registered` is **retired** — the first use of §6.2's
+  mechanism — and the guide's `retired` rule now says what a retired case no longer states.
+- **A guard for §6.2.** `backend/tests/data/ws_core_names.major1.txt` lists every name each cut
+  released; the owner test fails on a removed name and on an added name the cut did not record.

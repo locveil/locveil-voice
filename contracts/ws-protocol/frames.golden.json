@@ -32,7 +32,20 @@
         { "id": "audio.register/missing-client-id", "verdict": "invalid", "violation": "missing-required", "json": { "type": "register", "room_name": "Кухня", "sample_rate": 16000, "wants_audio": true }, "expect": { "frame": "audio.error", "then": "close" } },
         { "id": "audio.register/missing-room-name", "verdict": "invalid", "violation": "missing-required", "json": { "type": "register", "client_id": "kitchen_node", "sample_rate": 16000, "wants_audio": true }, "expect": { "frame": "audio.error", "then": "close" } },
         { "id": "audio.register/not-json", "verdict": "invalid", "violation": "not-json", "raw": "{\"type\": \"register\", \"client_id\": ", "expect": { "frame": "audio.error", "then": "close" } },
-        { "id": "audio.register/not-an-object", "verdict": "invalid", "violation": "not-an-object", "raw": "[\"register\", \"kitchen_node\"]", "expect": { "frame": "audio.error", "then": "close" } }
+        { "id": "audio.register/not-an-object", "verdict": "invalid", "violation": "not-an-object", "raw": "[\"register\", \"kitchen_node\"]", "expect": { "frame": "audio.error", "then": "close" } },
+        { "id": "audio.register/type-not-string", "verdict": "invalid", "violation": "wrong-json-type", "json": { "type": 7, "client_id": "kitchen_node", "room_name": "Кухня", "sample_rate": 16000, "wants_audio": true }, "expect": { "frame": "audio.error", "then": "close" } },
+        { "id": "audio.register/client-id-not-string", "verdict": "invalid", "violation": "wrong-json-type", "json": { "type": "register", "client_id": 5, "room_name": "Кухня", "sample_rate": 16000, "wants_audio": true }, "expect": { "frame": "audio.error", "then": "close" } },
+        { "id": "audio.register/room-name-not-string", "verdict": "invalid", "violation": "wrong-json-type", "json": { "type": "register", "client_id": "kitchen_node", "room_name": ["Кухня"], "sample_rate": 16000, "wants_audio": true }, "expect": { "frame": "audio.error", "then": "close" } },
+        { "id": "audio.register/sample-rate-not-integer", "verdict": "invalid", "violation": "wrong-json-type", "json": { "type": "register", "client_id": "kitchen_node", "room_name": "Кухня", "sample_rate": "16000", "wants_audio": true }, "expect": { "frame": "audio.error", "then": "close" } },
+        { "id": "audio.register/wants-audio-not-boolean", "verdict": "invalid", "violation": "wrong-json-type", "json": { "type": "register", "client_id": "kitchen_node", "room_name": "Кухня", "sample_rate": 16000, "wants_audio": "true" }, "expect": { "frame": "audio.error", "then": "close" } },
+        { "id": "audio.register/mode-not-string", "verdict": "invalid", "violation": "wrong-json-type", "json": { "type": "register", "client_id": "kitchen_node", "room_name": "Кухня", "sample_rate": 16000, "wants_audio": true, "mode": 1 }, "expect": { "frame": "audio.error", "then": "close" } },
+        { "id": "audio.register/wants-trace-not-boolean", "verdict": "invalid", "violation": "wrong-json-type", "json": { "type": "register", "client_id": "kitchen_node", "room_name": "Кухня", "sample_rate": 16000, "wants_audio": true, "wants_trace": 0 }, "expect": { "frame": "audio.error", "then": "close" } },
+        { "id": "audio.register/covered-rooms-not-array", "verdict": "invalid", "violation": "wrong-json-type", "json": { "type": "register", "client_id": "kitchen_node", "room_name": "Кухня", "sample_rate": 16000, "wants_audio": true, "covered_rooms": "Прихожая" }, "expect": { "frame": "audio.error", "then": "close" } },
+        { "id": "audio.register/name-not-string", "verdict": "invalid", "violation": "wrong-json-type", "json": { "type": "register", "client_id": "kitchen_node", "room_name": "Кухня", "sample_rate": 16000, "wants_audio": true, "name": 7 }, "expect": { "frame": "audio.error", "then": "close" } },
+        { "id": "audio.register/available-devices-not-array", "verdict": "invalid", "violation": "wrong-json-type", "json": { "type": "register", "client_id": "kitchen_node", "room_name": "Кухня", "sample_rate": 16000, "wants_audio": true, "available_devices": {} }, "expect": { "frame": "audio.error", "then": "close" } },
+        { "id": "audio.register/protocol-version-not-string", "verdict": "invalid", "violation": "wrong-json-type", "json": { "type": "register", "client_id": "kitchen_node", "room_name": "Кухня", "sample_rate": 16000, "wants_audio": true, "protocol_version": 1 }, "expect": { "frame": "audio.error", "then": "close" } },
+        { "id": "audio.register/firmware-version-not-string", "verdict": "invalid", "violation": "wrong-json-type", "json": { "type": "register", "client_id": "kitchen_node", "room_name": "Кухня", "sample_rate": 16000, "wants_audio": true, "firmware_version": 0.5 }, "expect": { "frame": "audio.error", "then": "close" } },
+        { "id": "audio.register/wake-pack-version-not-string", "verdict": "invalid", "violation": "wrong-json-type", "json": { "type": "register", "client_id": "kitchen_node", "room_name": "Кухня", "sample_rate": 16000, "wants_audio": true, "wake_pack_version": 1 }, "expect": { "frame": "audio.error", "then": "close" } }
       ]
     },
     "audio.end": {
@@ -144,7 +157,10 @@
         { "id": "reply.register-reply/missing-type", "verdict": "invalid", "violation": "missing-type", "json": { "client_id": "kitchen_node", "audio_out": { "rate": 22050, "channels": 1 } }, "expect": { "frame": "reply.error", "then": "close" } },
         { "id": "reply.register-reply/missing-client-id", "verdict": "invalid", "violation": "missing-required", "json": { "type": "register-reply", "audio_out": { "rate": 22050, "channels": 1 } }, "expect": { "frame": "reply.error", "then": "close" } },
         { "id": "reply.register-reply/not-json", "verdict": "invalid", "violation": "not-json", "raw": "{\"type\": \"register-reply\", \"client_id\": ", "expect": { "frame": "reply.error", "then": "close" } },
-        { "id": "reply.register-reply/not-an-object", "verdict": "invalid", "violation": "not-an-object", "raw": "[\"register-reply\", \"kitchen_node\"]", "expect": { "frame": "reply.error", "then": "close" } }
+        { "id": "reply.register-reply/not-an-object", "verdict": "invalid", "violation": "not-an-object", "raw": "[\"register-reply\", \"kitchen_node\"]", "expect": { "frame": "reply.error", "then": "close" } },
+        { "id": "reply.register-reply/type-not-string", "verdict": "invalid", "violation": "wrong-json-type", "json": { "type": 7, "client_id": "kitchen_node", "audio_out": { "rate": 22050, "channels": 1 } }, "expect": { "frame": "reply.error", "then": "close" } },
+        { "id": "reply.register-reply/client-id-not-string", "verdict": "invalid", "violation": "wrong-json-type", "json": { "type": "register-reply", "client_id": 5, "audio_out": { "rate": 22050, "channels": 1 } }, "expect": { "frame": "reply.error", "then": "close" } },
+        { "id": "reply.register-reply/audio-out-not-object", "verdict": "invalid", "violation": "wrong-json-type", "json": { "type": "register-reply", "client_id": "kitchen_node", "audio_out": 22050 }, "expect": { "frame": "reply.error", "then": "close" } }
       ]
     },
     "reply.registered": {
@@ -172,7 +188,8 @@
       "cases": [
         { "id": "reply.speak_begin/plain", "verdict": "valid", "json": { "type": "speak_begin", "rate": 22050, "channels": 1, "width": 16, "seq": 1 } },
         { "id": "reply.speak_begin/second-burst", "verdict": "valid", "json": { "type": "speak_begin", "rate": 22050, "channels": 1, "width": 16, "seq": 2 } },
-        { "id": "reply.speak_begin/lower-rate-than-registered", "verdict": "valid", "note": "a 16 kHz voice sent to a device registered at 22050 Hz: the server never upsamples", "json": { "type": "speak_begin", "rate": 16000, "channels": 1, "width": 16, "seq": 1 } },
+        { "id": "reply.speak_begin/lower-rate-than-registered", "verdict": "valid", "retired": true, "note": "retired at ws-protocol-v1.2.0: reply audio is always converted to the registered rate, so a burst at a lower rate than registered is no longer sent", "json": { "type": "speak_begin", "rate": 16000, "channels": 1, "width": 16, "seq": 1 } },
+        { "id": "reply.speak_begin/two-channels", "verdict": "valid", "note": "a device that registered two channels: a mono voice is spread over both", "json": { "type": "speak_begin", "rate": 22050, "channels": 2, "width": 16, "seq": 1 } },
         { "id": "reply.speak_begin/unknown-field", "verdict": "valid", "json": { "type": "speak_begin", "rate": 22050, "channels": 1, "width": 16, "seq": 1, "x_future": 1 } },
         { "id": "reply.speak_begin/missing-rate", "verdict": "invalid", "violation": "missing-required", "json": { "type": "speak_begin", "channels": 1, "width": 16, "seq": 1 } },
         { "id": "reply.speak_begin/missing-seq", "verdict": "invalid", "violation": "missing-required", "json": { "type": "speak_begin", "rate": 22050, "channels": 1, "width": 16 } },
@@ -279,7 +296,9 @@
         { "id": "observe.subscribe/unknown-field", "verdict": "valid", "json": { "token": "observe-secret", "filter": { "room_name": "Кухня", "types": ["result.produced"] }, "x_future": 1 } },
         { "id": "observe.subscribe/missing-token", "verdict": "invalid", "violation": "missing-required", "json": { "filter": { "room_name": "Кухня", "types": ["result.produced"] } }, "expect": { "frame": "observe.error", "then": "close" } },
         { "id": "observe.subscribe/not-json", "verdict": "invalid", "violation": "not-json", "raw": "{\"token\": ", "expect": { "frame": "observe.error", "then": "close" } },
-        { "id": "observe.subscribe/not-an-object", "verdict": "invalid", "violation": "not-an-object", "raw": "[\"observe-secret\"]", "expect": { "frame": "observe.error", "then": "close" } }
+        { "id": "observe.subscribe/not-an-object", "verdict": "invalid", "violation": "not-an-object", "raw": "[\"observe-secret\"]", "expect": { "frame": "observe.error", "then": "close" } },
+        { "id": "observe.subscribe/token-not-string", "verdict": "invalid", "violation": "wrong-json-type", "json": { "token": 12345, "filter": { "room_name": "Кухня", "types": ["result.produced"] } }, "expect": { "frame": "observe.error", "then": "close" } },
+        { "id": "observe.subscribe/filter-not-object", "verdict": "invalid", "violation": "wrong-json-type", "json": { "token": "observe-secret", "filter": "Кухня" }, "expect": { "frame": "observe.error", "then": "close" } }
       ]
     },
     "observe.subscribed": {

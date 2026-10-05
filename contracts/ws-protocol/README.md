@@ -29,10 +29,10 @@ or with the guide:
 
 | Leg | Asserts |
 |---|---|
-| L1 | the fixtures obey their own definitions and the naming rule |
+| L1 | the fixtures obey their own definitions and the naming rule; no released name was renamed or removed (`backend/tests/data/ws_core_names.major1.txt` — a cut appends the names it adds) |
 | L2 | document ≡ core: every frame the guide shows is valid, its frame table equals the definitions, it names every key the files use, it lists exactly the enumerated files |
 | L3 | every frame the server sent is a strictly valid instance of a defined frame |
-| L4 / L4b | every frame was witnessed on a real socket and the fixture values are real; every handshake case is replayed against the real handlers |
+| L4 / L4b | every frame was witnessed on a real socket and the fixture values are real; every handshake case is replayed against the real handlers; the server's own table of opening-frame types (`core/ws_protocol.py`) equals the definitions |
 | L5 / L6 | transcripts are well-formed, the rules hold on every recorded connection, each transcript equals a real recording |
 | L7 | the schema mirrors the definitions and accepts every real frame |
 
@@ -53,7 +53,8 @@ Versions have three levels (`process/contracts.md` §3):
 | patch | enumerated bytes moved and no harness can tell (an editorial fix to the guide, a case's `note`, STAMP metadata) | unchanged |
 
 Inside a major, file names, frame names, case ids and transcript names are never renamed or
-removed; a case that should no longer be asserted is marked `"retired": true`.
+removed; a case that should no longer be asserted is marked `"retired": true` with a `note`
+naming the release that retired it (first used at `v1.2.0`).
 
 `backend/tests/test_ws_protocol_version.py` keeps the version legs in agreement:
 

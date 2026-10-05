@@ -191,6 +191,46 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       none — no contract bytes move (`CLAUDE.md` is not an enumerated artifact; the machine core
       itself was cut by ARCH-61 at `ws-protocol-v1.1.0`).
 
+- [x] **ARCH-66** [WS][CONTRACTS] `[release]` — **DONE 2026-10-05 — contract cut `ws-protocol-v1.2.0`: the
+      guarantees BUG-47, BUG-48 and BUG-50 made true** (one batched MINOR; served `protocol_version`
+      stays `"1"`; the same twelve artifacts; every byte-locked edit in this one commit).
+      **Classification, checked before cutting:** nothing a conforming client relied on is removed
+      or changed — a client that plays by `speak_begin` keeps working, no conforming client sends
+      wrongly typed keys, no frame or key was added, removed or renamed. **Guide
+      (`docs/guides/websocket-api.md`):** header names the new tag; introduction — a device sends
+      mono, and receives the format it registered; `/ws/audio` — a registration in which a key has
+      the wrong JSON type is refused with `error`, `sample_rate` is a positive integer;
+      `/ws/audio/reply` — the same for `register-reply`, `rate` and `channels` positive integers;
+      **the reply-audio guarantee of `v1.0.1` restored verbatim — "The audio is already converted to
+      the rate/channel count you registered — play it as it comes."** — with what makes it true
+      (both directions, mono spread over the registered channels, an unconvertible reply is not
+      sent) and `speak_begin` kept as the statement of what is sent, its `rate` and `channels`
+      always equal to the registration; the `v1.1.0` wording "converted down, never up — play by
+      `speak_begin`" is withdrawn; **bursts never overlap** (the second of two simultaneous
+      replies waits); `/ws/output` — a `client_id` that is not a string is "not usable" and an
+      identity is minted; `/ws/observe` — a malformed `filter` is refused, its key types stated;
+      machine-readable-core section — the `retired` rule now says what a retired case no longer
+      states (the server no longer sends such a frame, a receiver owes it nothing, whatever its
+      `verdict` still says; its `note` names the release), client-side `wrong-json-type` cases are
+      announced and `output.hello`'s lack of invalid cases explained, and **rule T-9** is added
+      (no `speak_begin` while a burst is open; T-1..T-8 unchanged and not renumbered).
+      **`frames.golden.json`:** 139 cases (was 120) — 18 client-side `wrong-json-type` invalid
+      cases with `expect` (13 on `audio.register`, 3 on `reply.register-reply`, 2 on
+      `observe.subscribe`), each replayed against the real handler; `reply.speak_begin/two-channels`
+      added (a recorded frame); `reply.speak_begin/lower-rate-than-registered` RETIRED — kept,
+      marked `"retired": true`, its note naming this release. Transcripts and schema: bytes
+      unchanged. **Owner test:** T-9 in the rule checker (on every transcript and every recorded
+      connection); retired cases must be marked and explained; a new guard for "names are never
+      renamed or removed" — `backend/tests/data/ws_core_names.major1.txt` lists every name each
+      cut released, a removed name fails and so does an added name the cut did not record.
+      STAMP `1.2.0` + registry row + contract README; design doc §12. **For consumers:** re-pin;
+      skip the retired case; a harness may now assert T-9 and that `speak_begin` equals the
+      registration; a client that sent a wrongly typed key is refused where it used to be accepted.
+      **Verified:** suite 1966 passed / 7 skipped (+76 over BUG-50); owner test green on the
+      locked and the CI-resolved stack; `contract_guard --check` strict 0 failures with the tag;
+      `repin --check --fail-on any` exit 0. Flow: cut commit → tag on it → pushed together.
+      docs: guides/websocket-api (wrongly typed opening-frame keys refused; reply audio always in the registered format — the v1.0.1 sentence restored; bursts never overlap; retired rule; rule T-9; header tag)
+      contracts: ws-protocol-v1.2.0 cut (minor); re-pin owed: satellite, commons
 ### Code Quality & Review (QUAL)
 - [x] **QUAL-19** [ESP32] (P2, last pre-release) — **DONE 2026-06-09** (interactive review session + upstream study).
       **★ ARCH-22 (2026-06-14):** the **device-side** of the micro stack is now designed in `docs/design/esp32_satellite.md`

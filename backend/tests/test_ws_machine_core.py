@@ -276,6 +276,41 @@ def test_l1_names_are_stable_identifiers_and_unique_as_c_symbols():
             assert case["id"].startswith(name + "/"), f"{case['id']} does not belong to {name}"
 
 
+RELEASED_NAMES_FILE = Path(__file__).parent / "data" / "ws_core_names.major1.txt"
+
+
+def test_l1_no_released_name_was_renamed_or_removed():
+    """Inside a major, file names, frame names, case ids and transcript names are never
+    renamed or removed — a consumer's test table must not lose a symbol between two pins.
+    The baseline lists every name each cut released; a cut appends the names it adds. So a
+    missing name here is a removal (retire the case instead), and a name absent from the
+    baseline is an addition this cut forgot to record."""
+    released = set()
+    for line in RELEASED_NAMES_FILE.read_text(encoding="utf-8").splitlines():
+        if line and not line.startswith("#"):
+            kind, name = line.split(" ", 1)
+            released.add((kind, name))
+    current = {("frame", name) for name in FRAMES}
+    current |= {("case", case["id"]) for _, case in all_cases()}
+    current |= {("file", p.name) for p in CORE_DIR.iterdir() if p.name not in ("README.md", "STAMP.json")}
+    current |= {("file", "websocket-api.md")}
+    current |= {("transcript", p.name[len("transcript."):-len(".jsonl")])
+                for p in CORE_DIR.glob("transcript.*.jsonl")}
+    assert not released - current, f"released names that no longer exist: {sorted(released - current)}"
+    assert not current - released, (
+        f"names this cut adds but backend/tests/data/{RELEASED_NAMES_FILE.name} does not list: "
+        f"{sorted(current - released)}")
+
+
+def test_l1_retired_cases_are_marked_and_explained():
+    """`retired` is only ever `true`, and a retired case says why in its `note` — it is kept
+    for its name alone: the server no longer sends such a frame and a receiver owes it nothing."""
+    for _, case in all_cases():
+        if "retired" in case:
+            assert case["retired"] is True, case["id"]
+            assert "retired at ws-protocol-v" in case.get("note", ""), case["id"]
+
+
 def test_l1_definitions_are_well_formed():
     for name, defn in FRAMES.items():
         assert defn["direction"] in ("c2s", "s2c"), name
@@ -553,7 +588,8 @@ def test_l4b_the_servers_validator_gives_every_opening_case_its_verdict(frame, c
     violation = opening_frame_violation(frame, case["json"])
     if case["verdict"] == "valid":
         assert violation is None, f"{case['id']}: the server would refuse a valid frame — {violation}"
-    elif case["violation"] != "missing-type":        # the frame's own `type` is the endpoint's check
+    elif problems(FRAMES[frame], case["json"], strict_keys=True)[0] not in (
+            "missing-type", "wrong-json-type:type"):  # the frame's own `type` is the endpoint's check
         assert violation is not None, f"{case['id']}: the server would accept an invalid frame"
 
 
@@ -628,7 +664,7 @@ def transcript_connections(name: str) -> List[Conn]:
 
 
 def rule_violations(conn: Conn, *, cap_tolerant: bool) -> List[str]:
-    """Rules T-1..T-4 and T-6..T-8 on ONE connection (T-5 spans connections). `cap_tolerant`
+    """Rules T-1..T-4 and T-6..T-9 on ONE connection (T-5 spans connections). `cap_tolerant`
     admits what a recording may legitimately contain and a golden transcript does not: a batch
     `response` forced by the utterance cap instead of an `end` frame."""
     out: List[str] = []
@@ -648,7 +684,8 @@ def rule_violations(conn: Conn, *, cap_tolerant: bool) -> List[str]:
             if conn.closed_by != "server":
                 out.append(f"T-2: after an error frame the connection was closed by {conn.closed_by}")
 
-    # T-3 / T-4: bursts pair by seq, seq counts from 1; binary only inside a burst
+    # T-3 / T-4 / T-9: bursts pair by seq, seq counts from 1; binary only inside a burst;
+    # bursts never overlap (no speak_begin while one is open)
     if conn.channel == "reply":
         open_bursts: List[int] = []
         begun = 0
@@ -657,6 +694,9 @@ def rule_violations(conn: Conn, *, cap_tolerant: bool) -> List[str]:
                 if not open_bursts:
                     out.append("T-4: binary outside a speak_begin … speak_end bracket")
             elif line.get("frame") == "reply.speak_begin":
+                if open_bursts:
+                    out.append(f"T-9: speak_begin seq {line['json']['seq']} inside the open burst "
+                               f"{open_bursts[-1]}")
                 begun += 1
                 if line["json"]["seq"] != begun:
                     out.append(f"T-3: burst {begun} of the connection carries seq {line['json']['seq']}")
@@ -772,7 +812,7 @@ def test_l5_transcript_is_well_formed_and_obeys_the_rules(name):
 
 
 def test_l5_the_rules_hold_on_every_recorded_connection(capture):
-    """T-1..T-8 are stated in the document as facts about the server. Here they are checked
+    """T-1..T-9 are stated in the document as facts about the server. Here they are checked
     against everything the real handlers did in the witness suites — not just the fixtures."""
     wrong = [f"{conn}: {violation}" for conn in capture
              for violation in rule_violations(conn, cap_tolerant=True)]
@@ -1141,7 +1181,7 @@ def test_l2_the_guide_defines_everything_a_harness_relies_on():
                   | set(CHANNELS) | {f"transcript.{n}.jsonl" for n in TRANSCRIPT_NAMES})
     missing = sorted(word for word in keys | vocabulary if not _named_in_core_section(word))
     assert not missing, f"used by the fixture files but never named in the guide's section: {missing}"
-    for number in range(1, 9):
+    for number in range(1, 10):
         assert f"**T-{number}**" in _core_section(), f"rule T-{number} is not stated in the guide"
     for obligation in ("must accept", "must ignore", "must survive", "may reject", "must not fault"):
         assert f"**{obligation}**" in _core_section(), obligation

@@ -301,23 +301,6 @@ See `docs/review/phase1_architecture_map.md` §5.
       recorded (doc or journal) + follow-up tasks if gaps exist (completion cue not
       device-addressed, or no timestamp in the initiation ack). Satellite-side contact
       point: `../locveil-satellite` FW-1 intake record (REQ-33).
-- [ ] **ARCH-66** [WS][CONTRACTS] `[release]` — **Contract cut `ws-protocol-v1.2.0` — the guarantees
-      BUG-47, BUG-48 and BUG-50 make true** (filed 2026-10-05 at their intake; ONE batched minor,
-      served `protocol_version` stays `"1"`). Everything byte-locked moves in a single commit, after
-      the three code fixes: **guide** — bursts on a reply connection never overlap; opening frames
-      with a wrongly typed key are refused with `error`; the reply-audio guarantee of `v1.0.1`
-      restored ("already converted to the rate/channel count you registered — play it as it
-      comes"), `speak_begin` kept as the statement of what is sent (it now always equals the
-      registration), the `v1.1.0` "converted down, never up" wording withdrawn; **transcript rules**
-      — a new rule for non-overlapping bursts (existing rule numbers never change);
-      **`frames.golden.json`** — client-side `wrong-json-type` invalid cases with `expect`, each
-      proven by replay against the real handlers; the valid case
-      `reply.speak_begin/lower-rate-than-registered` RETIRED (never removed or renamed inside a
-      major) and the guide's `retired` rule made explicit about what a retired case no longer
-      states; **owner test** covers all three; STAMP `1.2.0` + tag + registry row. Classification
-      checked at intake: nothing a conforming client relied on is removed (a client that plays by
-      `speak_begin.rate` keeps working; no conforming client sends wrongly typed keys) — a minor.
-      `re-pin owed: satellite, commons`.
 
 ### Code Quality & Review (QUAL)
 

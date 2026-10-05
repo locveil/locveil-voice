@@ -21,6 +21,19 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-10-05 — ARCH-66: `ws-protocol-v1.2.0`, and the first retirement.** Three fixes, one cut.
+  What they have in common is direction: each makes the server keep something the document
+  already implied, so the guide changes by getting firmer, not longer. The interesting part is
+  the one sentence that went back to what it was. `v1.1.0` had replaced "already converted to
+  the rate you registered" with an accurate description of a server that did less; a fixture
+  recorded that lesser behaviour as a valid case. Now the server does what the sentence says
+  and the case describes something that no longer happens — and it cannot be deleted, because
+  a consumer's test table is promised that names do not disappear between two pins. So it is
+  the first case to be retired, and using the mechanism exposed that the guide only said
+  "skip it": true, but silent on what a retired `valid` case still claims. It claims nothing,
+  and the guide now says so. The promise itself got a guard on the way: a list of every name
+  each cut has released, which a later cut may only append to.
+
 - **2026-10-05 — BUG-50, the record repaired: a docs-verdict line the manifest test could not
   read.** The push was red in CI on one test, and not a code test: the completion entry's
   `docs:` line named its two nodes and then carried on after the closing parenthesis, and the
