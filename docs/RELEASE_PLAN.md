@@ -301,6 +301,23 @@ See `docs/review/phase1_architecture_map.md` §5.
       recorded (doc or journal) + follow-up tasks if gaps exist (completion cue not
       device-addressed, or no timestamp in the initiation ack). Satellite-side contact
       point: `../locveil-satellite` FW-1 intake record (REQ-33).
+- [ ] **ARCH-66** [WS][CONTRACTS] `[release]` — **Contract cut `ws-protocol-v1.2.0` — the guarantees
+      BUG-47, BUG-48 and BUG-50 make true** (filed 2026-10-05 at their intake; ONE batched minor,
+      served `protocol_version` stays `"1"`). Everything byte-locked moves in a single commit, after
+      the three code fixes: **guide** — bursts on a reply connection never overlap; opening frames
+      with a wrongly typed key are refused with `error`; the reply-audio guarantee of `v1.0.1`
+      restored ("already converted to the rate/channel count you registered — play it as it
+      comes"), `speak_begin` kept as the statement of what is sent (it now always equals the
+      registration), the `v1.1.0` "converted down, never up" wording withdrawn; **transcript rules**
+      — a new rule for non-overlapping bursts (existing rule numbers never change);
+      **`frames.golden.json`** — client-side `wrong-json-type` invalid cases with `expect`, each
+      proven by replay against the real handlers; the valid case
+      `reply.speak_begin/lower-rate-than-registered` RETIRED (never removed or renamed inside a
+      major) and the guide's `retired` rule made explicit about what a retired case no longer
+      states; **owner test** covers all three; STAMP `1.2.0` + tag + registry row. Classification
+      checked at intake: nothing a conforming client relied on is removed (a client that plays by
+      `speak_begin.rate` keeps working; no conforming client sends wrongly typed keys) — a minor.
+      `re-pin owed: satellite, commons`.
 
 ### Code Quality & Review (QUAL)
 
@@ -421,17 +438,38 @@ _Discrete functional defects (distinct from QUAL refactors/quality work). Surfac
       says each reply arrives as a bracketed burst; the transcript rules deliberately do not assert
       "bursts never overlap" until the code guarantees it. Expected fix: one lock per reply channel
       around the whole burst, a test with two concurrent deliveries, then the rule + a transcript in a
-      later `ws-protocol` minor. _Tag is the filer's default (a device-audible defect on the release
-      path) — the owner may re-tag._
-- [ ] **BUG-48** [WS] `[deferred]` — **WS handshakes do not type-check registration values** (filed
+      later `ws-protocol` minor. **Owner directive 2026-10-05: fix now.** Intake: no new transcript
+      is needed (two serialized bursts are exactly `transcript.reply-burst.jsonl`); the guarantee is
+      stated as a new transcript rule in the batched cut ARCH-66.
+- [ ] **BUG-48** [WS] `[release]` — **WS handshakes do not type-check registration values** (filed
       2026-10-05, side-find of the ARCH-60 reconciliation — design finding C-3; NOT part of the
       `ws-protocol-v1.1.0` cut). `{"type": "register", "client_id": 5, "room_name": "r"}` is
       registered and the ack echoes the number; `/ws/output` likewise echoes a numeric `client_id`;
       a string `sample_rate` is coerced or fails with a raw Python exception text in the `error`
       frame. No conforming client sends these, so the machine core asserts no c2s `wrong-json-type`
       case; hardening = validate the documented types at the three handshakes and answer a readable
-      `error`, then add the cases in a later minor. _Tag is the filer's default (no conforming client
-      is affected) — the owner may re-tag._
+      `error`, then add the cases in a later minor. **Owner directive 2026-10-05: fix now** (re-tagged
+      `[release]`). Intake: the types to enforce are the ones the guide's frame reference already
+      states (the server catches up with the document), plus the documented inner keys of
+      `audio_out` and `filter` as the schema types them; `/ws/output` stays the channel that never
+      rejects — there a `client_id` of the wrong type is simply not usable and an identity is
+      minted, as the guide already says. The cases land in the batched cut ARCH-66.
+- [ ] **BUG-50** [WS][AUDIO] `[release]` — **Reply audio is not converted UP to what the device registered**
+      (filed 2026-10-05 on the owner's decision, verbatim: "restore the reply-audio guarantee
+      server-side as a part of current goal"). Through `ws-protocol-v1.0.1` the guide promised that
+      audio on `/ws/audio/reply` is "already converted to the rate/channel count you registered";
+      the code only ever conformed DOWN (`AudioNegotiator.to_sink`, the local-sink rule "any device
+      plays lower"), so a 16 kHz voice reaches a 22.05 kHz device at 16 kHz. `v1.1.0` documented
+      that honestly (TEST-23's finding) instead of fixing it; the satellite's baseline "the
+      satellite never resamples" relies on the original promise. Fix: the reply path converts to
+      EXACTLY the registered contract — rate up as well as down, channel count up as well as down —
+      where the channel's conversion already lives, and never sends audio in any other format (a
+      conversion that cannot be done drops the delivery; it must not mislabel). Must hold on the
+      numpy-free armv7 controller image too: `AudioTranscoder`'s last fallback returns the input
+      bytes unchanged when numpy is missing while the caller relabels them with the target rate.
+      Proof: a real-socket test with a voice below the registered rate (`speak_begin` equals the
+      registration; PCM byte count matches the resampled duration). The guide wording and the
+      retired case land in the batched cut ARCH-66.
 
 ### Tests (TEST)
 > **Strategy (decided 2026-06-01): do NOT keep repairing the existing suite.** Most tests were written against

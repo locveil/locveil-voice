@@ -21,6 +21,16 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-10-05 — Intake: BUG-47 / BUG-48 to be fixed now, BUG-50 and ARCH-66 filed.** The owner
+  asked for the two defects found during the machine-core work to be fixed rather than parked,
+  and decided the open reply-audio question the other way from where `v1.1.0` left it: the guide
+  had been corrected to match a server that never converts up; the decision is to make the
+  server match the original promise instead, because the satellite's design rests on never
+  resampling. Three code fixes, each on its own, then one contract cut (ARCH-66) for everything
+  they make true — the guide and the fixtures are byte-locked, so their edits cannot ride the
+  fixes. Checked before starting: none of it is breaking for a conforming client, so the cut is
+  a minor.
+
 - **2026-10-05 — BUILD-56: the plugin that lists a router it never calls.** Seventeen alerts on
   the config-ui lock; fifteen closed by moving packages inside ranges the manifest already
   declared. The one that resisted was js-yaml: a tool two levels down pinned it to an exact
