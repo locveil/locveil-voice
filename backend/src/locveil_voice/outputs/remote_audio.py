@@ -4,8 +4,9 @@
 **separate reply-channel WS** it listens on (not the input connection). Each connected device is a
 `RemoteAudioOutput` whose `origin_key()` is the device's physical id, so the existing `OutputManager`
 conversational origin-pairing routes a result from that device straight here — for both sync replies and
-deferred fire-and-forget. The reply is synthesized to a PCM stream (ARCH-21 producer), conformed DOWN to the
-**device's** declared `AudioContract`, and pushed over the channel.
+deferred fire-and-forget. The reply is synthesized to a PCM stream (ARCH-21 producer), converted to EXACTLY the
+**device's** declared `AudioContract` (rate and channel count — up as well as down, BUG-50), and pushed over the
+channel.
 
 This is the protocol-agnostic **server seam**: `ReplyChannel` is the only coupling point. The device-facing wire
 protocol (handshake, frame format, offline policy) + the WS endpoint that constructs and registers these outputs
@@ -47,7 +48,7 @@ class CallbackReplyChannel:
     transport-agnostic + unit-testable.
 
     Args:
-        contract: the device's declared output `AudioContract` (drives `to_sink`).
+        contract: the device's declared output `AudioContract` (drives `to_device`).
         send_json: async callable sending a control frame (dict) — the WS `send_json`.
         send_bytes: async callable sending a raw PCM chunk (bytes) — the WS `send_bytes`.
         chunk_bytes: PCM is sent in frame-aligned blocks of ~this size.
@@ -120,8 +121,15 @@ class RemoteAudioOutput(OutputPort):
             pcm = await collect_pcm(stream.frames)
             producer = AudioData(data=pcm, timestamp=time.time(), sample_rate=stream.sample_rate,
                                  channels=stream.channels, format="pcm16")
-            # Conform DOWN to the DEVICE's declared contract (not the local sink).
-            conformed = await self._negotiator.to_sink(producer, self._channel.contract)
+            # BUG-50: convert to EXACTLY the device's declared contract — rate and channel count,
+            # up as well as down (a device registered one output format and never resamples).
+            contract = self._channel.contract
+            conformed = await self._negotiator.to_device(producer, contract)
+            if (conformed.sample_rate, conformed.channels) != (contract.preferred_rate, contract.channels):
+                # never send audio the device would play at the wrong speed — drop instead
+                raise RuntimeError(
+                    f"reply audio is {conformed.sample_rate} Hz/{conformed.channels} ch, the device "
+                    f"registered {contract.preferred_rate} Hz/{contract.channels} ch")
             await self._channel.send_audio(conformed.data, sample_rate=conformed.sample_rate,
                                            channels=conformed.channels, sample_width=stream.sample_width)
             return DeliveryResult.ok(self._name, OutputModality.SPEECH)

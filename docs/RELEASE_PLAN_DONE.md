@@ -1493,6 +1493,41 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       and the CI-resolved versions overlaid); suite 1806 passed / 7 skipped.
       docs: none — test tooling; no manifest node describes the frame tap
       contracts: none — no versioned surface moved (the tap is not an artifact; fixtures untouched)
+- [x] **BUG-50** [WS][AUDIO] `[release]` — **DONE 2026-10-05 — reply audio is always converted to exactly what
+      the device registered, up as well as down** (owner decision, verbatim: "restore the reply-audio
+      guarantee server-side as a part of current goal"). The guide promised through `ws-protocol-v1.0.1`
+      that audio on `/ws/audio/reply` is "already converted to the rate/channel count you registered";
+      the reply path used the LOCAL-sink rule (`AudioNegotiator.to_sink`: conform down only — "any
+      device plays lower"), so a 16 kHz voice reached a 22.05 kHz device at 16 kHz. **Fix, where the
+      channel's conversion already lives:** `AudioNegotiator.to_device(audio, contract)` converts to
+      EXACTLY the device's declared rate and channel count — resample up or down, downmix or spread a
+      mono voice over the registered channels (stdlib, like the existing downmix) — and raises if the
+      result is not that format; `RemoteAudioOutput` calls it instead of `to_sink` and checks the
+      result itself, so a burst in any other format is never sent (the delivery is dropped and
+      logged: wrong-speed audio is worse than none). `to_sink` and the local playback rule are
+      untouched. **Two defects in the resampling primitive surfaced while proving it, both fixed here
+      because the guarantee rests on them:** (1) `AudioTranscoder`'s last fallback returned its INPUT
+      bytes when numpy is missing while the caller relabelled them with the target rate — on the
+      numpy-free armv7 controller image every resample silently produced audio at the wrong speed;
+      it also interpolated interleaved stereo as one channel. It now always resamples: numpy for
+      mono when present, otherwise a stdlib linear interpolation that is channel-aware (≈50 ms for
+      five seconds of speech on x86). (2) the resampling cache keyed on the first 1 KB of the buffer
+      only — two utterances that START alike (leading silence) and are resampled between the same
+      rates collided, and the second was handed the first one's audio; reproduced at HEAD before
+      fixing (two different buffers, identical output). The key now covers the whole buffer and
+      its length. **Tests:** real socket — a 16 kHz voice arrives at the registered 22.05 kHz
+      (`speak_begin` equals the registration; the PCM lasts what the utterance lasted, ±2 samples;
+      really resampled, not relabelled), a 22.05 kHz voice arrives at a registered 16 kHz, a mono
+      voice arrives as the registered two channels (same signal on both), an unconvertible
+      delivery is dropped and nothing is pushed; unit — `to_device` both directions for rate and
+      channels, identity when nothing needs converting, raising on a failed resample; the stdlib
+      resampler keeps duration, ramp shape and channel separation and runs with numpy blocked;
+      the cache returns each utterance its own audio. The `v1.1.0` test that asserted "never
+      upsamples" is replaced. Owner test green against the `v1.1.0` fixtures (a device that
+      registers 16 kHz still receives the 16 kHz `speak_begin` those fixtures record).
+      **Verified:** suite 1890 passed / 7 skipped (+15), pyright 0 errors, import contracts 11 kept.
+      docs: guides/audio, arch/dataflow (replies to a satellite are converted to exactly the registered format — the exception to "never upsampled"); guides/websocket-api is byte-locked — its restored sentence lands with the ARCH-66 cut
+      contracts: none — no versioned surface moved yet (code + tests; the restored guarantee and the retired case land in `ws-protocol-v1.2.0`, ARCH-66)
 ### Tests (TEST)
 - [x] **TEST-0** (P0) — Minimal end-to-end smoke/integration harness (refactor safety net, Gate 0). **DONE
       2026-06-01** → `irene/tests/test_smoke_e2e.py` (**5 passed / 1 xfailed**, ~21s; boots the WebAPI runner once

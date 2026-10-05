@@ -71,6 +71,12 @@ when nothing's declared. Any device plays *lower*, so a 22 kHz TTS engine is pla
 *exceeds* the sink is downsampled — never upsampled. On a machine with several output devices, `sounddevice`
 can target a specific one. (Only raw PCM/WAV is handled today; MP3/FLAC are not.)
 
+**Replies to a satellite are the exception.** A device on the other end of the reply channel registered one
+output format and plays whatever arrives as that format — it does not resample. So a spoken reply sent to a
+satellite is converted to *exactly* the rate and channel count the device registered, up as well as down: a
+16 kHz voice reaches a 22.05 kHz device at 22.05 kHz. If the conversion cannot be done the reply is not sent
+at all, rather than sent at the wrong speed. See the [WebSocket API](websocket-api.md).
+
 ## Troubleshooting
 
 - **No sound** — confirm `components.audio` is on and `default_provider` isn't `console`; check the OS can

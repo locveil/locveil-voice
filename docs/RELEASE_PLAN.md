@@ -429,23 +429,6 @@ _Apply to every remediation task below (from the 4 review docs + QUAL-25/26). So
 ### Bugs (BUG)
 _Discrete functional defects (distinct from QUAL refactors/quality work). Surfaced from any source; filed before fixing._
 
-- [ ] **BUG-50** [WS][AUDIO] `[release]` — **Reply audio is not converted UP to what the device registered**
-      (filed 2026-10-05 on the owner's decision, verbatim: "restore the reply-audio guarantee
-      server-side as a part of current goal"). Through `ws-protocol-v1.0.1` the guide promised that
-      audio on `/ws/audio/reply` is "already converted to the rate/channel count you registered";
-      the code only ever conformed DOWN (`AudioNegotiator.to_sink`, the local-sink rule "any device
-      plays lower"), so a 16 kHz voice reaches a 22.05 kHz device at 16 kHz. `v1.1.0` documented
-      that honestly (TEST-23's finding) instead of fixing it; the satellite's baseline "the
-      satellite never resamples" relies on the original promise. Fix: the reply path converts to
-      EXACTLY the registered contract — rate up as well as down, channel count up as well as down —
-      where the channel's conversion already lives, and never sends audio in any other format (a
-      conversion that cannot be done drops the delivery; it must not mislabel). Must hold on the
-      numpy-free armv7 controller image too: `AudioTranscoder`'s last fallback returns the input
-      bytes unchanged when numpy is missing while the caller relabels them with the target rate.
-      Proof: a real-socket test with a voice below the registered rate (`speak_begin` equals the
-      registration; PCM byte count matches the resampled duration). The guide wording and the
-      retired case land in the batched cut ARCH-66.
-
 ### Tests (TEST)
 > **Strategy (decided 2026-06-01): do NOT keep repairing the existing suite.** Most tests were written against
 > pre-refactor code and will be invalidated by the ARCH refactors (ARCH-1..5) and the code reviews (QUAL-8/10/12/14).

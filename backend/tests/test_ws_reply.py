@@ -48,7 +48,7 @@ def _build_app(*, voice_rate=16000, voice_pcm=b"\x00\x00", negotiator=None):
     class _PassNeg:
         output_sink = None
 
-        async def to_sink(self, audio_data, sink=None, trace_context=None):
+        async def to_device(self, audio_data, device, trace_context=None):
             return audio_data
 
     class _CM:
@@ -201,23 +201,76 @@ def test_ws_audio_reply_pushes_bracketed_bursts_with_a_per_connection_seq():
         assert pcm == voice
 
 
-def test_ws_audio_reply_never_upsamples_speak_begin_states_the_real_format():
-    """The reply is conformed DOWN to the device's contract, never up: a 16 kHz voice reaches a
-    device that registered 22.05 kHz AS PRODUCED — `speak_begin` is what the device plays by."""
+def _register_and_hear(voice_rate, voice_pcm, audio_out):
+    """Register a reply channel with `audio_out`, deliver one result spoken by a voice of
+    `voice_rate`, return (speak_begin, pcm)."""
+    from fastapi.testclient import TestClient
+    app, om = _build_app(voice_rate=voice_rate, voice_pcm=voice_pcm, negotiator=_real_negotiator())
+    with TestClient(app) as client, client.websocket_connect("/ws/audio/reply") as ws:
+        ws.send_text(json.dumps({"type": "register-reply", "client_id": "kitchen_node",
+                                 "audio_out": audio_out}))
+        assert ws.receive_json()["type"] == "registered"
+        delivered = _speak(client, om, "готово")
+        assert [d.delivered for d in delivered] == [True]
+        begin, pcm, _, _ = _read_burst(ws)
+        return begin, pcm
+
+
+def test_ws_audio_reply_converts_a_lower_rate_voice_up_to_the_registered_rate():
+    """BUG-50: the reply is ALWAYS in the format the device registered. A 16 kHz voice reaches
+    a device that registered 22.05 kHz AT 22.05 kHz (it used to arrive at 16 kHz with only
+    `speak_begin` telling the truth) — a satellite plays what arrives and never resamples."""
+    pytest.importorskip("fastapi")
+    seconds = 0.5
+    voice = b"\x01\x02" * int(16000 * seconds)                 # half a second of 16 kHz mono
+    begin, pcm = _register_and_hear(16000, voice, {"rate": 22050, "channels": 1})
+
+    assert begin == {"type": "speak_begin", "rate": 22050, "channels": 1, "width": 16, "seq": 1}
+    samples = len(pcm) / 2
+    assert len(pcm) % 2 == 0
+    assert abs(samples - 22050 * seconds) <= 2, "the burst must last what the utterance lasted"
+    assert len(pcm) != len(voice)                              # really resampled, not relabelled
+
+
+def test_ws_audio_reply_converts_a_higher_rate_voice_down_to_the_registered_rate():
+    """…and the other direction, which always worked: a 22.05 kHz voice for a 16 kHz device."""
+    pytest.importorskip("fastapi")
+    seconds = 0.5
+    voice = b"\x01\x02" * int(22050 * seconds)
+    begin, pcm = _register_and_hear(22050, voice, {"rate": 16000, "channels": 1})
+
+    assert begin == {"type": "speak_begin", "rate": 16000, "channels": 1, "width": 16, "seq": 1}
+    assert abs(len(pcm) / 2 - 16000 * seconds) <= 2
+
+
+def test_ws_audio_reply_spreads_a_mono_voice_over_the_registered_channels():
+    """The channel count is part of what was registered too: a mono voice for a device that
+    registered two channels arrives as two-channel audio (the same signal on both)."""
+    pytest.importorskip("fastapi")
+    voice = bytes(range(200)) * 10                             # 1000 distinct mono samples
+    begin, pcm = _register_and_hear(22050, voice, {"rate": 22050, "channels": 2})
+
+    assert begin == {"type": "speak_begin", "rate": 22050, "channels": 2, "width": 16, "seq": 1}
+    assert len(pcm) == 2 * len(voice)
+    left = b"".join(pcm[i:i + 2] for i in range(0, len(pcm), 4))
+    right = b"".join(pcm[i + 2:i + 4] for i in range(0, len(pcm), 4))
+    assert left == voice and right == voice
+
+
+def test_ws_audio_reply_drops_a_delivery_it_cannot_convert_rather_than_mislabel_it():
+    """If the conversion does not produce the registered format, nothing is sent: a burst in
+    another format would be played at the wrong speed."""
     pytest.importorskip("fastapi")
     from fastapi.testclient import TestClient
 
-    voice = b"\x01\x02" * 1600
-    app, om = _build_app(voice_rate=16000, voice_pcm=voice, negotiator=_real_negotiator())
-
+    app, om = _build_app(voice_rate=16000, voice_pcm=b"\x01\x02" * 800)   # pass-through negotiator
     with TestClient(app) as client, client.websocket_connect("/ws/audio/reply") as ws:
         ws.send_text(json.dumps({"type": "register-reply", "client_id": "kitchen_node",
                                  "audio_out": {"rate": 22050, "channels": 1}}))
         assert ws.receive_json()["type"] == "registered"
-        _speak(client, om, "готово")
-        begin, pcm, _, _ = _read_burst(ws)
-        assert begin["rate"] == 16000 and begin["channels"] == 1 and begin["width"] == 16
-        assert pcm == voice
+        delivered = _speak(client, om, "готово")
+        assert [d.delivered for d in delivered] == [False]
+    # (nothing was pushed: the context manager closed a socket with no pending frames to read)
 
 
 def test_ws_audio_reply_register_without_audio_out_assumes_22050_mono():

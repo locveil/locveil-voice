@@ -21,6 +21,23 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-10-05 — BUG-50: the guarantee goes back to the server, and two older bugs come out with
+  it.** `v1.1.0` had resolved the gap between "converted to what you registered" and a server
+  that only converts down by correcting the sentence. The owner resolved it the other way: the
+  satellite is designed around never resampling, so the server keeps the promise. The change
+  itself is small — the reply path stops borrowing the local speaker's rule and gets its own,
+  exact one. Proving it was not. The first negotiator test returned buffers of the wrong
+  length, and the cause was not in the new code: the resampling cache identified a buffer by
+  its first kilobyte, so any two utterances that begin alike and go between the same rates
+  shared an entry — the second caller received the first caller's audio. With conform-down
+  only, the reply path rarely resampled at all; with exact conversion it will resample
+  routinely, and synthesized speech routinely begins with silence. The second find is of the
+  same family: with numpy absent — the armv7 controller image, by design — the last resampling
+  fallback returned its input untouched and the caller stamped the target rate on it. A
+  guarantee that depends on resampling had to rest on a resampler that either resamples or
+  fails, so the fallback now does the arithmetic with the standard library, and the output
+  adapter refuses to send anything that is not in the registered format.
+
 - **2026-10-05 — BUG-48: the third copy, and how it is kept honest.** The guide has stated the
   JSON type of every key since the frame reference landed; the server simply never read it. The
   fix needs those types in code, which makes a third hand-written statement of the same table

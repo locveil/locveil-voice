@@ -39,7 +39,7 @@ class _FakeTTS:
 
 
 class _PassThroughNegotiator:
-    async def to_sink(self, audio_data, sink=None, trace_context=None):
+    async def to_device(self, audio_data, device, trace_context=None):
         return audio_data
 
 

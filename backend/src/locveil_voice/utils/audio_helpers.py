@@ -509,8 +509,12 @@ class AudioTranscoder:
             )
         
         # Phase 6: Check resampling cache for repeated conversions
+        # BUG-50: the key identifies the WHOLE buffer. It used to hash only the first 1 KB, so
+        # two utterances that begin alike (leading silence!) and are resampled between the same
+        # rates collided — and the second caller was handed the first one's audio.
         cache_key = (
-            hashlib.md5(audio_data.data[:1024]).hexdigest(),  # Sample first 1KB for cache key
+            hashlib.md5(audio_data.data).hexdigest(),
+            len(audio_data.data),
             audio_data.sample_rate,
             target_rate,
             audio_data.channels,
@@ -746,8 +750,15 @@ class AudioTranscoder:
         channels: int
     ) -> bytes:
         """
-        Basic resampling fallback using simple interpolation.
-        
+        Basic resampling fallback using simple linear interpolation.
+
+        numpy when it is installed and the audio is mono (fast); otherwise the stdlib
+        implementation below. BUG-50: this fallback used to return the INPUT bytes when numpy
+        was missing — and the caller relabels the result with the target rate, so on the
+        numpy-free armv7 image (BUG-33) any resample silently produced audio that plays at
+        the wrong speed. It also interpolated interleaved multi-channel samples as if they
+        were one channel. A resample now always resamples, or raises.
+
         Args:
             audio_bytes: Input audio data as bytes
             source_rate: Source sample rate in Hz
@@ -757,29 +768,68 @@ class AudioTranscoder:
         Returns:
             Resampled audio data as bytes
         """
-        try:
-            import numpy as np  # type: ignore
-            
-            def _basic_convert():
-                # Convert bytes to numpy array (assuming 16-bit PCM)
-                audio_array = np.frombuffer(audio_bytes, dtype=np.int16)
-                
-                # Calculate conversion ratio
-                ratio = target_rate / source_rate
-                new_length = int(len(audio_array) * ratio)
-                
-                # Simple linear interpolation
-                old_indices = np.linspace(0, len(audio_array) - 1, new_length)
-                new_audio = np.interp(old_indices, np.arange(len(audio_array)), audio_array.astype(np.float32))
-                
-                # Convert back to int16
-                return new_audio.astype(np.int16).tobytes()
-            
-            return await asyncio.to_thread(_basic_convert)
-            
-        except ImportError:
-            logger.warning("numpy not available, cannot perform resampling")
-            return audio_bytes  # Return original if no resampling possible
+        if channels == 1:
+            try:
+                import numpy as np  # type: ignore
+            except ImportError:
+                pass
+            else:
+                def _basic_convert():
+                    # Convert bytes to numpy array (assuming 16-bit PCM)
+                    audio_array = np.frombuffer(audio_bytes, dtype=np.int16)
+
+                    # Calculate conversion ratio
+                    ratio = target_rate / source_rate
+                    new_length = int(len(audio_array) * ratio)
+
+                    # Simple linear interpolation
+                    old_indices = np.linspace(0, len(audio_array) - 1, new_length)
+                    new_audio = np.interp(old_indices, np.arange(len(audio_array)), audio_array.astype(np.float32))
+
+                    # Convert back to int16
+                    return new_audio.astype(np.int16).tobytes()
+
+                return await asyncio.to_thread(_basic_convert)
+
+        return await asyncio.to_thread(
+            AudioTranscoder._linear_resample_pcm16, audio_bytes, source_rate, target_rate, channels)
+
+    @staticmethod
+    def _linear_resample_pcm16(audio_bytes: bytes, source_rate: int, target_rate: int,
+                               channels: int) -> bytes:
+        """Linear-interpolation resample of interleaved little-endian PCM16, **numpy-free**
+        (stdlib `array`) and channel-aware — the last resort that always works, so the
+        numpy-free armv7 image can resample too. Speech-grade, not studio-grade."""
+        import array
+        import sys
+
+        if source_rate <= 0 or target_rate <= 0 or channels <= 0:
+            raise ValueError(f"cannot resample {source_rate} Hz -> {target_rate} Hz ({channels} ch)")
+        samples = array.array("h")
+        samples.frombytes(audio_bytes[:len(audio_bytes) - len(audio_bytes) % (2 * channels)])
+        if sys.byteorder == "big":
+            samples.byteswap()  # 'h' is native-endian; the PCM contract is little-endian
+        frames_in = len(samples) // channels
+        frames_out = frames_in * target_rate // source_rate
+        out = array.array("h", bytes(2 * frames_out * channels))
+        if frames_in and frames_out:
+            last = frames_in - 1
+            step = (last / (frames_out - 1)) if frames_out > 1 else 0.0
+            for ch in range(channels):
+                src = samples[ch::channels]
+                dst = []
+                for n in range(frames_out):
+                    position = n * step
+                    index = int(position)
+                    if index >= last:
+                        dst.append(src[last])
+                    else:
+                        a = src[index]
+                        dst.append(int(a + (src[index + 1] - a) * (position - index)))
+                out[ch::channels] = array.array("h", dst)
+        if sys.byteorder == "big":
+            out.byteswap()
+        return out.tobytes()
 
 
     # --- Folded from AudioFormatConverter (ARCH-18 PR-3): the rate/format/channel convenience methods are

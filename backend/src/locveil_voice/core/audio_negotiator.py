@@ -20,7 +20,8 @@ from ..config.models import CoreConfig
 from .trace_context import TraceContext
 from ..utils.audio_data import AudioData
 from ..utils.audio_helpers import AudioTranscoder
-from ..utils.audio_negotiation import AudioContract, CanonicalFormat, derive_canonical
+from ..utils.audio_negotiation import (
+    AudioContract, AudioNegotiationError, CanonicalFormat, derive_canonical)
 
 logger = logging.getLogger(__name__)
 
@@ -194,6 +195,59 @@ class AudioNegotiator:
                 (time.time() - t0) * 1000.0,
             )
         return out
+
+    async def to_device(self, audio_data: AudioData, device: AudioContract,
+                        trace_context: Optional[TraceContext] = None) -> AudioData:
+        """Convert a producer's audio (TTS) to EXACTLY what a remote device declared — its rate
+        and its channel count, **up as well as down** (BUG-50).
+
+        The local sink rule (`to_sink`: conform down only, "any device plays lower") does not
+        hold for a device on the other end of a reply channel: it registered ONE output format
+        and plays what arrives as that format — a satellite never resamples. So a 16 kHz voice
+        becomes 22.05 kHz for a device that registered 22.05 kHz, and a mono voice is spread
+        over the channels the device asked for. Raises `AudioNegotiationError` if the result is
+        not exactly the device's format: the caller must drop the delivery rather than send
+        audio that plays at the wrong speed."""
+        rate, channels = device.preferred_rate, device.channels
+        if audio_data.sample_rate == rate and audio_data.channels == channels:
+            return audio_data  # already what the device registered
+
+        t0 = time.time()
+        out = audio_data
+        method = "none"
+        if out.channels != channels and out.channels > 1:
+            out = self._downmix_to_mono(out)  # resample the fewest channels
+        if out.sample_rate != rate:
+            conv = AudioTranscoder.get_optimal_conversion_path(out.sample_rate, rate, "general")
+            method = getattr(conv, "value", str(conv))
+            out = await AudioTranscoder.resample_audio_data(out, rate, conv)
+        if out.channels != channels and out.channels == 1:
+            out = self._spread_mono(out, channels)
+        if out.sample_rate != rate or out.channels != channels:
+            raise AudioNegotiationError(
+                f"could not convert {audio_data.sample_rate} Hz/{audio_data.channels} ch audio to the "
+                f"device's {rate} Hz/{channels} ch (got {out.sample_rate} Hz/{out.channels} ch)")
+
+        if trace_context:
+            trace_context.record_stage(
+                "audio_output_conform",
+                {"sample_rate": audio_data.sample_rate, "channels": audio_data.channels},
+                {"sample_rate": out.sample_rate, "channels": out.channels},
+                {"device": f"{rate}Hz/{channels}ch", "method": method},
+                (time.time() - t0) * 1000.0,
+            )
+        return out
+
+    @staticmethod
+    def _spread_mono(audio_data: AudioData, channels: int) -> AudioData:
+        """Repeat a mono signal on `channels` interleaved channels (numpy-free, like the downmix)."""
+        arr = array.array("h")
+        arr.frombytes(audio_data.data[:len(audio_data.data) & ~1])
+        spread = array.array("h", bytes(2 * len(arr) * channels))
+        for ch in range(channels):
+            spread[ch::channels] = arr
+        return type(audio_data)(data=spread.tobytes(), timestamp=audio_data.timestamp,
+                                sample_rate=audio_data.sample_rate, channels=channels)
 
     @staticmethod
     def _downmix_to_mono(audio_data: AudioData) -> AudioData:

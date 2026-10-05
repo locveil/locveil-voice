@@ -158,3 +158,101 @@ def test_infeasible_config_is_fatal():
     cfg.asr.sample_rate = 48000          # would require upsampling from the 16 kHz mic
     with pytest.raises(AudioNegotiationError):
         AudioNegotiator.from_config(cfg)
+
+
+# --- BUG-50: exact conversion to a remote device's registered format ----------------------------
+
+def _device(rate, channels=1):
+    from locveil_voice.utils.audio_negotiation import AudioContract
+    return AudioContract([rate], rate, ["pcm16"], "pcm16", channels)
+
+
+def _negotiator():
+    from locveil_voice.utils.audio_negotiation import CanonicalFormat
+    return AudioNegotiator(CanonicalFormat(16000, "pcm16", 1))
+
+
+async def test_to_device_returns_the_same_object_when_nothing_needs_converting():
+    frame = AudioData(data=b"\x00\x00" * 220, timestamp=0.0, sample_rate=22050, channels=1)
+    assert await _negotiator().to_device(frame, _device(22050)) is frame
+
+
+@pytest.mark.parametrize("source,target", [(16000, 22050), (16000, 48000), (48000, 22050), (22050, 16000)])
+async def test_to_device_converts_the_rate_both_ways(source, target):
+    frame = AudioData(data=b"\x01\x02" * source, timestamp=0.0, sample_rate=source, channels=1)  # 1 s
+    out = await _negotiator().to_device(frame, _device(target))
+    assert (out.sample_rate, out.channels) == (target, 1)
+    assert abs(len(out.data) / 2 - target) <= 2            # still one second
+
+
+async def test_to_device_converts_the_channel_count_both_ways():
+    mono = AudioData(data=b"\x10\x00\x20\x00" * 50, timestamp=0.0, sample_rate=22050, channels=1)
+    stereo = await _negotiator().to_device(mono, _device(22050, channels=2))
+    assert stereo.channels == 2 and len(stereo.data) == 2 * len(mono.data)
+    assert stereo.data[:8] == b"\x10\x00\x10\x00\x20\x00\x20\x00"
+    back = await _negotiator().to_device(stereo, _device(22050, channels=1))
+    assert back.channels == 1 and back.data == mono.data
+
+
+async def test_to_device_raises_when_the_result_is_not_the_devices_format(monkeypatch):
+    """A resample that fails returns its input; the negotiator must notice, not pass it on."""
+    from locveil_voice.utils import audio_helpers
+    from locveil_voice.utils.audio_negotiation import AudioNegotiationError
+
+    async def _broken(audio_bytes, source_rate, target_rate, channels, method):
+        raise RuntimeError("no resampler")
+    monkeypatch.setattr(audio_helpers.AudioTranscoder, "_resample_bytes", staticmethod(_broken))
+    audio_helpers.AudioTranscoder.clear_cache()
+    frame = AudioData(data=b"\x07\x00" * 1600, timestamp=0.0, sample_rate=16000, channels=1)
+    with pytest.raises(AudioNegotiationError):
+        await _negotiator().to_device(frame, _device(22050))
+
+
+@pytest.mark.parametrize("source,target,channels", [(16000, 22050, 1), (48000, 16000, 1), (16000, 22050, 2)])
+def test_linear_resample_needs_no_numpy_and_keeps_duration_and_shape(source, target, channels):
+    """The last-resort resampler (stdlib only — the armv7 image has no numpy): the output lasts
+    as long as the input, a ramp stays a ramp, and channels stay separate."""
+    import array
+    frames = source // 10                                    # 100 ms
+    ramp = array.array("h")
+    for n in range(frames):
+        for ch in range(channels):
+            ramp.append((n if ch == 0 else -n) * 3)          # channel 1 mirrors channel 0
+    from locveil_voice.utils.audio_helpers import AudioTranscoder
+    out = array.array("h")
+    out.frombytes(AudioTranscoder._linear_resample_pcm16(ramp.tobytes(), source, target, channels))
+    assert len(out) == (frames * target // source) * channels
+    left = out[0::channels]
+    assert list(left) == sorted(left) and left[0] == 0 and abs(left[-1] - (frames - 1) * 3) <= 3
+    if channels == 2:
+        assert all(abs(a + b) <= 1 for a, b in zip(left, out[1::2]))   # still mirrored: not mixed
+
+
+async def test_basic_resample_fallback_resamples_without_numpy(monkeypatch):
+    """BUG-50: with numpy missing this fallback returned its INPUT, and the caller relabelled
+    it with the target rate — audio at the wrong speed on the numpy-free armv7 image."""
+    import builtins
+    from locveil_voice.utils.audio_helpers import AudioTranscoder
+    real_import = builtins.__import__
+
+    def _no_numpy(name, *args, **kwargs):
+        if name == "numpy" or name.startswith("numpy."):
+            raise ImportError("numpy is not installed on this image")
+        return real_import(name, *args, **kwargs)
+    monkeypatch.setattr(builtins, "__import__", _no_numpy)
+    pcm = b"\x01\x02" * 1600                                 # 100 ms at 16 kHz
+    out = await AudioTranscoder._basic_resample_bytes(pcm, 16000, 22050, 1)
+    assert len(out) == 2 * (1600 * 22050 // 16000) and out != pcm
+
+
+async def test_resample_cache_never_hands_one_utterance_the_audio_of_another():
+    """BUG-50: the resampling cache keyed on the first 1 KB only. Two utterances that START
+    alike — leading silence — and differ later got each other's audio."""
+    from locveil_voice.utils.audio_helpers import AudioTranscoder
+    silence = b"\x00\x00" * 1024                              # an identical first 2 KB
+    first = AudioData(data=silence + b"\x10\x10" * 4000, timestamp=0.0, sample_rate=16000, channels=1)
+    second = AudioData(data=silence + b"\x70\x70" * 8000, timestamp=0.0, sample_rate=16000, channels=1)
+    out_first = await AudioTranscoder.resample_audio_data(first, 22050)
+    out_second = await AudioTranscoder.resample_audio_data(second, 22050)
+    assert len(out_second.data) > len(out_first.data)          # its own length…
+    assert out_second.data[-200:] != out_first.data[-200:]     # …and its own content

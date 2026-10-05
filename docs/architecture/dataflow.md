@@ -44,6 +44,8 @@ Step 1 hides a small pipeline of its own — how raw audio becomes that transcri
   to ASR — VAD and wake are exactly the work the device already did.
 - **Output is the mirror.** A reply's audio (TTS) is conformed **down** to the playback **sink** — the device's
   capability, CD by default — through the same machinery: any device plays lower, so it's never upsampled.
+  A reply sent to a **satellite** is the one exception: it is converted to *exactly* the format the device
+  registered, up as well as down, because a satellite plays what arrives and never resamples.
 
 See [VAD](../guides/vad.md), [voice trigger](../guides/voice-trigger.md) and [audio](../guides/audio.md) for
 the knobs, and the [WebSocket API](../guides/websocket-api.md) for the wire protocols a device speaks.
