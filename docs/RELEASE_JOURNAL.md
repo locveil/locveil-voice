@@ -21,6 +21,17 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-10-05 — BUG-49: the first CI run of the owner test, and what "network" means.** One
+  leg failed in CI that passes locally, on the one transcript that pulls the plug. The cause was
+  not in the fixture and not in the server: the tap had hard-coded the close code by which the
+  hosting stack tells an application "the peer is gone", and CI — which installs unlocked — was
+  two uvicorn minors ahead of the lock, on a websocket implementation that says 1005 where the
+  old one says 1006. Worth recording because it is exactly the class of thing this work exists to
+  prevent on the other side: a client inferring protocol meaning from an incidental number. The
+  guide never names a code, only "dropped without a closing handshake"; the tap now reads the
+  stack the same way. It also argues for keeping the owner test honest about its environment:
+  the fix was verified against both stacks, by overlaying CI's versions on the local venv.
+
 - **2026-10-05 — ARCH-64: a schema that is allowed to say less than the owner's test.** The
   temptation with a schema is to make it the strict one — close every object, enumerate every
   value. That would have encoded the wrong party's obligation: a consumer validating captured

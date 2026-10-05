@@ -1360,6 +1360,24 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       ARCH-61. **Verified:** suite 1487 passed / 7 skipped (+8), guards green.
       docs: none — the code is brought to what `guides/websocket-api` already promises (an `error` answer on a protocol violation); the "error is terminal" sentence is byte-locked and lands with the ARCH-61 cut
       contracts: none — no versioned surface moved (the guide and the STAMP stay at `ws-protocol-v1.0.1`; server behavior now matches the document)
+- [x] **BUG-49** [TEST][WS][CI] `[release]` — **DONE 2026-10-05 (filed + completed same session; found by the
+      first CI run of the machine-core owner test — run 37288706817, the ARCH-62..64 push).** CI was
+      red on exactly one leg: `transcript.reconnect.jsonl` was "not a real recording". The transcript
+      closes both sockets `by: network`, and the frame tap decided "network" from the close code the
+      server-side stack reports for a peer that vanished without a closing handshake — which it
+      assumed to be 1006. That is what the LOCKED stack reports (uvicorn 0.49.0 / websockets 16.0, the
+      legacy implementation). CI installs unlocked and resolved uvicorn 0.54.0 / websockets 17.2,
+      whose newer implementation reports the same event as **1005** ("no status received"), so the
+      recording said `by: client` and no longer equalled the fixture. Reproduced locally by laying the
+      CI versions over the venv before touching anything: the two aborted connections came back as
+      1005. **Fix (test tooling only):** the tap treats both codes as "no closing handshake" —
+      neither ever travels on the wire (RFC 6455 §7.4.1), both are a stack's local way of saying the
+      peer is gone, and a client that closes properly sends a real code (1000). No fixture, guide or
+      server code changed; the wire contract says only "the connection dropped without a closing
+      handshake" and never names a code. **Verified:** owner test 305/305 on BOTH stacks (locked,
+      and the CI-resolved versions overlaid); suite 1806 passed / 7 skipped.
+      docs: none — test tooling; no manifest node describes the frame tap
+      contracts: none — no versioned surface moved (the tap is not an artifact; fixtures untouched)
 ### Tests (TEST)
 - [x] **TEST-0** (P0) — Minimal end-to-end smoke/integration harness (refactor safety net, Gate 0). **DONE
       2026-06-01** → `irene/tests/test_smoke_e2e.py` (**5 passed / 1 xfailed**, ~21s; boots the WebAPI runner once

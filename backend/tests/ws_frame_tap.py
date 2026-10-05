@@ -41,9 +41,13 @@ CHANNEL_BY_PATH = {
     "/ws/observe": "observe",
 }
 
-# A close code the server-side stack reports when the peer vanished without a closing
-# handshake (TCP reset / power loss) — the transcripts' `"by": "network"`.
-ABNORMAL_CLOSE_CODE = 1006
+# The close codes a server-side stack reports when the peer vanished without a closing
+# handshake (TCP reset / power loss) — the transcripts' `"by": "network"`. Neither code ever
+# travels on the wire (RFC 6455 §7.4.1): 1006 is "closed abnormally", 1005 "no status
+# received". WHICH one the application sees for a dropped connection depends on the hosting
+# stack — uvicorn's legacy websockets implementation reports 1006, its newer one 1005 —
+# so both mean the same thing here. A client that closes properly sends a real code (1000).
+NO_HANDSHAKE_CLOSE_CODES = frozenset({1005, 1006})
 
 _SCOPE_KEY = "locveil.ws_tap"
 
@@ -107,7 +111,7 @@ class _Tap:
             self._payload(state, "c2s", message)
         elif kind == "websocket.disconnect":
             code = message.get("code")
-            self._close(state, "network" if code == ABNORMAL_CLOSE_CODE else "client", code)
+            self._close(state, "network" if code in NO_HANDSHAKE_CLOSE_CODES else "client", code)
 
     def sent(self, ws: WebSocket, message: Dict[str, Any]) -> None:
         state = self._state(ws)
