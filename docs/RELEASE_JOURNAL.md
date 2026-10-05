@@ -21,6 +21,21 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-10-05 — ARCH-62: the golden frames, and a test that cannot be satisfied by agreeing with
+  itself.** The risk with a hand-written fixture file is that its author also writes the test
+  and both encode the same misreading. So the test is built around a witness that is neither:
+  the tap sits on the server side of the socket and records what the real handlers did while
+  the ordinary WS suites ran, and the fixtures must equal those recordings — not resemble them.
+  Every valid server frame in the file is a frame that was sent; the one synthetic valid case
+  per frame is derived mechanically (the recorded frame plus one unknown key), which is itself
+  the forward-compatibility promise in data form. The handshake is checked from the other side
+  too: each case is sent to the real endpoint and the answer compared with the file's `expect`.
+  That replay settled a design question by refusing to pass — `/ws/output` cannot carry a
+  single rejecting case, because it never rejects. Two keys were added to the reviewed shape
+  while it is still free to change: JSON types per key (a wrong-type verdict needs something to
+  be wrong against) and each channel's opening / ack / error frame names, so that a C harness
+  can drive its table from the file instead of hard-coding which frame acknowledges what.
+
 - **2026-10-05 — TEST-23: thirteen tests that were simply missing.** The machine core's premise is
   that fixtures are checked against frames a real handler put on a real socket, and half the
   documented frames had never been on one in any test: the speak burst was asserted on a callback

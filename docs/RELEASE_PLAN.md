@@ -321,15 +321,6 @@ See `docs/review/phase1_architecture_map.md` §5.
       served `protocol_version` stays `"1"`. On the cut: `re-pin owed: satellite` (FW-1a's conformance
       test consumes the pinned fixtures from the day they exist, never gated on them) and commons
       (PROD-28 build item 6 — its eval WS provider pins `ws-protocol` when the core lands).
-- [ ] **ARCH-62** [WS][CONTRACTS] `[release]` — **WS machine core, slice 1: golden frames + the owner test's
-      frame tap** (filed 2026-10-05, split out of ARCH-61 at intake; design §3, §5). Hand-written
-      `contracts/ws-protocol/frames.golden.json` — twenty frame definitions (key lists, JSON types,
-      opaque/volatile marks), valid / invalid / unknown-type / malformed cases with real values, c2s
-      invalid cases carrying the server's `expect`; the pytest tap plugin recording every frame at the
-      server side of the socket; `backend/tests/test_ws_machine_core.py` legs L1 (self-consistency +
-      the naming rule), L3 (real s2c frames conform strictly), L4 (every frame witnessed, first valid
-      cases equal recorded frames), L4b (handshake cases replayed against the real handlers). The file
-      is NOT enumerated until ARCH-61. Needs BUG-46 and TEST-23 first.
 - [ ] **ARCH-63** [WS][CONTRACTS] `[release]` — **WS machine core, slice 2: JSONL transcripts** (filed
       2026-10-05, split out of ARCH-61 at intake; design §4, §5). Nine hand-written one-scenario files
       `contracts/ws-protocol/transcript.<scenario>.jsonl` (audio-batch, audio-streaming, audio-trace,

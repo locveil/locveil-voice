@@ -135,3 +135,20 @@ def test_ws_observe_streams_filtered_events_after_subscribed():
                       "session_id": "5f0c1d7a9b3e4c62a8d4e1f0b7c39a25",
                       "client_id": "kitchen_node", "room_name": "Кухня", "source": "ws_audio",
                       "payload": {"text": "Таймер на 5 минут запущен", "success": True}}
+
+
+def test_ws_observe_event_without_identity_carries_nulls_not_missing_keys():
+    """An event with no origin still has all four identity keys — as JSON null. (A parser
+    that expects a string there must be ready for null; one that expects the key may be.)"""
+    import json
+    from fastapi.testclient import TestClient
+    bus = EventBus()
+    app = _router_app(token="observe-secret", allow_remote=True, bus=bus)
+    with TestClient(app) as client, client.websocket_connect("/ws/observe") as ws:
+        ws.send_text(json.dumps({"token": "observe-secret"}))          # no filter: everything
+        assert ws.receive_json() == {"type": "subscribed"}
+        client.portal.call(bus.publish, PipelineEvent(type=EventType.INPUT_RECEIVED))
+        ev = ws.receive_json()
+        assert ev.pop("timestamp") > 0
+        assert ev == {"type": "event", "event": "input.received", "session_id": None,
+                      "client_id": None, "room_name": None, "source": None, "payload": {}}

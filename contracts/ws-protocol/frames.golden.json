@@ -1,0 +1,341 @@
+{
+  "contract": "ws-protocol",
+  "protocol_major": 1,
+  "core_format": 1,
+  "channels": {
+    "audio": { "path": "/ws/audio", "opening": "audio.register", "ack": "audio.registered", "error": "audio.error" },
+    "reply": { "path": "/ws/audio/reply", "opening": "reply.register-reply", "ack": "reply.registered", "error": "reply.error" },
+    "output": { "path": "/ws/output", "opening": "output.hello", "ack": "output.connected", "error": "output.error" },
+    "observe": { "path": "/ws/observe", "opening": "observe.subscribe", "ack": "observe.subscribed", "error": "observe.error" }
+  },
+  "binary": {
+    "audio.c2s": { "content": "pcm_s16le", "channels": 1, "rate_from": "audio.register.sample_rate" },
+    "reply.s2c": { "content": "pcm_s16le", "rate_from": "reply.speak_begin.rate", "channels_from": "reply.speak_begin.channels", "only_between": ["reply.speak_begin", "reply.speak_end"] }
+  },
+  "frames": {
+    "audio.register": {
+      "channel": "audio", "direction": "c2s", "type": "register",
+      "required": ["type", "client_id", "room_name"],
+      "optional": ["sample_rate", "wants_audio", "mode", "wants_trace", "covered_rooms", "name", "available_devices", "protocol_version", "firmware_version", "wake_pack_version"],
+      "types": { "type": "string", "client_id": "string", "room_name": "string", "sample_rate": "integer", "wants_audio": "boolean", "mode": "string", "wants_trace": "boolean", "covered_rooms": "array", "name": "string", "available_devices": "array", "protocol_version": "string", "firmware_version": "string", "wake_pack_version": "string" },
+      "opaque": [],
+      "volatile": [],
+      "cases": [
+        { "id": "audio.register/plain", "verdict": "valid", "json": { "type": "register", "client_id": "kitchen_node", "room_name": "Кухня", "sample_rate": 16000, "wants_audio": true } },
+        { "id": "audio.register/minimal", "verdict": "valid", "json": { "type": "register", "client_id": "kitchen_node", "room_name": "Кухня" } },
+        { "id": "audio.register/streaming", "verdict": "valid", "json": { "type": "register", "client_id": "kitchen_node", "room_name": "Кухня", "sample_rate": 16000, "wants_audio": true, "mode": "streaming" } },
+        { "id": "audio.register/wants-trace", "verdict": "valid", "json": { "type": "register", "client_id": "kitchen_node", "room_name": "Кухня", "sample_rate": 16000, "wants_trace": true } },
+        { "id": "audio.register/mode-other-is-batch", "verdict": "valid", "note": "any mode other than \"streaming\" selects batch", "json": { "type": "register", "client_id": "kitchen_node", "room_name": "Кухня", "sample_rate": 16000, "mode": "single" } },
+        { "id": "audio.register/full", "verdict": "valid", "json": { "type": "register", "client_id": "kitchen_node", "room_name": "Кухня", "sample_rate": 16000, "wants_audio": true, "mode": "streaming", "wants_trace": false, "covered_rooms": ["Кухня", "Прихожая"], "name": "Кухонная колонка", "available_devices": [], "protocol_version": "1", "firmware_version": "0.5.2", "wake_pack_version": "wake-pack-v1.0.1" } },
+        { "id": "audio.register/unknown-field", "verdict": "valid", "json": { "type": "register", "client_id": "kitchen_node", "room_name": "Кухня", "sample_rate": 16000, "wants_audio": true, "x_future": 1 } },
+        { "id": "audio.register/missing-type", "verdict": "invalid", "violation": "missing-type", "json": { "client_id": "kitchen_node", "room_name": "Кухня", "sample_rate": 16000, "wants_audio": true }, "expect": { "frame": "audio.error", "then": "close" } },
+        { "id": "audio.register/missing-client-id", "verdict": "invalid", "violation": "missing-required", "json": { "type": "register", "room_name": "Кухня", "sample_rate": 16000, "wants_audio": true }, "expect": { "frame": "audio.error", "then": "close" } },
+        { "id": "audio.register/missing-room-name", "verdict": "invalid", "violation": "missing-required", "json": { "type": "register", "client_id": "kitchen_node", "sample_rate": 16000, "wants_audio": true }, "expect": { "frame": "audio.error", "then": "close" } },
+        { "id": "audio.register/not-json", "verdict": "invalid", "violation": "not-json", "raw": "{\"type\": \"register\", \"client_id\": ", "expect": { "frame": "audio.error", "then": "close" } },
+        { "id": "audio.register/not-an-object", "verdict": "invalid", "violation": "not-an-object", "raw": "[\"register\", \"kitchen_node\"]", "expect": { "frame": "audio.error", "then": "close" } }
+      ]
+    },
+    "audio.end": {
+      "channel": "audio", "direction": "c2s", "type": "end",
+      "required": ["type"],
+      "optional": [],
+      "types": { "type": "string" },
+      "opaque": [],
+      "volatile": [],
+      "cases": [
+        { "id": "audio.end/plain", "verdict": "valid", "json": { "type": "end" } },
+        { "id": "audio.end/unknown-field", "verdict": "valid", "json": { "type": "end", "x_future": 1 } }
+      ]
+    },
+    "audio.registered": {
+      "channel": "audio", "direction": "s2c", "type": "registered",
+      "required": ["type", "client_id", "session_id", "trace", "protocol_version"],
+      "optional": [],
+      "types": { "type": "string", "client_id": "string", "session_id": "string", "trace": "boolean", "protocol_version": "string" },
+      "opaque": [],
+      "volatile": ["session_id"],
+      "cases": [
+        { "id": "audio.registered/plain", "verdict": "valid", "json": { "type": "registered", "client_id": "kitchen_node", "session_id": "77831f2ac76a4036966af40d95a5c7d3", "trace": false, "protocol_version": "1" } },
+        { "id": "audio.registered/trace-granted", "verdict": "valid", "json": { "type": "registered", "client_id": "kitchen_node", "session_id": "a94e50cacf6d49da9f2e7ae8914a4fc9", "trace": true, "protocol_version": "1" } },
+        { "id": "audio.registered/unknown-field", "verdict": "valid", "json": { "type": "registered", "client_id": "kitchen_node", "session_id": "77831f2ac76a4036966af40d95a5c7d3", "trace": false, "protocol_version": "1", "x_future": 1 } },
+        { "id": "audio.registered/missing-type", "verdict": "invalid", "violation": "missing-type", "json": { "client_id": "kitchen_node", "session_id": "77831f2ac76a4036966af40d95a5c7d3", "trace": false, "protocol_version": "1" } },
+        { "id": "audio.registered/type-not-string", "verdict": "invalid", "violation": "wrong-json-type", "json": { "type": 7, "client_id": "kitchen_node", "session_id": "77831f2ac76a4036966af40d95a5c7d3", "trace": false, "protocol_version": "1" } },
+        { "id": "audio.registered/missing-session-id", "verdict": "invalid", "violation": "missing-required", "json": { "type": "registered", "client_id": "kitchen_node", "trace": false, "protocol_version": "1" } },
+        { "id": "audio.registered/missing-protocol-version", "verdict": "invalid", "violation": "missing-required", "json": { "type": "registered", "client_id": "kitchen_node", "session_id": "77831f2ac76a4036966af40d95a5c7d3", "trace": false } },
+        { "id": "audio.registered/trace-not-boolean", "verdict": "invalid", "violation": "wrong-json-type", "json": { "type": "registered", "client_id": "kitchen_node", "session_id": "77831f2ac76a4036966af40d95a5c7d3", "trace": "false", "protocol_version": "1" } },
+        { "id": "audio.registered/protocol-version-not-string", "verdict": "invalid", "violation": "wrong-json-type", "json": { "type": "registered", "client_id": "kitchen_node", "session_id": "77831f2ac76a4036966af40d95a5c7d3", "trace": false, "protocol_version": 1 } }
+      ]
+    },
+    "audio.partial": {
+      "channel": "audio", "direction": "s2c", "type": "partial",
+      "required": ["type", "text"],
+      "optional": [],
+      "types": { "type": "string", "text": "string" },
+      "opaque": [],
+      "volatile": [],
+      "cases": [
+        { "id": "audio.partial/plain", "verdict": "valid", "json": { "type": "partial", "text": "включи свет" } },
+        { "id": "audio.partial/unknown-field", "verdict": "valid", "json": { "type": "partial", "text": "включи свет", "x_future": 1 } },
+        { "id": "audio.partial/missing-text", "verdict": "invalid", "violation": "missing-required", "json": { "type": "partial" } },
+        { "id": "audio.partial/text-not-string", "verdict": "invalid", "violation": "wrong-json-type", "json": { "type": "partial", "text": null } }
+      ]
+    },
+    "audio.response": {
+      "channel": "audio", "direction": "s2c", "type": "response",
+      "required": ["type", "text", "success", "error", "confidence", "intent_name", "timestamp", "metadata"],
+      "optional": [],
+      "types": { "type": "string", "text": "string", "success": "boolean", "error": ["string", "null"], "confidence": "number", "intent_name": ["string", "null"], "timestamp": "number", "metadata": "object" },
+      "opaque": ["metadata"],
+      "volatile": ["timestamp"],
+      "cases": [
+        { "id": "audio.response/plain", "verdict": "valid", "json": { "type": "response", "text": "Таймер на 5 минут запущен", "success": true, "error": null, "confidence": 1.0, "intent_name": "timer.set", "timestamp": 1791190742.4075792, "metadata": { "original_intent": "timer.set" } } },
+        { "id": "audio.response/failed", "verdict": "valid", "note": "a failed command is still a response: success false, error a string", "json": { "type": "response", "text": "Не удалось включить свет", "success": false, "error": "device unreachable", "confidence": 1.0, "intent_name": "smart_home.switch_on", "timestamp": 1791190742.407581, "metadata": { "original_intent": "smart_home.switch_on" } } },
+        { "id": "audio.response/no-intent-name", "verdict": "valid", "json": { "type": "response", "text": "готово", "success": true, "error": null, "confidence": 1.0, "intent_name": null, "timestamp": 1791190745.0832782, "metadata": { "ok": true } } },
+        { "id": "audio.response/unknown-field", "verdict": "valid", "json": { "type": "response", "text": "Таймер на 5 минут запущен", "success": true, "error": null, "confidence": 1.0, "intent_name": "timer.set", "timestamp": 1791190742.4075792, "metadata": { "original_intent": "timer.set" }, "x_future": 1 } },
+        { "id": "audio.response/missing-text", "verdict": "invalid", "violation": "missing-required", "json": { "type": "response", "success": true, "error": null, "confidence": 1.0, "intent_name": "timer.set", "timestamp": 1791190742.4075792, "metadata": { "original_intent": "timer.set" } } },
+        { "id": "audio.response/missing-success", "verdict": "invalid", "violation": "missing-required", "json": { "type": "response", "text": "Таймер на 5 минут запущен", "error": null, "confidence": 1.0, "intent_name": "timer.set", "timestamp": 1791190742.4075792, "metadata": { "original_intent": "timer.set" } } },
+        { "id": "audio.response/success-not-boolean", "verdict": "invalid", "violation": "wrong-json-type", "json": { "type": "response", "text": "Таймер на 5 минут запущен", "success": "true", "error": null, "confidence": 1.0, "intent_name": "timer.set", "timestamp": 1791190742.4075792, "metadata": { "original_intent": "timer.set" } } },
+        { "id": "audio.response/text-not-string", "verdict": "invalid", "violation": "wrong-json-type", "json": { "type": "response", "text": null, "success": true, "error": null, "confidence": 1.0, "intent_name": "timer.set", "timestamp": 1791190742.4075792, "metadata": { "original_intent": "timer.set" } } },
+        { "id": "audio.response/confidence-not-number", "verdict": "invalid", "violation": "wrong-json-type", "json": { "type": "response", "text": "Таймер на 5 минут запущен", "success": true, "error": null, "confidence": "1.0", "intent_name": "timer.set", "timestamp": 1791190742.4075792, "metadata": { "original_intent": "timer.set" } } },
+        { "id": "audio.response/metadata-not-object", "verdict": "invalid", "violation": "wrong-json-type", "json": { "type": "response", "text": "Таймер на 5 минут запущен", "success": true, "error": null, "confidence": 1.0, "intent_name": "timer.set", "timestamp": 1791190742.4075792, "metadata": null } }
+      ]
+    },
+    "audio.trace": {
+      "channel": "audio", "direction": "s2c", "type": "trace",
+      "required": ["type", "request_id", "trace"],
+      "optional": [],
+      "types": { "type": "string", "request_id": "string", "trace": "object" },
+      "opaque": ["trace"],
+      "volatile": ["request_id"],
+      "cases": [
+        { "id": "audio.trace/plain", "verdict": "valid", "json": { "type": "trace", "request_id": "af955a51-4cbb-49d0-9314-96cbd6cf6ec2", "trace": { "trace_version": 1, "request_id": "af955a51-4cbb-49d0-9314-96cbd6cf6ec2", "saved_at": "2026-10-05T08:59:05.083364+00:00", "replay": { "input": null, "request": null, "canonical": null, "seed_context": null, "config_subset": null, "config_digest": null, "provider_models": null }, "execution": { "pipeline_stages": [{ "stage": "stub_pipeline", "input": { "in": "audio" }, "output": { "out": "готово" }, "metadata": {}, "processing_time_ms": 1.0, "timestamp": 1791190745.0832593 }], "context_evolution": { "before": null, "after": null, "changes": { "summary": "Incomplete context tracking", "error": "Missing before or after snapshot" } }, "performance_metrics": { "total_processing_time_ms": 1.0, "stage_breakdown": { "stub_pipeline": 1.0 }, "total_stages": 1, "execution_start_time": 1791190745.0832367, "trace_overhead_estimate_ms": 0.1 } }, "logs": [], "handler_events": [], "recorded_output": null } } },
+        { "id": "audio.trace/unknown-field", "verdict": "valid", "json": { "type": "trace", "request_id": "af955a51-4cbb-49d0-9314-96cbd6cf6ec2", "trace": { "trace_version": 1, "request_id": "af955a51-4cbb-49d0-9314-96cbd6cf6ec2", "saved_at": "2026-10-05T08:59:05.083364+00:00", "replay": { "input": null, "request": null, "canonical": null, "seed_context": null, "config_subset": null, "config_digest": null, "provider_models": null }, "execution": { "pipeline_stages": [{ "stage": "stub_pipeline", "input": { "in": "audio" }, "output": { "out": "готово" }, "metadata": {}, "processing_time_ms": 1.0, "timestamp": 1791190745.0832593 }], "context_evolution": { "before": null, "after": null, "changes": { "summary": "Incomplete context tracking", "error": "Missing before or after snapshot" } }, "performance_metrics": { "total_processing_time_ms": 1.0, "stage_breakdown": { "stub_pipeline": 1.0 }, "total_stages": 1, "execution_start_time": 1791190745.0832367, "trace_overhead_estimate_ms": 0.1 } }, "logs": [], "handler_events": [], "recorded_output": null }, "x_future": 1 } },
+        { "id": "audio.trace/missing-trace", "verdict": "invalid", "violation": "missing-required", "json": { "type": "trace", "request_id": "af955a51-4cbb-49d0-9314-96cbd6cf6ec2" } },
+        { "id": "audio.trace/trace-not-object", "verdict": "invalid", "violation": "wrong-json-type", "json": { "type": "trace", "request_id": "af955a51-4cbb-49d0-9314-96cbd6cf6ec2", "trace": "af955a51-4cbb-49d0-9314-96cbd6cf6ec2" } }
+      ]
+    },
+    "audio.error": {
+      "channel": "audio", "direction": "s2c", "type": "error",
+      "required": ["type", "error"],
+      "optional": [],
+      "types": { "type": "string", "error": "string" },
+      "opaque": [],
+      "volatile": [],
+      "cases": [
+        { "id": "audio.error/plain", "verdict": "valid", "json": { "type": "error", "error": "first frame must be type=register" } },
+        { "id": "audio.error/certificate-mismatch", "verdict": "valid", "json": { "type": "error", "error": "client_id does not match certificate identity (kitchen_node)" } },
+        { "id": "audio.error/unknown-field", "verdict": "valid", "json": { "type": "error", "error": "first frame must be type=register", "x_future": 1 } },
+        { "id": "audio.error/missing-error", "verdict": "invalid", "violation": "missing-required", "json": { "type": "error" } },
+        { "id": "audio.error/error-not-string", "verdict": "invalid", "violation": "wrong-json-type", "json": { "type": "error", "error": { "code": 400 } } }
+      ]
+    },
+    "reply.register-reply": {
+      "channel": "reply", "direction": "c2s", "type": "register-reply",
+      "required": ["type", "client_id"],
+      "optional": ["audio_out"],
+      "types": { "type": "string", "client_id": "string", "audio_out": "object" },
+      "opaque": [],
+      "volatile": [],
+      "cases": [
+        { "id": "reply.register-reply/plain", "verdict": "valid", "json": { "type": "register-reply", "client_id": "kitchen_node", "audio_out": { "rate": 22050, "channels": 1 } } },
+        { "id": "reply.register-reply/minimal", "verdict": "valid", "note": "without audio_out the server assumes 22050 Hz mono", "json": { "type": "register-reply", "client_id": "kitchen_node" } },
+        { "id": "reply.register-reply/audio-out-extra-key", "verdict": "valid", "note": "audio_out carries rate and channels; any other key in it is ignored", "json": { "type": "register-reply", "client_id": "kitchen_node", "audio_out": { "rate": 22050, "channels": 1, "width": 16 } } },
+        { "id": "reply.register-reply/unknown-field", "verdict": "valid", "json": { "type": "register-reply", "client_id": "kitchen_node", "audio_out": { "rate": 22050, "channels": 1 }, "x_future": 1 } },
+        { "id": "reply.register-reply/missing-type", "verdict": "invalid", "violation": "missing-type", "json": { "client_id": "kitchen_node", "audio_out": { "rate": 22050, "channels": 1 } }, "expect": { "frame": "reply.error", "then": "close" } },
+        { "id": "reply.register-reply/missing-client-id", "verdict": "invalid", "violation": "missing-required", "json": { "type": "register-reply", "audio_out": { "rate": 22050, "channels": 1 } }, "expect": { "frame": "reply.error", "then": "close" } },
+        { "id": "reply.register-reply/not-json", "verdict": "invalid", "violation": "not-json", "raw": "{\"type\": \"register-reply\", \"client_id\": ", "expect": { "frame": "reply.error", "then": "close" } },
+        { "id": "reply.register-reply/not-an-object", "verdict": "invalid", "violation": "not-an-object", "raw": "[\"register-reply\", \"kitchen_node\"]", "expect": { "frame": "reply.error", "then": "close" } }
+      ]
+    },
+    "reply.registered": {
+      "channel": "reply", "direction": "s2c", "type": "registered",
+      "required": ["type", "client_id", "protocol_version"],
+      "optional": [],
+      "types": { "type": "string", "client_id": "string", "protocol_version": "string" },
+      "opaque": [],
+      "volatile": [],
+      "cases": [
+        { "id": "reply.registered/plain", "verdict": "valid", "json": { "type": "registered", "client_id": "kitchen_node", "protocol_version": "1" } },
+        { "id": "reply.registered/unknown-field", "verdict": "valid", "json": { "type": "registered", "client_id": "kitchen_node", "protocol_version": "1", "x_future": 1 } },
+        { "id": "reply.registered/missing-type", "verdict": "invalid", "violation": "missing-type", "json": { "client_id": "kitchen_node", "protocol_version": "1" } },
+        { "id": "reply.registered/missing-protocol-version", "verdict": "invalid", "violation": "missing-required", "json": { "type": "registered", "client_id": "kitchen_node" } },
+        { "id": "reply.registered/protocol-version-not-string", "verdict": "invalid", "violation": "wrong-json-type", "json": { "type": "registered", "client_id": "kitchen_node", "protocol_version": 1 } }
+      ]
+    },
+    "reply.speak_begin": {
+      "channel": "reply", "direction": "s2c", "type": "speak_begin",
+      "required": ["type", "rate", "channels", "width", "seq"],
+      "optional": [],
+      "types": { "type": "string", "rate": "integer", "channels": "integer", "width": "integer", "seq": "integer" },
+      "opaque": [],
+      "volatile": [],
+      "cases": [
+        { "id": "reply.speak_begin/plain", "verdict": "valid", "json": { "type": "speak_begin", "rate": 22050, "channels": 1, "width": 16, "seq": 1 } },
+        { "id": "reply.speak_begin/second-burst", "verdict": "valid", "json": { "type": "speak_begin", "rate": 22050, "channels": 1, "width": 16, "seq": 2 } },
+        { "id": "reply.speak_begin/lower-rate-than-registered", "verdict": "valid", "note": "a 16 kHz voice sent to a device registered at 22050 Hz: the server never upsamples", "json": { "type": "speak_begin", "rate": 16000, "channels": 1, "width": 16, "seq": 1 } },
+        { "id": "reply.speak_begin/unknown-field", "verdict": "valid", "json": { "type": "speak_begin", "rate": 22050, "channels": 1, "width": 16, "seq": 1, "x_future": 1 } },
+        { "id": "reply.speak_begin/missing-rate", "verdict": "invalid", "violation": "missing-required", "json": { "type": "speak_begin", "channels": 1, "width": 16, "seq": 1 } },
+        { "id": "reply.speak_begin/missing-seq", "verdict": "invalid", "violation": "missing-required", "json": { "type": "speak_begin", "rate": 22050, "channels": 1, "width": 16 } },
+        { "id": "reply.speak_begin/rate-not-number", "verdict": "invalid", "violation": "wrong-json-type", "json": { "type": "speak_begin", "rate": "22050", "channels": 1, "width": 16, "seq": 1 } },
+        { "id": "reply.speak_begin/rate-not-integer", "verdict": "invalid", "violation": "wrong-json-type", "json": { "type": "speak_begin", "rate": 22050.5, "channels": 1, "width": 16, "seq": 1 } },
+        { "id": "reply.speak_begin/seq-null", "verdict": "invalid", "violation": "wrong-json-type", "json": { "type": "speak_begin", "rate": 22050, "channels": 1, "width": 16, "seq": null } }
+      ]
+    },
+    "reply.speak_end": {
+      "channel": "reply", "direction": "s2c", "type": "speak_end",
+      "required": ["type", "seq"],
+      "optional": [],
+      "types": { "type": "string", "seq": "integer" },
+      "opaque": [],
+      "volatile": [],
+      "cases": [
+        { "id": "reply.speak_end/plain", "verdict": "valid", "json": { "type": "speak_end", "seq": 1 } },
+        { "id": "reply.speak_end/second-burst", "verdict": "valid", "json": { "type": "speak_end", "seq": 2 } },
+        { "id": "reply.speak_end/unknown-field", "verdict": "valid", "json": { "type": "speak_end", "seq": 1, "x_future": 1 } },
+        { "id": "reply.speak_end/missing-seq", "verdict": "invalid", "violation": "missing-required", "json": { "type": "speak_end" } },
+        { "id": "reply.speak_end/seq-not-number", "verdict": "invalid", "violation": "wrong-json-type", "json": { "type": "speak_end", "seq": "1" } }
+      ]
+    },
+    "reply.error": {
+      "channel": "reply", "direction": "s2c", "type": "error",
+      "required": ["type", "error"],
+      "optional": [],
+      "types": { "type": "string", "error": "string" },
+      "opaque": [],
+      "volatile": [],
+      "cases": [
+        { "id": "reply.error/plain", "verdict": "valid", "json": { "type": "error", "error": "first frame must be type=register-reply with client_id" } },
+        { "id": "reply.error/unavailable", "verdict": "valid", "note": "sent before the opening frame is read, when the server cannot speak", "json": { "type": "error", "error": "reply channel unavailable" } },
+        { "id": "reply.error/unknown-field", "verdict": "valid", "json": { "type": "error", "error": "first frame must be type=register-reply with client_id", "x_future": 1 } },
+        { "id": "reply.error/missing-error", "verdict": "invalid", "violation": "missing-required", "json": { "type": "error" } }
+      ]
+    },
+    "output.hello": {
+      "channel": "output", "direction": "c2s", "type": null,
+      "required": [],
+      "optional": ["client_id"],
+      "types": { "client_id": "string" },
+      "opaque": [],
+      "volatile": [],
+      "cases": [
+        { "id": "output.hello/plain", "verdict": "valid", "json": { "client_id": "web_abc123" } },
+        { "id": "output.hello/empty", "verdict": "valid", "note": "no client_id: the server mints one and returns it in the ack", "json": {} },
+        { "id": "output.hello/unknown-field", "verdict": "valid", "json": { "client_id": "web_abc123", "x_future": 1 } }
+      ]
+    },
+    "output.connected": {
+      "channel": "output", "direction": "s2c", "type": "connected",
+      "required": ["type", "client_id"],
+      "optional": [],
+      "types": { "type": "string", "client_id": "string" },
+      "opaque": [],
+      "volatile": [],
+      "cases": [
+        { "id": "output.connected/plain", "verdict": "valid", "json": { "type": "connected", "client_id": "web_abc123" } },
+        { "id": "output.connected/unknown-field", "verdict": "valid", "json": { "type": "connected", "client_id": "web_abc123", "x_future": 1 } },
+        { "id": "output.connected/missing-type", "verdict": "invalid", "violation": "missing-type", "json": { "client_id": "web_abc123" } },
+        { "id": "output.connected/missing-client-id", "verdict": "invalid", "violation": "missing-required", "json": { "type": "connected" } },
+        { "id": "output.connected/client-id-not-string", "verdict": "invalid", "violation": "wrong-json-type", "json": { "type": "connected", "client_id": 123 } }
+      ]
+    },
+    "output.message": {
+      "channel": "output", "direction": "s2c", "type": "message",
+      "required": ["type", "text"],
+      "optional": [],
+      "types": { "type": "string", "text": "string" },
+      "opaque": [],
+      "volatile": [],
+      "cases": [
+        { "id": "output.message/plain", "verdict": "valid", "json": { "type": "message", "text": "Таймер на 10 минут завершён" } },
+        { "id": "output.message/unknown-field", "verdict": "valid", "json": { "type": "message", "text": "Таймер на 10 минут завершён", "x_future": 1 } },
+        { "id": "output.message/missing-text", "verdict": "invalid", "violation": "missing-required", "json": { "type": "message" } },
+        { "id": "output.message/text-not-string", "verdict": "invalid", "violation": "wrong-json-type", "json": { "type": "message", "text": ["Таймер на 10 минут завершён"] } }
+      ]
+    },
+    "output.error": {
+      "channel": "output", "direction": "s2c", "type": "error",
+      "required": ["type", "error"],
+      "optional": [],
+      "types": { "type": "string", "error": "string" },
+      "opaque": [],
+      "volatile": [],
+      "cases": [
+        { "id": "output.error/plain", "verdict": "valid", "json": { "type": "error", "error": "web push output unavailable" } },
+        { "id": "output.error/unknown-field", "verdict": "valid", "json": { "type": "error", "error": "web push output unavailable", "x_future": 1 } },
+        { "id": "output.error/missing-error", "verdict": "invalid", "violation": "missing-required", "json": { "type": "error" } }
+      ]
+    },
+    "observe.subscribe": {
+      "channel": "observe", "direction": "c2s", "type": null,
+      "required": ["token"],
+      "optional": ["filter"],
+      "types": { "token": "string", "filter": "object" },
+      "opaque": [],
+      "volatile": [],
+      "cases": [
+        { "id": "observe.subscribe/plain", "verdict": "valid", "json": { "token": "observe-secret", "filter": { "room_name": "Кухня", "types": ["result.produced"] } } },
+        { "id": "observe.subscribe/minimal", "verdict": "valid", "note": "no filter: every event", "json": { "token": "observe-secret" } },
+        { "id": "observe.subscribe/full-filter", "verdict": "valid", "json": { "token": "observe-secret", "filter": { "types": ["result.produced", "output.delivered"], "session_id": "5f0c1d7a9b3e4c62a8d4e1f0b7c39a25", "client_id": "kitchen_node", "room_name": "Кухня", "source": "ws_audio" } } },
+        { "id": "observe.subscribe/unknown-field", "verdict": "valid", "json": { "token": "observe-secret", "filter": { "room_name": "Кухня", "types": ["result.produced"] }, "x_future": 1 } },
+        { "id": "observe.subscribe/missing-token", "verdict": "invalid", "violation": "missing-required", "json": { "filter": { "room_name": "Кухня", "types": ["result.produced"] } }, "expect": { "frame": "observe.error", "then": "close" } },
+        { "id": "observe.subscribe/not-json", "verdict": "invalid", "violation": "not-json", "raw": "{\"token\": ", "expect": { "frame": "observe.error", "then": "close" } },
+        { "id": "observe.subscribe/not-an-object", "verdict": "invalid", "violation": "not-an-object", "raw": "[\"observe-secret\"]", "expect": { "frame": "observe.error", "then": "close" } }
+      ]
+    },
+    "observe.subscribed": {
+      "channel": "observe", "direction": "s2c", "type": "subscribed",
+      "required": ["type"],
+      "optional": [],
+      "types": { "type": "string" },
+      "opaque": [],
+      "volatile": [],
+      "cases": [
+        { "id": "observe.subscribed/plain", "verdict": "valid", "json": { "type": "subscribed" } },
+        { "id": "observe.subscribed/unknown-field", "verdict": "valid", "json": { "type": "subscribed", "x_future": 1 } },
+        { "id": "observe.subscribed/missing-type", "verdict": "invalid", "violation": "missing-type", "json": {} }
+      ]
+    },
+    "observe.event": {
+      "channel": "observe", "direction": "s2c", "type": "event",
+      "required": ["type", "event", "session_id", "client_id", "room_name", "source", "payload", "timestamp"],
+      "optional": [],
+      "types": { "type": "string", "event": "string", "session_id": ["string", "null"], "client_id": ["string", "null"], "room_name": ["string", "null"], "source": ["string", "null"], "payload": "object", "timestamp": "number" },
+      "opaque": ["payload"],
+      "volatile": ["timestamp"],
+      "cases": [
+        { "id": "observe.event/plain", "verdict": "valid", "json": { "type": "event", "event": "result.produced", "session_id": "5f0c1d7a9b3e4c62a8d4e1f0b7c39a25", "client_id": "kitchen_node", "room_name": "Кухня", "source": "ws_audio", "payload": { "text": "Таймер на 5 минут запущен", "success": true }, "timestamp": 1791190744.0289161 } },
+        { "id": "observe.event/no-identity", "verdict": "valid", "note": "an event that carries no origin: the four identity keys are null, never absent", "json": { "type": "event", "event": "input.received", "session_id": null, "client_id": null, "room_name": null, "source": null, "payload": {}, "timestamp": 1791190744.0289161 } },
+        { "id": "observe.event/unknown-field", "verdict": "valid", "json": { "type": "event", "event": "result.produced", "session_id": "5f0c1d7a9b3e4c62a8d4e1f0b7c39a25", "client_id": "kitchen_node", "room_name": "Кухня", "source": "ws_audio", "payload": { "text": "Таймер на 5 минут запущен", "success": true }, "timestamp": 1791190744.0289161, "x_future": 1 } },
+        { "id": "observe.event/missing-event", "verdict": "invalid", "violation": "missing-required", "json": { "type": "event", "session_id": "5f0c1d7a9b3e4c62a8d4e1f0b7c39a25", "client_id": "kitchen_node", "room_name": "Кухня", "source": "ws_audio", "payload": { "text": "Таймер на 5 минут запущен", "success": true }, "timestamp": 1791190744.0289161 } },
+        { "id": "observe.event/payload-not-object", "verdict": "invalid", "violation": "wrong-json-type", "json": { "type": "event", "event": "result.produced", "session_id": "5f0c1d7a9b3e4c62a8d4e1f0b7c39a25", "client_id": "kitchen_node", "room_name": "Кухня", "source": "ws_audio", "payload": null, "timestamp": 1791190744.0289161 } }
+      ]
+    },
+    "observe.error": {
+      "channel": "observe", "direction": "s2c", "type": "error",
+      "required": ["type", "error"],
+      "optional": [],
+      "types": { "type": "string", "error": "string" },
+      "opaque": [],
+      "volatile": [],
+      "cases": [
+        { "id": "observe.error/plain", "verdict": "valid", "json": { "type": "error", "error": "unauthorized" } },
+        { "id": "observe.error/unknown-field", "verdict": "valid", "json": { "type": "error", "error": "unauthorized", "x_future": 1 } },
+        { "id": "observe.error/missing-error", "verdict": "invalid", "violation": "missing-required", "json": { "type": "error" } }
+      ]
+    }
+  },
+  "unknown": [
+    { "id": "audio.c2s/unknown-type", "channel": "audio", "direction": "c2s", "verdict": "unknown", "json": { "type": "x_future", "detail": { "anything": true } } },
+    { "id": "audio.s2c/unknown-type", "channel": "audio", "direction": "s2c", "verdict": "unknown", "json": { "type": "x_future", "detail": { "anything": true } } },
+    { "id": "reply.c2s/unknown-type", "channel": "reply", "direction": "c2s", "verdict": "unknown", "json": { "type": "x_future", "detail": { "anything": true } } },
+    { "id": "reply.s2c/unknown-type", "channel": "reply", "direction": "s2c", "verdict": "unknown", "json": { "type": "x_future", "detail": { "anything": true } } },
+    { "id": "output.s2c/unknown-type", "channel": "output", "direction": "s2c", "verdict": "unknown", "json": { "type": "x_future", "detail": { "anything": true } } },
+    { "id": "observe.s2c/unknown-type", "channel": "observe", "direction": "s2c", "verdict": "unknown", "json": { "type": "x_future", "detail": { "anything": true } } }
+  ],
+  "malformed": [
+    { "id": "any/not-json", "verdict": "invalid", "violation": "not-json", "raw": "{\"type\": \"registered\", \"client_id\": " },
+    { "id": "any/empty-text", "verdict": "invalid", "violation": "not-json", "raw": "" },
+    { "id": "any/not-an-object", "verdict": "invalid", "violation": "not-an-object", "raw": "[\"registered\", \"kitchen_node\"]" },
+    { "id": "any/scalar", "verdict": "invalid", "violation": "not-an-object", "raw": "42" }
+  ]
+}

@@ -45,6 +45,40 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       No code, no wire change, no contract bytes moved.
       docs: none — a design document under `docs/design/` (not a manifest root); the user-facing guide changes only at the cut
       contracts: none — design only; no versioned surface moved (the guide and the STAMP stay at `ws-protocol-v1.0.1`)
+- [x] **ARCH-62** [WS][CONTRACTS] `[release]` — **DONE 2026-10-05 — WS machine core, slice 1: golden frames +
+      the owner test's frame tap** (split out of ARCH-61; design §3, §5; family lead BUILD-47).
+      **`contracts/ws-protocol/frames.golden.json`** (hand-written, NOT yet enumerated — it becomes
+      contract at the ARCH-61 cut): `core_format` 1, the four channels with their `opening` / `ack` /
+      `error` frame names, a `binary` block describing the two PCM directions, **20 frame
+      definitions** (`required` / `optional` key lists, a `types` map of JSON types per key, `opaque`
+      and `volatile` marks) carrying **110 cases**, plus 6 `unknown`-type cases (both directions of
+      the two voice channels, the server's direction of the operator ones) and 4 channel-independent
+      `malformed` ones — 120 in all. Every s2c valid case is a frame the running server really sent;
+      the only synthetic valid case per frame is `…/unknown-field` (the `plain` frame plus one key).
+      c2s invalid cases exist only where the guide promises the server's reaction and each carries
+      `expect` (`<channel>.error`, then `close`); s2c invalid cases are structural verdicts and never
+      do. **`backend/tests/ws_frame_tap.py`** — a pytest plugin that wraps Starlette's
+      `WebSocket.send` / `receive` and writes one JSON line per event in the transcript line format
+      (it records facts and never names a frame; an abnormal close code is recorded as
+      `"by": "network"`). **`backend/tests/test_ws_machine_core.py`** — the six witness suites re-run
+      once in a child pytest process under the tap, then: **L1** the fixtures obey their own
+      definitions (verdict and stated violation hold exactly; names use only `[a-z0-9._/-]` and stay
+      unique as C symbols — the review's rule); **L3** every frame the server sent is a strictly
+      valid instance of a defined frame (a key outside the lists fails: the server may not grow a
+      field without the core); **L4** every definition crossed a real socket, every `plain` case and
+      every s2c valid case equals a recorded frame (volatile keys and opaque values by JSON type),
+      binary runs occur exactly where declared; **L4b** the handshake replayed against the real
+      handlers on all four channels — every valid opening case is answered by the ack, every c2s
+      invalid case gets exactly its `expect` (the frame, then the server closes), every valid `end`
+      finalizes, an unknown-type frame after the handshake leaves `/ws/audio` and `/ws/audio/reply`
+      working. One witness added to `test_observe_tap` (an event without identity carries JSON
+      nulls, not missing keys). Additions to the reviewed shape, both before the names freeze: the
+      per-key `types` map (design §3.1) and the `opening` / `ack` / `error` names in `channels`, so a
+      data-driven harness needs no table of its own. Mutation-checked: a falsified value, an
+      unlisted server key, an `expect` the server does not honor and a colliding id each turn a leg
+      red. **Verified:** suite 1671 passed / 7 skipped (+171), guards green.
+      docs: none — the fixture format is described in `guides/websocket-api`, which is byte-locked; that section lands with the ARCH-61 cut (until then the file is a draft no STAMP enumerates)
+      contracts: none — no versioned surface moved yet (`frames.golden.json` is not enumerated; the STAMP stays at `ws-protocol-v1.0.1` until ARCH-61)
 ### Code Quality & Review (QUAL)
 - [x] **QUAL-19** [ESP32] (P2, last pre-release) — **DONE 2026-06-09** (interactive review session + upstream study).
       **★ ARCH-22 (2026-06-14):** the **device-side** of the micro stack is now designed in `docs/design/esp32_satellite.md`
