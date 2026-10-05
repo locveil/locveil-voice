@@ -429,19 +429,6 @@ _Apply to every remediation task below (from the 4 review docs + QUAL-25/26). So
 ### Bugs (BUG)
 _Discrete functional defects (distinct from QUAL refactors/quality work). Surfaced from any source; filed before fixing._
 
-- [ ] **BUG-48** [WS] `[release]` — **WS handshakes do not type-check registration values** (filed
-      2026-10-05, side-find of the ARCH-60 reconciliation — design finding C-3; NOT part of the
-      `ws-protocol-v1.1.0` cut). `{"type": "register", "client_id": 5, "room_name": "r"}` is
-      registered and the ack echoes the number; `/ws/output` likewise echoes a numeric `client_id`;
-      a string `sample_rate` is coerced or fails with a raw Python exception text in the `error`
-      frame. No conforming client sends these, so the machine core asserts no c2s `wrong-json-type`
-      case; hardening = validate the documented types at the three handshakes and answer a readable
-      `error`, then add the cases in a later minor. **Owner directive 2026-10-05: fix now** (re-tagged
-      `[release]`). Intake: the types to enforce are the ones the guide's frame reference already
-      states (the server catches up with the document), plus the documented inner keys of
-      `audio_out` and `filter` as the schema types them; `/ws/output` stays the channel that never
-      rejects — there a `client_id` of the wrong type is simply not usable and an identity is
-      minted, as the guide already says. The cases land in the batched cut ARCH-66.
 - [ ] **BUG-50** [WS][AUDIO] `[release]` — **Reply audio is not converted UP to what the device registered**
       (filed 2026-10-05 on the owner's decision, verbatim: "restore the reply-audio guarantee
       server-side as a part of current goal"). Through `ws-protocol-v1.0.1` the guide promised that

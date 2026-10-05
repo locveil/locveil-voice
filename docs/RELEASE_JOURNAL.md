@@ -21,6 +21,18 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-10-05 — BUG-48: the third copy, and how it is kept honest.** The guide has stated the
+  JSON type of every key since the frame reference landed; the server simply never read it. The
+  fix needs those types in code, which makes a third hand-written statement of the same table
+  — document, golden definitions, and now the server. Three copies drift, so the owner test
+  holds the new one to the other two: same frames, same required keys, same type per key, and
+  the validator must give every opening-frame case in the core the verdict the core gives it.
+  Two decisions were about what NOT to reject. `/ws/output` keeps its documented character —
+  it has never refused an opening frame, so a `client_id` of the wrong type is "not usable"
+  and gets a minted identity rather than an error. And `/ws/observe` answers a mistyped token
+  with the same bare "unauthorized" as a wrong one: a caller that has not authenticated is not
+  owed an explanation of the frame format.
+
 - **2026-10-05 — BUG-47: one lock, in the only place that knows what a burst is.** The defect was
   found by reading, not by hearing it, so the first step was to make it happen: two results
   delivered at once to one registered reply socket came out as a second `speak_begin` inside the

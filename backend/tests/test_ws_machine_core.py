@@ -526,6 +526,37 @@ def test_l4b_every_valid_end_frame_finalizes_the_utterance(server, case):
         assert _receive_frame(ws, "audio")[0] == "audio.response"
 
 
+def test_l4b_the_servers_opening_frame_table_equals_the_definitions():
+    """The server refuses an opening frame whose documented keys have the wrong JSON type
+    (BUG-48). Its table of those types is hand-written in `core/ws_protocol.py` — a third
+    copy of what the guide's frame reference and the golden definitions state, so it is held
+    to them here: same opening frames, same required keys, same type per key."""
+    from locveil_voice.core.ws_protocol import OPENING_FRAMES
+    assert set(OPENING_FRAMES) == {entry["opening"] for entry in CHANNELS.values()}
+    for name, spec in OPENING_FRAMES.items():
+        defn = FRAMES[name]
+        keys = {k: v for k, v in defn["types"].items() if k != "type"}
+        assert spec["types"] == keys, name
+        assert list(spec["required"]) == [k for k in defn["required"] if k != "type"], name
+        for nested in list(spec.get("inner", {})) + list(spec.get("items", {})):
+            assert nested in keys, f"{name}: {nested} is not a key of the frame"
+
+
+@pytest.mark.parametrize("frame,case", [
+    pytest.param(entry["opening"], case, id=case["id"])
+    for entry in CHANNELS.values() for case in live(FRAMES[entry["opening"]]["cases"])
+    if "json" in case])
+def test_l4b_the_servers_validator_gives_every_opening_case_its_verdict(frame, case):
+    """…and the validator built on that table agrees with the core case by case. (`/ws/output`
+    has no invalid cases: that channel mints an identity instead of refusing.)"""
+    from locveil_voice.core.ws_protocol import opening_frame_violation
+    violation = opening_frame_violation(frame, case["json"])
+    if case["verdict"] == "valid":
+        assert violation is None, f"{case['id']}: the server would refuse a valid frame — {violation}"
+    elif case["violation"] != "missing-type":        # the frame's own `type` is the endpoint's check
+        assert violation is not None, f"{case['id']}: the server would accept an invalid frame"
+
+
 def _unknown_case(channel: str, direction: str) -> Dict[str, Any]:
     return next(c for c in GOLDEN["unknown"] if (c["channel"], c["direction"]) == (channel, direction))
 
@@ -934,6 +965,10 @@ def test_l7_schema_accepts_every_real_frame(capture):
                 continue
             if line["direction"] == "c2s" and not accepted:
                 continue
+            if line["direction"] == "c2s" and FRAMES[frame]["type"] is None \
+                    and frame == CHANNELS["output"]["opening"] \
+                    and problems(FRAMES[frame], line["json"], strict_keys=False):
+                continue        # `/ws/output` never rejects: its ack does not vouch for the frame
             for def_name in (frame, f"{conn.channel}.{line['direction']}"):
                 if not _accepts(def_name, line["json"]):
                     wrong.append(f"{conn}: not a valid {def_name}: {line['json']}")

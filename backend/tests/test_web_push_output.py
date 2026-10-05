@@ -126,3 +126,18 @@ def test_ws_output_never_rejects_its_opening_frame():
         ws.send_text('{"client_id": ')
         ack = ws.receive_json()
         assert ack["type"] == "connected" and ack["client_id"].startswith("web_")
+
+
+@pytest.mark.parametrize("client_id", [5, ["web_abc123"], {"id": "x"}, True, None, ""])
+def test_ws_output_mints_an_identity_when_client_id_is_not_a_usable_string(client_id):
+    """BUG-48: a numeric `client_id` used to be echoed back in the ack and used as a routing
+    key. This channel still never rejects — a `client_id` that is not a non-empty string is
+    simply not usable, and an identity is minted."""
+    from fastapi.testclient import TestClient
+    om = OutputManager()
+    with TestClient(_app(om)).websocket_connect("/ws/output") as ws:
+        ws.send_text(json.dumps({"client_id": client_id}))
+        ack = ws.receive_json()
+        assert ack["type"] == "connected"
+        assert isinstance(ack["client_id"], str) and ack["client_id"].startswith("web_")
+        assert list(om._outputs) == [ack["client_id"]]

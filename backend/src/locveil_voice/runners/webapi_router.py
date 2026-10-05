@@ -20,7 +20,7 @@ from typing import Dict, Any, List, Optional
 # rebound them to `object`, which makes them unusable in type annotations).
 from ..core.engine import AsyncVACore
 from ..core.intent_asset_loader import IntentAssetLoader
-from ..core.ws_protocol import WS_PROTOCOL_VERSION
+from ..core.ws_protocol import WS_PROTOCOL_VERSION, opening_frame_violation
 from ..inputs.web import WebInput
 from fastapi import APIRouter  # type: ignore
 
@@ -789,8 +789,19 @@ def create_webapi_router(
         try:
             # Step 1 — registration handshake (first TEXT frame): the identity linchpin (QUAL-28 store).
             reg = json.loads(await websocket.receive_text())
-            if reg.get("type") != "register":
+            if not isinstance(reg, dict) or reg.get("type") != "register":
                 await websocket.send_json({"type": "error", "error": "first frame must be type=register"})
+                await websocket.close()
+                return
+            # BUG-48: the documented keys carry their documented JSON types, or the frame is
+            # refused — `client_id: 5` used to be registered and echoed back in the ack.
+            # (`primary_room` stays accepted as an alias of `room_name`, as from_dict reads it.)
+            if "room_name" not in reg and "primary_room" in reg:
+                reg = {**reg, "room_name": reg["primary_room"]}
+            violation = opening_frame_violation("audio.register", reg)
+            if violation is not None:
+                await websocket.send_json({"type": "error",
+                                           "error": f"invalid register frame: {violation}"})
                 await websocket.close()
                 return
             registration = ClientRegistration.from_dict(reg)
@@ -804,8 +815,13 @@ def create_webapi_router(
                                            "error": f"client_id does not match certificate identity ({cert_cn})"})
                 await websocket.close()
                 return
-            await get_client_registry().register_client(registration)
             sample_rate = int(reg.get("sample_rate", 16000))
+            if sample_rate < 1:
+                await websocket.send_json({"type": "error",
+                                           "error": 'invalid register frame: "sample_rate" must be positive'})
+                await websocket.close()
+                return
+            await get_client_registry().register_client(registration)
             wants_audio = bool(reg.get("wants_audio", False))
             # ARCH-37: a satellite may ask for the execution trace back (`wants_trace`, contract
             # default false). Honored only when the operator opted in ([trace] allow_remote_request);
@@ -975,10 +991,21 @@ def create_webapi_router(
         unsubscribe = None
         try:
             auth = json.loads(await websocket.receive_text())
-            if not authorize_observer(client_host, auth.get("token"),
-                                      configured_token=getattr(sys_cfg, "observe_token", None),
-                                      allow_remote=getattr(sys_cfg, "observe_allow_remote", False)):
+            # BUG-48: authorization first (a frame that is not an object, or whose token is not
+            # a string, is simply unauthorized — nothing about the frame is explained to a
+            # caller that has not authenticated), then the shape of what an authorized caller sent.
+            token = auth.get("token") if isinstance(auth, dict) else None
+            if not isinstance(token, str) or not authorize_observer(
+                    client_host, token,
+                    configured_token=getattr(sys_cfg, "observe_token", None),
+                    allow_remote=getattr(sys_cfg, "observe_allow_remote", False)):
                 await websocket.send_json({"type": "error", "error": "unauthorized"})
+                await websocket.close()
+                return
+            violation = opening_frame_violation("observe.subscribe", auth)
+            if violation is not None:
+                await websocket.send_json({"type": "error",
+                                           "error": f"invalid subscribe frame: {violation}"})
                 await websocket.close()
                 return
             if core.event_bus is None:
@@ -986,7 +1013,7 @@ def create_webapi_router(
                 await websocket.close()
                 return
 
-            f = auth.get("filter") or {}
+            f = auth.get("filter", {})
             types = [EventType(t) for t in f.get("types", [])] or None
             ev_filter = identity_filter(session_id=f.get("session_id"), client_id=f.get("client_id"),
                                         room_name=f.get("room_name"), source=f.get("source"), types=types)
@@ -1038,7 +1065,9 @@ def create_webapi_router(
             client_id = first.get("client_id")
         except Exception:
             client_id = None
-        if not client_id:
+        # BUG-48: this channel never rejects its opening frame — a `client_id` that is not a
+        # string is not usable, so an identity is minted (it used to be echoed back as-is).
+        if not isinstance(client_id, str) or not client_id:
             client_id = f"web_{uuid.uuid4().hex[:8]}"
 
         async def _send(text: str) -> None:
@@ -1083,25 +1112,35 @@ def create_webapi_router(
         # BUG-46: the first frame is parsed INSIDE a handler — a frame that is not JSON, not
         # an object, binary, or carries an unusable `audio_out` is a protocol violation and
         # gets the `error` answer the wire contract promises (it used to drop the socket).
-        try:
-            reg = json.loads(await websocket.receive_text())
-            client_id = reg.get("client_id")
-            ao = reg.get("audio_out") or {}
-            rate, ch = int(ao.get("rate", 22050)), int(ao.get("channels", 1))
-        except WebSocketDisconnect:
-            return
-        except Exception as e:
+        async def _reject(reason: str) -> None:
             try:
-                await websocket.send_json({"type": "error",
-                                           "error": f"malformed register-reply frame: {e}"})
+                await websocket.send_json({"type": "error", "error": reason})
                 await websocket.close()
             except Exception:
                 pass
+
+        try:
+            reg = json.loads(await websocket.receive_text())
+        except WebSocketDisconnect:
             return
-        if reg.get("type") != "register-reply" or not client_id:
-            await websocket.send_json({"type": "error",
-                                       "error": "first frame must be type=register-reply with client_id"})
-            await websocket.close()
+        except Exception as e:
+            await _reject(f"malformed register-reply frame: {e}")
+            return
+        if not isinstance(reg, dict) or reg.get("type") != "register-reply" or not reg.get("client_id"):
+            await _reject("first frame must be type=register-reply with client_id")
+            return
+        # BUG-48: documented keys carry their documented JSON types (a numeric `client_id`, an
+        # `audio_out` that is not an object, a `rate` given as a string are refused, not coerced).
+        violation = opening_frame_violation("reply.register-reply", reg)
+        if violation is not None:
+            await _reject(f"invalid register-reply frame: {violation}")
+            return
+        client_id = reg["client_id"]
+        ao = reg.get("audio_out", {})
+        rate, ch = int(ao.get("rate", 22050)), int(ao.get("channels", 1))
+        if rate < 1 or ch < 1:
+            await _reject('invalid register-reply frame: "audio_out.rate" and "audio_out.channels" '
+                          "must be positive")
             return
         # ARCH-36 finding (b): same mTLS identity binding as /ws/audio — a cert can only
         # claim its own reply channel (it would otherwise receive another room's speech).

@@ -1444,6 +1444,37 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       passed / 7 skipped (+2), guards green.
       docs: none — the guide is byte-locked; the "bursts never overlap" statement lands with the ARCH-66 cut (the guide's existing "bracketed binary burst" already reads that way)
       contracts: none — no versioned surface moved (code + tests; the guarantee is stated in `ws-protocol-v1.2.0`, ARCH-66)
+- [x] **BUG-48** [WS] `[release]` — **DONE 2026-10-05 — opening frames are type-checked: a documented key
+      with the wrong JSON type is refused, not registered** (owner directive "go and fix these";
+      design finding C-3 of `docs/design/ws_machine_core.md`). `{"type": "register", "client_id": 5,
+      …}` was registered and the ack echoed the number; a string `sample_rate` or `audio_out.rate`
+      was coerced; `/ws/output` echoed a numeric `client_id` and used it as a routing key; a numeric
+      `filter.room_name` subscribed silently to a filter that could never match. **Fix — the server
+      catches up with the document:** `core/ws_protocol.py` gains `OPENING_FRAMES` (for each
+      channel's opening frame the required keys and the JSON type of every key, exactly as the
+      guide's frame reference states them, plus the documented inner keys of `audio_out` and
+      `filter` and the element types of the two arrays, as the schema types them) and
+      `opening_frame_violation()` — shape only, unknown keys ignored, `16000.0` is an integer,
+      `true` is not a number. The four handshakes use it: **`/ws/audio`** and **`/ws/audio/reply`**
+      answer `error` ("invalid register frame: "client_id" must be a string") and close;
+      non-positive `sample_rate` / `audio_out.rate` / `audio_out.channels` are refused the same
+      way; **`/ws/observe`** decides authorization first and explains nothing to an unauthorized
+      caller (a token that is not a string is simply `unauthorized`), then refuses a malformed
+      `filter` by name; **`/ws/output`** stays the channel that never rejects — a `client_id`
+      that is not a non-empty string is not usable and an identity is minted, as the guide
+      already says. `primary_room` stays accepted as the undocumented alias it was. The existing
+      error texts recorded in the `v1.1.0` fixtures are unchanged. **Tests:** 30 wrong-type
+      refusals across the three rejecting channels (each: `error`, server close, nothing
+      registered), six unusable `client_id` values minted on `/ws/output`, integer-valued floats
+      and unknown keys still accepted; **owner test** — the server's table equals the golden
+      definitions key for key, and its validator gives every opening-frame case of the core its
+      verdict; the schema leg no longer treats `/ws/output`'s ack as vouching for the frame.
+      Green against the `v1.1.0` fixtures on the locked and the CI-resolved stack. **For
+      clients:** nothing changes for one that sends what the guide documents; one that sent a
+      number where a string is documented is now refused at registration. **Verified:** suite
+      1875 passed / 7 skipped (+62), import contracts 11 kept, guards green.
+      docs: none — the guide's frame reference already states every type enforced here and already promises `error` on a violation; the sentence spelling out "wrongly typed key → refused" is byte-locked and lands with the ARCH-66 cut
+      contracts: none — no versioned surface moved (code + tests; the wrong-type cases enter `frames.golden.json` in `ws-protocol-v1.2.0`, ARCH-66)
 - [x] **BUG-49** [TEST][WS][CI] `[release]` — **DONE 2026-10-05 (filed + completed same session; found by the
       first CI run of the machine-core owner test — run 37288706817, the ARCH-62..64 push).** CI was
       red on exactly one leg: `transcript.reconnect.jsonl` was "not a real recording". The transcript

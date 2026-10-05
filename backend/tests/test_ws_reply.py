@@ -294,3 +294,29 @@ def test_ws_audio_reply_concurrent_deliveries_arrive_as_whole_bursts():
             begin, pcm, frames, end = _read_burst(ws)
             assert begin["seq"] == seq and end == {"type": "speak_end", "seq": seq}
             assert pcm == voice and frames == 5
+
+
+# --- BUG-48: the documented keys carry their documented JSON types -------------------------------
+
+@pytest.mark.parametrize("patch", [
+    {"client_id": 5}, {"audio_out": 22050}, {"audio_out": [22050, 1]},
+    {"audio_out": {"rate": "22050", "channels": 1}}, {"audio_out": {"rate": 22050, "channels": "1"}},
+    {"audio_out": {"rate": 0, "channels": 1}}, {"audio_out": {"rate": 22050, "channels": 0}},
+])
+def test_ws_audio_reply_register_with_a_wrongly_typed_key_is_refused(patch):
+    """`"rate": "22050"` used to be coerced and a numeric `client_id` registered; both are
+    refused now — `error`, the server closes, no output is paired."""
+    pytest.importorskip("fastapi")
+    from fastapi.testclient import TestClient
+    from starlette.websockets import WebSocketDisconnect
+
+    app, om = _build_app()
+    frame = {"type": "register-reply", "client_id": "kitchen_node",
+             "audio_out": {"rate": 22050, "channels": 1}, **patch}
+    with TestClient(app).websocket_connect("/ws/audio/reply") as ws:
+        ws.send_text(json.dumps(frame))
+        msg = ws.receive_json()
+        assert msg["type"] == "error" and msg["error"], msg
+        with pytest.raises(WebSocketDisconnect):
+            ws.receive_json()
+    assert om._outputs == {}

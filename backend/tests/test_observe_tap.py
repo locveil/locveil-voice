@@ -152,3 +152,29 @@ def test_ws_observe_event_without_identity_carries_nulls_not_missing_keys():
         assert ev.pop("timestamp") > 0
         assert ev == {"type": "event", "event": "input.received", "session_id": None,
                       "client_id": None, "room_name": None, "source": None, "payload": {}}
+
+
+# --- BUG-48: the documented keys carry their documented JSON types -------------------------------
+
+@pytest.mark.parametrize("frame,reason", [
+    ({"token": 12345}, "unauthorized"),                               # a token that is not a string
+    ({"token": ["observe-secret"]}, "unauthorized"),
+    ({"token": "observe-secret", "filter": "Кухня"}, "filter"),      # authorized, malformed filter
+    ({"token": "observe-secret", "filter": None}, "filter"),
+    ({"token": "observe-secret", "filter": {"types": "result.produced"}}, "filter.types"),
+    ({"token": "observe-secret", "filter": {"room_name": 7}}, "filter.room_name"),
+])
+def test_ws_observe_subscribe_with_a_wrongly_typed_key_is_refused(frame, reason):
+    """Authorization is decided first and explains nothing; an AUTHORIZED caller whose filter
+    has the wrong shape is told which key — a numeric `room_name` used to subscribe silently
+    to a filter that could never match."""
+    import json
+    from fastapi.testclient import TestClient
+    from starlette.websockets import WebSocketDisconnect
+    app = _router_app(token="observe-secret", allow_remote=True, bus=EventBus())
+    with TestClient(app).websocket_connect("/ws/observe") as ws:
+        ws.send_text(json.dumps(frame))
+        msg = ws.receive_json()
+        assert msg["type"] == "error" and reason in msg["error"], msg
+        with pytest.raises(WebSocketDisconnect):
+            ws.receive_json()

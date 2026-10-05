@@ -300,3 +300,47 @@ def test_ws_audio_first_frame_must_be_register():
     with TestClient(_failing_pipeline_app()).websocket_connect("/ws/audio") as ws:
         ws.send_text(json.dumps({"type": "end"}))
         _error_then_close(ws)
+
+
+# --- BUG-48: the documented keys carry their documented JSON types -------------------------------
+
+_GOOD_REGISTER = {"type": "register", "client_id": "kitchen_node", "room_name": "Кухня",
+                  "sample_rate": 16000, "wants_audio": True}
+
+
+@pytest.mark.parametrize("key,value", [
+    ("client_id", 5), ("room_name", ["Кухня"]), ("sample_rate", "16000"), ("sample_rate", 16000.5),
+    ("sample_rate", True), ("sample_rate", 0), ("wants_audio", "true"), ("mode", 1),
+    ("wants_trace", 0), ("covered_rooms", "Кухня"), ("covered_rooms", ["Кухня", 7]),
+    ("name", None), ("available_devices", {}), ("available_devices", ["lamp"]),
+    ("protocol_version", 1), ("firmware_version", 0.5), ("wake_pack_version", ["v1"]),
+])
+def test_ws_audio_register_with_a_wrongly_typed_key_is_refused(key, value):
+    """A numeric `client_id` used to be registered and echoed back in the ack; a string
+    `sample_rate` was coerced. Every documented key now has its documented type, or the
+    registration is refused with `error` and the server closes — and nothing is registered."""
+    pytest.importorskip("fastapi")
+    from fastapi.testclient import TestClient
+    from locveil_voice.core.client_registry import get_client_registry
+
+    get_client_registry().clients.pop("kitchen_node", None)
+    with TestClient(_failing_pipeline_app()).websocket_connect("/ws/audio") as ws:
+        ws.send_text(json.dumps({**_GOOD_REGISTER, key: value}))
+        from starlette.websockets import WebSocketDisconnect
+        msg = ws.receive_json()
+        assert msg["type"] == "error" and key in msg["error"], msg
+        with pytest.raises(WebSocketDisconnect):
+            ws.receive_json()
+    assert "kitchen_node" not in get_client_registry().clients
+    assert 5 not in get_client_registry().clients
+
+
+def test_ws_audio_register_accepts_integer_valued_numbers_and_unknown_keys():
+    """Strict about types, not about spelling: `16000.0` is an integer as far as JSON is
+    concerned, and a key the server does not know is ignored whatever its type."""
+    pytest.importorskip("fastapi")
+    from fastapi.testclient import TestClient
+
+    with TestClient(_failing_pipeline_app()).websocket_connect("/ws/audio") as ws:
+        ws.send_text(json.dumps({**_GOOD_REGISTER, "sample_rate": 16000.0, "x_future": {"a": 1}}))
+        assert ws.receive_json()["type"] == "registered"
