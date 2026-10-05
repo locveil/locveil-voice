@@ -503,24 +503,6 @@ size-matched to the Russian stack; language is a per-config/deployment choice (a
       board** (D-4/D-5), seeded when BUILD-21 lands, not decided unilaterally here. Scope for that design: which
       repo owns the unified compose, health-gated `depends_on` vs. tolerant clients, whether the units collapse
       into one, and how `update.sh` stays per-repo when the compose is not. Related: BUILD-18 (ops conformance).
-- [ ] **BUILD-47** `[release]` [CI][CONTRACTS] — **HK-13 wave 0: un-gate contract-guard, close the
-      layer-2 path-gate hole, fix the rotted manifest guard pointer** (filed 2026-10-05 at PROD-28
-      intake — council HK-13, voice delegation (a). **LEAD ID of the voice PROD-28 family:** BUILD-47..52
-      + ARCH-60/61, with ARCH-48 narrowed and ASSET-6 re-truthed at the same intake; every task is
-      `[release]` by owner ruling q8). Verified at intake: `ci.yml`'s `contract-guard` job runs only when
-      the `contracts` filter matches (`contracts/**`, the vendored script, the workflow) — yet the owned
-      artifacts live outside `contracts/`, so the drift rule never ran for the edit it exists to catch;
-      `backend-health` (the only job that runs pytest = every layer-2 conformance/version test) triggers
-      on `backend/**`, `config/**`, `docker/**` only — a commit touching just a pin, a STAMP or a locked
-      guide runs NO conformance test; `docs/manifest.json`'s `guides/websocket-api` node still names
-      `irene/tests/test_ws_protocol_version.py` as its guard (rotted since BUILD-36). Scope: (1) the
-      `contract-guard` job runs on EVERY push/PR — no `changes` dependency, no path gate; (2) pytest
-      runs whenever `contracts/**` or an enumerated/guarded artifact path moves
-      (`docs/guides/websocket-api.md`, `docs/guides/tracing.md`, `config-ui/openapi.json` + its
-      generator, `docs/manifest.json`; the vendored core-py copy already sits under `backend/**`);
-      (3) the manifest pointer → `backend/tests/…`, plus a coherence assertion that canonical
-      `stamp`/`guard` pointers resolve so the class cannot re-rot silently. NOT in scope: the CI
-      `repin --check` step and the dispatch gate (need repin v2 — BUILD-51).
 - [ ] **BUILD-48** `[release]` [CONTRACTS][WS] — **Owner cut `ws-protocol-v1.0.1` (bytes-only patch)**
       (filed 2026-10-05 at PROD-28 intake, delegation (b); lead BUILD-47). Verified at intake: both
       post-tag drifts are real — `939a205` moved the guide's Python sample port 6000→8080, `346a5f3`
@@ -570,8 +552,7 @@ size-matched to the Russian stack; language is a per-config/deployment choice (a
       they wait for the re-stamp); delete the manual re-pin recipe in
       `contracts/pins/report-protocol/README.md`; add the CI `repin --check` step (touch-the-family
       from the diff base) and the image-dispatch gate (families fail on minor+, patch/tool gaps warn);
-      re-truth the registry's Guards paragraph ("path-gated" is already false after BUILD-47) and the
-      own-dialect invariant wording that HK-13 outdated (`trace-format-doc-canonical`'s "additive keys
+      re-truth the own-dialect invariant wording that HK-13 outdated (`trace-format-doc-canonical`'s "additive keys
       keep the version" → keep the SERVED major, cut a minor; guard-tag mentions) — CLAUDE.md edits
       held for this owner-visible sweep rather than made piecemeal.
 - [ ] **BUILD-52** `[release]` [DOC][CONTRACTS] — **docs-manifest remodel: retire the internal

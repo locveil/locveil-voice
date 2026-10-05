@@ -2,7 +2,8 @@
 # Replaces backend-health.yml + frontend-health.yml + build-images.yml.
 #
 # Shape (bridge-aligned):
-#   push/PR   → path-filtered fast gates only: ledger-guard / backend-health / frontend-health.
+#   push/PR   → path-filtered fast gates: ledger-guard / backend-health / frontend-health —
+#               plus contract-guard on EVERY push (no path gate, BUILD-47/HK-13).
 #   dispatch  → the SAME gates (forced for the areas being published) + image publishing:
 #               a targets × languages matrix for the backend images (default: all 6) and the
 #               multi-arch config-ui image — each publish job `needs:` its green health job,
@@ -58,7 +59,6 @@ jobs:
       backend: ${{ steps.filter.outputs.backend }}
       ui: ${{ steps.filter.outputs.ui }}
       ledger: ${{ steps.filter.outputs.ledger }}
-      contracts: ${{ steps.filter.outputs.contracts }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -72,6 +72,18 @@ jobs:
               - 'config/**'
               - 'docker/**'
               - '.github/workflows/ci.yml'
+              # Layer 2 must run whenever a contract moves (process/contracts.md §4,
+              # HK-13/BUILD-47): backend-health is the only job that runs pytest — the
+              # conformance / version / drift tests — so every pin, STAMP and owned
+              # artifact path that lives OUTSIDE backend/ is listed here. (The vendored
+              # core-py copy is already under backend/**.) A new owned artifact outside
+              # backend/ or contracts/ adds its path in the same change.
+              - 'contracts/**'
+              - 'docs/guides/websocket-api.md'
+              - 'docs/guides/tracing.md'
+              - 'docs/manifest.json'
+              - 'config-ui/openapi.json'
+              - 'scripts/dump_openapi.py'
             ui:
               - 'config-ui/**'
               - '.github/workflows/ci.yml'
@@ -80,10 +92,6 @@ jobs:
               - 'CLAUDE.md'
               - 'scripts/scope_guard.py'
               - '.scope-guard.toml'
-              - '.github/workflows/ci.yml'
-            contracts:
-              - 'contracts/**'
-              - 'scripts/contract_guard.py'
               - '.github/workflows/ci.yml'
 
   # ------------------------------------------------------------------ #
@@ -100,11 +108,12 @@ jobs:
 
   # ------------------------------------------------------------------ #
   # Contract guard — layer-1 contract coherence (layout, registry,      #
-  # STAMP/PIN shape, pin hashes). process/contracts.md §4.              #
+  # STAMP/PIN shape, pin hashes, content drift). process/contracts.md  #
+  # §4. Runs on EVERY push/PR/dispatch — NO path gate (HK-13): owned    #
+  # artifacts mostly live outside contracts/, so a gated job never ran  #
+  # for the edit the drift rule exists to catch.                        #
   # ------------------------------------------------------------------ #
   contract-guard:
-    needs: changes
-    if: needs.changes.outputs.contracts == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

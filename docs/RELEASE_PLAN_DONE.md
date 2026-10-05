@@ -1535,6 +1535,29 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
 
 ### Internationalization (I18N)
 ### Build & CI (BUILD)
+- [x] **BUILD-47** `[release]` [CI][CONTRACTS] — **DONE 2026-10-05 (HK-13 wave 0; PROD-28 voice
+      delegation (a); LEAD ID of the voice PROD-28 family — BUILD-47..52 + ARCH-60/61, ARCH-48
+      narrowed).** The two CI holes HK-13 found live in this repo are closed and the rotted manifest
+      pointer is fixed. **(1) contract-guard un-gated:** the `contract-guard` job lost its `changes`
+      dependency and its path filter — it runs strict on every push/PR/dispatch (the `contracts`
+      filter output is gone). Before, an edit to `docs/guides/websocket-api.md` — an owned artifact
+      living outside `contracts/` — never started the job whose drift rule exists for exactly that
+      edit. **(2) layer 2 runs when contracts move:** `backend-health` (the only job that runs
+      pytest, i.e. every version/drift/conformance test) now also triggers on `contracts/**`,
+      `docs/guides/websocket-api.md`, `docs/guides/tracing.md`, `docs/manifest.json`,
+      `config-ui/openapi.json` and its generator `scripts/dump_openapi.py`; the vendored core-py copy
+      was already covered by `backend/**`. A commit touching only a pin, a STAMP or a locked guide can
+      no longer land with zero conformance tests run. **(3) manifest pointer:** the
+      `guides/websocket-api` node's `canonical.guard` → `backend/tests/test_ws_protocol_version.py`
+      (was `irene/tests/…` since BUILD-36), and `test_docs_manifest.py` gained
+      `test_canonical_pointers_resolve` so a canonical `stamp`/`guard` pointer that names no file
+      fails the suite instead of rotting silently. Registry Guards paragraph re-truthed in the same
+      change ("path-gated" was now false). NOT here (need repin v2): the CI `repin --check` step and
+      the dispatch gate — BUILD-51; the two rotted `conformance` pointers inside PIN.json files wait
+      for the sweep's re-stamp (pins are never hand-edited). **Verified:** suite 1465 passed / 7
+      skipped (+1), both guards green, workflow YAML parses with the expected job/filter shape.
+      docs: none — CI wiring + manifest metadata + a test; no manifest node describes CI gating
+      contracts: none — no versioned surface moved (enforcement wiring only; `docs/manifest.json` is not an enumerated artifact)
 ### Models & Assets (ASSET)
 ### Documentation (DOC)
 - [x] **DOC-5b** (P2) — DONE 2026-06-08: regenerated `guides/DONATION_FILE_SPECIFICATION.md` for the v1.1

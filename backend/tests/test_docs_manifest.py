@@ -101,3 +101,17 @@ def test_done_ledger_verdict_node_ids_exist():
             if ref and ref not in ids:
                 bad.append(ref)
     assert not bad, f"docs-verdict lines reference unknown manifest nodes: {bad}"
+
+
+def test_canonical_pointers_resolve():
+    """A `canonical` carve-out names the STAMP and the guard test that make the node a
+    contract — both are repo-root-relative paths and must resolve to files (BUILD-47: the
+    ws-protocol guard pointer named a pre-BUILD-36 `irene/tests/…` path for three months
+    with every check green)."""
+    rotted = []
+    for n in NODES:
+        for key in ("stamp", "guard"):
+            pointer = n.get("canonical", {}).get(key)
+            if pointer and not (_REPO_ROOT / pointer.split("::")[0]).is_file():
+                rotted.append(f"{n['id']}.canonical.{key} -> {pointer}")
+    assert not rotted, f"manifest canonical pointers that resolve to no file: {rotted}"

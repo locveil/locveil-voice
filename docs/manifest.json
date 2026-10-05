@@ -69,7 +69,7 @@
       "status": "ok",
       "canonical": { "invariant": "ws-protocol-doc-canonical",
                      "stamp": "contracts/ws-protocol/STAMP.json",
-                     "guard": "irene/tests/test_ws_protocol_version.py" } },
+                     "guard": "backend/tests/test_ws_protocol_version.py" } },
 
     { "id": "arch/client-registry", "path": "docs/architecture/client-registry.md", "class": "narrative",
       "audience": ["contributor", "integrator"], "covers": ["ws-protocol"], "status": "ok" },

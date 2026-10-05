@@ -21,6 +21,17 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-10-05 — BUILD-47 DONE: the guards now run for the edits they exist to catch.** Wave 0 of
+  HK-13 in this repo, and the least glamorous kind of fix: nothing was wrong with the rules, they
+  simply never executed. The layer-1 job was filtered to `contracts/**` while the bytes it locks live
+  in `docs/guides/` and `config-ui/`; the layer-2 tests ride `backend-health`, which a pin-only or
+  guide-only commit never triggered — which is how the WS guide and its STAMP both moved after their
+  tag with every check green. The contract-guard job now has no gate at all, and the pytest job's
+  trigger lists every pin, STAMP and owned-artifact path outside `backend/` (with a comment making
+  "a new owned artifact adds its path here" part of the cut). The manifest's `irene/tests/…` guard
+  pointer is fixed and, more usefully, a coherence assertion now fails the suite on any canonical
+  pointer that names no file — the same rule guard v4 will apply to STAMP and PIN pointers.
+
 - **2026-10-05 — PROD-28 intake (council HK-13): the voice half filed as BUILD-47..52 + ARCH-60/61,
   ARCH-48 narrowed, ASSET-6 re-truthed.** HK-13's diagnosis named this repo twice with evidence, and
   reconciliation confirmed every claim against the tree: `websocket-api.md` and the ws-protocol STAMP

@@ -34,7 +34,8 @@ catalog PIN.jsons via `scripts/repin.py` — the two copies move together or not
 Guards: layer 1 is the vendored `scripts/contract_guard.py` (commons
 `packages/contract-guard/`, pinned at tag **`contract-guard-v3.1`** — never edit the
 vendored file, re-pin to move; runs in `hooks/pre-commit` with `--relax-tags` (mid-bump
-tolerance) and strict in the path-gated `contract-guard` CI job, `--check` only); layer 2
-is the per-pin conformance tests listed above. Staleness (a pin trailing its owner) is
+tolerance) and strict in the `contract-guard` CI job on every push — no path gate —
+`--check` only); layer 2 is the per-contract version/drift tests and per-pin conformance
+tests listed above, which CI runs whenever `contracts/**` or an owned artifact path moves. Staleness (a pin trailing its owner) is
 the vendored repin tool's job — `.repin.toml` + the `process/contracts.md` §5 severity
 ladder (BUILD-43).
