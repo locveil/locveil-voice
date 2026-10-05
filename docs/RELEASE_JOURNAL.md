@@ -21,6 +21,16 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-10-05 — BUG-47: one lock, in the only place that knows what a burst is.** The defect was
+  found by reading, not by hearing it, so the first step was to make it happen: two results
+  delivered at once to one registered reply socket came out as a second `speak_begin` inside the
+  first bracket, with both utterances' audio mixed. The fix could have gone higher — the output
+  manager could queue per device, the notification service could wait its turn — but neither of
+  them knows that a spoken reply is a bracket of several frames; only the reply channel does, and
+  it is also the only thing every delivery to that device passes through. So the channel
+  serializes itself and nothing above it changes. Numbering moved inside the lock with it: `seq`
+  now counts bursts in the order they are sent, which is what the transcript rule has always said.
+
 - **2026-10-05 — Intake: BUG-47 / BUG-48 to be fixed now, BUG-50 and ARCH-66 filed.** The owner
   asked for the two defects found during the machine-core work to be fixed rather than parked,
   and decided the open reply-audio question the other way from where `v1.1.0` left it: the guide

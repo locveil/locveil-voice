@@ -429,18 +429,6 @@ _Apply to every remediation task below (from the 4 review docs + QUAL-25/26). So
 ### Bugs (BUG)
 _Discrete functional defects (distinct from QUAL refactors/quality work). Surfaced from any source; filed before fixing._
 
-- [ ] **BUG-47** [WS] `[release]` — **Two spoken replies to one device can interleave on the reply channel**
-      (filed 2026-10-05, side-find of the ARCH-60 reconciliation — design finding C-4; NOT part of the
-      `ws-protocol-v1.1.0` cut). `CallbackReplyChannel.send_audio` awaits between `speak_begin`, each
-      PCM chunk and `speak_end`, and nothing serializes deliveries per channel: a deferred announcement
-      (a timer ringing) delivered by the notification loop while `/ws/audio` is routing a reply to the
-      same device can open a second burst inside the first — interleaved PCM on the speaker. The guide
-      says each reply arrives as a bracketed burst; the transcript rules deliberately do not assert
-      "bursts never overlap" until the code guarantees it. Expected fix: one lock per reply channel
-      around the whole burst, a test with two concurrent deliveries, then the rule + a transcript in a
-      later `ws-protocol` minor. **Owner directive 2026-10-05: fix now.** Intake: no new transcript
-      is needed (two serialized bursts are exactly `transcript.reply-burst.jsonl`); the guarantee is
-      stated as a new transcript rule in the batched cut ARCH-66.
 - [ ] **BUG-48** [WS] `[release]` — **WS handshakes do not type-check registration values** (filed
       2026-10-05, side-find of the ARCH-60 reconciliation — design finding C-3; NOT part of the
       `ws-protocol-v1.1.0` cut). `{"type": "register", "client_id": 5, "room_name": "r"}` is

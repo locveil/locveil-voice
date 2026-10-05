@@ -13,6 +13,7 @@ protocol (handshake, frame format, offline policy) + the WS endpoint that constr
 ESP32 design session (`ws_esp32_transport.md` / QUAL-45).
 """
 
+import asyncio
 import logging
 import time
 from typing import Any, Optional, Protocol, Set
@@ -59,6 +60,11 @@ class CallbackReplyChannel:
         self._chunk_bytes = chunk_bytes
         self._connected = True
         self._seq = 0
+        # BUG-47: ONE burst at a time. Deliveries to a device come from independent tasks (the
+        # `/ws/audio` handler routing a reply, the notification loop announcing a timer) and
+        # every send below yields to the event loop — without this a second `speak_begin` could
+        # land inside the first burst and two utterances' PCM would interleave on the speaker.
+        self._burst_lock = asyncio.Lock()
 
     @property
     def contract(self) -> AudioContract:
@@ -71,15 +77,16 @@ class CallbackReplyChannel:
         self._connected = False
 
     async def send_audio(self, pcm: bytes, *, sample_rate: int, channels: int, sample_width: int) -> None:
-        self._seq += 1
-        seq = self._seq
-        await self._send_json({"type": "speak_begin", "rate": sample_rate, "channels": channels,
-                               "width": sample_width * 8, "seq": seq})
-        frame = max(1, channels * sample_width)
-        block = max(frame, (self._chunk_bytes // frame) * frame)
-        for i in range(0, len(pcm), block):
-            await self._send_bytes(pcm[i:i + block])
-        await self._send_json({"type": "speak_end", "seq": seq})
+        async with self._burst_lock:  # the whole bracket, `speak_begin` through `speak_end`
+            self._seq += 1            # numbered in the order the bursts go out
+            seq = self._seq
+            await self._send_json({"type": "speak_begin", "rate": sample_rate, "channels": channels,
+                                   "width": sample_width * 8, "seq": seq})
+            frame = max(1, channels * sample_width)
+            block = max(frame, (self._chunk_bytes // frame) * frame)
+            for i in range(0, len(pcm), block):
+                await self._send_bytes(pcm[i:i + block])
+            await self._send_json({"type": "speak_end", "seq": seq})
 
 
 class RemoteAudioOutput(OutputPort):

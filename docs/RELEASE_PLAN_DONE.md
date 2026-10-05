@@ -1422,6 +1422,28 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       ARCH-61. **Verified:** suite 1487 passed / 7 skipped (+8), guards green.
       docs: none — the code is brought to what `guides/websocket-api` already promises (an `error` answer on a protocol violation); the "error is terminal" sentence is byte-locked and lands with the ARCH-61 cut
       contracts: none — no versioned surface moved (the guide and the STAMP stay at `ws-protocol-v1.0.1`; server behavior now matches the document)
+- [x] **BUG-47** [WS] `[release]` — **DONE 2026-10-05 — deliveries to one reply connection are serialized: a
+      burst is never opened inside another** (owner directive "go and fix these"; design finding C-4
+      of `docs/design/ws_machine_core.md`). `CallbackReplyChannel.send_audio` awaited between
+      `speak_begin`, every PCM chunk and `speak_end` with nothing serializing callers, and deliveries
+      to a device come from independent tasks (the `/ws/audio` handler routing a reply, the
+      notification loop announcing a timer). **Reproduced before fixing**, on a real socket: two
+      results delivered to one registered `/ws/audio/reply` connection at the same time arrived as
+      `speak_begin 1`, `speak_begin 2`, PCM of both mixed — the second bracket opened inside the
+      first. **Fix:** the channel owns its send path, so the channel holds the lock — one
+      `asyncio.Lock` per `CallbackReplyChannel` around the whole bracket; `seq` is taken inside it, so
+      bursts are numbered in the order they go out. Nothing above the adapter changes (the
+      OutputManager and the notification service stay unaware; `hexagonal-architecture` — the lock
+      lives in `outputs/remote_audio.py`, import contracts 11 kept). A burst whose send fails
+      releases the lock (the socket is gone anyway). **Tests** (`test_ws_reply`): three concurrent
+      `send_audio` calls on a channel whose sends each yield produce three whole brackets in order;
+      and the endpoint test — two concurrent `OutputManager.deliver` calls to one registered reply
+      connection arrive as two whole bursts (`seq` 1 then 2, each with all its PCM, nothing
+      interleaved). Both failed before the fix. The machine-core owner test is green against the
+      `v1.1.0` fixtures (rules T-3/T-4 were worded to hold either way). **Verified:** suite 1813
+      passed / 7 skipped (+2), guards green.
+      docs: none — the guide is byte-locked; the "bursts never overlap" statement lands with the ARCH-66 cut (the guide's existing "bracketed binary burst" already reads that way)
+      contracts: none — no versioned surface moved (code + tests; the guarantee is stated in `ws-protocol-v1.2.0`, ARCH-66)
 - [x] **BUG-49** [TEST][WS][CI] `[release]` — **DONE 2026-10-05 (filed + completed same session; found by the
       first CI run of the machine-core owner test — run 37288706817, the ARCH-62..64 push).** CI was
       red on exactly one leg: `transcript.reconnect.jsonl` was "not a real recording". The transcript

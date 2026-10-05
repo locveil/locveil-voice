@@ -235,3 +235,62 @@ def test_ws_audio_reply_register_without_audio_out_assumes_22050_mono():
         _speak(client, om, "готово")
         begin, _, _, _ = _read_burst(ws)
         assert begin["rate"] == 22050 and begin["channels"] == 1
+
+
+# --- BUG-47: two deliveries to ONE reply connection must not interleave ------------------------
+
+@pytest.mark.asyncio
+async def test_callback_reply_channel_serializes_concurrent_bursts():
+    """The channel owns its send path: a second `send_audio` waits for the first burst's
+    `speak_end` — even when every send yields to the event loop (as a real socket does)."""
+    import asyncio
+    sent = []
+
+    async def send_json(d):
+        await asyncio.sleep(0)
+        sent.append(d["type"] + str(d["seq"]))
+
+    async def send_bytes(b):
+        await asyncio.sleep(0)
+        sent.append("pcm")
+
+    ch = CallbackReplyChannel(AudioContract([22050], 22050, ["pcm16"], "pcm16", 1),
+                              send_json, send_bytes, chunk_bytes=8)
+    await asyncio.gather(*(ch.send_audio(b"\x01\x02" * 12, sample_rate=22050, channels=1,
+                                         sample_width=2) for _ in range(3)))
+    burst = ["pcm"] * 3
+    assert sent == (["speak_begin1"] + burst + ["speak_end1"]
+                    + ["speak_begin2"] + burst + ["speak_end2"]
+                    + ["speak_begin3"] + burst + ["speak_end3"])
+
+
+def test_ws_audio_reply_concurrent_deliveries_arrive_as_whole_bursts():
+    """The race on a real socket: a spoken reply and a deferred announcement are delivered to
+    the same device AT THE SAME TIME (the `/ws/audio` handler routes one, the notification loop
+    the other). Each must arrive as a whole bracketed burst — never one inside the other."""
+    pytest.importorskip("fastapi")
+    import asyncio
+    from fastapi.testclient import TestClient
+    from locveil_voice.intents.models import IntentResult
+
+    voice = b"\x01\x02" * 10000                       # 5 binary frames per burst
+    app, om = _build_app(voice_rate=22050, voice_pcm=voice, negotiator=_real_negotiator())
+
+    async def _both_at_once():
+        ctx = RequestContext(session_id="s", client_id="kitchen_node")
+        return await asyncio.gather(
+            om.deliver(IntentResult(text="Таймер на 5 минут запущен"), ctx, OutputModality.SPEECH),
+            om.deliver(IntentResult(text="Таймер на 1 минуту завершён"), ctx, OutputModality.SPEECH))
+
+    with TestClient(app) as client, client.websocket_connect("/ws/audio/reply") as ws:
+        ws.send_text(json.dumps({"type": "register-reply", "client_id": "kitchen_node",
+                                 "audio_out": {"rate": 22050, "channels": 1}}))
+        assert ws.receive_json()["type"] == "registered"
+
+        outcomes = client.portal.call(_both_at_once)
+        assert [d.delivered for pair in outcomes for d in pair] == [True, True]
+
+        for seq in (1, 2):                            # two WHOLE bursts, in seq order
+            begin, pcm, frames, end = _read_burst(ws)
+            assert begin["seq"] == seq and end == {"type": "speak_end", "seq": seq}
+            assert pcm == voice and frames == 5
