@@ -507,6 +507,49 @@ size-matched to the Russian stack; language is a per-config/deployment choice (a
       board** (D-4/D-5), seeded when BUILD-21 lands, not decided unilaterally here. Scope for that design: which
       repo owns the unified compose, health-gated `depends_on` vs. tolerant clients, whether the units collapse
       into one, and how `update.sh` stays per-repo when the compose is not. Related: BUILD-18 (ops conformance).
+- [ ] **BUILD-54** `[release]` [DEPS][SECURITY] — **Python lock: the five patch-level security bumps**
+      (filed 2026-10-05, owner request: clear the open Dependabot alerts; 47 open at intake — 15 on
+      `backend/uv.lock`, 15 on a root `uv.lock`, 17 on `config-ui/package-lock.json`). Targeted
+      `uv lock --upgrade-package` only, no blanket upgrade, `pyproject.toml` untouched (every range
+      already admits the patched version; `anthropic<1` from BUG-45 stays): **aiohttp** 3.14.1 →
+      ≥ 3.14.3, **anyio** 4.14.0 → ≥ 4.14.2 (critical), **cryptography** 49.0.0 → ≥ 50.0.0,
+      **pyasn1** 0.6.3 → ≥ 0.6.4, **urllib3** 2.7.0 → ≥ 2.8.0. **Intake finding — there is one
+      lockfile, not two:** the root `uv.lock` moved to `backend/uv.lock` at BUILD-36 (2026-07-13)
+      and no longer exists on `main`, yet GitHub's dependency graph still lists a `uv.lock`
+      manifest at the repo root and keeps raising alerts against it (its newest are dated today);
+      whether those 15 close once `backend/uv.lock` is patched is observed after the push, not
+      assumed. **Acceptance:** the full backend suite + the CI gate set green on an environment
+      synced from the new lock — in particular the WS machine-core owner test, which records real
+      frames through the anyio/websocket stack; `config-ui/openapi.json` regenerates byte-identical;
+      contract-guard strict and `repin --check --fail-on any` clean; no enumerated contract
+      artifact moves. torch and setuptools are BUILD-55 (coupled, and a heavier decision).
+- [ ] **BUILD-55** `[release]` [DEPS][SECURITY] — **torch ≥ 2.13.0, and with it setuptools ≥ 83.0.0**
+      (filed 2026-10-05 with BUILD-54). Two alerts that are one move: the locked **torch** 2.12.1
+      declares `setuptools<82`, which is what holds **setuptools** at 81.0.0 —
+      `uv lock --upgrade-package setuptools` alone changes nothing. Decision to make at execution,
+      not assumed: is a patched torch installable for everything this repo locks and builds — the
+      CPU-index wheels (`[tool.uv.sources]` pins torch/torchaudio to `download.pytorch.org/whl/cpu`)
+      for every platform the current lock carries, with the locked torchaudio and the two torch
+      consumers (Silero TTS, Whisper ASR — x86_64 standalone only; the armv7 profile stays
+      torch-free by gate). If yes: upgrade both, prove the suite and a real torch/torchaudio import
+      on the locked stack. If no: leave the alert open and record exactly what blocks it. setuptools
+      82 removed `pkg_resources` — check nothing on the locked stack imports it. Same acceptance
+      as BUILD-54.
+- [ ] **BUILD-56** `[release]` [DEPS][SECURITY][UI] — **config-ui npm lock: the alerted packages**
+      (filed 2026-10-05 with BUILD-54). 17 alerts on `config-ui/package-lock.json`, all but two
+      reachable inside the ranges `package.json` already declares: **react-router-dom** 6.30.4 →
+      ≥ 6.30.6, **postcss** 8.5.15 → ≥ 8.5.23, **vitest** + **@vitest/mocker** 4.1.8 → ≥ 4.1.11
+      (a patch — `package.json` is already on `^4.1.8`, not a major), **js-yaml** 4.2.0 / 4.3.0 →
+      ≥ 4.3.2, **brace-expansion** 1.1.15/1.1.16 → ≥ 1.1.21, 2.1.1 → ≥ 2.1.7, 5.0.7 → ≥ 5.0.12,
+      **browserslist** 4.25.2 → ≥ 4.28.7, **postcss-selector-parser** 6.1.2 → ≥ 6.1.3. Targeted
+      `npm update <pkg>` only; no `--force`; an `overrides` entry only if a transitive cannot
+      otherwise reach its patched version. **Deliberately NOT fixed here:** the two **react-router**
+      alerts patched only in 7.18.0 — the Workbench plugin contract freezes the `react-router-dom`
+      singleton at major 6, so a v7 move is a cross-repo contract major, not a dependency bump;
+      the alerts stay open (not dismissed) and the completion entry records whether the vulnerable
+      paths are reachable in config-ui. **Acceptance** (`config-ui-stays-functional`):
+      `npm run check`, `npm run build`, `npm run test` green; the emitted manifest fragment and
+      `config-ui/openapi.json` unchanged.
 ### Models & Assets (ASSET)
 
 - [ ] **ASSET-6** `[deferred]` [ASSET][CONTRACTS][SATELLITE] — **The multi-model wake-pack v1.x cut**
