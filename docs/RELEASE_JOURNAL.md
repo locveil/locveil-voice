@@ -21,6 +21,25 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-10-05 — PROD-28 intake (council HK-13): the voice half filed as BUILD-47..52 + ARCH-60/61,
+  ARCH-48 narrowed, ASSET-6 re-truthed.** HK-13's diagnosis named this repo twice with evidence, and
+  reconciliation confirmed every claim against the tree: `websocket-api.md` and the ws-protocol STAMP
+  both moved after `ws-protocol-v1` (939a205, 346a5f3) while the satellite's pin reported current;
+  the layer-2 suites sit behind a `backend/**` path gate, so a commit touching only a pin, a STAMP or
+  a locked guide runs no conformance test at all; the contract-guard job is gated away from the very
+  artifacts it guards; three `irene/tests/…` pointers survived the BUILD-36 layout move (one in the
+  docs manifest, two inside PIN.json files that only a re-stamp may touch). Filing shape: wave 0
+  (BUILD-47, the family's lead ID) and the three owner cuts (BUILD-48/49/50) need no new tooling and
+  start now; the sweep (BUILD-51) and the docs-manifest remodel (BUILD-52) wait for the commons tag
+  set; the WS machine core is design-first (ARCH-60, satellite reviews) then one implementation cut
+  (ARCH-61 → `ws-protocol-v1.1.0`). Two redefinitions against the board text, both recorded in the
+  entries: wake-pack's declaration is cut now instead of riding the gated ASSET-6, and the stale
+  `surfaces` globs found in the manifest ride BUILD-52 rather than widening wave 0. Every new task is
+  `[release]` by owner ruling q8 (the keeper's dissent is on the board, not reopened); ARCH-48 keeps
+  its `[deferred]` tag — it was narrowed to a major-only comparison, not filed from the entry.
+  CLAUDE.md is deliberately untouched at intake: the approved `ws-protocol-doc-canonical` amendment
+  lands with the core (ARCH-61) and the remaining dialect re-wording rides the sweep.
+
 - **2026-07-20 — QUAL-86 DONE: the cascade trace stops lying by omission — QUAL-53's prerequisite
   discharged four weeks after it was named.** The `nlu_cascade` stage's `cascade_attempts` had always
   been a single final-result entry wrapped around a black-box call; the per-provider story (who tried,

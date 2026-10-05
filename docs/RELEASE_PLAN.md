@@ -233,6 +233,14 @@ See `docs/review/phase1_architecture_map.md` §5.
       firmware-version MQTT topic (the bridge-side tripwire); satellite DES-3/FW decides what the ESP32
       actually reports. Scope at task start: flag semantics (warn-only vs. gate), where the "current"
       wake-pack tag is read from, and whether `/health` participates.
+      **NARROWED 2026-10-05 (HK-13 / PROD-28 intake, family lead BUILD-47): the comparison is
+      MAJOR-only.** Runtime-served and device-reported versions carry the major
+      (`../locveil-commons/process/contracts.md` §3): a device is stale only when the major of its
+      reported `protocol_version` differs from the served `WS_PROTOCOL_VERSION`, or the major of its
+      reported `wake_pack_version` tag trails the major of the current `contracts/wake-pack/STAMP.json`
+      tag. Minor and patch gaps NEVER flag — tags are three-part from HK-13 on, so a device flashed at
+      `wake-pack-v1` against a current `wake-pack-v1.0.1` is current, and the earlier
+      `!= WS_PROTOCOL_VERSION` / "behind the tag" string comparisons above are superseded.
 - [ ] **ARCH-49** [ASSETS][UI] `[deferred]` — **★ DESIGN — language-asset re-cut ("option C"): `responses/` vs
       `lexicon/`, evict technical mappings, schemas + parity gates** (`design-then-implement`; filed
       2026-07-13 from an owner analysis session — owner chose option C of three). Today's split
@@ -292,6 +300,36 @@ See `docs/review/phase1_architecture_map.md` §5.
       recorded (doc or journal) + follow-up tasks if gaps exist (completion cue not
       device-addressed, or no timestamp in the initiation ack). Satellite-side contact
       point: `../locveil-satellite` FW-1 intake record (REQ-33).
+- [ ] **ARCH-60** [WS][CONTRACTS] `[release]` — **★ DESIGN: the WS machine core — golden frames, JSONL
+      transcripts, JSON Schema** (`design-then-implement`; filed 2026-10-05 at PROD-28 intake — council
+      HK-13 decision 9, voice delegation (d); family lead BUILD-47). Owner ruling: design AND
+      implementation now, all three slices in order, never gating the satellite's FW-1a. The core is
+      hand-written, subordinate to `docs/guides/websocket-api.md` (`ws-protocol-doc-canonical` — on
+      disagreement the document wins and the core is fixed), never generated from code, and validated
+      by an owner-side test against REAL frames from the existing WS suites (`test_ws_driving_input`,
+      `test_ws_reply`, `test_ws_streaming_asr`, `test_observe_tap`, `test_web_push_output`). Consumer
+      constraints the design must answer: pins are FLAT — every file needs a unique basename and is
+      enumerated individually (no globs; never `README.md`/`PIN.json`/`STAMP.json`); the C++ firmware
+      consumer wants valid AND invalid cases per frame type (unknown-type frames included), transcripts
+      as JSONL with direction/channel/kind and binary frames as markers (register → PCM → end →
+      response, the reply channel, reconnect), stable language-neutral names, additions = minor, byte
+      edits = patch; one frames file vs one per frame type is the open layout question. Deliverable:
+      design doc under `docs/design/`, reviewed by the satellite side BEFORE any implementation
+      (ARCH-61).
+- [ ] **ARCH-61** [WS][CONTRACTS] `[release]` — **WS machine core — implementation, ONE cut
+      `ws-protocol-v1.1.0`** (filed 2026-10-05 at PROD-28 intake; GATED on ARCH-60's design passing the
+      satellite-side review; family lead BUILD-47). Slices in order per the reviewed design: (1) golden
+      frame fixtures + the owner test validating real frames from the five WS suites, (2) JSONL
+      transcripts, (3) the JSON Schema — all under `contracts/ws-protocol/`, every file enumerated in
+      the STAMP's `artifacts`, landing as one minor cut (the pinned set gains files; the served
+      `protocol_version` stays `"1"`). Same change: the owner-approved amendment to
+      `ws-protocol-doc-canonical`, verbatim — "`contracts/ws-protocol/` additionally holds the
+      protocol's hand-written machine core (golden frames, transcripts, schema). It is subordinate to
+      the document: on disagreement the document wins and the core is fixed. Never generated from code;
+      a wire change updates document and core in the same change." On the cut: `re-pin owed: satellite`
+      (FW-1a's conformance test consumes the pinned fixtures from the day they exist, never gated on
+      them) and commons (PROD-28 build item 6 — its eval WS provider pins `ws-protocol` when the core
+      lands).
 
 ### Code Quality & Review (QUAL)
 
@@ -465,6 +503,90 @@ size-matched to the Russian stack; language is a per-config/deployment choice (a
       board** (D-4/D-5), seeded when BUILD-21 lands, not decided unilaterally here. Scope for that design: which
       repo owns the unified compose, health-gated `depends_on` vs. tolerant clients, whether the units collapse
       into one, and how `update.sh` stays per-repo when the compose is not. Related: BUILD-18 (ops conformance).
+- [ ] **BUILD-47** `[release]` [CI][CONTRACTS] — **HK-13 wave 0: un-gate contract-guard, close the
+      layer-2 path-gate hole, fix the rotted manifest guard pointer** (filed 2026-10-05 at PROD-28
+      intake — council HK-13, voice delegation (a). **LEAD ID of the voice PROD-28 family:** BUILD-47..52
+      + ARCH-60/61, with ARCH-48 narrowed and ASSET-6 re-truthed at the same intake; every task is
+      `[release]` by owner ruling q8). Verified at intake: `ci.yml`'s `contract-guard` job runs only when
+      the `contracts` filter matches (`contracts/**`, the vendored script, the workflow) — yet the owned
+      artifacts live outside `contracts/`, so the drift rule never ran for the edit it exists to catch;
+      `backend-health` (the only job that runs pytest = every layer-2 conformance/version test) triggers
+      on `backend/**`, `config/**`, `docker/**` only — a commit touching just a pin, a STAMP or a locked
+      guide runs NO conformance test; `docs/manifest.json`'s `guides/websocket-api` node still names
+      `irene/tests/test_ws_protocol_version.py` as its guard (rotted since BUILD-36). Scope: (1) the
+      `contract-guard` job runs on EVERY push/PR — no `changes` dependency, no path gate; (2) pytest
+      runs whenever `contracts/**` or an enumerated/guarded artifact path moves
+      (`docs/guides/websocket-api.md`, `docs/guides/tracing.md`, `config-ui/openapi.json` + its
+      generator, `docs/manifest.json`; the vendored core-py copy already sits under `backend/**`);
+      (3) the manifest pointer → `backend/tests/…`, plus a coherence assertion that canonical
+      `stamp`/`guard` pointers resolve so the class cannot re-rot silently. NOT in scope: the CI
+      `repin --check` step and the dispatch gate (need repin v2 — BUILD-51).
+- [ ] **BUILD-48** `[release]` [CONTRACTS][WS] — **Owner cut `ws-protocol-v1.0.1` (bytes-only patch)**
+      (filed 2026-10-05 at PROD-28 intake, delegation (b); lead BUILD-47). Verified at intake: both
+      post-tag drifts are real — `939a205` moved the guide's Python sample port 6000→8080, `346a5f3`
+      moved the STAMP's `code_constant` path — and the satellite's pin reported current throughout. The
+      cut absorbs both: STAMP gains `artifacts: ["docs/guides/websocket-api.md"]` (doc-canonical
+      contracts lock the WHOLE file, owner ruling q3), version `1.0.1`, tag `ws-protocol-v1.0.1`; the
+      doc header line names the new tag; the served `protocol_version` stays `"1"` (runtime-served
+      versions carry the MAJOR only); the guide's "the version only moves on a breaking wire change"
+      sentence is re-worded to the three-level rule; `test_ws_protocol_version.py` compares the major
+      and checks doc-header tag == STAMP tag; registry row + `contracts/ws-protocol/README.md`
+      re-truthed. Flow: artifact + STAMP one commit → tag → push together. `re-pin owed: satellite`.
+- [ ] **BUILD-49** `[release]` [CONTRACTS][TRACE] — **Owner cut `trace-format-v1.0.1` (bytes-only
+      patch): `docs/guides/tracing.md` enumerated whole** (filed 2026-10-05 at PROD-28 intake,
+      delegation (b); lead BUILD-47). Owner ruling q3 remediates the DOC-14 refusal to enumerate
+      ("prose evolves" — from now an edit to the guide cuts a patch). Verified at intake: the guide and
+      the STAMP are byte-identical to `trace-format-v1` (no hidden drift to absorb). Scope: STAMP gains
+      `artifacts: ["docs/guides/tracing.md"]`, version `1.0.1`, new tag; the guide's version line names
+      the tag and its closing paragraph states the three-level rule (`trace_version` = the major);
+      `TRACE_FORMAT_VERSION` stays `1`; `test_trace_format_version.py` goes major-only; registry row +
+      `contracts/trace-format/README.md` re-truthed. No cross-repo consumer pins it yet — no re-pin owed.
+- [ ] **BUILD-50** `[release]` [CONTRACTS] — **`ui-openapi` + `wake-pack` STAMPs declare `artifacts`
+      (empty list + resolving `guard`): patch cuts `ui-openapi-v1.1.1` + `wake-pack-v1.0.1`** (filed
+      2026-10-05 at PROD-28 intake, delegation (b); lead BUILD-47). Both are the legal empty-list
+      shapes of contracts.md §2: `ui-openapi` is a repo-internal GENERATED artifact whose
+      regenerate-and-compare test is the stronger check (`guard` →
+      `backend/tests/test_openapi_drift.py`, replacing the ad-hoc `drift_guard` field); `wake-pack` is
+      a binary-pack sidecar where the STAMP is the whole pinned set (`guard` → the test asserting the
+      STAMP mirrors the released catalog). STAMP-metadata-only = patch. Intake redefinition: the board
+      allowed wake-pack to ride ASSET-6; it is cut NOW instead — ASSET-6 is gated on new wake words
+      and must not hold a declaration; the pack hashes/URLs are NOT touched here (ASSET-6 keeps the
+      drift re-stamp and the immutable-URL switch). Also found at intake: the registry row still says
+      `ui-openapi-v1` against a STAMP at `ui-openapi-v1.1` — fixed by this cut's row.
+      `re-pin owed: satellite` (wake-pack).
+- [ ] **BUILD-51** `[release]` [PROCESS][CONTRACTS][CI] — **The HK-13 sweep (ONE pass, after the commons
+      tag set): re-vendor contract-guard v4 / repin v2 / scope-guard, migrate `.repin.toml`, re-stamp
+      every pin, CI `repin --check` + dispatch gate** (filed 2026-10-05 at PROD-28 intake, delegation
+      (c); lead BUILD-47; **WAITS on commons**: `contract-guard-v4.0.0`, `repin-v2.0.0`, the next scope
+      tag carrying the re-worded contract-triad block, `report-protocol-v1.0.1` — and on the bridge's
+      `catalog-v1.10.0` + satellite's `esp32-site-v1.1.0`). Scope: re-vendor the tag set (`[[tool]]`
+      entries gain path + sha256; CLAUDE.md block re-pin; registry/CLAUDE.md/CI guard-tag mentions
+      move); drop `files` from `.repin.toml` (pin sets derive from the owner STAMP's `artifacts`) and
+      make every `conformance` a real file path (the commons-dest catalog entry is prose today);
+      re-stamp every pin — catalog BOTH dests at `catalog-v1.10.0` (gains the enumerated
+      `catalog-contract.md`), `report-protocol-v1.0.1`, `esp32-site-v1.1.0`, `core-py` at its current
+      tag — which also fixes the two rotted `irene/tests/…` `conformance` pointers in the
+      `esp32-site` + `report-protocol` PIN.json (verified at intake; pins are never hand-edited, so
+      they wait for the re-stamp); delete the manual re-pin recipe in
+      `contracts/pins/report-protocol/README.md`; add the CI `repin --check` step (touch-the-family
+      from the diff base) and the image-dispatch gate (families fail on minor+, patch/tool gaps warn);
+      re-truth the registry's Guards paragraph ("path-gated" is already false after BUILD-47) and the
+      own-dialect invariant wording that HK-13 outdated (`trace-format-doc-canonical`'s "additive keys
+      keep the version" → keep the SERVED major, cut a minor; guard-tag mentions) — CLAUDE.md edits
+      held for this owner-visible sweep rather than made piecemeal.
+- [ ] **BUILD-52** `[release]` [DOC][CONTRACTS] — **docs-manifest remodel: retire the internal
+      `contracts/docs-manifest/` STAMP for a `docs-manifest-schema` pin; the manifest test goes
+      hermetic** (filed 2026-10-05 at PROD-28 intake, delegation (b) tail; lead BUILD-47; **WAITS on
+      commons** cutting the `docs-manifest-schema` family, first tag `docs-manifest-schema-v1.0.0`;
+      executes in the BUILD-51 sweep session as its own commit). HK-13 decision 6 (partially reversing
+      HK-6): `docs/manifest.json` is instance data; the contract is the commons-owned schema. Scope:
+      delete `contracts/docs-manifest/` (the `docs-manifest-v1` tag stays as frozen history), drop its
+      registry row, pin `docs-manifest-schema` under `contracts/pins/` via repin, and point
+      `test_docs_manifest.py`'s schema leg at the pin (today it reads `../locveil-commons/…` and SKIPS
+      when the sibling is absent — i.e. never runs in CI). Discovered at intake, rides here: the
+      manifest's `surfaces` trigger globs still name pre-BUILD-36 paths (`irene/**`, `configs/**`,
+      root `pyproject.toml`) — re-truth to `backend/src/locveil_voice/**`, `config/**`,
+      `backend/pyproject.toml`.
 ### Models & Assets (ASSET)
 
 - [ ] **ASSET-6** `[deferred]` [ASSET][CONTRACTS][SATELLITE] — **The multi-model wake-pack v1.x cut**
@@ -480,6 +602,10 @@ size-matched to the Russian stack; language is a per-config/deployment choice (a
       `wake-pack-v1.x`; the catalog-coherence leg of `test_ws_protocol_version.py` moves in the same
       change. On the cut: **`re-pin owed: satellite`** (it re-pins + re-publishes; its `.repin.toml`
       watches the family so the staleness nag is automatic).
+      **RE-TRUTHED 2026-10-05 (HK-13 / PROD-28 intake, lead BUILD-47):** tags are three-part from
+      HK-13 on — a new word is a MINOR cut (`wake-pack-v1.1.0`), and the STAMP's `artifacts`/`guard`
+      declaration no longer rides here (BUILD-50 cuts `wake-pack-v1.0.1` for it, hashes/URLs
+      untouched). The drift re-stamp + immutable-URL switch stay in this task.
 
 ### Documentation (DOC)
 
