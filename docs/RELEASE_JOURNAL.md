@@ -21,6 +21,20 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-10-05 — TEST-23: thirteen tests that were simply missing.** The machine core's premise is
+  that fixtures are checked against frames a real handler put on a real socket, and half the
+  documented frames had never been on one in any test: the speak burst was asserted on a callback
+  list, `/ws/output` never pushed anything, `/ws/observe` was only ever refused. Writing them the
+  way a device would — explicit frames, no client library in between — paid off before a single
+  fixture existed. Wiring the production negotiator into the reply test instead of the usual
+  pass-through stub showed that the guide's "the audio is already converted to the rate you
+  registered" describes half of what the code does: it converts down and never up, so a 16 kHz
+  voice arrives at 16 kHz on a device that asked for 22.05, and only `speak_begin` tells the
+  truth. A firmware that trusted its own registration would play that reply 38% too fast. The
+  reconnect test goes through the real notification service and durable store rather than
+  planting a notice, and pulls the plug at the transport — the server-side close code (1006) is
+  what later lets a recorded connection say "network" instead of "client".
+
 - **2026-10-05 — BUG-46: the error frame the reply channel never sent.** Three of the four WS
   endpoints read their first frame inside a `try`; the reply channel read it one line above
   one. A device that sent garbage there got a dropped socket and nothing to log. The machine

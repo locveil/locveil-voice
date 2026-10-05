@@ -290,3 +290,72 @@ def test_ws_streaming_bounded_client_without_end_is_force_finalized(monkeypatch)
         # NO end frame — the idle timeout must finalize and answer anyway
         resp = ws.receive_json()
         assert resp["type"] == "response" and resp["text"] == "ответ: таймер на десять минут"
+
+
+def test_ws_streaming_server_endpoints_then_device_hard_finalizes():
+    """TEST-23 — the documented streaming flow, both ways an utterance ends on ONE connection:
+    the server detects the end of the first from the audio (partials while it listens, then the
+    response — the device sent no `end`), the device hard-finalizes the second with `end`."""
+    pytest.importorskip("fastapi")
+    from fastapi.testclient import TestClient
+
+    class _ASR:
+        def supports_streaming(self, provider=None):
+            return True
+
+        async def transcribe_stream_segments(self, audio_stream, **kwargs):
+            heard = 0
+            async for _chunk in audio_stream:
+                heard += 1
+                if heard == 1:
+                    yield ("включи", False)
+                elif heard == 2:
+                    yield ("включи свет", False)
+                elif heard == 3:
+                    yield ("включи свет на кухне", True)    # the MODEL endpoints the utterance
+                elif heard == 4:
+                    yield ("спасибо", False)
+            if heard > 3:                                   # `end` closed the stream mid-utterance
+                yield ("спасибо", True)
+
+    class _CM:
+        def __init__(self, asr):
+            self._asr = asr
+        def get_component(self, name):
+            return self._asr if name == "asr" else None
+        def get_components(self):
+            return {}
+
+    class _WM:
+        async def process_text_input(self, text, session_id=None, wants_audio=False,
+                                     client_context=None, trace_context=None):
+            return IntentResult(text=f"ответ: {text}", metadata={}, should_speak=True)
+
+    class _Core:
+        def __init__(self):
+            self.workflow_manager = _WM()
+            self.config = None
+            self.component_manager = _CM(_ASR())
+            self.plugin_manager = None
+            self.output_manager = None
+
+    frame = b"\x00\x01" * 512
+    with TestClient(_make_app(_Core())).websocket_connect("/ws/audio") as ws:
+        ws.send_text(json.dumps({"type": "register", "client_id": "kitchen_node",
+                                 "room_name": "Кухня", "sample_rate": 16000,
+                                 "wants_audio": True, "mode": "streaming"}))
+        assert ws.receive_json()["type"] == "registered"
+
+        ws.send_bytes(frame)
+        assert ws.receive_json() == {"type": "partial", "text": "включи"}
+        ws.send_bytes(frame)
+        assert ws.receive_json() == {"type": "partial", "text": "включи свет"}
+        ws.send_bytes(frame)                                # no `end` — the server endpoints
+        first = ws.receive_json()
+        assert first["type"] == "response" and first["text"] == "ответ: включи свет на кухне"
+
+        ws.send_bytes(frame)                                # the device just keeps streaming
+        assert ws.receive_json() == {"type": "partial", "text": "спасибо"}
+        ws.send_text(json.dumps({"type": "end"}))           # hard-finalize
+        second = ws.receive_json()
+        assert second["type"] == "response" and second["text"] == "ответ: спасибо"

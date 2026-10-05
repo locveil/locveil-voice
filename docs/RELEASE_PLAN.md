@@ -500,19 +500,6 @@ _Trace-driven system testing (design `docs/design/trace_system_testing.md`, TEST
       to german" → `greeting.hello` (0.86, keyword beats verb); bare "pause" → `audio.stop` (1.00 — note the
       RU twin «поставь на паузу» routes `smart_home.playback_pause`; decide the intended EN owner before
       fixing). Consumer half unaffected: `expect` stays canonical, the bridge replays language-blind.
-- [ ] **TEST-23** `[release]` [TEST][WS] — **Real-socket witness tests for the WS frames and flows no suite
-      drives through an endpoint** (filed 2026-10-05, split out of ARCH-61 at intake; design
-      `docs/design/ws_machine_core.md` §5, review answer Q2). The machine core's owner test validates the
-      fixtures against frames the real handlers emit in the WS suites, and several documented frames
-      never cross a real socket there: `speak_begin` / `speak_end` and the reply PCM run (asserted only
-      at callback level), `/ws/output` `message` + `error`, `/ws/observe` `subscribed` + `event`; nor do
-      these flows: two utterances on one batch connection, a streaming utterance endpointed by the
-      server with partials, a granted trace and a rejected first frame with explicit device frames,
-      the satellite pair (both voice channels of one device, an utterance and its spoken reply), a
-      reconnect of both channels with a missed announcement delivered on the new reply channel.
-      Ordinary endpoint tests, added to the suites that own the channels; plus the fake reply server
-      in `test_arch36_satellite` made protocol-conforming (it omits `protocol_version` and `width`).
-      Needs BUG-46 (the rejected-first-frame flow asserts the close).
 
 ### Build & CI (BUILD)
 _Real English deployment across all three Docker arches (armv7/aarch64/x86_64) + English eval. Design

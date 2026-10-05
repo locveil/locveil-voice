@@ -34,7 +34,7 @@ async def test_callback_reply_channel_frames_begin_pcm_end():
     assert ch.is_connected() is True
 
 
-def _build_app():
+def _build_app(*, voice_rate=16000, voice_pcm=b"\x00\x00", negotiator=None):
     from fastapi import FastAPI
     from locveil_voice.runners.webapi_router import create_webapi_router
     from locveil_voice.outputs.manager import OutputManager
@@ -42,8 +42,8 @@ def _build_app():
     class _FakeTTS:
         async def synthesize_to_stream(self, text, **kw):
             async def _f():
-                yield b"\x00\x00"
-            return PCMStream(16000, 1, 2, _f())
+                yield voice_pcm
+            return PCMStream(voice_rate, 1, 2, _f())
 
     class _PassNeg:
         output_sink = None
@@ -60,7 +60,7 @@ def _build_app():
     class _Core:
         def __init__(self):
             self.output_manager = om
-            self.audio_negotiator = _PassNeg()
+            self.audio_negotiator = negotiator or _PassNeg()
             self.component_manager = _CM()
             self.config = None
             self.plugin_manager = None
@@ -138,3 +138,100 @@ def test_ws_audio_reply_answers_error_on_a_binary_first_frame():
         assert ws.receive_json()["type"] == "error"
         with pytest.raises(WebSocketDisconnect):
             ws.receive_json()
+
+
+# --- TEST-23: the speak burst through the REAL endpoint (it was asserted at callback level only) ---
+
+def _real_negotiator():
+    """The production conform-down seam (16 kHz mono canonical pipeline)."""
+    from locveil_voice.core.audio_negotiator import AudioNegotiator
+    from locveil_voice.utils.audio_negotiation import CanonicalFormat
+    return AudioNegotiator(CanonicalFormat(16000, "pcm16", 1))
+
+
+def _speak(client, om, text, client_id="kitchen_node"):
+    """Deliver one spoken result to the device from inside the app's event loop."""
+    from locveil_voice.intents.models import IntentResult
+    return client.portal.call(om.deliver, IntentResult(text=text),
+                              RequestContext(session_id="s", client_id=client_id),
+                              OutputModality.SPEECH)
+
+
+def _read_burst(ws):
+    """One bracketed burst off the socket: (speak_begin, pcm bytes, binary frame count, speak_end)."""
+    begin = ws.receive_json()
+    assert begin["type"] == "speak_begin"
+    pcm, frames = bytearray(), 0
+    while True:
+        msg = ws.receive()
+        if msg.get("bytes") is not None:
+            pcm.extend(msg["bytes"])
+            frames += 1
+            continue
+        end = json.loads(msg["text"])
+        assert end["type"] == "speak_end"
+        return begin, bytes(pcm), frames, end
+
+
+def test_ws_audio_reply_pushes_bracketed_bursts_with_a_per_connection_seq():
+    """register-reply → registered → speak_begin / PCM / speak_end, twice: `seq` pairs each
+    bracket and counts the bursts of this connection from 1."""
+    pytest.importorskip("fastapi")
+    from fastapi.testclient import TestClient
+
+    voice = b"\x01\x02" * 5000                      # 10000 bytes of 22.05 kHz mono PCM16
+    app, om = _build_app(voice_rate=22050, voice_pcm=voice, negotiator=_real_negotiator())
+
+    with TestClient(app) as client, client.websocket_connect("/ws/audio/reply") as ws:
+        ws.send_text(json.dumps({"type": "register-reply", "client_id": "kitchen_node",
+                                 "audio_out": {"rate": 22050, "channels": 1}}))
+        assert ws.receive_json() == {"type": "registered", "client_id": "kitchen_node",
+                                     "protocol_version": "1"}
+
+        delivered = _speak(client, om, "Таймер на 5 минут запущен")
+        assert [d.delivered for d in delivered] == [True]
+        begin, pcm, frames, end = _read_burst(ws)
+        assert begin == {"type": "speak_begin", "rate": 22050, "channels": 1, "width": 16, "seq": 1}
+        assert pcm == voice and frames > 1            # the whole utterance, genuinely chunked
+        assert end == {"type": "speak_end", "seq": 1}
+
+        _speak(client, om, "Таймер на 5 минут завершён")
+        begin, pcm, _, end = _read_burst(ws)
+        assert begin["seq"] == 2 and end == {"type": "speak_end", "seq": 2}
+        assert pcm == voice
+
+
+def test_ws_audio_reply_never_upsamples_speak_begin_states_the_real_format():
+    """The reply is conformed DOWN to the device's contract, never up: a 16 kHz voice reaches a
+    device that registered 22.05 kHz AS PRODUCED — `speak_begin` is what the device plays by."""
+    pytest.importorskip("fastapi")
+    from fastapi.testclient import TestClient
+
+    voice = b"\x01\x02" * 1600
+    app, om = _build_app(voice_rate=16000, voice_pcm=voice, negotiator=_real_negotiator())
+
+    with TestClient(app) as client, client.websocket_connect("/ws/audio/reply") as ws:
+        ws.send_text(json.dumps({"type": "register-reply", "client_id": "kitchen_node",
+                                 "audio_out": {"rate": 22050, "channels": 1}}))
+        assert ws.receive_json()["type"] == "registered"
+        _speak(client, om, "готово")
+        begin, pcm, _, _ = _read_burst(ws)
+        assert begin["rate"] == 16000 and begin["channels"] == 1 and begin["width"] == 16
+        assert pcm == voice
+
+
+def test_ws_audio_reply_register_without_audio_out_assumes_22050_mono():
+    """`audio_out` may be omitted: the server assumes 22.05 kHz mono (a 48 kHz voice is then
+    converted down to it)."""
+    pytest.importorskip("fastapi")
+    pytest.importorskip("numpy")
+    from fastapi.testclient import TestClient
+
+    app, om = _build_app(voice_rate=48000, voice_pcm=b"\x01\x02" * 4800,
+                         negotiator=_real_negotiator())
+    with TestClient(app) as client, client.websocket_connect("/ws/audio/reply") as ws:
+        ws.send_text(json.dumps({"type": "register-reply", "client_id": "kitchen_node"}))
+        assert ws.receive_json()["type"] == "registered"
+        _speak(client, om, "готово")
+        begin, _, _, _ = _read_burst(ws)
+        assert begin["rate"] == 22050 and begin["channels"] == 1

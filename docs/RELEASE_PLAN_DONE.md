@@ -1610,6 +1610,37 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       correct), all profiles valid, armv7l gate green, config-validator valid, contracts 11/11.
       docs: none — a test + config-file corrections; no manifest node documents the relocated sections.
 
+- [x] **TEST-23** `[release]` [TEST][WS] — **DONE 2026-10-05 — real-socket witness tests for the WS frames and
+      flows no suite drove through an endpoint** (split out of ARCH-61; design
+      `docs/design/ws_machine_core.md` §5, review answer Q2; family lead BUILD-47). Thirteen ordinary
+      endpoint tests, each in the suite that owns its channel, every one asserting on what actually
+      crosses the socket. **`test_ws_reply`:** two bracketed bursts through `/ws/audio/reply`
+      (`speak_begin` / chunked PCM / `speak_end`, `seq` 1 then 2) with the production conform-down
+      negotiator in the app; a 16 kHz voice reaching a device registered at 22.05 kHz AS PRODUCED
+      (the server never upsamples — `speak_begin` states the real format); `register-reply` without
+      `audio_out` assuming 22.05 kHz mono. **`test_web_push_output`:** a deferred result arriving as a
+      `message` frame; `error` + close when web push is unavailable; the opening frame is never
+      rejected (a non-JSON one gets a minted identity). **`test_observe_tap`:** `subscribed`, then
+      only the filter-matching bus event as an `event` frame. **`test_ws_driving_input`:** two
+      utterances on one batch connection (one session id; a failed command is still a `response`);
+      `end` before `register` → `error` + close. **`test_ws_streaming_asr`:** one streaming
+      connection where the server endpoints the first utterance (partials, then the response, no
+      `end` from the device) and the device hard-finalizes the second. **`test_arch36_satellite`:**
+      the granted-trace flow with explicit device frames; the satellite pair over a real loopback
+      server (utterance up `/ws/audio`, `response` back there, the spoken reply as a burst on
+      `/ws/audio/reply`); a power-loss reconnect — both sockets aborted without a closing handshake,
+      an announcement fired while offline goes through the real notification → durable-store path,
+      both channels re-register (new session id) and the missed announcement is spoken on the new
+      reply channel with `seq` restarting at 1. The suite's fake reply server now speaks the
+      protocol it stands in for (`protocol_version` in the ack, `width` in `speak_begin` — both read
+      by firmware). `_build_app` in `test_ws_reply` takes the voice format and negotiator as
+      parameters; nothing else in the existing tests changed. **Finding (document, lands with
+      ARCH-61):** the guide says the reply audio is "already converted to the rate/channel count you
+      registered" — the code conforms DOWN only, so a lower-rate voice arrives at its own rate.
+      **Verified:** suite 1500 passed / 7 skipped (+13); the three loopback tests stable over
+      repeated runs.
+      docs: none — tests only; the guide inaccuracy the tests exposed (reply audio is conformed down, never up) is a byte-locked guide edit and lands with the ARCH-61 cut
+      contracts: none — no versioned surface moved (tests only)
 ### Internationalization (I18N)
 ### Build & CI (BUILD)
 - [x] **BUILD-47** `[release]` [CI][CONTRACTS] — **DONE 2026-10-05 (HK-13 wave 0; PROD-28 voice

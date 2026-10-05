@@ -229,3 +229,74 @@ def test_ws_audio_mid_stream_failure_gets_error_then_close():
         ws.send_bytes(b"\x00\x01" * 320)
         ws.send_text(json.dumps({"type": "end"}))
         _error_then_close(ws)
+
+
+# --- TEST-23: the documented batch flows with explicit device frames ----------------------------
+
+def test_ws_audio_two_utterances_on_one_batch_connection():
+    """register → registered → (PCM → end → response) twice on ONE socket: the session lives as
+    long as the connection, and a failed command is still a `response` (success=false + error)."""
+    pytest.importorskip("fastapi")
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+    from locveil_voice.runners.webapi_router import create_webapi_router
+
+    sessions = []
+    results = iter([
+        IntentResult(text="Таймер на 5 минут запущен", metadata={"original_intent": "timer.set"}),
+        IntentResult(text="Не удалось включить свет", success=False, error="device unreachable",
+                     metadata={"original_intent": "smart_home.switch_on"}),
+    ])
+
+    class _WM:
+        async def process_audio_input(self, audio_data, session_id=None, wants_audio=False,
+                                      client_context=None, trace_context=None):
+            sessions.append(session_id)
+            return next(results)
+
+    class _Core:
+        def __init__(self):
+            self.workflow_manager = _WM()
+            self.config = None
+            self.component_manager = None
+            self.plugin_manager = None
+
+    app = FastAPI()
+    app.include_router(create_webapi_router(_Core(), asset_loader=None, web_input=None,
+                                            start_time=0.0))
+
+    with TestClient(app).websocket_connect("/ws/audio") as ws:
+        ws.send_text(json.dumps({"type": "register", "client_id": "kitchen_node",
+                                 "room_name": "Кухня", "sample_rate": 16000, "wants_audio": True}))
+        ack = ws.receive_json()
+        assert ack == {"type": "registered", "client_id": "kitchen_node",
+                       "session_id": ack["session_id"], "trace": False, "protocol_version": "1"}
+
+        ws.send_bytes(b"\x00\x01" * 512)            # two ~32 ms frames of 16 kHz PCM16
+        ws.send_bytes(b"\x00\x01" * 512)
+        ws.send_text(json.dumps({"type": "end"}))
+        first = ws.receive_json()
+        assert first.pop("timestamp") > 0
+        assert first == {"type": "response", "text": "Таймер на 5 минут запущен", "success": True,
+                         "error": None, "confidence": 1.0, "intent_name": "timer.set",
+                         "metadata": {"original_intent": "timer.set"}}
+
+        ws.send_bytes(b"\x00\x01" * 512)
+        ws.send_text(json.dumps({"type": "end"}))
+        second = ws.receive_json()
+        assert second["type"] == "response" and second["success"] is False
+        assert second["error"] == "device unreachable"
+        assert second["intent_name"] == "smart_home.switch_on"
+
+    assert sessions == [ack["session_id"]] * 2      # one session for the whole connection
+
+
+def test_ws_audio_first_frame_must_be_register():
+    """A well-formed frame in the wrong position is a protocol violation too: `end` before
+    `register` is answered with `error`, and the server closes."""
+    pytest.importorskip("fastapi")
+    from fastapi.testclient import TestClient
+
+    with TestClient(_failing_pipeline_app()).websocket_connect("/ws/audio") as ws:
+        ws.send_text(json.dumps({"type": "end"}))
+        _error_then_close(ws)

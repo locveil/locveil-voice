@@ -104,3 +104,34 @@ def test_ws_observe_malformed_first_frame_gets_error_then_close():
         assert msg["type"] == "error" and msg["error"]
         with pytest.raises(WebSocketDisconnect):
             ws.receive_json()
+
+
+# --- TEST-23: `subscribed` and `event` over the real socket ------------------------------------
+
+def test_ws_observe_streams_filtered_events_after_subscribed():
+    """subscribe (token + filter) → subscribed → only the matching bus events arrive as `event`."""
+    import json
+    from fastapi.testclient import TestClient
+    bus = EventBus()
+    app = _router_app(token="observe-secret", allow_remote=True, bus=bus)
+    with TestClient(app) as client, client.websocket_connect("/ws/observe") as ws:
+        ws.send_text(json.dumps({"token": "observe-secret",
+                                 "filter": {"room_name": "Кухня", "types": ["result.produced"]}}))
+        assert ws.receive_json() == {"type": "subscribed"}
+
+        # filtered out twice over: another room, then another event type
+        client.portal.call(bus.publish, PipelineEvent(type=EventType.RESULT_PRODUCED,
+                                                      room_name="Спальня"))
+        client.portal.call(bus.publish, PipelineEvent(type=EventType.INPUT_RECEIVED,
+                                                      room_name="Кухня"))
+        client.portal.call(bus.publish, PipelineEvent(
+            type=EventType.RESULT_PRODUCED, session_id="5f0c1d7a9b3e4c62a8d4e1f0b7c39a25",
+            client_id="kitchen_node", room_name="Кухня", source="ws_audio",
+            payload={"text": "Таймер на 5 минут запущен", "success": True}))
+
+        ev = ws.receive_json()
+        assert ev.pop("timestamp") > 0
+        assert ev == {"type": "event", "event": "result.produced",
+                      "session_id": "5f0c1d7a9b3e4c62a8d4e1f0b7c39a25",
+                      "client_id": "kitchen_node", "room_name": "Кухня", "source": "ws_audio",
+                      "payload": {"text": "Таймер на 5 минут запущен", "success": True}}

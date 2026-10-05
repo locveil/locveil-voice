@@ -12,6 +12,7 @@ import socket
 
 import pytest
 
+from locveil_voice.core.ws_protocol import WS_PROTOCOL_VERSION
 from locveil_voice.satellite.link import SatelliteLink, SatelliteReplyClient, _frames
 from locveil_voice.runners.satellite_runner import WAKE_ARM_WINDOW_S, _in_armed_window
 from locveil_voice.runners.webapi_router import _client_cert_cn
@@ -297,6 +298,216 @@ def test_recorder_declined_and_next_utterance_finalizes(tmp_path):
     assert "reply_audio" not in first
 
 
+# --- TEST-23: the device's view — explicit frames against the real endpoints -----------------------
+
+def test_trace_granted_explicit_frames_response_then_one_trace():
+    """The documented trace flow with the frames a device sends (no SatelliteLink in between):
+    `wants_trace` granted in the ack, then each `response` is followed by exactly one `trace`."""
+    pytest.importorskip("fastapi")
+    from fastapi.testclient import TestClient
+
+    with TestClient(_stub_router(allow_remote_trace=True)).websocket_connect("/ws/audio") as ws:
+        ws.send_text(json.dumps({"type": "register", "client_id": "kitchen_node",
+                                 "room_name": "Кухня", "sample_rate": 16000,
+                                 "wants_trace": True}))
+        ack = ws.receive_json()
+        assert ack["type"] == "registered" and ack["trace"] is True
+        ws.send_bytes(b"\x00\x01" * 512)
+        ws.send_text(json.dumps({"type": "end"}))
+        response = ws.receive_json()
+        assert response["type"] == "response" and response["text"] == "готово"
+        trace = ws.receive_json()
+        assert set(trace) == {"type", "request_id", "trace"} and trace["type"] == "trace"
+        assert trace["request_id"] and isinstance(trace["trace"], dict)
+
+
+VOICE_PCM = b"\x01\x02" * 5000   # the fake voice: 10000 bytes of 22.05 kHz mono PCM16
+
+
+def _voice_app():
+    """Both voice channels wired the way the engine wires them: a stubbed pipeline, ONE shared
+    OutputManager, the production conform-down negotiator, a fake 22.05 kHz voice."""
+    from fastapi import FastAPI
+    from locveil_voice.core.audio_negotiator import AudioNegotiator
+    from locveil_voice.intents.models import IntentResult
+    from locveil_voice.outputs.manager import OutputManager
+    from locveil_voice.runners.webapi_router import create_webapi_router
+    from locveil_voice.utils.audio_negotiation import CanonicalFormat
+    from locveil_voice.utils.audio_stream import PCMStream
+
+    class _WM:
+        async def process_audio_input(self, audio_data, session_id=None, wants_audio=False,
+                                      client_context=None, trace_context=None):
+            return IntentResult(text="Таймер на 5 минут запущен",
+                                metadata={"original_intent": "timer.set"})
+
+    class _TTS:
+        async def synthesize_to_stream(self, text, **kw):
+            async def _frames_():
+                yield VOICE_PCM
+            return PCMStream(22050, 1, 2, _frames_())
+
+    class _CM:
+        def get_component(self, name):
+            return _TTS() if name == "tts" else None
+
+    om = OutputManager()
+
+    class _Core:
+        workflow_manager = _WM()
+        config = None
+        component_manager = _CM()
+        plugin_manager = None
+        output_manager = om
+        audio_negotiator = AudioNegotiator(CanonicalFormat(16000, "pcm16", 1))
+
+    app = FastAPI()
+    app.include_router(create_webapi_router(_Core(), asset_loader=None, web_input=None,
+                                            start_time=0.0))
+    return app, om
+
+
+@pytest.fixture()
+def durable_store(tmp_path):
+    """The reply channel drains undelivered notices at registration — keep that off the real
+    assets tree."""
+    from locveil_voice.core.durable_actions import JsonFileDurableActionStore, set_durable_action_store
+    store = JsonFileDurableActionStore(tmp_path / "durable_actions.json")
+    set_durable_action_store(store)
+    yield store
+    set_durable_action_store(None)
+
+
+REGISTER = {"type": "register", "client_id": "kitchen_node", "room_name": "Кухня",
+            "sample_rate": 16000, "wants_audio": True}
+REGISTER_REPLY = {"type": "register-reply", "client_id": "kitchen_node",
+                  "audio_out": {"rate": 22050, "channels": 1}}
+
+
+async def _open(http, url, path, first_frame):
+    """Open one channel the way a device does: connect, send the opening frame, read the ack."""
+    ws = await http.ws_connect(f"{url}{path}")
+    await ws.send_str(json.dumps(first_frame, ensure_ascii=False))
+    ack = json.loads(await asyncio.wait_for(ws.receive_str(), timeout=5.0))
+    assert ack["type"] == "registered" and ack["client_id"] == first_frame["client_id"]
+    assert ack["protocol_version"] == WS_PROTOCOL_VERSION
+    return ws, ack
+
+
+async def _read_burst(ws):
+    """One bracketed burst: (speak_begin, pcm, speak_end)."""
+    import aiohttp
+    begin = json.loads(await asyncio.wait_for(ws.receive_str(), timeout=5.0))
+    assert begin["type"] == "speak_begin"
+    pcm = bytearray()
+    while True:
+        msg = await asyncio.wait_for(ws.receive(), timeout=5.0)
+        if msg.type == aiohttp.WSMsgType.BINARY:
+            pcm.extend(msg.data)
+            continue
+        assert msg.type == aiohttp.WSMsgType.TEXT
+        end = json.loads(msg.data)
+        assert end["type"] == "speak_end"
+        return begin, bytes(pcm), end
+
+
+async def test_satellite_pair_utterance_and_its_spoken_reply(durable_store):
+    """Both voice channels of ONE device over real sockets: the utterance goes up `/ws/audio`,
+    its `response` comes back there, and the spoken reply arrives on `/ws/audio/reply` as a
+    bracketed burst — never on the input socket."""
+    aiohttp = pytest.importorskip("aiohttp")
+    app, om = _voice_app()
+
+    async with _LiveServer(app) as srv, aiohttp.ClientSession() as http:
+        reply, _ = await _open(http, srv.url, "/ws/audio/reply", REGISTER_REPLY)
+        audio, ack = await _open(http, srv.url, "/ws/audio", REGISTER)
+        assert ack["trace"] is False and ack["session_id"]
+
+        for _ in range(3):                               # ~96 ms of 16 kHz PCM16
+            await audio.send_bytes(b"\x00\x01" * 512)
+        await audio.send_str(json.dumps({"type": "end"}))
+        response = json.loads(await asyncio.wait_for(audio.receive_str(), timeout=5.0))
+        assert response["type"] == "response" and response["text"] == "Таймер на 5 минут запущен"
+        assert response["intent_name"] == "timer.set" and response["success"] is True
+
+        begin, pcm, end = await _read_burst(reply)
+        assert begin == {"type": "speak_begin", "rate": 22050, "channels": 1, "width": 16, "seq": 1}
+        assert pcm == VOICE_PCM and end == {"type": "speak_end", "seq": 1}
+
+        await audio.close()
+        await reply.close()
+        for _ in range(100):                             # the server deregisters on disconnect
+            if not om._outputs:
+                break
+            await asyncio.sleep(0.02)
+        assert om._outputs == {}
+
+
+async def test_reconnect_reregisters_and_speaks_the_missed_announcement(durable_store, monkeypatch):
+    """A device that loses power mid-session comes back: both channels re-register on new
+    connections (a NEW session id), and the announcement that fired while it was offline is
+    spoken on the new reply channel as soon as it is up."""
+    aiohttp = pytest.importorskip("aiohttp")
+    import locveil_voice.core.notifications as notifications
+    from locveil_voice.core.notifications import (
+        DeliveryMethod, NotificationMessage, NotificationService, NotificationType)
+
+    app, om = _voice_app()
+    service = NotificationService()
+    service.set_output_manager(om)
+    monkeypatch.setattr(notifications, "_notification_service", service)
+
+    def _power_loss(ws):
+        ws._writer.transport.abort()                     # no closing handshake — the plug is pulled
+
+    try:
+        async with _LiveServer(app) as srv, aiohttp.ClientSession() as http:
+            reply, _ = await _open(http, srv.url, "/ws/audio/reply", REGISTER_REPLY)
+            audio, first_ack = await _open(http, srv.url, "/ws/audio", REGISTER)
+
+            _power_loss(audio)
+            _power_loss(reply)
+            for _ in range(250):                         # the server notices and deregisters
+                if not om._outputs:
+                    break
+                await asyncio.sleep(0.02)
+            assert om._outputs == {}
+
+            # a timer rings while the device is away: no output for it → queued for redelivery
+            await service.send_notification(NotificationMessage(
+                type=NotificationType.ACTION_COMPLETION, title="Action Completed",
+                message="Таймер на 5 минут завершён",
+                details={"domain": "timers", "action_name": "timer_1"},
+                delivery_methods=[DeliveryMethod.TTS, DeliveryMethod.LOG],
+                session_id=first_ack["session_id"], domain="timers", source="ws_audio",
+                physical_id="kitchen_node", room_name="Кухня", language="ru", redeliver=True))
+            queued = []
+            for _ in range(250):
+                if durable_store.path.exists():
+                    queued = json.loads(durable_store.path.read_text(encoding="utf-8"))["undelivered"]
+                if queued:
+                    break
+                await asyncio.sleep(0.02)
+            assert [n["message"] for n in queued] == ["Таймер на 5 минут завершён"]
+
+            audio2, second_ack = await _open(http, srv.url, "/ws/audio", REGISTER)
+            assert second_ack["session_id"] != first_ack["session_id"]   # the session died with the socket
+
+            reply2, _ = await _open(http, srv.url, "/ws/audio/reply", REGISTER_REPLY)
+            begin, pcm, end = await _read_burst(reply2)
+            assert begin == {"type": "speak_begin", "rate": 22050, "channels": 1, "width": 16,
+                             "seq": 1}                   # `seq` restarts with the connection
+            assert pcm == VOICE_PCM and end == {"type": "speak_end", "seq": 1}
+            assert durable_store.pop_undelivered(["kitchen_node"]) == []   # drained, not duplicated
+
+            await audio2.close()
+            await reply2.close()
+            await audio.close()
+            await reply.close()
+    finally:
+        await service.stop()
+
+
 # --- reply client vs the §4 wire contract ----------------------------------------------------------
 
 async def test_reply_client_plays_framed_speech():
@@ -311,8 +522,12 @@ async def test_reply_client_plays_framed_speech():
         reg = json.loads((await ws.receive()).data)
         assert reg["type"] == "register-reply" and reg["client_id"] == "sat"
         assert reg["audio_out"] == {"rate": 22050, "channels": 1}
-        await ws.send_json({"type": "registered", "client_id": "sat"})
-        await ws.send_json({"type": "speak_begin", "rate": 22050, "channels": 1, "seq": 1})
+        # a test double must speak the protocol it stands in for (websocket-api.md): the ack
+        # carries `protocol_version`, `speak_begin` carries `width` — firmware reads both
+        await ws.send_json({"type": "registered", "client_id": "sat",
+                            "protocol_version": WS_PROTOCOL_VERSION})
+        await ws.send_json({"type": "speak_begin", "rate": 22050, "channels": 1, "width": 16,
+                            "seq": 1})
         await ws.send_bytes(b"\x01\x02" * 100)
         await ws.send_bytes(b"\x03\x04" * 100)
         await ws.send_json({"type": "speak_end", "seq": 1})

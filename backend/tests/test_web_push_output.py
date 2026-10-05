@@ -90,3 +90,39 @@ def test_ws_output_mints_client_id_when_absent():
         ack = ws.receive_json()
         assert ack["type"] == "connected" and ack["client_id"].startswith("web_")
         assert ack["client_id"] in om._outputs
+
+
+# --- TEST-23: the pushed `message` frame and the `error` frame over the real socket ----------
+
+def test_ws_output_pushes_a_deferred_result_as_a_message_frame():
+    """hello → connected → a deferred result addressed to this client_id arrives as `message`."""
+    from fastapi.testclient import TestClient
+    om = OutputManager()
+    with TestClient(_app(om)) as client, client.websocket_connect("/ws/output") as ws:
+        ws.send_text(json.dumps({"client_id": "web_abc123"}))
+        assert ws.receive_json() == {"type": "connected", "client_id": "web_abc123"}
+
+        ctx = RequestContext(source="api", client_id="web_abc123")
+        res = client.portal.call(om.deliver, IntentResult(text="Таймер на 10 минут завершён"), ctx, T)
+        assert [r.delivered for r in res] == [True]
+        assert ws.receive_json() == {"type": "message", "text": "Таймер на 10 минут завершён"}
+
+
+def test_ws_output_answers_error_and_closes_when_web_push_is_unavailable():
+    from fastapi.testclient import TestClient
+    from starlette.websockets import WebSocketDisconnect
+    with TestClient(_app(None)).websocket_connect("/ws/output") as ws:
+        assert ws.receive_json() == {"type": "error", "error": "web push output unavailable"}
+        with pytest.raises(WebSocketDisconnect):
+            ws.receive_json()
+
+
+def test_ws_output_never_rejects_its_opening_frame():
+    """This channel is lenient by design: a first frame without a usable client_id — even one
+    that is not JSON — gets a minted identity instead of an `error`."""
+    from fastapi.testclient import TestClient
+    om = OutputManager()
+    with TestClient(_app(om)).websocket_connect("/ws/output") as ws:
+        ws.send_text('{"client_id": ')
+        ack = ws.receive_json()
+        assert ack["type"] == "connected" and ack["client_id"].startswith("web_")
