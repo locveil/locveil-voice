@@ -1558,6 +1558,27 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       skipped (+1), both guards green, workflow YAML parses with the expected job/filter shape.
       docs: none — CI wiring + manifest metadata + a test; no manifest node describes CI gating
       contracts: none — no versioned surface moved (enforcement wiring only; `docs/manifest.json` is not an enumerated artifact)
+- [x] **BUILD-48** `[release]` [CONTRACTS][WS] — **DONE 2026-10-05 (owner cut `ws-protocol-v1.0.1`,
+      bytes-only patch; PROD-28 voice delegation (b); lead BUILD-47).** The WS wire-protocol contract
+      is now declared and byte-locked, and the two edits that slipped past `ws-protocol-v1` are inside
+      a version. **STAMP:** `version` `1.0.1`, tag `ws-protocol-v1.0.1`, `artifacts:
+      ["docs/guides/websocket-api.md"]` — the guide enumerated WHOLE (owner ruling q3: doc-canonical
+      contracts lock the whole file; any later edit cuts at least a patch); the legacy singular
+      `artifact` field dropped (one declaration, not two); the note records the three-level rule and
+      what the patch absorbs (939a205's sample port 6000→8080, 346a5f3's `code_constant` path).
+      **Guide:** the header line names the new tag; the sentence "the version only moves on a breaking
+      wire change" now states the three-level rule — the SERVED number is the major and moves only on
+      a breaking change, minor = additive wire change, patch = a document edit with the wire
+      untouched. **Served value unchanged:** `WS_PROTOCOL_VERSION` stays `"1"` (runtime-served
+      versions carry the major only), module docstring re-truthed. **Test:**
+      `test_ws_protocol_version.py` rewritten from the equal-triple to the major-only comparison —
+      STAMP is the three-part authority, the doc header names the STAMP tag exactly and shows the
+      major, the served constant equals the major, the enumerated artifact and the `code_constant`
+      pointer resolve to files. Registry row + `contracts/ws-protocol/README.md` re-truthed (levels
+      table + the cut flow). No wire change. **Verified:** suite 1467 passed / 7 skipped; guard green
+      (strict once the tag exists); flow = artifact + STAMP one commit → tag → pushed together.
+      docs: guides/websocket-api (header tag + the three-level version sentence)
+      contracts: ws-protocol bumped v1 → v1.0.1 (patch: guide enumerated whole, two post-tag drifts absorbed; served major unchanged); re-pin owed: satellite
 ### Models & Assets (ASSET)
 ### Documentation (DOC)
 - [x] **DOC-5b** (P2) — DONE 2026-06-08: regenerated `guides/DONATION_FILE_SPECIFICATION.md` for the v1.1

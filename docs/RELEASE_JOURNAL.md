@@ -21,6 +21,19 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-10-05 — BUILD-48 DONE: `ws-protocol-v1.0.1` — the guide is locked, and the version test
+  stops asserting an equality that could no longer be true.** The first three-part tag in this repo.
+  The old test wanted doc number == served constant == STAMP version; with three-level versions that
+  triple is wrong by construction — the STAMP now says `1.0.1` while a fielded device must keep
+  seeing `"1"`, because the served value states wire compatibility and nothing else. The rewrite
+  splits the roles: the STAMP is the authority, the doc header quotes its tag and shows the major,
+  the served constant is the major. That split is what dissolved the council's three-way conflict
+  (the satellite wanted the byte-lock, this repo refused version churn on every typo, the bridge
+  observed a minor that meant nothing): a typo in the guide is now a patch that no device can
+  observe. The cut itself is deliberately boring — it enumerates the whole guide and absorbs the two
+  edits that had landed after `ws-protocol-v1` (a sample port and a STAMP path) while the
+  satellite's pin reported current. The satellite owes a re-pin; nothing on the wire moved.
+
 - **2026-10-05 — BUILD-47 DONE: the guards now run for the edits they exist to catch.** Wave 0 of
   HK-13 in this repo, and the least glamorous kind of fix: nothing was wrong with the rules, they
   simply never executed. The layer-1 job was filtered to `contracts/**` while the bytes it locks live

@@ -503,17 +503,6 @@ size-matched to the Russian stack; language is a per-config/deployment choice (a
       board** (D-4/D-5), seeded when BUILD-21 lands, not decided unilaterally here. Scope for that design: which
       repo owns the unified compose, health-gated `depends_on` vs. tolerant clients, whether the units collapse
       into one, and how `update.sh` stays per-repo when the compose is not. Related: BUILD-18 (ops conformance).
-- [ ] **BUILD-48** `[release]` [CONTRACTS][WS] — **Owner cut `ws-protocol-v1.0.1` (bytes-only patch)**
-      (filed 2026-10-05 at PROD-28 intake, delegation (b); lead BUILD-47). Verified at intake: both
-      post-tag drifts are real — `939a205` moved the guide's Python sample port 6000→8080, `346a5f3`
-      moved the STAMP's `code_constant` path — and the satellite's pin reported current throughout. The
-      cut absorbs both: STAMP gains `artifacts: ["docs/guides/websocket-api.md"]` (doc-canonical
-      contracts lock the WHOLE file, owner ruling q3), version `1.0.1`, tag `ws-protocol-v1.0.1`; the
-      doc header line names the new tag; the served `protocol_version` stays `"1"` (runtime-served
-      versions carry the MAJOR only); the guide's "the version only moves on a breaking wire change"
-      sentence is re-worded to the three-level rule; `test_ws_protocol_version.py` compares the major
-      and checks doc-header tag == STAMP tag; registry row + `contracts/ws-protocol/README.md`
-      re-truthed. Flow: artifact + STAMP one commit → tag → push together. `re-pin owed: satellite`.
 - [ ] **BUILD-49** `[release]` [CONTRACTS][TRACE] — **Owner cut `trace-format-v1.0.1` (bytes-only
       patch): `docs/guides/tracing.md` enumerated whole** (filed 2026-10-05 at PROD-28 intake,
       delegation (b); lead BUILD-47). Owner ruling q3 remediates the DOC-14 refusal to enumerate

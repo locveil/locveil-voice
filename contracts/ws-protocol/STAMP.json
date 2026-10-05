@@ -1,10 +1,12 @@
 {
   "contract": "ws-protocol",
-  "version": "1",
-  "tag": "ws-protocol-v1",
-  "date": "2026-07-12",
+  "version": "1.0.1",
+  "tag": "ws-protocol-v1.0.1",
+  "date": "2026-10-05",
   "owner_repo": "locveil-voice",
-  "artifact": "docs/guides/websocket-api.md",
+  "artifacts": [
+    "docs/guides/websocket-api.md"
+  ],
   "code_constant": "backend/src/locveil_voice/core/ws_protocol.py::WS_PROTOCOL_VERSION",
-  "note": "First tag stamps the wire protocol as already shipped and proven (ARCH-36/38, the eval WS suite); v1 is the four-channel dialect the doc describes, including the ARCH-47 version-reporting register fields and the protocol_version field in every registered ack."
+  "note": "Major 1 is the four-channel dialect the guide describes, as shipped and proven (ARCH-36/38, the eval WS suite), including the ARCH-47 version-reporting register fields and the protocol_version field in every registered ack. Three-level versions (process/contracts.md §3): the SERVED protocol_version carries the major only (\"1\") and moves only on a breaking wire change; an additive wire change is a minor cut, a byte edit to an enumerated artifact with the wire untouched is a patch. v1.0.1 (2026-10-05, HK-13/BUILD-48) is a bytes-only patch: the guide is enumerated WHOLE from this cut on (doc-canonical contracts lock the whole file), and the cut absorbs the two edits that landed after ws-protocol-v1 without a version move (the guide's Python sample port 6000 -> 8080; this stamp's code_constant path after the backend/ layout move). No wire change."
 }

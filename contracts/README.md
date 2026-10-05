@@ -11,7 +11,7 @@ re-pin from the owner when it moves.
 
 | Contract | Where | Version authority |
 |---|---|---|
-| [`ws-protocol`](ws-protocol/README.md) | artifact stays `docs/guides/websocket-api.md` (`ws-protocol-doc-canonical`); `ws-protocol/` holds the STAMP + pointer README; served as `protocol_version` in every `registered` ack | `ws-protocol/STAMP.json` + tag `ws-protocol-v1` (triple-checked by `backend/tests/test_ws_protocol_version.py`) |
+| [`ws-protocol`](ws-protocol/README.md) | artifact stays `docs/guides/websocket-api.md` (`ws-protocol-doc-canonical`); `ws-protocol/` holds the STAMP + pointer README; the major is served as `protocol_version` in every `registered` ack | `ws-protocol/STAMP.json` + tag `ws-protocol-v1.0.1`; the guide is enumerated whole (byte-locked); the served value is the major only (agreement checked by `backend/tests/test_ws_protocol_version.py`) |
 | [`wake-pack`](wake-pack/README.md) | sidecar stamp over the unmodified ASSET-5 HF pack (third-party manifest, never forked); in-code catalog is the release list | `wake-pack/STAMP.json` + tag `wake-pack-v1` (URL/catalog coherence in the same test) |
 | [`ui-openapi`](ui-openapi/README.md) | repo-internal GENERATED contract — artifact stays `config-ui/openapi.json` (generator `scripts/dump_openapi.py`, consumer `npm run gen:api-types`) | `ui-openapi/STAMP.json` + tag `ui-openapi-v1`; drift guard `backend/tests/test_openapi_drift.py` |
 | [`docs-manifest`](docs-manifest/README.md) | repo-INTERNAL contract — artifact stays `docs/manifest.json` (the user-facing docs registry; schema is commons-owned) | `docs-manifest/STAMP.json` + tag `docs-manifest-v1`; coherence test `backend/tests/test_docs_manifest.py` |
