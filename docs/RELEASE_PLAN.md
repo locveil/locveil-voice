@@ -537,6 +537,21 @@ size-matched to the Russian stack; language is a per-config/deployment choice (a
       re-truth the own-dialect invariant wording that HK-13 outdated (`trace-format-doc-canonical`'s "additive keys
       keep the version" → keep the SERVED major, cut a minor; guard-tag mentions) — CLAUDE.md edits
       held for this owner-visible sweep rather than made piecemeal.
+      **SWEEP-GO RECONCILIATION 2026-10-05 (all owner tags verified on their origins):** the tag set
+      as actually cut — `contract-guard-v4.0.0`, `repin-v2.0.0`, **`scope-v7.3.1`** (block-only:
+      `scope_guard.py` bytes identical to v7.2; the contract-triad block text changed — pin v7.3.1,
+      not v7.3.0), `report-protocol-v1.0.1`, `catalog-v1.10.0`, `esp32-site-v1.1.0`; `core-py` stays
+      at `core-py-v1.1` (re-stamped for a strict v2 PIN.json). Ordering: guard v4's STAMP-DRIFT
+      fails on `contracts/docs-manifest/STAMP.json` (it moved after its tag), so **BUILD-52 lands
+      FIRST** (it retires that STAMP; pinned with the still-vendored repin v1) and this sweep
+      re-stamps its pin with v2 along with the rest. The commons catalog copy is the one write
+      outside this repo: committed in commons as its own commit naming this task. CI wiring as
+      ruled: `repin --check --fail-on major --touched <base>` in the un-gated contract-guard job;
+      release/dispatch path + `make -C eval repin-check` at `--fail-on minor`. CLAUDE.md scope
+      (coordinator ruling relayed 2026-10-05): the contract-triad block re-pinned verbatim from
+      commons at `scope-v7.3.1`, the `trace-format-doc-canonical` sentence re-truthed to the
+      three-level rule, vendored-tool tag mentions moved — minimal, listed for the owner; the
+      `ws-protocol-doc-canonical` amendment is NOT here (ARCH-61).
 - [ ] **BUILD-52** `[release]` [DOC][CONTRACTS] — **docs-manifest remodel: retire the internal
       `contracts/docs-manifest/` STAMP for a `docs-manifest-schema` pin; the manifest test goes
       hermetic** (filed 2026-10-05 at PROD-28 intake, delegation (b) tail; lead BUILD-47; **WAITS on
@@ -550,6 +565,22 @@ size-matched to the Russian stack; language is a per-config/deployment choice (a
       manifest's `surfaces` trigger globs still name pre-BUILD-36 paths (`irene/**`, `configs/**`,
       root `pyproject.toml`) — re-truth to `backend/src/locveil_voice/**`, `config/**`,
       `backend/pyproject.toml`.
+      **SWEEP-GO RECONCILIATION 2026-10-05:** `docs-manifest-schema-v1.0.0` is cut (artifact
+      `process/user-docs/manifest.schema.json`). Executes BEFORE BUILD-51 (see there) with the
+      still-vendored repin v1 — the family entry therefore carries a `files` list for one commit;
+      BUILD-51 drops it and re-stamps the pin with v2.
+- [ ] **BUILD-53** `[release]` [CONTRACTS][UI] — **Pin the `workbench` family: config-ui builds
+      against the commons plugin contract through a live `file:` link with NO pin** (filed 2026-10-05
+      at the PROD-28 sweep-GO, coordinator-assigned; lead BUILD-47). Commons cut `workbench-v1.3.0`
+      as a NEW enumerated surface — `packages/workbench/src/contract.ts`,
+      `schemas/manifest-fragment.schema.json`, `schemas/runtime-config.schema.json` (the machine
+      schemas owed since HK-12). Scope: `[[family]] workbench` in `.repin.toml`, dest
+      `contracts/pins/workbench`, registry row + pin README; a conformance test proving the
+      manifest fragment the plugin build emits validates against the PINNED
+      `manifest-fragment.schema.json` — tested at the SOURCE of the emitted manifest,
+      hermetically (no built `dist/` in CI unless CI already builds it). Executes after BUILD-51
+      (needs repin v2: the pin set derives from the owner STAMP). Verdict to record:
+      `contracts: workbench first consumed (pin @ v1.3.0)`.
 ### Models & Assets (ASSET)
 
 - [ ] **ASSET-6** `[deferred]` [ASSET][CONTRACTS][SATELLITE] — **The multi-model wake-pack v1.x cut**

@@ -21,6 +21,17 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-10-05 — PROD-28 sweep GO: BUILD-53 filed, BUILD-51/52 reconciled against the tags as
+  actually cut.** The commons tag set landed the same day, with two differences from the filing
+  text worth recording: the scope tag to pin is `scope-v7.3.1` (a block-only cut — the guard's
+  bytes are those of v7.2, only the contract-triad block text moved), and commons also cut
+  `workbench-v1.3.0` as an enumerated surface, which exposed an unpinned edge on this side:
+  config-ui compiles against the plugin contract through a live `file:` link, so a commons change
+  reaches the build with no pin and no conformance test in between. That becomes BUILD-53. A dry
+  run of guard v4 against the tree showed exactly one hard failure — the internal docs-manifest
+  STAMP differs from its own tag — which fixes the execution order: BUILD-52 retires that STAMP
+  first, then the sweep vendors the guard that would have refused it.
+
 - **2026-10-05 — ARCH-60: the WS machine-core design is drafted and parked for the satellite's
   review — and writing it found more in the document than in the code.** The draft
   (`docs/design/ws_machine_core.md`) proposes one golden-frames file, nine one-scenario JSONL
