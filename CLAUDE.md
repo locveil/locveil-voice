@@ -15,7 +15,8 @@ but these rules apply to any task). **Single source of truth** (relocated here f
   ports → adapters). Don't add backwards/cross-layer imports (enforced by the import-linter contracts).
 - **`config-ui-stays-functional`** — `config-ui` is a first-class consumer of backend contracts. Any task that changes
   one of these **must update config-ui in the same change and leave it building/type-checking clean**:
-  - **Donation schema/format** (`assets/donations/v1.0.json`, `ParameterSpec`/`MethodDonation` shape) → config-ui
+  - **Donation schema/format** (`assets/donation_language_v1.1.json` + `assets/donation_contract_v1.1.json`,
+    `ParameterSpec`/`MethodDonation` shape) → config-ui
     editors (`ParameterSpecEditor`, `Token/SlotPatternsEditor`, `Examples/LemmasEditor`), its **AJV** validation, `src/types/*`.
   - **Config schema** (`CoreConfig` / `config-master.toml`) → `ConfigSection` editors, `/configuration/config*` calls, `src/types/*`.
   - **REST API endpoints / parameter schemas / analysis endpoints** → `src/utils/apiClient.ts`, the analysis components.

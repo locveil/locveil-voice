@@ -2520,6 +2520,29 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       two-part model (language-neutral `contract.json` + per-language `<lang>.json`), with full field reference
       from `donation_contract_v1.1.json` (method/param schema, type + entity_type enums) and the cross-language
       validation rule. Old single-file/v1.0 body + drift banner replaced.
+- [x] **DOC-15** `[release]` [DOCS][NLU] — **DONE 2026-10-06 (board PROD-18 round 1, decision 3: "voice's
+      how-to cites both") — the donation-side half of the language-data convention lands in
+      `docs/guides/howto-new-intent.md`.** New section "Words for the smart home — what a donation
+      owns", between Case B and the long-running-actions section, reader-first: the catalog carries
+      the nouns under its "Localization" rule (the pinned `contracts/pins/catalog/catalog-contract.md`
+      is linked), the donation carries the verbs; verbs AND the capability's spoken noun are
+      donation data (`phrases` / `lemmas` — field labels are UI display text the resolver never
+      matches speech against); value labels are the match vocabulary — a donation may QUOTE them
+      in phrases and examples, but the catalog `values` table is the only vocabulary at match
+      time, so a quoted phrase that stops matching after a bridge rename is a stale donation, not
+      a catalog defect; group tokens (`light`, `cover`, …) are unlocalized identifiers whose
+      spoken words live in `group_noun.choice_surfaces` (the real snippet from the smart-home
+      donation); never ask the bridge for a label — add a lemma, and the reverse: a catalog entry
+      missing a ru/en name or value label is a bridge-side defect to report. Cites commons
+      `process/language-data.md` by its GitHub URL (a sibling-checkout relative path would not
+      resolve for a reader on the web). **CLAUDE.md citation fix** (`config-ui-stays-functional`):
+      the donation-schema path `assets/donations/v1.0.json` (a file that does not exist) →
+      `assets/donation_language_v1.1.json` + `assets/donation_contract_v1.1.json` (the real ones;
+      config-ui's `gen:api-types` reads exactly these) — a factual correction outside the pinned
+      blocks. **Verified:** suite 2063 passed / 7 skipped (unchanged — prose only), pyright 0
+      errors, docs-manifest coherence test green; scope-guard OK.
+      docs: guides/howto-new-intent
+      contracts: none — prose only; the pinned catalog guide is linked, not moved
 ### UI / config-ui (UI)
 - [x] **UI-1** [DEDITOR] (P2) — **DONE 2026-06-06.** Designed the human-friendly donation/pattern authoring model →
       `config-ui/docs/donation_editor_ux.md`. **Persona-driven** (author knows handlers, **zero spaCy/NLU**): the model

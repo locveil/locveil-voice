@@ -477,19 +477,6 @@ size-matched to the Russian stack; language is a per-config/deployment choice (a
 
 ### Documentation (DOC)
 
-- [ ] **DOC-15** `[release]` [DOCS][NLU] — **The donation-side half of the language-data convention in
-      `docs/guides/howto-new-intent.md`** (manifest node `guides/howto-new-intent`; board PROD-18
-      round 1, decision 3: "voice's how-to cites both"; filed 2026-10-06). The how-to gains a short
-      section on who contributes which words: verbs and the capability's spoken noun are donation
-      data (lemmas/phrases); donations may QUOTE catalog value labels as phrases and examples while
-      the catalog `values` table is the only vocabulary at match time (a quoted phrase that stops
-      matching is a stale donation, not a catalog defect); group tokens get their spoken words in
-      `group_noun.choice_surfaces`; never ask the bridge for a catalog label — add a lemma. Cites the
-      pinned guide's "Localization" section (`contracts/pins/catalog/catalog-contract.md`) and
-      commons `process/language-data.md`. Also the factual citation fix in `CLAUDE.md`
-      (`config-ui-stays-functional`): the donation schema path `assets/donations/v1.0.json` is stale
-      — the real files are `assets/donation_language_v1.1.json` + `assets/donation_contract_v1.1.json`.
-
 ### UI / config-ui (UI)
 React/Vite donation+config editor. Front-end feature/UX work (the BUILD-4 build gate stays under Build & CI).
 Governed by `config-ui-stays-functional` (config-ui must stay functional).

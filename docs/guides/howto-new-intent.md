@@ -134,6 +134,46 @@ weather = "locveil_voice.intents.handlers.weather:WeatherIntentHandler"
 
 After editing entry-points, reinstall (`uv sync --project backend`) so the new handler is picked up.
 
+## Words for the smart home — what a donation owns
+
+Smart-home intents are a special case: half of the vocabulary is not yours to write. The
+**bridge's device catalog** carries the *nouns* — what every device, room, state field and
+enum value is called, in Russian and English (German optional), under the rules of its
+"Localization" section ([`contracts/pins/catalog/catalog-contract.md`](../../contracts/pins/catalog/catalog-contract.md)).
+The **donation** carries the *verbs*. The split across the whole product is written down in
+[`locveil-commons/process/language-data.md`](https://github.com/locveil/locveil-commons/blob/main/process/language-data.md);
+this is what it means when you author a smart-home donation:
+
+- **Verbs and the spoken noun of a capability are donation data.** «включи», «переключи»,
+  «направь» are `phrases`; «заслонка», «режим», «вентилятор» are spoken because a `lemmas`
+  entry (and the phrases that use it) say so — not because a catalog field label happens to
+  read the same. Field labels are display text for the UI; the resolver never matches speech
+  against them.
+- **Value labels are the match vocabulary — quote them, don't restate them.** When the user
+  says «кондиционер на охлаждение», the value is matched against the catalog's `values`
+  table for that capability (its `labels`), and only against that table. A donation may
+  *quote* those labels in its `phrases` and examples so the classifier learns the shape of
+  the sentence («заслонка на авто», «кондиционер на обогрев») — but the quoted words are not
+  what decides the value at match time. If a quoted phrase stops matching after the bridge
+  renames a label, the donation is stale, not the catalog.
+- **Group nouns get their words in `group_noun.choice_surfaces`.** A room-level command
+  («включи свет», «закрой шторы») names a *group* — `light`, `cover`, … — and those tokens
+  are identifiers the catalog never localizes. The spoken words for a group live in the
+  donation, per language:
+
+  ```json
+  { "name": "group_noun",
+    "choice_surfaces": { "light": ["свет"], "cover": ["шторы", "жалюзи", "занавески"] } }
+  ```
+
+- **Never ask the bridge for a label — add a lemma.** If a household word is missing, the fix
+  is a `lemmas` / `phrases` entry in the language file, restart, done. Asking the catalog to
+  carry a verb or a synonym for a device is the wrong direction: the catalog's words are
+  nouns, authored once per device, and must stay free of how any one assistant phrases
+  commands. (The reverse holds too: a device whose catalog entry lacks a Russian or English
+  name or value label is a bridge-side defect to report, not something to patch around in a
+  donation.)
+
 ## Long-running actions — fire-and-forget and durability
 
 If a handler needs to do something *after* replying — ring in ten minutes, finish a long playback — it

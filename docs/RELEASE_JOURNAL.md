@@ -21,6 +21,14 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-10-06 — DOC-15: whose words are whose.** The louver work in the morning had already
+  lived the rule — the word «заслонка» went into a donation, not into a request to the bridge —
+  and now the how-to says it for the next contributor: the catalog brings the nouns and the rules
+  for them live in its own guide, the donation brings the verbs and the spoken noun, value labels
+  may be quoted but only the catalog's table matches, group words sit in `choice_surfaces`, and a
+  missing word is a lemma away, never a label request. Beside it, a stale path in the working
+  rules that named a donation-schema file which has not existed since the v1.1 split — corrected
+  to the two files that do. contracts: none. docs: guides/howto-new-intent.
 - **2026-10-06 — ARCH-67: patience from the catalog, and a word before the wait.** Since July
   every request to the bridge got the same twenty seconds, a number that lived in a handover
   sentence; the catalog now publishes, next to each action, how long the bridge itself will
