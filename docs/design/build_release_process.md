@@ -39,7 +39,8 @@ minimal dependency set, and per-target buildx GHA caching (`scope=<target>`; the
   + `pytest`. Runs when `backend` changed or a dispatch requests images.
 - **`frontend-health`** — unchanged content (`npm ci / check / build / test`), same file.
 - **Publish jobs** (D-3) — `workflow_dispatch` only, **`needs:` their green health jobs**. Today's standalone
-  `build-images.yml` can publish from a red tree; that hole closes. `issue-triage.yml` stays separate (not build).
+  `build-images.yml` can publish from a red tree; that hole closes. (`issue-triage.yml`, the pre-ARCH-30 public-issue
+  labeller, was retired by BUILD-14 / PROD-19 on 2026-10-06 — public intake is the reports pipeline, the Issues tab is off.)
 
 ### D-2 — The matrix and naming: RU unsuffixed, EN suffixed
 Dispatch inputs: **`targets`** (armv7 / aarch64 / standalone; default all) × **`languages`** (ru / en; default

@@ -1989,6 +1989,22 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       contracts: none — no versioned surface moved (tests only)
 ### Internationalization (I18N)
 ### Build & CI (BUILD)
+- [x] **BUILD-14** `[deferred]` [CI][FEEDBACK] — **DONE 2026-10-06 (executed under board PROD-19, owner
+      directive: "Disable the Issues tabs on all four repos and execute PROD-19") — the pre-ARCH-30
+      public-repo issue triage is retired; intake is ONE door, locveil-reports.** Reconciled at start
+      against the three postures the entry offered: the owner chose (c) — the public Issues tab is
+      DISABLED on this repo (and on bridge, satellite, commons; the private reports repo keeps its
+      Issues, it IS the intake), so neither forwarding (a) nor redirect templates (b) have a subject.
+      Removed: `.github/workflows/issue-triage.yml` (keyword → `area:*`/`platform:*` labels + ack
+      comment, no AI — strictly weaker than the reports repo's Claude triage with lens process files,
+      the /inbox loop and ARCH-34 bundles) and `.github/ISSUE_TEMPLATE/` (bug/feature forms +
+      `config.yml`). Nothing else referenced them: `ci.yml` has no filter on them; the `/report`
+      collector (`outputs/github_report.py`) files into locveil-reports, untouched. Nothing worth
+      moving to the reports repo — its triage already labels by lens, not by keyword. The stale
+      sentence in `docs/design/build_release_process.md` ("issue-triage.yml stays separate") is
+      re-truthed. Zero public issues were ever filed here. Bridge twin: OPS-28. docs: none — no
+      manifest node describes public intake (the user-facing path is the report button, documented
+      already); the design-doc sentence is a design doc. contracts: none — no surface moved.
 - [x] **BUILD-47** `[release]` [CI][CONTRACTS] — **DONE 2026-10-05 (HK-13 wave 0; PROD-28 voice
       delegation (a); LEAD ID of the voice PROD-28 family — BUILD-47..52 + ARCH-60/61, ARCH-48
       narrowed).** The two CI holes HK-13 found live in this repo are closed and the rotted manifest

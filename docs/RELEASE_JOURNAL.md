@@ -21,6 +21,12 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-10-06 — BUILD-14: one door.** The repo had carried two intake paths since July — the
+  keyword labeller and issue forms from before problem reporting existed, and the reports
+  pipeline that replaced them — and no public issue was ever filed through the old one. The owner
+  closed the question the entry had left open by taking the third option, disabling the Issues
+  tab outright, which makes the old machinery not weaker but pointless; it is gone. Board PROD-19
+  carries the decision for all four public repos. contracts: none. docs: none.
 - **2026-10-05 — BUILD-57: the pin becomes what is compiled.** BUILD-53 pinned the Workbench
   contract and said plainly what the pin did not do: the type-check still walked a link into
   the neighbouring checkout, so the pinned bytes were a record of what had been verified, not
