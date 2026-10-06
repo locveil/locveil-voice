@@ -301,6 +301,42 @@ See `docs/review/phase1_architecture_map.md` §5.
       recorded (doc or journal) + follow-up tasks if gaps exist (completion cue not
       device-addressed, or no timestamp in the initiation ack). Satellite-side contact
       point: `../locveil-satellite` FW-1 intake record (REQ-33).
+      **Side-find at ARCH-68 intake (2026-10-06), verify here:** `NotificationService.
+      send_action_completion_notification` gates on `context.should_notify_completion`
+      (`context_models.py:460` — `long_running_threshold` 30 s) whenever the monitoring
+      component has wired the context manager (every profile: `monitoring = true`), so a
+      timer shorter than 30 s may never ring. The scenario-job design (ARCH-68 §4) routes
+      its terminal speech around that gate on purpose; the timer's exposure is this task's.
+- [ ] **ARCH-68** [MQTT][UX][DESIGN] `[release]` — **DESIGN: the durable scenario job + the bridge
+      SSE adapter (PROD-18 tier 3, voice side)** (board PROD-18 round 2, decisions 9–10; the
+      bridge's spec `../locveil-bridge/docs/design/scenarios/scenario_jobs.md` §5/§6/§8/§10 is
+      what this designs against; filed 2026-10-06). Deliverable: `docs/design/scenario_jobs_voice.md`
+      — (1) the driven port for job events (`ScenarioJobEventsPort` beside the delivery port) + the
+      SSE client adapter beside `BridgeClient` (one persistent `/events/scenarios` subscription,
+      §8 d backoff); how the `202` reaches the handler (`DeliveryResult` fields vs a `start_job()`
+      — decided and justified); HTTP-status branching in `_to_delivery_result` (202 accepted, 409
+      → `error.job_id`); `wait: false` ONLY on scenario commands (owner rider: device-level long
+      actions stay synchronous); (2) the durable record — one per room under `<assets_root>/state/`
+      like the timer, what it stores, re-arm after a voice restart (`GET /scenario/jobs/{id}`) and
+      after a bridge restart (`404 job_unknown` → `GET /scenario/state` → speak the actual room
+      state); (3) speech — acceptance (ARCH-67's «Запускаю сценарий» + the ceiling phrase from
+      `max_duration_ms`; flag-off decided), terminal success/failure with `failures[]` (device
+      names from the catalog), the mid-job second command and «stop» refusals, delivery to the
+      originating device + `redeliver_on_reconnect`; (4) watchdog + liveness as a state machine
+      (§6 rules; timers; what every transition says); (5) config — new keys and their
+      `config-ui-stays-functional` consequence (prefer none); (6) tests + the voice lines of the
+      bridge's §10 WB7 checklist; (7) the implementation task + the re-pin task filed `[release]`
+      and sequenced; (8) what ARCH-67's sized synchronous path keeps doing until the job path
+      lands. DESIGN ONLY — no code; the implementation is the follow-up this doc files.
+      **Reconciled at intake (2026-10-06):** everything the design builds on is in the tree as
+      claimed — `_to_delivery_result` ignores the HTTP status (`outputs/bridge.py:212–237`),
+      `request_body` never sends `wait` (`device_commands.py:91–94`), the ack path is
+      `NotificationService.send_acknowledgement` (`core/notifications.py:268`), the durable
+      substrate is the timer's (`handlers/base.py:674–800`, `timer.py:390`). Two substrate facts the
+      design must route around, found at intake: (a) the reconciler calls `rearm_durable_action`
+      ONLY for a future deadline (`durable_actions.py:238–244`) and its missed-deadline texts are
+      timer-specific («сработал таймер», `:48–55`); (b) the completion notification's 30 s
+      threshold gate (recorded against ARCH-59 above).
 
 ### Code Quality & Review (QUAL)
 
