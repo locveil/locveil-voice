@@ -21,6 +21,21 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-10-06 — ARCH-67: patience from the catalog, and a word before the wait.** Since July
+  every request to the bridge got the same twenty seconds, a number that lived in a handover
+  sentence; the catalog now publishes, next to each action, how long the bridge itself will
+  wait, and voice sizes each request a quarter above that plus two seconds — a cold movie
+  scenario gets seventy-eight, a relay keeps the configured fallback. Reconciliation turned up a
+  fourth copy of the old number nobody had bumped: the dispatcher's seven-second cap, sitting in
+  front of the twenty, which meant an air conditioner confirming in its usual second half was
+  being reported as "not sure" while the bridge was still happily waiting. It takes the same
+  fallback as the client now. The other half is the owner's round-2 decision: when the wait will
+  be long, say something at once — «включаю», a statement of intent that cannot be wrong — and
+  the real answer when it comes; the scenario confirmation had to turn past tense for the pair
+  to read as ack-then-fact. One flag, on by default, turns the early word off, per the owner's
+  "might become annoying over time". The flag reached the generated REST schema, so the ui-openapi
+  surface took a minor. contracts: ui-openapi-v1.2.0 cut; the catalog Timing fields first
+  consumed. docs: guides/smart-home.
 - **2026-10-06 — BUILD-58: the catalog starts telling us how long to wait.** The re-pin that
   TEST-24 saw coming, run the one way the rule allows: one command, both copies, one tag. What
   arrived is mostly words — the louver label the board chose, nine input values that finally have

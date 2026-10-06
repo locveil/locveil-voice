@@ -24,15 +24,25 @@ Dependencies (injected, QUAL-24): `DeviceCatalogPort` (the world) +
 `DeviceCommandDeliveryPort` (awaited delivery). No HTTP, no bridge knowledge here.
 """
 
+import dataclasses
 import re
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 from ..models import Intent, IntentResult
 from ..context_models import UnifiedConversationContext
 from ..device_catalog import CatalogDevice, DeviceCatalog
-from ..device_commands import CanonicalCommand, DeviceCommand, GroupScope, RoomGroupCommand
+from ..device_commands import (
+    CanonicalCommand,
+    DeviceCommand,
+    GroupScope,
+    RoomGroupCommand,
+    is_slow_action,
+    published_wait_ms,
+    size_request_timeout,
+)
 from ..ports import DeviceCatalogPort, DeviceCommandDeliveryPort
 from .base import IntentHandler
+from ...core.client_registry import resolve_physical_id
 from ...core.donations import MissingRequiredParameter
 # the ONE surface-normalization + RU-stem truth — shared with the catalog resolver so a value
 # matched here behaves identically to a device name matched there
@@ -60,6 +70,12 @@ _QUANTITY_UNIT_KEY = {
     "humidity": "unit_percent",
 }
 
+# ARCH-67: the final result's metadata key carrying the acknowledgement spoken mid-turn
+ACKNOWLEDGEMENT_METADATA_KEY = "acknowledgement"
+
+# ARCH-67: `set*` on these speaks «ставлю» (a value), on anything else «переключаю» (a choice)
+_VALUE_CAPABILITIES = frozenset({"temperature", "climate", "brightness", "cover", "volume"})
+
 # capability each method actuates, in preference order when a device carries several
 _METHOD_CAPABILITY = {
     "power": ("power", "climate", "fan", "playback"),
@@ -78,18 +94,29 @@ class SmartHomeIntentHandler(IntentHandler):
         super().__init__()
         self.catalog_port: Optional[DeviceCatalogPort] = None
         self.command_port: Optional[DeviceCommandDeliveryPort] = None
+        # ARCH-67 (PROD-18 round 2): the ONE flag — `[outputs.bridge] acknowledge_slow_actions`
+        self.acknowledge_slow_actions: bool = True
 
     def set_device_command_services(self, catalog_port: DeviceCatalogPort,
-                                    command_port: DeviceCommandDeliveryPort) -> None:
-        """Application injection (QUAL-24): the catalog world + the awaited delivery seam."""
+                                    command_port: DeviceCommandDeliveryPort,
+                                    acknowledge_slow_actions: bool = True) -> None:
+        """Application injection (QUAL-24): the catalog world + the awaited delivery seam +
+        the acknowledgement policy (one flag, default on)."""
         self.catalog_port = catalog_port
         self.command_port = command_port
+        self.acknowledge_slow_actions = acknowledge_slow_actions
 
     async def can_handle(self, intent: Intent) -> bool:
         return intent.domain == "smart_home"
 
     async def execute(self, intent: Intent, context: UnifiedConversationContext) -> IntentResult:
-        return await self.execute_with_donation_routing(intent, context)
+        result = await self.execute_with_donation_routing(intent, context)
+        # ARCH-67: what was acknowledged mid-turn rides the final result's metadata, so a
+        # client / the eval / a trace can see that an interim utterance preceded this text
+        acknowledged = self._take_acknowledgement(context)
+        if acknowledged:
+            result.metadata[ACKNOWLEDGEMENT_METADATA_KEY] = acknowledged
+        return result
 
     # --- shared plumbing ---------------------------------------------------------------------
 
@@ -216,9 +243,73 @@ class SmartHomeIntentHandler(IntentHandler):
 
     async def _deliver(self, command: CanonicalCommand,
                        context: UnifiedConversationContext) -> Optional[Any]:
+        """Size the request from the catalog's published timing, acknowledge a slow action
+        before it goes out, then await the honest outcome (ARCH-67; PROD-18 round 2, decision 8).
+
+        - `published_wait_ms` reads what the bridge promises to wait for THIS command (a
+          capability's `confirm_timeout_ms`, a scenario value's `max_duration_ms`); the request
+          timeout is `× 1.25 + 2 s` above it. Nothing published → the command carries no
+          timeout and the delivery layer applies the configured fallback.
+        - Above ~3 s the user hears an immediate «включаю»-class acknowledgement — a statement of
+          intent, never of success — on the request's own channel, then the confirmation or
+          failure exactly as before. One flag turns the acknowledgement off; the sizing stays.
+        """
         if self.command_port is None:
             return None
+        catalog = self._catalog()
+        bound_ms = published_wait_ms(catalog, command) if catalog is not None else None
+        if bound_ms is not None:
+            command = dataclasses.replace(command, timeout_seconds=size_request_timeout(bound_ms))
+            if self.acknowledge_slow_actions and is_slow_action(bound_ms):
+                await self._acknowledge(command, context)
         return await self.command_port.deliver_device_command(command, context)
+
+    def _ack_template_key(self, command: CanonicalCommand) -> str:
+        """The action family's acknowledgement («включаю» for power on, «запускаю сценарий»…)."""
+        capability = command.capability if isinstance(command, DeviceCommand) else command.group
+        action = command.action
+        if capability == "scenario":
+            return "ack_scenario_off" if action == "off" else "ack_scenario"
+        if action in ("on", "turn_on"):
+            return "ack_on"
+        if action in ("off", "turn_off"):
+            return "ack_off"
+        if action == "open":
+            return "ack_open"
+        if action == "close":
+            return "ack_close"
+        if action.startswith("set"):
+            return "ack_set" if capability in _VALUE_CAPABILITIES else "ack_switch"
+        return "ack_generic"
+
+    async def _acknowledge(self, command: CanonicalCommand,
+                           context: UnifiedConversationContext) -> None:
+        """Speak the acknowledgement on the request's channel (never raises, never blocks the
+        command: the notification service queues it and the OutputManager routes it by the
+        request's identity, exactly as a deferred completion travels)."""
+        service = self._notification_service
+        if service is None:
+            return
+        language = self._lang(context)
+        text = self._get_template(self._ack_template_key(command), language)
+        try:
+            queued = await service.send_acknowledgement(
+                session_id=context.session_id, domain="smart_home", message=text,
+                source=getattr(context, "request_source", None),
+                physical_id=resolve_physical_id(context.client_id, context.room_name,
+                                                context.session_id),
+                room_name=context.client_id or context.room_name, language=language)
+        except Exception as e:  # an ack must never cost the action
+            self.logger.warning(f"acknowledgement not spoken: {e}")
+            return
+        if queued:
+            context.get_handler_context("smart_home")[ACKNOWLEDGEMENT_METADATA_KEY] = text
+
+    @staticmethod
+    def _take_acknowledgement(context: UnifiedConversationContext) -> Optional[str]:
+        """Pop the acknowledgement spoken during this turn (one-shot; never leaks into the next)."""
+        slot = context.handler_contexts.get("smart_home")
+        return slot.pop(ACKNOWLEDGEMENT_METADATA_KEY, None) if slot else None
 
     async def _speak_outcome(self, delivery: Optional[Any], ok_text: str, language: str,
                        catalog: Optional[DeviceCatalog] = None,

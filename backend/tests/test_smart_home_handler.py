@@ -67,7 +67,8 @@ CATALOG_PAYLOAD = {
              {"name": "power", "group": "power", "actions": [{"name": "on"}, {"name": "off"}]},
              {"name": "playback", "group": "playback",
               "actions": [{"name": "play"}, {"name": "pause"}, {"name": "stop"}]},
-             {"name": "input", "group": "input",
+             # ARCH-67: the LG TV's input gate (3 000 ms) — the boundary, NOT a slow action
+             {"name": "input", "group": "input", "confirm_timeout_ms": 3000,
               "actions": [{"name": "set", "params": [
                   {"name": "value", "type": "string", "required": True,
                    "options_from": "inputs"}]}]},
@@ -78,7 +79,9 @@ CATALOG_PAYLOAD = {
         {"id": "appletv_children", "room": "children_room", "names": {"ru": "Apple TV"},
          "aliases": {"ru": ["эппл"]},
          "capabilities": [
-             {"name": "power", "group": "power", "actions": [{"name": "on"}, {"name": "off"}]},
+             # ARCH-67: Apple TV power confirms within 5 000 ms — slow (> 3 s)
+             {"name": "power", "group": "power", "confirm_timeout_ms": 5000,
+              "actions": [{"name": "on"}, {"name": "off"}]},
              {"name": "playback", "group": "playback",
               "actions": [{"name": "play"}, {"name": "pause"}]}]},
         {"id": "appletv_living", "room": "living_room", "names": {"ru": "Apple TV"},
@@ -113,9 +116,10 @@ CATALOG_PAYLOAD = {
         {"id": "bedroom_hvac", "room": "bedroom", "names": {"ru": "Кондиционер"},
          "aliases": {"ru": ["кондей"]},
          "capabilities": [
-             {"name": "power", "group": "climate",
+             # ARCH-67: the MitsubishiHvac gate — 15 000 ms on power and mode (as pinned)
+             {"name": "power", "group": "climate", "confirm_timeout_ms": 15000,
               "actions": [{"name": "on"}, {"name": "off"}]},
-             {"name": "mode", "group": "climate",
+             {"name": "mode", "group": "climate", "confirm_timeout_ms": 15000,
               "actions": [{"name": "set", "params": [
                   {"name": "value", "type": "string", "required": True,
                    "values": [{"wire": "0", "canonical": "auto", "labels": {"ru": "авто"}},
@@ -243,11 +247,20 @@ CATALOG_PAYLOAD = {
               "actions": [{"name": "set", "params": [
                   {"name": "value", "type": "enum", "required": True,
                    "values": [
+                       # ARCH-67: tier-2 ceilings as pinned (teardown + cold activation)
                        {"wire": "movie_vhs", "canonical": "movie_vhs",
-                        "labels": {"ru": "Кино с видеокассеты"}},
+                        "labels": {"ru": "Кино с видеокассеты"}, "max_duration_ms": 55500},
                        {"wire": "movie_appletv", "canonical": "movie_appletv",
-                        "labels": {"ru": "Кино с Apple TV"}}]}]},
-                          {"name": "off"}]}]},
+                        "labels": {"ru": "Кино с Apple TV"}, "max_duration_ms": 60500}]}]},
+                          {"name": "off"}],
+              # the state field carries the same ceilings + `none` = deactivating the room
+              "fields": [{"name": "scenario", "type": "string",
+                          "labels": {"ru": "сценарий", "en": "scenario"},
+                          "values": [
+                              {"wire": "none", "canonical": "none",
+                               "labels": {"ru": "нет", "en": "none"}, "max_duration_ms": 29000},
+                              {"wire": "movie_vhs", "canonical": "movie_vhs",
+                               "labels": {"ru": "Кино с видеокассеты"}, "max_duration_ms": 55500}]}]}]},
     ],
 }
 
@@ -984,3 +997,156 @@ async def test_zaslonka_matches_no_cover_or_curtain_surface(harness):
     context = UnifiedConversationContext(session_id="s", room_name="Гостиная", language="ru")
     for text in ("направь заслонку влево", "заслонка в положение 3", "качай заслонку"):
         assert await harness.resolver.device_resolver.scan_utterance(text, context) is None, text
+
+
+# --- ARCH-67: requests sized from the catalog's timing + acknowledge-then-confirm ------------------
+# (board PROD-18 round 2, decision 8; the flag: "make acknowledgements configurable (might become
+# annoying over time). I guess, one flag is enough")
+
+class FakeNotifications:
+    """Records what the handler asked to be spoken mid-turn; `accept=False` = nothing attached."""
+
+    def __init__(self, accept: bool = True):
+        self.accept = accept
+        self.acks: list = []
+
+    async def send_acknowledgement(self, **kw):
+        self.acks.append(kw)
+        return self.accept
+
+
+@pytest.fixture
+async def acked(loader):
+    h = await Harness(loader).start()
+    h.handler._notification_service = FakeNotifications()
+    return h
+
+
+def _sized(harness) -> list:
+    return [c.timeout_seconds for c in harness.capture.captured]
+
+
+async def test_slow_capability_sizes_the_request_and_is_acknowledged(acked):
+    """HVAC power (`confirm_timeout_ms` 15 000) → timeout 15 × 1.25 + 2 = 20.75 s; the user hears
+    «Включаю» first (claims nothing), then the ordinary confirmation; the final result records it."""
+    result, captured = await acked.run("power_on", "включи кондей", {"target": "кондей"},
+                                       room="Спальня")
+    assert captured == [{"kind": "actuate", "device_id": "bedroom_hvac",
+                         "capability": "power", "action": "on", "params": None}]
+    assert _sized(acked) == [20.75]
+    notes = acked.handler._notification_service.acks
+    assert [a["message"] for a in notes] == ["Включаю"]
+    assert notes[0]["language"] == "ru" and notes[0]["domain"] == "smart_home"
+    assert notes[0]["session_id"] == "s" and notes[0]["physical_id"]
+    assert result.success and "Включила" in result.text
+    assert result.metadata["acknowledgement"] == "Включаю"
+
+
+async def test_unpublished_capability_keeps_the_fallback_and_is_not_acknowledged(acked):
+    """A relay's power (no `confirm_timeout_ms`) → the command carries NO timeout (the delivery
+    layer applies the configured fallback) and nothing is spoken before the outcome."""
+    result, captured = await acked.run("power_on", "включи телек", {"target": "телек"},
+                                       room="Детская")
+    assert captured[0]["device_id"] == "children_room_tv"
+    assert _sized(acked) == [None]
+    assert acked.handler._notification_service.acks == []
+    assert "acknowledgement" not in result.metadata
+
+
+async def test_three_second_bound_is_sized_but_not_slow(acked):
+    """The TV's input gate (3 000 ms) sizes the request (5.75 s) yet sits ON the ~3 s line —
+    strict: no acknowledgement for it."""
+    result, captured = await acked.run("input_select", "переключи телек на hdmi2",
+                                       {"target": "телек", "value": "hdmi2"}, room="Детская")
+    assert captured[0]["capability"] == "input"
+    assert _sized(acked) == [pytest.approx(5.75)]
+    assert acked.handler._notification_service.acks == []
+
+
+async def test_five_second_power_is_slow(acked):
+    result, captured = await acked.run("power_off", "выключи эппл", {"target": "эппл"},
+                                       room="Детская")
+    assert captured[0]["device_id"] == "appletv_children"
+    assert _sized(acked) == [pytest.approx(8.25)]
+    assert [a["message"] for a in acked.handler._notification_service.acks] == ["Выключаю"]
+
+
+async def test_flag_off_keeps_the_sizing_and_silences_the_acknowledgement(loader):
+    """The ONE flag: off → requests are still sized from the catalog, nothing is spoken early."""
+    h = await Harness(loader).start()
+    h.handler._notification_service = FakeNotifications()
+    h.handler.set_device_command_services(h.catalog_service,
+                                          DeviceCommandDispatcher(h.output_manager),
+                                          acknowledge_slow_actions=False)
+    result, captured = await h.run("power_on", "включи кондей", {"target": "кондей"},
+                                   room="Спальня")
+    assert captured[0]["device_id"] == "bedroom_hvac"
+    assert _sized(h) == [20.75]
+    assert h.handler._notification_service.acks == []
+    assert "acknowledgement" not in result.metadata
+    assert result.success
+
+
+async def test_acknowledgement_then_honest_failure(loader):
+    """Ack first, then the bridge says the device never confirmed: the failure is spoken as
+    before — the acknowledgement claimed nothing, so nothing has to be retracted."""
+    def unreachable(command):
+        return DeliveryResult(output_name=OUTPUT_TYPE, modality=OutputModality.DEVICE_COMMAND,
+                              delivered=False, error_code="device_unreachable")
+    h = await Harness(loader, responder=unreachable).start()
+    h.handler._notification_service = FakeNotifications()
+    result, captured = await h.run("hvac_mode", "кондиционер на охлаждение",
+                                   {"target": "кондиционер", "value": "охлаждение"},
+                                   room="Спальня")
+    assert captured[0]["capability"] == "mode" and _sized(h) == [20.75]
+    assert [a["message"] for a in h.handler._notification_service.acks] == ["Переключаю"]
+    assert not result.success and "не отвечает" in result.text
+    assert result.metadata["acknowledgement"] == "Переключаю"
+
+
+async def test_scenario_value_ceiling_sizes_the_request(acked):
+    """Tier 2: a scenario value's `max_duration_ms` (55 500) → 55.5 × 1.25 + 2 = 71.375 s, the
+    scenario family's acknowledgement, and a confirmation that speaks the fact («Включила»)."""
+    result, captured = await acked.run("scenario_start", "включи кино с видеокассеты", {},
+                                       room="Гостиная")
+    assert captured[0]["params"] == {"value": "movie_vhs"}
+    assert _sized(acked) == [pytest.approx(71.375)]
+    assert [a["message"] for a in acked.handler._notification_service.acks] == ["Запускаю сценарий"]
+    assert result.text == "Включила «Кино с видеокассеты»"
+
+
+async def test_scenario_off_uses_the_none_entry_ceiling(acked):
+    """Deactivation rides the `scenario` field's `none` entry (29 000 → 38.25 s)."""
+    result, captured = await acked.run("scenario_stop", "выключи кино", {}, room="Гостиная")
+    assert captured[0]["action"] == "off"
+    assert _sized(acked) == [pytest.approx(38.25)]
+    assert [a["message"] for a in acked.handler._notification_service.acks] == ["Выключаю сценарий"]
+    assert result.text == "Выключила сценарий"
+
+
+async def test_acknowledgement_not_recorded_when_nothing_could_speak_it(loader):
+    """The notification service found no channel (returns False) → the ack is not claimed on
+    the result either; the action itself is unaffected."""
+    h = await Harness(loader).start()
+    h.handler._notification_service = FakeNotifications(accept=False)
+    result, captured = await h.run("power_on", "включи кондей", {"target": "кондей"},
+                                   room="Спальня")
+    assert captured and result.success
+    assert len(h.handler._notification_service.acks) == 1
+    assert "acknowledgement" not in result.metadata
+
+
+async def test_acknowledgement_slot_never_leaks_into_the_next_turn(acked):
+    await acked.run("power_on", "включи кондей", {"target": "кондей"}, room="Спальня")
+    result, _ = await acked.run("power_on", "включи телек", {"target": "телек"}, room="Детская")
+    assert "acknowledgement" not in result.metadata
+
+
+async def test_no_notification_service_means_no_ack_and_no_crash(harness):
+    """A handler without the notification service wired (tests, a bare profile) still sizes
+    and delivers; the acknowledgement is simply not spoken."""
+    assert harness.handler._notification_service is None
+    result, captured = await harness.run("power_on", "включи кондей", {"target": "кондей"},
+                                         room="Спальня")
+    assert captured and result.success and _sized(harness) == [20.75]
+    assert "acknowledgement" not in result.metadata

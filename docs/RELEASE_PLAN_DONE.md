@@ -231,6 +231,82 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       `repin --check --fail-on any` exit 0. Flow: cut commit → tag on it → pushed together.
       docs: guides/websocket-api (wrongly typed opening-frame keys refused; reply audio always in the registered format — the v1.0.1 sentence restored; bursts never overlap; retired rule; rule T-9; header tag)
       contracts: ws-protocol-v1.2.0 cut (minor); re-pin owed: satellite, commons
+- [x] **ARCH-67** [MQTT][CONFIG][UX] `[release]` — **DONE 2026-10-06 (board PROD-18 round 2, decision
+      8; gated on BUILD-58, which re-pinned `catalog-v1.11.0`) — every bridge request is sized from
+      the catalog's published timing, and a slow action is acknowledged before it is confirmed,
+      behind ONE flag.** **(a) Sizing.** `published_wait_ms(catalog, command)` (`device_commands.py`,
+      domain) reads what the bridge promises to wait for THIS command: device form = the
+      capability's bound for the action — a scenario value's `max_duration_ms` (`set(value)`; `off`
+      = the `scenario` field's `none` entry) else `confirm_timeout_ms`; room form = the MAX over the
+      room's capabilities tagged with the group (the bridge picks the member or fans out, so the
+      honest ceiling is the slowest). `size_request_timeout(ms) = ms / 1000 × 1.25 + 2 s` (15 000 →
+      20.75 s, 25 000 → 33.25 s, 61 500 → 78.875 s). The handler's one delivery chokepoint
+      (`_deliver`) stamps it on the command (`timeout_seconds`, `compare=False` — fixtures compare
+      WHAT is sent); `BridgeClient` sizes that request's `aiohttp.ClientTimeout` with it and the
+      `DeviceCommandDispatcher` bounds its await at sized-or-fallback + 2 s grace (so the HTTP layer
+      reports first). Nothing published → the command carries no timeout and the configured
+      `[outputs.bridge] timeout_seconds` is the FALLBACK — its Field description re-worded ("FALLBACK
+      … for an action the bridge's catalog publishes no timing for"), the 8 config files' comments
+      likewise. `wait` stays as today (never `wait: false`). **The intake find is closed by the same
+      change:** the dispatcher's `DEFAULT_DELIVERY_TIMEOUT_S = 7.0` (ARCH-8 PR-4, never bumped at
+      BUG-41) silently cut every awaited delivery at 7 s in front of the 20 s HTTP timeout — an HVAC
+      confirm landing between 7 and 15 s spoke «не уверена» while the bridge was still waiting; the
+      dispatcher now takes the SAME fallback number as the client (`DEFAULT_FALLBACK_TIMEOUT_S =
+      20.0`, matching `BridgeOutputConfig`), wired from `[outputs.bridge]` by the intent component.
+      **(b) The acknowledgement.** Above `SLOW_ACTION_THRESHOLD_MS = 3000` (strict — the 3 000 ms
+      inputs are not slow; Apple TV power 5 000, HVAC 15 000, every scenario value are) the handler
+      speaks at once, on the request's own channel, a template that CLAIMS NOTHING, phrased per
+      action family: ru `ack_on` «Включаю», `ack_off` «Выключаю», `ack_open` «Открываю», `ack_close`
+      «Закрываю», `ack_set` «Ставлю» (temperature/climate/brightness/cover/volume), `ack_switch`
+      «Переключаю» (mode/fan/vane/input…), `ack_scenario` «Запускаю сценарий», `ack_scenario_off`
+      «Выключаю сценарий», `ack_generic` «Секунду»; en "Turning on" / "Turning off" / "Opening" /
+      "Closing" / "Setting" / "Switching" / "Starting the scenario" / "Stopping the scenario" /
+      "One moment". Path: `NotificationService.send_acknowledgement` (new
+      `NotificationType.ACKNOWLEDGEMENT`, TTS+LOG, no preference gate) → the queue → the
+      OutputManager addressed by the request's identity (`request_source`, `resolve_physical_id`,
+      room) — the exact route a timer ring takes to the satellite's reply channel (its burst lock
+      serializes ack and confirmation) or the browser push; dropped (D-3) where no output is
+      attached, never misrouted; never raises into the action. Then the honest confirmation or
+      failure as before. What was acknowledged rides the final result as
+      `metadata.acknowledgement` (one-shot slot in the session's handler context, popped in
+      `execute`, recorded only when the service accepted it). The scenario confirmations become
+      factual at the echo — ru «Включила «{label}»» / «Выключила сценарий», en "“{label}” is on" /
+      "The scenario is off" — because after «Запускаю сценарий» a second progressive «Включаю…» read
+      as a second ack, not a confirmation (every other confirmation template unchanged). **The
+      flag — owner's words, verbatim: "OK, but make acknowledgements configurable (might become
+      annoying over time). I guess, one flag is enough"** → `[outputs.bridge] acknowledge_slow_actions
+      = true` (`BridgeOutputConfig.acknowledge_slow_actions`, default on; in `config-master.toml` +
+      the 7 profile/example configs; validator green), injected via
+      `set_device_command_services(…, acknowledge_slow_actions)`; off = sizing stays, nothing is
+      spoken early. **ui-openapi cut `ui-openapi-v1.2.0` (MINOR):** the schema is the openapi source,
+      so `config-ui/openapi.json` gained the property + the re-worded description
+      (`scripts/dump_openapi.py`), `npm run gen:api-types` regenerated `openapi.gen.ts`; STAMP
+      1.1.1 → 1.2.0 (note extended) + registry row + tag on the cut commit; drift test green.
+      config-ui's schema-driven `[outputs]` editor renders the boolean as a toggle with no
+      component change — `npm run check` + `test` (44) + `build` green. **Tests (+34 over
+      BUILD-58):** `test_device_command_sizing.py` (18: the formula at six published values, the
+      strict 3 s threshold, device-form lookups present/absent/unknown, the scenario value ceiling
+      over the capability, `off` → the `none` entry, room-form max / none, the command identity
+      untouched by the timeout, the dispatcher's wait = sized-or-fallback + grace and a real
+      slower-than-sized delivery → None); `test_smart_home_handler.py` (+11: HVAC on sized 20.75 +
+      «Включаю» + metadata; relay = fallback + silent; the 3 s input sized 5.75 but not slow; Apple
+      TV off 8.25 + «Выключаю»; flag off = sized + silent; ack then `device_unreachable` →
+      «Переключаю» then «не отвечает»; scenario value 71.375 + «Запускаю сценарий» + «Включила
+      «Кино с видеокассеты»»; scenario off 38.25 via `none`; a refused ack is not claimed; the slot
+      never leaks into the next turn; no notification service = no crash); `test_bridge_output.py`
+      (+3: fallback when unsized, the sized number per request through the stubbed seam AND through
+      the real `_request_json` with a stubbed session — 33.25 / 20.0 / 20.0 — plus the model's
+      flag default); `test_notification_output_routing.py` (+2: the ack reaches the origin channel
+      as speech, is dropped not misrouted). **Eval:** the honest-UX louver cases (ru + en, the AC's
+      15 s window = a slow action) gain a `metadata.acknowledgement` assertion — present, and
+      claiming nothing (no «готово», no past-tense «-ла»; no "done") — beside the shared calibrated
+      rubric, which is untouched (it lives in commons, outside this task's write permission; the
+      judged `response_text` is still the final honest reply). **Verified:** suite 2063 passed / 7
+      skipped, pyright 0 errors, import contracts 11 kept, config validator + donation validator +
+      build analyzer green; contract-guard strict 0 failures with the tag; `repin --check --fail-on
+      any` exit 0. Flow: cut commit → tag on it → pushed together.
+      docs: guides/smart-home (the acknowledge-then-confirm paragraph; the `[outputs.bridge]` snippet gains the flag and the fallback wording)
+      contracts: ui-openapi-v1.2.0 cut (minor — `BridgeOutputConfig.acknowledge_slow_actions`, the re-described `timeout_seconds`; repo-internal, no re-pin); the catalog v1.11 Timing fields FIRST CONSUMED
 ### Code Quality & Review (QUAL)
 - [x] **QUAL-19** [ESP32] (P2, last pre-release) — **DONE 2026-06-09** (interactive review session + upstream study).
       **★ ARCH-22 (2026-06-14):** the **device-side** of the micro stack is now designed in `docs/design/esp32_satellite.md`

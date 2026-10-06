@@ -1,13 +1,13 @@
 {
   "contract": "ui-openapi",
-  "version": "1.1.1",
-  "tag": "ui-openapi-v1.1.1",
-  "date": "2026-10-05",
+  "version": "1.2.0",
+  "tag": "ui-openapi-v1.2.0",
+  "date": "2026-10-06",
   "owner_repo": "locveil-voice",
   "artifacts": [],
   "guard": "backend/tests/test_openapi_drift.py",
   "artifact": "config-ui/openapi.json",
   "generator": "scripts/dump_openapi.py",
   "consumer": "config-ui `npm run gen:api-types` (openapi-typescript → src/types/openapi.gen.ts)",
-  "note": "Repo-internal GENERATED contract (BUILD-26): the artifact's content moves with the code and the drift guard keeps the committed copy exact; this stamp versions the CONVENTION surface, not each regeneration — bump (and re-tag) only on a deliberate breaking reshape of the REST surface. The artifact's own info.version mirrors the package version. v1.1 (BUILD-36/PROD-21, 2026-07-13): the irene→locveil_voice package rename moved every generated component-schema name (Pydantic FQN-based: `irene__…` → `locveil_voice__…`), a consumer-visible reshape of the generated TS surface — a deliberate minor bump per process/python-layout.md §4. v1.1.1 (HK-13/BUILD-50, 2026-10-05): a declaration-only patch — `artifacts` is declared EMPTY with a `guard` pointer (process/contracts.md §2: a repo-internal generated artifact whose regenerate-and-compare test is the stronger check is not byte-enumerated; enumerating it would force a version cut on every REST change the drift guard already covers). `guard` replaces the earlier ad-hoc `drift_guard` field; `artifact` stays as the informational location of the generated file. Three-level versions from here: major = a deliberate breaking reshape of the REST surface convention, minor = a consumer-visible reshape of the generated surface, patch = stamp metadata."
+  "note": "Repo-internal GENERATED contract (BUILD-26): the artifact's content moves with the code and the drift guard keeps the committed copy exact; this stamp versions the CONVENTION surface, not each regeneration — bump (and re-tag) only on a deliberate breaking reshape of the REST surface. The artifact's own info.version mirrors the package version. v1.1 (BUILD-36/PROD-21, 2026-07-13): the irene→locveil_voice package rename moved every generated component-schema name (Pydantic FQN-based: `irene__…` → `locveil_voice__…`), a consumer-visible reshape of the generated TS surface — a deliberate minor bump per process/python-layout.md §4. v1.1.1 (HK-13/BUILD-50, 2026-10-05): a declaration-only patch — `artifacts` is declared EMPTY with a `guard` pointer (process/contracts.md §2: a repo-internal generated artifact whose regenerate-and-compare test is the stronger check is not byte-enumerated; enumerating it would force a version cut on every REST change the drift guard already covers). `guard` replaces the earlier ad-hoc `drift_guard` field; `artifact` stays as the informational location of the generated file. Three-level versions from here: major = a deliberate breaking reshape of the REST surface convention, minor = a consumer-visible reshape of the generated surface, patch = stamp metadata. v1.2.0 (ARCH-67 / board PROD-18 round 2, 2026-10-06): a consumer-visible MINOR — `BridgeOutputConfig` gains `acknowledge_slow_actions` (boolean, default true; the one flag that silences the acknowledge-then-confirm speech) and `timeout_seconds` is re-described as the FALLBACK request timeout; the generated TS surface gains the property."
 }

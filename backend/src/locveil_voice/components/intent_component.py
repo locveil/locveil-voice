@@ -97,9 +97,17 @@ class IntentComponent(Component, WebAPIPlugin):
         output_manager = getattr(core, "output_manager", None)
         if catalog_service is not None:
             from ..core.device_command_dispatcher import DeviceCommandDispatcher
+            # ARCH-67: the dispatcher's fallback wait and the handler's acknowledgement flag both
+            # come from `[outputs.bridge]` — one section, one fallback number, one flag.
+            bridge_cfg = getattr(getattr(core.config, "outputs", None), "bridge", None)
+            fallback_timeout = float(getattr(bridge_cfg, "timeout_seconds", 20.0))
+            acknowledge = bool(getattr(bridge_cfg, "acknowledge_slow_actions", True))
             self.handler_manager.set_device_command_services(
-                catalog_service, DeviceCommandDispatcher(output_manager))
-            logger.info("Device-command services injected into intent handlers (ARCH-8)")
+                catalog_service,
+                DeviceCommandDispatcher(output_manager, fallback_timeout_seconds=fallback_timeout),
+                acknowledge_slow_actions=acknowledge)
+            logger.info("Device-command services injected into intent handlers (ARCH-8; "
+                        f"fallback wait {fallback_timeout}s, acknowledge_slow_actions={acknowledge})")
         
         # NOTE: Component dependencies will be injected during post-initialization coordination
         # This ensures all components are available before dependency injection

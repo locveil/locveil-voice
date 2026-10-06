@@ -25,6 +25,9 @@ class NotificationType(Enum):
     ACTION_FAILURE = "action_failure"
     SYSTEM_STATUS = "system_status"
     CRITICAL_ALERT = "critical_alert"
+    # ARCH-67: an interim «включаю»-class utterance spoken on the request's own channel
+    # BEFORE a slow action's outcome is known — claims nothing, the honest result follows
+    ACKNOWLEDGEMENT = "acknowledgement"
 
 
 class NotificationPriority(Enum):
@@ -260,6 +263,43 @@ class NotificationService:
             redeliver=redeliver
         )
 
+        return await self.send_notification(notification)
+
+    async def send_acknowledgement(
+        self,
+        session_id: Optional[str],
+        domain: str,
+        message: str,
+        source: Optional[str] = None,
+        physical_id: Optional[str] = None,
+        room_name: Optional[str] = None,
+        language: Optional[str] = None,
+    ) -> bool:
+        """Speak an immediate acknowledgement on the request's own channel (ARCH-67, board
+        PROD-18 round 2: acknowledge-then-confirm).
+
+        `message` is already rendered in the request language by the handler («Включаю»,
+        "Turning on") and CLAIMS NOTHING — the honest confirmation or failure follows through
+        the ordinary result path when the action lands. Routed exactly like a deferred
+        completion: by the request's addressing identity (channel / room-device), so it reaches
+        the satellite's reply channel or the browser push and is dropped (D-3) where no output
+        is attached. No preference gate — the ONE config flag (`[outputs.bridge]
+        acknowledge_slow_actions`) is the switch, applied by the handler before calling this.
+        """
+        notification = NotificationMessage(
+            type=NotificationType.ACKNOWLEDGEMENT,
+            priority=NotificationPriority.NORMAL,
+            title="Acknowledgement",
+            message=message,
+            details={"domain": domain},
+            delivery_methods=[DeliveryMethod.TTS, DeliveryMethod.LOG],
+            session_id=session_id,
+            domain=domain,
+            source=source,
+            physical_id=physical_id,
+            room_name=room_name,
+            language=language,
+        )
         return await self.send_notification(notification)
 
     async def send_action_failure_notification(

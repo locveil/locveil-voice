@@ -13,8 +13,10 @@ confirm_partial: "{ok}, но не ответили: {failed}"
 confirm_setpoint: "Ставлю {temp} {unit} — {name}"
 confirm_brightness: "Яркость {level} {unit} — {name}"
 confirm_pause: "Ставлю на паузу — {name}"
-confirm_scenario: "Включаю «{label}»"
-confirm_scenario_off: "Выключаю сценарий"
+# ARCH-67: a scenario is confirmed only after the whole switch landed (up to a minute) — the
+# acknowledgement below says «запускаю» first, so the confirmation speaks the fact, not the intent
+confirm_scenario: "Включила «{label}»"
+confirm_scenario_off: "Выключила сценарий"
 
 clarify_which: "Какой именно: {options}?"
 # BUG-39: all candidates share one name → ask by room (rooms stay nominative, no declension)
@@ -98,3 +100,16 @@ confirm_hvac_vane: "Заслонка — {value}"
 confirm_hvac_widevane: "Заслонка по горизонтали — {value}"
 slot_hvac_vane: "в какое положение поставить заслонку"
 slot_hvac_widevane: "куда направить заслонку"
+# ARCH-67 (PROD-18 round 2): acknowledgements for SLOW actions — spoken at once, before the bridge
+# answers, when the catalog says it may wait more than ~3 s (an AC, a scenario). Each CLAIMS
+# NOTHING: a statement of intent in the present tense, never «готово»/«включила». The honest
+# confirmation or failure follows when the action lands. One config flag turns these off.
+ack_on: "Включаю"
+ack_off: "Выключаю"
+ack_open: "Открываю"
+ack_close: "Закрываю"
+ack_set: "Ставлю"
+ack_switch: "Переключаю"
+ack_scenario: "Запускаю сценарий"
+ack_scenario_off: "Выключаю сценарий"
+ack_generic: "Секунду"

@@ -88,6 +88,11 @@ tests:
   # live — on `wb7` the bedroom AC is real), and the plain-Russian miss when the room has none
   # (the registration room, EVAL_ROOM «Кухня», has no AC in the pinned house; with the bridge
   # disabled the same case speaks «умный дом не подключён» — also a graceful failure).
+  # The louver is a SLOW action (the catalog publishes a 15 s confirmation window for the AC):
+  # the assistant speaks an acknowledgement at once («Переключаю» — intent, never success) on
+  # the reply channel, then the honest confirmation that the judge grades below. The final
+  # result records the acknowledgement in `metadata.acknowledgement`, so the honest-UX case
+  # asserts it was spoken AND claims nothing (ARCH-67; `[outputs.bridge] acknowledge_slow_actions`).
   - description: RU Intent — the louver noun is understood and routed to the horizontal axis
     metadata: { kind: system, language: ru }
     vars:
@@ -106,6 +111,13 @@ tests:
       - type: llm-rubric
         transform: JSON.parse(output).response_text
         value: "file://../../locveil-commons/eval/shared/rubrics/ru/confirms_action_ru.txt"
+      # ARCH-67: a slow action was acknowledged first, and the acknowledgement claimed nothing —
+      # a present-tense statement of intent in Russian, never «готово» / a past-tense «-ла» verb.
+      - type: javascript
+        value: |
+          const ack = (JSON.parse(output).metadata || {}).acknowledgement;
+          return typeof ack === 'string' && ack.length > 0
+            && !/готово|ла$/i.test(ack) && /^[А-Яа-яЁё ]+$/.test(ack);
   - description: RU UX — polite, human-readable miss when the room has no louver to move
     metadata: { kind: ux, language: ru }
     vars:
@@ -181,6 +193,11 @@ tests:
       - type: llm-rubric
         transform: JSON.parse(output).response_text
         value: "file://../../locveil-commons/eval/shared/rubrics/en/confirms_action_en.txt"
+      # ARCH-67: the slow action was acknowledged first, claiming nothing ("Switching", never "done")
+      - type: javascript
+        value: |
+          const ack = (JSON.parse(output).metadata || {}).acknowledgement;
+          return typeof ack === 'string' && ack.length > 0 && !/done|\bis on\b|\bset\b$/i.test(ack);
   - description: EN UX — polite, human-readable miss when the room has no louver to move
     metadata: { kind: ux, language: en }
     vars:

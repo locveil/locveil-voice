@@ -142,6 +142,10 @@ class BridgeClient(OutputPort):
 
     def __init__(self, base_url: str, timeout_seconds: float = 20.0) -> None:
         self._base_url = base_url.rstrip("/")
+        # The FALLBACK (`[outputs.bridge] timeout_seconds`): the session-wide total for every
+        # request the catalog publishes no timing for (catalog/state/options pulls, and a
+        # command on a capability without `confirm_timeout_ms`). A command that carries a
+        # timeout sized from the catalog (ARCH-67) overrides it per request.
         self._timeout = aiohttp.ClientTimeout(total=timeout_seconds)
         self._session: Optional[aiohttp.ClientSession] = None
 
@@ -159,12 +163,17 @@ class BridgeClient(OutputPort):
     # --- transport (one seam; tests stub this) ----------------------------------------------------
 
     async def _request_json(self, method: str, path: str,
-                            body: Optional[Dict[str, Any]] = None) -> Tuple[int, Dict[str, Any]]:
-        """One HTTP round-trip → (status, parsed JSON body). Raises on transport failure."""
+                            body: Optional[Dict[str, Any]] = None,
+                            timeout_seconds: Optional[float] = None) -> Tuple[int, Dict[str, Any]]:
+        """One HTTP round-trip → (status, parsed JSON body). Raises on transport failure.
+        `timeout_seconds` sizes THIS request (a catalog-published bound); None = the fallback."""
         if self._session is None or self._session.closed:
             await self.start()
         assert self._session is not None
-        async with self._session.request(method, f"{self._base_url}{path}", json=body) as resp:
+        timeout = (aiohttp.ClientTimeout(total=timeout_seconds)
+                   if timeout_seconds is not None else self._timeout)
+        async with self._session.request(method, f"{self._base_url}{path}", json=body,
+                                         timeout=timeout) as resp:
             return resp.status, await resp.json(content_type=None)
 
     # --- OutputPort ------------------------------------------------------------------------------
@@ -190,7 +199,8 @@ class BridgeClient(OutputPort):
                 detail=f"unknown command type {type(command).__name__}")
 
         try:
-            status, payload = await self._request_json("POST", path, command.request_body())
+            status, payload = await self._request_json("POST", path, command.request_body(),
+                                                       timeout_seconds=command.timeout_seconds)
         except (aiohttp.ClientError, asyncio.TimeoutError, OSError) as e:
             logger.warning(f"bridge unreachable delivering {command!r}: {e}")
             return DeliveryResult(

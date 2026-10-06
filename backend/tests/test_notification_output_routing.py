@@ -83,3 +83,34 @@ async def test_send_completion_threads_addressing_onto_message():
     assert queued.source == "cli"
     assert queued.physical_id == "kitchen"
     assert queued.room_name == "Кухня"
+
+
+# --- ARCH-67: the acknowledgement travels the same identity-addressed path ------------------------
+
+async def test_acknowledgement_reaches_the_request_channel_as_speech():
+    """`send_acknowledgement` queues a TTS-method message addressed like a completion; the
+    OutputManager routes it to the request's origin (a TEXT-only console degrades it) — the
+    satellite's reply channel / the browser push get it the same way a timer ring does."""
+    captured = []
+    svc = await _service_with_console(captured.append, origin="ws_audio")
+    ok = await svc.send_acknowledgement(session_id="s1", domain="smart_home", message="Включаю",
+                                        source="ws_audio", physical_id="bedroom-sat",
+                                        room_name="bedroom", language="ru")
+    assert ok
+    note = svc._notification_queue.get_nowait()
+    assert note.type.value == "acknowledgement"
+    assert DeliveryMethod.TTS in note.delivery_methods      # → SPEECH modality
+    assert note.priority is NotificationPriority.NORMAL
+    assert (note.source, note.physical_id, note.room_name, note.language) == \
+        ("ws_audio", "bedroom-sat", "bedroom", "ru")
+    await svc._deliver_notification(note)
+    assert captured == ["📝 Включаю"]
+
+
+async def test_acknowledgement_with_no_attached_output_is_dropped_not_misrouted():
+    captured = []
+    svc = await _service_with_console(captured.append, origin="cli")
+    await svc.send_acknowledgement(session_id="s1", domain="smart_home", message="Включаю",
+                                   source="ws_audio", physical_id="nobody")
+    await svc._deliver_notification(svc._notification_queue.get_nowait())
+    assert captured == []

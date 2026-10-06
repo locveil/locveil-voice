@@ -36,6 +36,18 @@ which one («…, но не ответили: Бра»).
 Scenario devices work like everything else: «включи кино с видеокассеты» starts the
 scenario whose name matches, «выключи кино» stops it.
 
+**Slow actions are acknowledged, then confirmed.** Most devices answer within a fraction
+of a second. Some take longer by nature — an air conditioner confirms on its own cadence,
+a streamer wakes from standby, a movie scenario switches a whole chain of devices — and
+the bridge's catalog says, for each of those, how long it is prepared to wait. For such an
+action Irene speaks at once, without claiming anything («Включаю», «Переключаю», «Запускаю
+сценарий» — a statement of what she is doing, never «готово»), and the real answer follows
+when the device has actually confirmed: «Включила кондиционер», or an honest «Устройство не
+отвечает» if it never did. Nothing is ever reported as done before it is. Every request is
+also given exactly as much patience as the catalog says that device needs, so a cold
+scenario start is waited out instead of timing out. If the early acknowledgement gets
+tiresome, one setting turns it off (below); the patience stays.
+
 Sensor questions are read live from the bridge: «какая температура в душевой?»,
 «какая влажность?» — dedicated sensors are preferred, and on climate units Irene reads
 the measured room temperature, not the thermostat setting.
@@ -69,7 +81,8 @@ the config UI under **Output Channels**):
 [outputs.bridge]
 enabled = true
 base_url = "http://localhost:8000"   # your locveil-bridge REST endpoint
-timeout_seconds = 20.0               # patient enough for devices that confirm slowly (air conditioners)
+timeout_seconds = 20.0               # fallback patience for devices the catalog publishes no timing for
+acknowledge_slow_actions = true      # speak «включаю» at once before a slow action; false = only the outcome
 ```
 
 That's the whole setup: the catalog pull, the room vocabulary, and the device commands

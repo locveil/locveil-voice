@@ -71,7 +71,8 @@ web_push = true                     # Browser push channel (/ws/output) for defe
 # deployed and reachable from this instance (hardware bring-up, ARCH-25).
 enabled = false
 base_url = "http://localhost:8000"  # locveil-bridge REST API
-timeout_seconds = 20.0
+timeout_seconds = 20.0             # fallback only — requests are sized from the catalog's published timing
+acknowledge_slow_actions = true    # «включаю»-class acknowledgement before a slow action; the honest outcome follows
 
 # ============================================================
 # COMPONENT ENABLEMENT — everything on (full experience)

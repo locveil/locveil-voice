@@ -126,10 +126,12 @@ class StubBridge(BridgeClient):
     def __init__(self, *responses):
         super().__init__("http://bridge.test:8000")
         self.requests = []
+        self.timeouts = []   # ARCH-67: the per-request timeout each call asked for (None = fallback)
         self._responses = list(responses)
 
-    async def _request_json(self, method, path, body=None):
+    async def _request_json(self, method, path, body=None, timeout_seconds=None):
         self.requests.append((method, path, body))
+        self.timeouts.append(timeout_seconds)
         response = self._responses.pop(0)
         if isinstance(response, Exception):
             raise response
@@ -303,8 +305,66 @@ def test_bridge_config_defaults():
     cfg = BridgeOutputConfig()
     assert cfg.enabled is False
     assert cfg.base_url == "http://localhost:8000"
-    # BUG-41: must exceed the bridge's slowest gated echo-wait (HVAC confirms up to ~15 s)
+    # BUG-41 sized it at 20 s; ARCH-67 made it the FALLBACK — requests the catalog publishes
+    # timing for are sized from the field, this applies only when the field is absent
     assert cfg.timeout_seconds == 20.0
+    assert "FALLBACK" in (BridgeOutputConfig.model_fields["timeout_seconds"].description or "")
+    assert cfg.acknowledge_slow_actions is True   # PROD-18 round 2: "one flag is enough", default on
+
+
+# --- ARCH-67: per-request sizing from the catalog's published timing ------------------------------
+
+async def test_command_without_sized_timeout_uses_the_fallback():
+    bridge = StubBridge((200, {"success": True, "state": {"power": "on"}, "error": None}))
+    cmd = DeviceCommand(device_id="bedroom_spots", capability="power", action="on")
+    await bridge.deliver(_command_result(cmd), _CTX, OutputModality.DEVICE_COMMAND)
+    assert bridge.timeouts == [None]
+
+
+async def test_command_with_sized_timeout_is_sent_with_it():
+    """A command sized from `confirm_timeout_ms` (15 000 → 20.75 s) sizes ITS request —
+    the session fallback is untouched."""
+    bridge = StubBridge((200, {"success": True, "state": {"mode": "cool"}, "error": None}))
+    cmd = DeviceCommand(device_id="bedroom_hvac", capability="mode", action="set",
+                        params={"value": "cool"}, timeout_seconds=20.75)
+    await bridge.deliver(_command_result(cmd), _CTX, OutputModality.DEVICE_COMMAND)
+    assert bridge.timeouts == [20.75]
+    assert bridge._timeout.total == 20.0
+
+
+async def test_real_request_timeout_is_per_request(monkeypatch):
+    """Through the REAL `_request_json` (session stubbed): the aiohttp timeout handed to
+    the request is the sized one, or the session default when none is sized."""
+    seen = []
+
+    class _Resp:
+        status = 200
+
+        async def json(self, content_type=None):
+            return {"success": True, "state": {}, "error": None}
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *a):
+            return False
+
+    class _Session:
+        closed = False
+
+        def request(self, method, url, json=None, timeout=None):
+            seen.append(timeout.total)
+            return _Resp()
+
+    bridge = BridgeClient("http://bridge.test:8000", timeout_seconds=20.0)
+    bridge._session = _Session()
+    sized = DeviceCommand(device_id="streamer", capability="power", action="on",
+                          timeout_seconds=33.25)
+    plain = DeviceCommand(device_id="bedroom_spots", capability="power", action="on")
+    await bridge.deliver(_command_result(sized), _CTX, OutputModality.DEVICE_COMMAND)
+    await bridge.deliver(_command_result(plain), _CTX, OutputModality.DEVICE_COMMAND)
+    await bridge.get_device_state("bedroom_spots")
+    assert seen == [33.25, 20.0, 20.0]
 
 
 async def test_get_device_options_success_and_failure():

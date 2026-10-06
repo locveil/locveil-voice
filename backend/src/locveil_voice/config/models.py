@@ -148,9 +148,18 @@ class BridgeOutputConfig(BaseModel):
     base_url: str = Field(default="http://localhost:8000",
                           description="Base URL of the locveil-bridge REST API (no trailing slash)")
     timeout_seconds: float = Field(default=20.0, gt=0,
-                                   description="Per-request HTTP timeout — must exceed the bridge's slowest "
-                                               "gated actuation echo-wait (Mitsubishi HVAC confirms take up to "
-                                               "~15 s; relays echo in ~500 ms)")
+                                   description="FALLBACK per-request HTTP timeout, in seconds, for an action the "
+                                               "bridge's catalog publishes no timing for (absent = its 500 ms echo "
+                                               "window). Every other request is sized from the catalog's "
+                                               "confirm_timeout_ms / max_duration_ms (× 1.25 + 2 s), never from "
+                                               "this value.")
+    acknowledge_slow_actions: bool = Field(default=True,
+                                           description="Speak an immediate acknowledgement («включаю» / \"turning "
+                                                       "on\" — a statement of intent, never of success) before a "
+                                                       "slow action — one the catalog says the bridge may wait more "
+                                                       "than ~3 s to confirm (an air conditioner, a scenario) — "
+                                                       "then the honest confirmation or failure when it lands. Off "
+                                                       "= only the final outcome is spoken.")
 
 
 class OutputConfig(BaseModel):

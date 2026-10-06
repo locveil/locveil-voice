@@ -301,30 +301,6 @@ See `docs/review/phase1_architecture_map.md` §5.
       recorded (doc or journal) + follow-up tasks if gaps exist (completion cue not
       device-addressed, or no timestamp in the initiation ack). Satellite-side contact
       point: `../locveil-satellite` FW-1 intake record (REQ-33).
-- [ ] **ARCH-67** [MQTT][CONFIG][UX] `[release]` — **Requests sized from the catalog's timing fields +
-      the acknowledge-then-confirm policy behind one flag** (board PROD-18 round 2, decision 8;
-      filed 2026-10-06 after BUILD-58 re-pins `catalog-v1.11.0`; gated on BUILD-58). (a) Per-request
-      timeout sizing: a device command's timeout = max(`confirm_timeout_ms` of the capabilities
-      involved) × 1.25 + 2 s; a scenario value's from its `max_duration_ms` the same way; when the
-      field is absent/null the config `[outputs.bridge] timeout_seconds` is the FALLBACK (its
-      description re-worded: no longer "must exceed 15 s"). `wait` stays as today (never
-      `wait: false`). (b) When the published bound exceeds ~3 s, speak an immediate acknowledgement
-      that CLAIMS NOTHING («включаю»-class, ru + en, per action family — never "done") before
-      delivering, then the honest confirmation/failure as today. Behind ONE config flag — owner's
-      words, verbatim: "OK, but make acknowledgements configurable (might become annoying over
-      time). I guess, one flag is enough" — default on, in `config-master.toml` + the config schema
-      + validator; if the schema moves `config-ui/openapi.json`, cut `ui-openapi` as a MINOR
-      (`ui-openapi-v1.2.0`, STAMP + registry row + tag) and keep config-ui green
-      (`config-ui-stays-functional`). Tests: sizing per field present/absent; ack only when the flag
-      is on AND the bound is slow; never for fast actions; ack-then-failure; the scenario ceiling
-      path. The eval honest-UX case for a slow action gains the ack.
-      **Reconciled at intake (2026-10-06):** the council's "one 20 s number in three places" is
-      three places (`BridgeOutputConfig.timeout_seconds` default, `BridgeClient` default, the 8
-      config files) — but a FOURTH bound sits in front of them: `DeviceCommandDispatcher`'s
-      `DEFAULT_DELIVERY_TIMEOUT_S = 7.0` (ARCH-8 PR-4, never bumped at BUG-41) caps the awaited
-      delivery at 7 s regardless of the 20 s HTTP timeout, so an HVAC confirm that lands between 7
-      and 15 s speaks «не уверена» today while the bridge is still waiting. The sizing replaces
-      that cap too (dispatcher wait = sized-or-fallback + grace), not a scope change — recorded.
 
 ### Code Quality & Review (QUAL)
 

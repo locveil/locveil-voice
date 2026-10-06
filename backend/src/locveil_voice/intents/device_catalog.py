@@ -116,6 +116,31 @@ class CatalogCapability:
                 return f
         return None
 
+    def published_wait_ms(self, action: str, params: Optional[Dict[str, Any]]) -> Optional[int]:
+        """The bridge's published bound for one action on this capability (contract v1.11
+        "Timing"): a scenario value's `max_duration_ms` when the action selects one — the
+        `set(value)` entry, or the field's `none` entry for `off` — else the capability's
+        `confirm_timeout_ms`; None when nothing is published (the consumer's fallback applies)."""
+        ceiling = self._value_ceiling_ms(action, params)
+        if ceiling is not None:
+            return ceiling
+        return self.confirm_timeout_ms
+
+    def _value_ceiling_ms(self, action: str, params: Optional[Dict[str, Any]]) -> Optional[int]:
+        spec = self.action(action)
+        for param in (spec.params if spec else ()):
+            chosen = (params or {}).get(param.name)
+            for value in param.values or ():
+                if value.canonical == chosen and value.max_duration_ms is not None:
+                    return value.max_duration_ms
+        if action == "off":
+            # the deactivation ceiling rides the state field's `none` entry
+            for field_spec in self.fields:
+                none_entry = field_spec.value("none")
+                if none_entry is not None and none_entry.max_duration_ms is not None:
+                    return none_entry.max_duration_ms
+        return None
+
 
 @dataclass(frozen=True)
 class CatalogDevice:

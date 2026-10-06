@@ -135,12 +135,15 @@ class IntentHandlerManager:
         self._initialized = True
         logger.info(f"IntentHandlerManager initialized with {len(self._handler_instances)} handlers and donation support")
     
-    def set_device_command_services(self, catalog_port: Any, command_port: Any) -> None:
-        """Inject the device-catalog port + the awaited DEVICE_COMMAND delivery seam into the
-        handlers that actuate through the bridge boundary (ARCH-8 PR-4, QUAL-24 pattern)."""
+    def set_device_command_services(self, catalog_port: Any, command_port: Any,
+                                    acknowledge_slow_actions: bool = True) -> None:
+        """Inject the device-catalog port + the awaited DEVICE_COMMAND delivery seam (+ the
+        ARCH-67 acknowledgement flag) into the handlers that actuate through the bridge
+        boundary (ARCH-8 PR-4, QUAL-24 pattern)."""
         for handler_name, handler in self._handler_instances.items():
             if hasattr(handler, 'set_device_command_services'):
-                handler.set_device_command_services(catalog_port, command_port)
+                handler.set_device_command_services(catalog_port, command_port,
+                                                    acknowledge_slow_actions)
                 logger.debug(f"Set device-command services on handler: {handler_name}")
 
     def set_context_manager(self, context_manager: Any) -> None:

@@ -12,8 +12,10 @@ confirm_partial: "{ok}, but no response from: {failed}"
 confirm_setpoint: "Setting {temp} {unit} — {name}"
 confirm_brightness: "Brightness {level} {unit} — {name}"
 confirm_pause: "Pausing — {name}"
-confirm_scenario: "Starting “{label}”"
-confirm_scenario_off: "Stopping the scenario"
+# ARCH-67: a scenario is confirmed only after the whole switch landed — the acknowledgement
+# says "starting" first, so the confirmation speaks the fact, not the intent
+confirm_scenario: "“{label}” is on"
+confirm_scenario_off: "The scenario is off"
 
 clarify_which: "Which one: {options}?"
 # BUG-39: all candidates share one name → ask by room
@@ -94,3 +96,15 @@ confirm_hvac_vane: "Louver — {value}"
 confirm_hvac_widevane: "Horizontal louver — {value}"
 slot_hvac_vane: "which louver position"
 slot_hvac_widevane: "which way to point the louver"
+# ARCH-67 (PROD-18 round 2): acknowledgements for SLOW actions — spoken at once, before the bridge
+# answers, when the catalog says it may wait more than ~3 s. Each CLAIMS NOTHING: a statement of
+# intent, never "done". The honest confirmation or failure follows. One config flag turns these off.
+ack_on: "Turning on"
+ack_off: "Turning off"
+ack_open: "Opening"
+ack_close: "Closing"
+ack_set: "Setting"
+ack_switch: "Switching"
+ack_scenario: "Starting the scenario"
+ack_scenario_off: "Stopping the scenario"
+ack_generic: "One moment"
