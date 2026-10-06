@@ -43,7 +43,7 @@ config runs the English set) unless overridden, e.g. `EVAL_LANG=en` for a remote
 | `ws.promptfooconfig.yaml` (system) | ASR + intent | Irene on the target | no | yes (WAV) | ✅ ru live + en live (WER ✓ + intent ✓; `make ws CONFIG=embedded-armv7-en` = 4/4, Moonshine ASR) |
 | `ws.promptfooconfig.yaml` (ux) | DeepSeek judge | Irene on the target | `DEEPSEEK_API_KEY` | yes (WAV) | ✅ ru live; en live (rubrics validated; fixtures recorded) |
 | `trace.promptfooconfig.yaml` | offline golden replay | nothing (models present) | no | traces (JSON) | ✅ ru + en golden green (`make replay CONFIG=embedded-armv7-en`) |
-| `device.promptfooconfig.yaml` | utterance → canonical DeviceCommand (producer contract) | Irene + the mock bridge (`make device-auto` wires both) | tier 2 only | no (cases GENERATED from the pinned crossover fixtures) | ✅ tier 1 (default gate): 47/47; tier 2 (`TIER=2 NLU=llm`): 5/8 — red = the deferred relative-adjustment trio («поярче»/«потеплее») |
+| `device.promptfooconfig.yaml` | utterance → canonical DeviceCommand (producer contract) | Irene + the mock bridge (`make device-auto` wires both) | tier 2 only | no (cases GENERATED from the pinned crossover fixtures) | ✅ tier 1 (default gate): 53/53; tier 2 (`TIER=2 NLU=llm`): 5/8 — red = the deferred relative-adjustment trio («поярче»/«потеплее») |
 
 ## Setup (uv)
 

@@ -21,6 +21,17 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-10-06 — TEST-24: the louvers reach the shared fixtures.** The one task where voice
+  writes into the commons tree on purpose: the crossover pin is co-owned ground, and a fixture
+  task is how it moves. Five fixtures (F82–F86) went in beside F80/F81, the commons guard
+  stayed green, and then the question that matters — does the whole producer pipeline, not just
+  the handler, emit the right canonical command — got its answer from the real cross-suite:
+  53/53 against the mock bridge, louvers included. Two things recorded rather than done. The
+  pin still has no strict `PIN.json`; that is an ownership/tag-family decision, not a fixture
+  task's. And the bridge cut `catalog-v1.11.0` this afternoon — the catalog pins now trail by a
+  minor, which is exactly the re-pin task's work (and that re-pin must restamp the fixtures'
+  `catalog_version`, or the guard that just passed will fail, correctly). contracts:
+  crossover-fixtures moved. docs: eval/readme.
 - **2026-10-06 — QUAL-82: the louvers learn their name.** Filed in July as a linguistics problem
   wearing a plumbing coat — the plumbing was one table row, the question was what to CALL the
   thing, and whether the word belonged to the catalog or to the donation. The board answered both

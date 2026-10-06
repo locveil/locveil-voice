@@ -396,6 +396,51 @@
     fixture: F81
     tier: "1"
     kind: actuate
+- description: "F82 (t1, actuate): заслонка в положение три"
+  vars:
+    utterance: "заслонка в положение три"
+    room: "bedroom"
+    expect: {"kind": "actuate", "device_id": "bedroom_hvac", "capability": "vane", "action": "set", "params": {"value": "pos_3"}}
+  metadata:
+    fixture: F82
+    tier: "1"
+    kind: actuate
+- description: "F83 (t1, actuate): заслонка на авто"
+  vars:
+    utterance: "заслонка на авто"
+    room: "bedroom"
+    expect: {"kind": "actuate", "device_id": "bedroom_hvac", "capability": "vane", "action": "set", "params": {"value": "auto"}}
+  metadata:
+    fixture: F83
+    tier: "1"
+    kind: actuate
+- description: "F84 (t1, actuate): качай заслонку"
+  vars:
+    utterance: "качай заслонку"
+    room: "bedroom"
+    expect: {"kind": "actuate", "device_id": "bedroom_hvac", "capability": "vane", "action": "set", "params": {"value": "swing"}}
+  metadata:
+    fixture: F84
+    tier: "1"
+    kind: actuate
+- description: "F85 (t1, actuate): направь заслонку влево"
+  vars:
+    utterance: "направь заслонку влево"
+    room: "bedroom"
+    expect: {"kind": "actuate", "device_id": "bedroom_hvac", "capability": "widevane", "action": "set", "params": {"value": "left"}}
+  metadata:
+    fixture: F85
+    tier: "1"
+    kind: actuate
+- description: "F86 (t1, actuate): заслонка в центр"
+  vars:
+    utterance: "заслонка в центр"
+    room: "bedroom"
+    expect: {"kind": "actuate", "device_id": "bedroom_hvac", "capability": "widevane", "action": "set", "params": {"value": "center"}}
+  metadata:
+    fixture: F86
+    tier: "1"
+    kind: actuate
 - description: "F90 (t2, actuate): вруби телек"
   vars:
     utterance: "вруби телек"

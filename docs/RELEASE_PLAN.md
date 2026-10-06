@@ -419,22 +419,6 @@ _Trace-driven system testing (design `docs/design/trace_system_testing.md`, TEST
       to german" → `greeting.hello` (0.86, keyword beats verb); bare "pause" → `audio.stop` (1.00 — note the
       RU twin «поставь на паузу» routes `smart_home.playback_pause`; decide the intended EN owner before
       fixing). Consumer half unaffected: `expect` stays canonical, the bridge replays language-blind.
-- [ ] **TEST-24** `[release]` [TEST][MQTT][CONTRACTS] — **Crossover fixtures for the AC louvers (`vane` /
-      `widevane`) — the co-owned pin move QUAL-82 deliberately left out** (filed 2026-10-06 at the QUAL-82
-      intake; board PROD-18 round-1 rider: "the vane/widevane crossover fixtures as separate tasks"). The
-      fixtures pin `../locveil-commons/contracts/pins/crossover-fixtures/crossover_fixtures.json` is
-      CO-OWNED (voice-authored, moved only by voice fixture tasks, never hand-edited alongside feature
-      code), so QUAL-82 ships the intents with harness tests only. Scope: author the tier-1 fixtures
-      beside F80/F81 (same shape, `context.room: bedroom`, `device_id: bedroom_hvac`) — vane:
-      «заслонка в положение три» → `vane.set{value: pos_3}`, «заслонка на авто» → `vane.set{value: auto}`,
-      «качай заслонку» → `vane.set{value: swing}`; widevane: «направь заслонку влево» →
-      `widevane.set{value: left}`, «заслонка в центр» → `widevane.set{value: center}`; plus a
-      non-collision fixture («подними жалюзи» in `cabinet` stays the F16 room-group — already pinned, so
-      a note, not a new fixture) and a clarify fixture if the pinned house has >1 AC in scope for a
-      room-less utterance. Then: the commons layer-2 guard (`eval/tests/test_crossover_fixtures.py`)
-      green, the strict `PIN.json` the pin README still owes, `make device-tests` regenerating
-      `eval/device.tests.yaml` here, and the device suite tier 1 green against the mock bridge. Ref:
-      QUAL-82 (the intents + templates), QUAL-81 (F80/F81 precedent), `contracts/README.md`.
 
 ### Build & CI (BUILD)
 _Real English deployment across all three Docker arches (armv7/aarch64/x86_64) + English eval. Design
