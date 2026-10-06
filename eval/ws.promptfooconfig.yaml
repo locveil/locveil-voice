@@ -83,6 +83,39 @@ tests:
         # TEST-16: the CALIBRATED shared rubric — single source, no inline drift.
         value: "file://../../locveil-commons/eval/shared/rubrics/ru/graceful_failure_ru.txt"
 
+  # ── 5. The AC louvers — «заслонка» (QUAL-82; board PROD-18 round 1) ─────────────
+  # Honest UX, both ways: the louver confirmation when the room HAS an AC (needs the bridge
+  # live — on `wb7` the bedroom AC is real), and the plain-Russian miss when the room has none
+  # (the registration room, EVAL_ROOM «Кухня», has no AC in the pinned house; with the bridge
+  # disabled the same case speaks «умный дом не подключён» — also a graceful failure).
+  - description: RU Intent — the louver noun is understood and routed to the horizontal axis
+    metadata: { kind: system, language: ru }
+    vars:
+      audio: fixtures/{{env.EVAL_LANG}}/louver_no_ac.wav
+      reference: направь заслонку влево
+    assert:
+      - type: is-json
+      - type: javascript
+        value: JSON.parse(output).intent_name === 'smart_home.hvac_widevane'
+  - description: RU UX — assistant confirms the louver position in natural Russian (bridge + AC in the bedroom)
+    metadata: { kind: ux, language: ru }
+    vars:
+      audio: fixtures/{{env.EVAL_LANG}}/louver_position.wav
+      reference: поставь заслонку в положение три в спальне
+    assert:
+      - type: llm-rubric
+        transform: JSON.parse(output).response_text
+        value: "file://../../locveil-commons/eval/shared/rubrics/ru/confirms_action_ru.txt"
+  - description: RU UX — polite, human-readable miss when the room has no louver to move
+    metadata: { kind: ux, language: ru }
+    vars:
+      audio: fixtures/{{env.EVAL_LANG}}/louver_no_ac.wav
+      reference: направь заслонку влево
+    assert:
+      - type: llm-rubric
+        transform: JSON.parse(output).response_text
+        value: "file://../../locveil-commons/eval/shared/rubrics/ru/graceful_failure_ru.txt"
+
   # ═══════════════════════════ ENGLISH (language: en) ═══════════════════════════
   # Same four scenarios, English audio/reference/rubric. Fixtures pending recording (fixtures/en/*).
   # ── 1. ASR transcript accuracy ─────────────────────────────────────────────────
@@ -127,4 +160,33 @@ tests:
       - type: llm-rubric
         transform: JSON.parse(output).response_text
         # TEST-16: the CALIBRATED shared rubric — single source, no inline drift.
+        value: "file://../../locveil-commons/eval/shared/rubrics/en/graceful_failure_en.txt"
+
+  # ── 5. The AC louvers (EN twins of the RU set; fixtures pending recording) ──────
+  - description: EN Intent — the louver is understood and routed to the horizontal axis
+    metadata: { kind: system, language: en }
+    vars:
+      audio: fixtures/{{env.EVAL_LANG}}/louver_no_ac.wav
+      reference: point the louver to the left
+    assert:
+      - type: is-json
+      - type: javascript
+        value: JSON.parse(output).intent_name === 'smart_home.hvac_widevane'
+  - description: EN UX — assistant confirms the louver position in natural English (bridge + AC in the bedroom)
+    metadata: { kind: ux, language: en }
+    vars:
+      audio: fixtures/{{env.EVAL_LANG}}/louver_position.wav
+      reference: set the louver to position three in the bedroom
+    assert:
+      - type: llm-rubric
+        transform: JSON.parse(output).response_text
+        value: "file://../../locveil-commons/eval/shared/rubrics/en/confirms_action_en.txt"
+  - description: EN UX — polite, human-readable miss when the room has no louver to move
+    metadata: { kind: ux, language: en }
+    vars:
+      audio: fixtures/{{env.EVAL_LANG}}/louver_no_ac.wav
+      reference: point the louver to the left
+    assert:
+      - type: llm-rubric
+        transform: JSON.parse(output).response_text
         value: "file://../../locveil-commons/eval/shared/rubrics/en/graceful_failure_en.txt"

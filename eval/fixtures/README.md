@@ -11,8 +11,13 @@ Coverage parity between languages is a directory diff.
 |---|---|---|---|
 | `timer_10min.wav` | «поставь таймер на десять минут» | "set a timer for ten minutes" | cases 1, 2, 3 |
 | `light_unreachable.wav` | «включи свет в гараже» | "turn on the light in the garage" | case 4 |
+| `louver_position.wav` | «поставь заслонку в положение три в спальне» | "set the louver to position three in the bedroom" | case 5 (louver confirmation) |
+| `louver_no_ac.wav` | «направь заслонку влево» | "point the louver to the left" | case 5 (louver intent + graceful miss) |
 
-`fixtures/ru/*` are recorded + committed; `fixtures/en/*` are **pending recording**.
+`fixtures/ru/*` are committed; `fixtures/en/*` are **pending recording**. The two `ru` louver
+fixtures are **synthesized** (Silero v4 `kseniya`, conformed with the ffmpeg line below) rather
+than recorded — re-record them with `make record FIXTURE=louver_position` when a human take is
+wanted; the cases do not change.
 
 These fixtures **are committed** — `eval/fixtures/**/*.wav` is carved out of the repo's
 blanket `*.wav` ignore, because they're versioned test *inputs*: committing them keeps WER

@@ -44,6 +44,15 @@ Volume, playback and household modes answer to voice as well: «сделай г�
 на телеке 30», «следующий трек», «мы уходим», «режим уборки на 30 минут», «включи
 сигнализацию воды». Water valves and heating circuits deliberately have no voice surface.
 
+Air conditioners take their settings by name, with the values the device itself reports:
+«кондиционер на охлаждение», «вентилятор на скорость два», «поставь кондей на 22 градуса».
+The air-flow louvers are addressed as **«заслонка»** — the vertical louver by position
+(«заслонка в положение три», «заслонка на авто», «качай заслонку»), the horizontal one by
+direction («направь заслонку влево», «заслонка в центр», «заслонку крайне вправо»). Say
+the room when you are not in it («заслонка на авто в спальне»); with several air
+conditioners in one room Irene asks which. «Жалюзи» keeps meaning the window blinds —
+«подними жалюзи» still opens them.
+
 Inputs and apps are voice-switchable too: «переключи усилитель на cd» validates the
 input against the device's own set, and «запусти ютуб на телеке» asks the device
 for its installed apps at that moment — so a newly installed app is launchable

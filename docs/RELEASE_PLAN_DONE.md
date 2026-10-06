@@ -1337,6 +1337,65 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       `power.on`; a mode change → `mode.set` (dead firmware-side until DRV-26); «какая температура в детской» →
       `room_temperature`.
 
+- [x] **QUAL-82** [MQTT][NLU] `[release]` — **DONE 2026-10-06 (board PROD-18 round 1; owner
+      ruling q8 re-tagged it `[release]` at intake).** Voice control of the AC louvers, built on the
+      owner's decisions and nothing else: the spoken noun is **«заслонка»** («жалюзи» stays the cover
+      group's — the cabinet rollers' alias; «шторка» was out because it stem-matches «шторы» at 90),
+      **two donation-side intents** — `smart_home.hvac_vane` (positional / vertical: «заслонка в
+      положение три», «заслонка на авто», «качай заслонку») and `smart_home.hvac_widevane`
+      (directional / horizontal: «направь заслонку влево», «заслонка в центр», «заслонку крайне
+      вправо») — the capability noun and verb patterns in voice's donations exactly like
+      «режим»/«вентилятор», the catalog contributing only the value labels; **no catalog change, no
+      re-pin** (`catalog-v1.10.0` already carries `vane` auto/swing/pos_1..5 and `widevane`
+      swing/far_left/left/center/right/far_right/split with ru/en/de labels; voice matches VALUE
+      labels, so the bridge's coming field-label rename «жалюзи» → «заслонка» changes nothing here).
+      Routed via the device form like mode/fan: room → the single capable device, else clarify — never
+      a group noun. **Handler:** `_CHOICE_BINDINGS` gains `vane` / `widevane` (`<cap>.set{value}`, no
+      invented legacy fallback — the old `climate.set_vane` never had a voice consumer, QUAL-81);
+      `_handle_hvac_vane` / `_handle_hvac_widevane` ride `_hvac_choice` unchanged except for a
+      per-kind slot key (bare «заслонка» asks «в какое положение поставить заслонку», not the mode
+      slot) and one honest fix that mode/fan inherit: the several-ACs clarify now carries each
+      candidate's ROOM, so same-named ACs are told apart by room (BUG-39's room-led question) instead
+      of by device id. **Donations:** `contract.json` intent list + both methods (`value` pattern: the
+      noun-led shape «заслонк[аиу] (в|на) …» with a lazy capture that stops before a trailing «в
+      <комната>», and the verb-led «(по)кача… заслонку» capturing the verb — `_match_option`'s shared
+      stem lands «качай» on the label «качание» = `swing`; `room` pattern excludes the direction words
+      so «в центр» is never a room; EN branches «louver to (the) …» / «swing the louver»); `ru.json`
+      (12 + 18 phrases, lemmas, examples) and `en.json`; number words are normalized upstream once
+      (BUG-1), so «положение три» meets the label «положение 3» verbatim. **Templates** ru/en:
+      `confirm_hvac_vane` «Заслонка — {value}», `confirm_hvac_widevane` «Заслонка по горизонтали —
+      {value}», the two slot lines. **The `swing` ambiguity** (both axes carry it under the same ru
+      label «качание») is resolved by the INTENT: «качай заслонку» → `vane.set{swing}`, «качай
+      заслонку по горизонтали» → `widevane.set{swing}` — the longer phrase wins at T1 (QUAL-64
+      specificity), the handler never has to guess from the word. **Tests (+34; suite 1992 → 2026
+      passed / 7 skipped):** harness (13) — both axes' success paths, two-word labels whole, the
+      intent-resolved `swing`, unknown value reads the catalog options back and sends nothing, the
+      louver slot, the several-ACs clarify in the cabinet (the two new louver-capable ACs sit in the
+      room that ALSO owns the «жалюзи» rollers — the rollers are never candidates), the house-wide
+      clarify speaks no device id, a room without louvers says so, «поверни жалюзи» keeps the
+      room-group cover routing beside louvered ACs, and the **resolver stem regression**:
+      «заслонка»/«заслонку»/«заслонки»/«заслонке» score < 80 against EVERY cover/curtain surface in
+      the house while «шторка» scores ≥ 80 against the curtains (why it was rejected), and the F94
+      utterance scan spots no device in a louver sentence; T1 routing (11 cases, both shapes +
+      «подними/закрой жалюзи» → cover) + a non-collision guard («поверни/подними/опусти жалюзи» →
+      a `cover_*` intent, never a louver one) + extraction (9 cases against the real donation,
+      numbers normalized). **Eval:** `ws.promptfooconfig.yaml` gains the louver block in both
+      languages — intent routing of «направь заслонку влево» → `hvac_widevane`, the confirmation
+      rubric on «поставь заслонку в положение три в спальне» (needs the bridge; on wb7 the bedroom AC
+      is real), the graceful-failure rubric on the same louver sentence spoken from «Кухня» (no AC
+      there — «Не нашла подходящего устройства»; with the bridge off, «умный дом не подключён»); the
+      two RU fixtures are **synthesized** (Silero v4 `kseniya`, conformed to 16 kHz/mono/PCM16,
+      transcribed cleanly by the small Vosk model: «направь заслонку влево» exact; the position one
+      with two inflection slips the extraction and the room matcher absorb) and say so in
+      `eval/fixtures/README.md`; EN twins pending recording like the rest of the EN set. **Left out
+      on purpose (rider):** the vane/widevane CROSSOVER FIXTURES — the co-owned pin in
+      `../locveil-commons/contracts/pins/crossover-fixtures/` moves only by its own fixtures task:
+      **TEST-24**, filed open. Gates: pyright 0, import-linter 11/11, no-TYPE_CHECKING, donations
+      0/0, contract-guard 0, repin `--fail-on any` 0 (nothing moved). config-ui untouched: the
+      donation SCHEMA is unchanged (two more instances of the existing shape).
+      docs: guides/smart-home
+      contracts: none — no versioned surface moved (catalog pin consumed as-is at catalog-v1.10.0; the fixtures pin deliberately untouched, see TEST-24)
+
 - [x] **QUAL-83** [QUAL][CONFIG] `[release]` — **✓ DONE 2026-07-16. Dead config-field + dead-code sweep**
       (ARCH-50 §B/F-F3; every deletion re-verified by grep before removal). **Config fields deleted (~30):**
       the whole `AssetConfig` download/cache block (11); `DateTimeHandlerConfig` + `GreetingsHandlerConfig`

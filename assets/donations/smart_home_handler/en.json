@@ -958,6 +958,64 @@
           "description": "Room"
         }
       ]
+    },
+    {
+      "method_name": "_handle_hvac_vane",
+      "intent_suffix": "hvac_vane",
+      "description": "hvac louver (vertical: position, auto, swing)",
+      "phrases": [
+        "louver to position",
+        "louver position",
+        "louver to auto",
+        "louver to swing",
+        "swing the louver",
+        "vane to position",
+        "vane to auto",
+        "louver"
+      ],
+      "lemmas": [],
+      "examples": [],
+      "parameters": [
+        {
+          "name": "value",
+          "description": "Louver position (per the device catalog: position 1–5, auto, swing)"
+        },
+        {
+          "name": "room",
+          "description": "Room"
+        }
+      ]
+    },
+    {
+      "method_name": "_handle_hvac_widevane",
+      "intent_suffix": "hvac_widevane",
+      "description": "hvac louver, horizontal (direction: left, right, center, swing, split)",
+      "phrases": [
+        "point the louver",
+        "point the louver left",
+        "point the louver right",
+        "louver to the left",
+        "louver to the right",
+        "louver to the center",
+        "louver to center",
+        "louver to far left",
+        "louver to far right",
+        "louver to split",
+        "louver sideways",
+        "swing the louver sideways"
+      ],
+      "lemmas": [],
+      "examples": [],
+      "parameters": [
+        {
+          "name": "value",
+          "description": "Louver direction (per the device catalog: left, right, center, far left/right, swing, split)"
+        },
+        {
+          "name": "room",
+          "description": "Room"
+        }
+      ]
     }
   ]
 }

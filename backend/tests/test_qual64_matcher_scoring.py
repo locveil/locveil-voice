@@ -43,6 +43,20 @@ CASES = [
     ("кондиционер на охлаждение", "smart_home.hvac_mode"),
     ("переведи кондиционер в режим осушения", "smart_home.hvac_mode"),
     ("вентилятор на скорость 2", "smart_home.hvac_fan"),
+    # QUAL-82: the louvers — two shapes on one noun («заслонка»), the positional/vertical axis vs
+    # the directional/horizontal one; the shared `swing` value is routed by the longer phrase
+    ("заслонка в положение три", "smart_home.hvac_vane"),
+    ("поставь заслонку в положение два", "smart_home.hvac_vane"),
+    ("заслонка на авто", "smart_home.hvac_vane"),
+    ("качай заслонку", "smart_home.hvac_vane"),
+    ("заслонка", "smart_home.hvac_vane"),
+    ("направь заслонку влево", "smart_home.hvac_widevane"),
+    ("заслонка в центр", "smart_home.hvac_widevane"),
+    ("заслонку крайне вправо", "smart_home.hvac_widevane"),
+    ("качай заслонку по горизонтали", "smart_home.hvac_widevane"),
+    # ... and the noun non-collision: «жалюзи» stays with the cover group (the cabinet rollers)
+    ("подними жалюзи", "smart_home.cover_open"),
+    ("закрой жалюзи", "smart_home.cover_close"),
     # BUG-26: authored boosts cancelled the specificity edge EXACTLY (1.4256 == 1.4256) and the
     # tie fell to donation load order — system.about lost its own literal phrase to the
     # two-token «расскажи о» prefix. Tie-break = matched-pattern token count, never load order.
@@ -80,3 +94,43 @@ async def test_donation_boost_is_consulted(provider):
     assert provider.intent_boosts.get("smart_home.scenario_stop") == pytest.approx(1.3)
     assert provider._pattern_score("smart_home.scenario_stop", 1.2, 2) > \
            provider._pattern_score("smart_home.power_off", 1.2, 1)
+
+
+async def test_louver_donations_never_capture_jalousie(provider):
+    """QUAL-82 non-collision: whatever «поверни жалюзи» routes to, it is a COVER intent — the
+    louver donations own «заслонка» only and must never pull a «жалюзи» sentence."""
+    ctx = UnifiedConversationContext(session_id="s", language="ru")
+    for text in ("поверни жалюзи", "подними жалюзи", "опусти жалюзи"):
+        intent = await provider.recognize(text, ctx)
+        assert intent is not None, text
+        assert intent.name.startswith("smart_home.cover_"), f"{text!r} -> {intent.name}"
+
+
+EXTRACTION_CASES = [
+    # (intent suffix, utterance as spoken, expected extracted params) — the number words are
+    # normalized upstream once for the cascade (BUG-1), so «три» reaches the regex as «3» and
+    # the handler meets the catalog label «положение 3» verbatim
+    ("hvac_vane", "заслонка в положение три", {"value": "положение 3"}),
+    ("hvac_vane", "заслонку в положение два в спальне", {"value": "положение 2", "room": "спальне"}),
+    ("hvac_vane", "заслонка на авто", {"value": "авто"}),
+    ("hvac_vane", "качай заслонку", {"value": "качай"}),
+    ("hvac_vane", "покачай заслонку", {"value": "качай"}),
+    ("hvac_widevane", "направь заслонку влево", {"value": "влево"}),
+    ("hvac_widevane", "заслонка в центр", {"value": "центр"}),          # «центр» is NOT a room
+    ("hvac_widevane", "заслонку крайне вправо в детской", {"value": "крайне вправо", "room": "детской"}),
+    ("hvac_widevane", "качай заслонку по горизонтали", {"value": "качай"}),
+]
+
+
+@pytest.mark.parametrize("suffix,text,expected", EXTRACTION_CASES)
+async def test_louver_extraction(provider, suffix, text, expected):
+    """QUAL-82: the T1 value/room patterns for both louver shapes, against the real donation."""
+    from locveil_voice.utils.text_processing import normalize_numbers_to_digits
+    loader = IntentAssetLoader(Path("assets"), AssetLoaderConfig())
+    await loader.load_all_assets(["smart_home"])
+    donation = loader.get_donation("smart_home")
+    assert donation is not None
+    method = next(m for m in donation.method_donations if m.intent_suffix == suffix)
+    params = await provider.extract_parameters(normalize_numbers_to_digits(text, "ru"),
+                                               f"smart_home.{suffix}", method.parameters)
+    assert params == expected, f"{text!r} -> {params}"

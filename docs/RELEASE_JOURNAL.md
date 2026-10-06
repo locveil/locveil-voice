@@ -21,6 +21,18 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-10-06 — QUAL-82: the louvers learn their name.** Filed in July as a linguistics problem
+  wearing a plumbing coat — the plumbing was one table row, the question was what to CALL the
+  thing, and whether the word belonged to the catalog or to the donation. The board answered both
+  (PROD-18 round 1): «заслонка», donation-side, two intents. The word was checked before it was
+  trusted — «жалюзи» is a cover alias, «шторка» collapses into «шторы» under the resolver's own
+  stem rule, «заслонка» touches nothing — and the test now pins that arithmetic so a future
+  catalog cannot quietly reopen it. The one trap worth recording: `swing` lives in BOTH louver
+  axes under the same Russian label, so the handler would have had to guess from the word; it
+  does not — the intent carries the axis, and the longer phrase («…по горизонтали») wins the
+  routing. One side effect mode/fan get for free: the several-ACs question now names rooms, not
+  device ids. The crossover fixtures were left alone on purpose (co-owned pin → TEST-24);
+  the EN axis stays what TEST-19 says it is. contracts: none. docs: guides/smart-home.
 - **2026-10-06 — BUILD-14: one door.** The repo had carried two intake paths since July — the
   keyword labeller and issue forms from before problem reporting existed, and the reports
   pipeline that replaced them — and no public issue was ever filed through the old one. The owner

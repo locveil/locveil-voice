@@ -89,3 +89,8 @@ slot_alarm_state: "on or off"
 confirm_hvac_mode: "AC mode — {value}"
 confirm_hvac_fan: "Fan — {value}"
 slot_hvac_value: "which mode"
+# QUAL-82: the AC louvers — vane (vertical / positional) and the horizontal axis
+confirm_hvac_vane: "Louver — {value}"
+confirm_hvac_widevane: "Horizontal louver — {value}"
+slot_hvac_vane: "which louver position"
+slot_hvac_widevane: "which way to point the louver"

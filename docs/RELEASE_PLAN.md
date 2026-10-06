@@ -369,50 +369,6 @@ _Apply to every remediation task below (from the 4 review docs + QUAL-25/26). So
       `locveil-commons/eval/eval_commons/providers/ws_audio_provider.py`, which documents the field. Nothing currently *consumes* the
       value, which is why this is deferrable rather than urgent. Interim alternative if the break is unwelcome:
       add `recognition_confidence` alongside — purely additive, but it leaves the misleading field in place.
-- [>] **QUAL-82** [MQTT][NLU] `[release]` — **FEATURE: voice control for the AC louvers (`vane`/`widevane`) —
-      gated on the VWB-33 language-ownership convention.** DRV-28 (consumed as QUAL-81) gave the three
-      MitsubishiHvac ACs `vane.set{value}` (auto, качание, положение 1–5) and `widevane.set{value}` (качание,
-      крайне влево…крайне вправо, разделено); voice deliberately exposes neither — the old `climate.set_vane`
-      never had a voice consumer either (`git log -S set_vane` over `irene/` is empty), so QUAL-81 preserved
-      exact feature parity and invented nothing.
-      **The plumbing is an afternoon by design** — QUAL-81's binding table means
-      `_CHOICE_BINDINGS["vane"] = (("vane", "set", "value"),)`, one donation method riding `_hvac_choice`
-      (label matching, clarification, delivery all generalize), templates, tests. **The linguistics is the
-      work**, and it is the actual scope:
-      (1) **the noun collision** — the natural Russian word for the louver, «жалюзи», is already a `cover`-group
-      surface (the cabinet rollers), so «поверни жалюзи» would fight the depth-doctrine group routing; the
-      capability needs a chosen spoken noun («шторка»? «обдув»?) and it must not poison cover routing;
-      (2) **two utterance shapes** — vane is positional («положение три»: a number into a choice param),
-      widevane is directional and verb-led («направь обдув влево», unlike mode's noun-led «кондиционер на
-      охлаждение») — new T1 patterns plus intent names the LLM tier can classify into;
-      (3) **ownership** — the catalog carries the value labels; whether the capability noun and verb patterns
-      live catalog-side or donation-side is exactly what the bridge's **VWB-33** design decides, and this
-      feature is its first real test case — building before the convention exists risks building what it then
-      forbids. Also honest-UX: mode/fan are daily speech; vane is a set-once remote-in-hand tweak — no demand
-      recorded yet. Ref: QUAL-81 (binding table), `docs/design/mqtt_integration.md` §14, bridge VWB-33.
-      **RECONCILED 2026-10-06 (intake; board PROD-18 round 1 DECIDED — re-tagged `[release]`, owner
-      ruling q8):** the three open questions above are closed by the owner on the board, not here.
-      (1) The spoken noun is **«заслонка»** (q4 — also the bridge's future field label; «жалюзи» stays
-      with the cover group, «шторка» is OUT: it stem-matches «шторы»/«штора» at 90 in the resolver,
-      «заслонка»/«заслонку»/«заслонки» score ≤ 42 against every cover/curtain surface — verified
-      against `_surface_score` at intake). (2) **Two intents**, `smart_home.hvac_vane` (positional:
-      «заслонка в положение три», «заслонка на авто», «качай заслонку») and `smart_home.hvac_widevane`
-      (directional: «направь заслонку влево», «заслонка в центр», «заслонка вправо»). (3) Ownership
-      (q6 of the decisions): both are **donation-side** — the capability noun and verb patterns live in
-      voice's donations exactly like «режим»/«вентилятор»; the catalog carries only the value labels.
-      **No catalog change, no re-pin:** the pinned `catalog-v1.10.0` already carries `vane`
-      auto/swing/pos_1..5 and `widevane` swing/far_left/left/center/right/far_right/split with ru/en/de
-      labels (checked in `contracts/pins/catalog/catalog.golden.json`); voice matches VALUE labels, so the
-      bridge's later field-label rename («жалюзи» → «заслонка», its next cut) changes nothing here.
-      Routing: via the device form like mode/fan (room → the single capable device, else clarify) — NOT a
-      group noun. **Build:** `_CHOICE_BINDINGS` + `vane`/`widevane` riding `_hvac_choice`; the two
-      intents in the smart_home donation (ru + en phrases/lemmas/examples, `contract.json` intent list +
-      T1 value/room patterns for both shapes — number words are normalized before extraction, so
-      «положение три» meets the label «положение 3»); ru/en templates; harness tests (both axes, the
-      several-ACs clarify, the `swing` value resolved by intent, the «жалюзи» non-collision + a resolver
-      stem regression); UX eval cases. **Out of scope (rider):** the vane/widevane crossover fixtures are
-      a CO-OWNED pin move — **TEST-24**, filed separately.
-
 - [ ] **QUAL-84** [QUAL] `[deferred]` — **Donation-driven classification heuristics** (ARCH-50 §G; owner:
       keep as named constants now, revisit later). `entity_resolver.py:290` device-domain list +
       `report_bundle.py:124` `smart_home` intent-prefix triage derive from donations (e.g. a

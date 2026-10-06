@@ -35,7 +35,9 @@
     "smart_home.cleaning_delay",
     "smart_home.water_alarm",
     "smart_home.hvac_mode",
-    "smart_home.hvac_fan"
+    "smart_home.hvac_fan",
+    "smart_home.hvac_vane",
+    "smart_home.hvac_widevane"
   ],
   "domain_patterns": [
     "smart_home"
@@ -809,6 +811,50 @@
           "type": "string",
           "required": false,
           "pattern": "(?:\\bв|\\bin)\\s+([а-яёa-z_]+)\\s*$",
+          "entity_type": "room"
+        }
+      ]
+    },
+    {
+      "method_name": "_handle_hvac_vane",
+      "intent_suffix": "hvac_vane",
+      "boost": 1.3,
+      "room_context": "none",
+      "parameters": [
+        {
+          "name": "value",
+          "type": "string",
+          "required": false,
+          "pattern": "(?:по)?((?:кача[а-яё]*|swing)(?=\\s+(?:the\\s+)?(?:заслонк|louver|vane))|(?:(?<=заслонк[аиу] в )|(?<=заслонк[аиу] на )|(?<=заслонк[аиу] )(?!в\\s|на\\s|по\\s)|(?<=louver to the )|(?<=louver to )(?!the\\s)|(?<=louvers to the )|(?<=louvers to )(?!the\\s)|(?<=vane to the )|(?<=vane to )(?!the\\s))[a-zа-яё0-9][a-zа-яё0-9 ]*?(?=(?:\\s+(?:в|in)\\s+(?:the\\s+)?[a-zа-яё]+)?\\s*$))",
+          "entity_type": "generic"
+        },
+        {
+          "name": "room",
+          "type": "string",
+          "required": false,
+          "pattern": "(?:\\bв|\\bin)\\s+(?!центр\\b|положение\\b|авто\\b|качание\\b|position\\b|auto\\b|center\\b)([а-яёa-z_]+)\\s*$",
+          "entity_type": "room"
+        }
+      ]
+    },
+    {
+      "method_name": "_handle_hvac_widevane",
+      "intent_suffix": "hvac_widevane",
+      "boost": 1.3,
+      "room_context": "none",
+      "parameters": [
+        {
+          "name": "value",
+          "type": "string",
+          "required": false,
+          "pattern": "(?:по)?((?:кача[а-яё]*|swing)(?=\\s+(?:the\\s+)?(?:заслонк|louver|vane))|(?:(?<=заслонк[аиу] в )|(?<=заслонк[аиу] на )|(?<=заслонк[аиу] )(?!в\\s|на\\s|по\\s)|(?<=louver to the )|(?<=louver to )(?!the\\s)|(?<=louvers to the )|(?<=louvers to )(?!the\\s)|(?<=vane to the )|(?<=vane to )(?!the\\s))[a-zа-яё0-9][a-zа-яё0-9 ]*?(?=(?:\\s+(?:в|in)\\s+(?:the\\s+)?[a-zа-яё]+)?\\s*$))",
+          "entity_type": "generic"
+        },
+        {
+          "name": "room",
+          "type": "string",
+          "required": false,
+          "pattern": "(?:\\bв|\\bin)\\s+(?!центр\\b|положение\\b|авто\\b|качание\\b|position\\b|auto\\b|center\\b)([а-яёa-z_]+)\\s*$",
           "entity_type": "room"
         }
       ]

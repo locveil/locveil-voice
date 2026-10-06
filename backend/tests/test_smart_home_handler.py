@@ -23,6 +23,27 @@ from locveil_voice.intents.models import Intent
 from locveil_voice.outputs.device_command import OUTPUT_TYPE, CapturingDeviceCommandOutput
 from locveil_voice.outputs.manager import OutputManager
 
+# QUAL-82: the louver value sets exactly as the pinned golden carries them (catalog-v1.10.0) —
+# `swing` sits in BOTH axes, which is the ambiguity the two intents resolve
+VANE_VALUES = [
+    {"wire": "0", "canonical": "auto", "labels": {"ru": "авто", "en": "auto"}},
+    {"wire": "1", "canonical": "swing", "labels": {"ru": "качание", "en": "swing"}},
+    {"wire": "2", "canonical": "pos_1", "labels": {"ru": "положение 1", "en": "position 1"}},
+    {"wire": "3", "canonical": "pos_2", "labels": {"ru": "положение 2", "en": "position 2"}},
+    {"wire": "4", "canonical": "pos_3", "labels": {"ru": "положение 3", "en": "position 3"}},
+    {"wire": "5", "canonical": "pos_4", "labels": {"ru": "положение 4", "en": "position 4"}},
+    {"wire": "6", "canonical": "pos_5", "labels": {"ru": "положение 5", "en": "position 5"}},
+]
+WIDEVANE_VALUES = [
+    {"wire": "0", "canonical": "swing", "labels": {"ru": "качание", "en": "swing"}},
+    {"wire": "1", "canonical": "far_left", "labels": {"ru": "крайне влево", "en": "far left"}},
+    {"wire": "2", "canonical": "left", "labels": {"ru": "влево", "en": "left"}},
+    {"wire": "3", "canonical": "center", "labels": {"ru": "центр", "en": "center"}},
+    {"wire": "4", "canonical": "right", "labels": {"ru": "вправо", "en": "right"}},
+    {"wire": "5", "canonical": "far_right", "labels": {"ru": "крайне вправо", "en": "far right"}},
+    {"wire": "6", "canonical": "split", "labels": {"ru": "разделено", "en": "split"}},
+]
+
 # a golden-shaped house slice: every capability kind the fixtures exercise
 CATALOG_PAYLOAD = {
     "version": "test-house-1",
@@ -110,7 +131,44 @@ CATALOG_PAYLOAD = {
                   {"name": "value", "type": "float", "required": True,
                    "min": 16.0, "max": 31.0, "unit": "°C"}]}],
               "fields": [{"name": "setpoint", "unit": "°C", "labels": {"ru": "уставка"}},
-                         {"name": "room_temperature", "unit": "°C"}]}]},
+                         {"name": "room_temperature", "unit": "°C"}]},
+             # QUAL-82: the louvers, value sets as pinned at catalog-v1.10.0 (both axes carry
+             # `swing`; the field label «жалюзи» is deliberately mirrored — voice never reads it)
+             {"name": "vane", "group": "vane",
+              "actions": [{"name": "set", "params": [
+                  {"name": "value", "type": "string", "required": True,
+                   "values": VANE_VALUES}]}],
+              "fields": [{"name": "vane", "labels": {"ru": "жалюзи", "en": "vane"}}]},
+             {"name": "widevane", "group": "widevane",
+              "actions": [{"name": "set", "params": [
+                  {"name": "value", "type": "string", "required": True,
+                   "values": WIDEVANE_VALUES}]}],
+              "fields": [{"name": "widevane",
+                          "labels": {"ru": "горизонтальные жалюзи", "en": "wide vane"}}]}]},
+        # QUAL-82: two louver-capable ACs in the room that ALSO owns the «жалюзи» rollers — the
+        # several-ACs clarify and the noun non-collision live here
+        {"id": "cabinet_hvac_window", "room": "cabinet", "names": {"ru": "Кондиционер у окна"},
+         "capabilities": [
+             {"name": "power", "group": "climate", "actions": [{"name": "on"}, {"name": "off"}]},
+             {"name": "vane", "group": "vane",
+              "actions": [{"name": "set", "params": [
+                  {"name": "value", "type": "string", "required": True,
+                   "values": VANE_VALUES}]}]},
+             {"name": "widevane", "group": "widevane",
+              "actions": [{"name": "set", "params": [
+                  {"name": "value", "type": "string", "required": True,
+                   "values": WIDEVANE_VALUES}]}]}]},
+        {"id": "cabinet_hvac_door", "room": "cabinet", "names": {"ru": "Кондиционер у двери"},
+         "capabilities": [
+             {"name": "power", "group": "climate", "actions": [{"name": "on"}, {"name": "off"}]},
+             {"name": "vane", "group": "vane",
+              "actions": [{"name": "set", "params": [
+                  {"name": "value", "type": "string", "required": True,
+                   "values": VANE_VALUES}]}]},
+             {"name": "widevane", "group": "widevane",
+              "actions": [{"name": "set", "params": [
+                  {"name": "value", "type": "string", "required": True,
+                   "values": WIDEVANE_VALUES}]}]}]},
         # an OLD-dialect AC (pre-DRV-28 addressing): proves the per-device fallback binding keeps
         # working while a live bridge still serves climate.set_mode/set_setpoint
         {"id": "children_split_legacy", "room": "children_room", "names": {"ru": "Сплит"},
@@ -770,3 +828,159 @@ async def test_legacy_setpoint_falls_back_to_climate(harness):
     assert captured[-1]["capability"] == "climate"
     assert captured[-1]["action"] == "set_setpoint"
     assert captured[-1]["params"] == {"temp": 22}
+
+
+# --- QUAL-82: the AC louvers — «заслонка» (board PROD-18 round 1) ---------------------------------
+#
+# Two donation-side intents ride the mode/fan binding table: `hvac_vane` is the vertical /
+# positional axis (auto, swing, pos_1..5), `hvac_widevane` the horizontal / directional one
+# (swing, far_left..far_right, split). The spoken noun is «заслонка» — chosen because «жалюзи»
+# is the cabinet rollers' alias (a cover-group surface) and «шторка» stem-matches «шторы».
+# Routing is the device form like mode/fan: room → the single capable device, else clarify.
+
+
+async def test_vane_position_routes_vane_set(harness):
+    """«заслонка в положение три» → vane.set{value: pos_3} — number words are normalized before
+    extraction, so the handler meets «положение 3» and matches the ru label exactly."""
+    result, captured = await harness.run("hvac_vane", "заслонка в положение три",
+                                         {"value": "положение 3"}, room="Спальня")
+    assert result.success, result.error
+    assert captured and captured[-1] == {
+        "kind": "actuate", "device_id": "bedroom_hvac",
+        "capability": "vane", "action": "set", "params": {"value": "pos_3"}}
+    assert "Заслонка" in result.text and "положение 3" in result.text
+
+
+async def test_vane_auto_routes_vane_set(harness):
+    result, captured = await harness.run("hvac_vane", "заслонка на авто",
+                                         {"value": "авто"}, room="Спальня")
+    assert result.success, result.error
+    assert captured[-1]["capability"] == "vane"
+    assert captured[-1]["params"] == {"value": "auto"}
+
+
+async def test_vane_swing_from_the_verb_form(harness):
+    """«качай заслонку» — the extraction regex captures the verb («качай»); the shared-stem option
+    match lands it on the label «качание» = `swing`."""
+    result, captured = await harness.run("hvac_vane", "качай заслонку",
+                                         {"value": "качай"}, room="Спальня")
+    assert result.success, result.error
+    assert captured[-1] == {
+        "kind": "actuate", "device_id": "bedroom_hvac",
+        "capability": "vane", "action": "set", "params": {"value": "swing"}}
+
+
+async def test_widevane_direction_routes_widevane_set(harness):
+    """«направь заслонку влево» → widevane.set{value: left}."""
+    result, captured = await harness.run("hvac_widevane", "направь заслонку влево",
+                                         {"value": "влево"}, room="Спальня")
+    assert result.success, result.error
+    assert captured and captured[-1] == {
+        "kind": "actuate", "device_id": "bedroom_hvac",
+        "capability": "widevane", "action": "set", "params": {"value": "left"}}
+    assert "по горизонтали" in result.text and "влево" in result.text
+
+
+async def test_widevane_center_and_far_positions(harness):
+    """«заслонка в центр» / «заслонку крайне вправо» — two-word labels match whole."""
+    result, captured = await harness.run("hvac_widevane", "заслонка в центр",
+                                         {"value": "центр"}, room="Спальня")
+    assert result.success, result.error
+    assert captured[-1]["params"] == {"value": "center"}
+    result, captured = await harness.run("hvac_widevane", "заслонку крайне вправо",
+                                         {"value": "крайне вправо"}, room="Спальня")
+    assert result.success, result.error
+    assert captured[-1]["params"] == {"value": "far_right"}
+
+
+async def test_swing_is_resolved_by_the_intent_not_the_word(harness):
+    """Both axes carry `swing` under the same ru label «качание» — the INTENT decides which
+    capability receives it; the word alone never could."""
+    _, captured = await harness.run("hvac_vane", "заслонка качание",
+                                    {"value": "качание"}, room="Спальня")
+    assert captured[-1]["capability"] == "vane" and captured[-1]["params"] == {"value": "swing"}
+    _, captured = await harness.run("hvac_widevane", "качай заслонку по горизонтали",
+                                    {"value": "качай"}, room="Спальня")
+    assert captured[-1]["capability"] == "widevane" and captured[-1]["params"] == {"value": "swing"}
+
+
+async def test_vane_unknown_value_clarifies_with_the_catalog_options(harness):
+    """A value the device does not carry («заслонка вверх») reads the options back and sends
+    nothing — the catalog `values` table is the only vocabulary at match time."""
+    result, captured = await harness.run("hvac_vane", "заслонка вверх",
+                                         {"value": "вверх"}, room="Спальня")
+    assert not captured
+    assert result.metadata.get("clarification_reason") == "unknown_option"
+    assert "положение 1" in result.text
+
+
+async def test_vane_missing_value_asks_the_louver_slot(harness):
+    """Bare «заслонка» asks for the position in louver words, not the mode slot's."""
+    result, captured = await harness.run("hvac_vane", "заслонка", {}, room="Спальня")
+    assert not captured
+    assert result.metadata.get("clarification")
+    assert "заслонку" in result.text and "режим" not in result.text
+
+
+async def test_vane_clarifies_when_the_room_has_several_acs(harness):
+    """Two louver-capable ACs in the cabinet → one-shot clarification naming both; the rollers
+    (cover group, alias «жалюзи») are never candidates — vane is not a cover capability."""
+    result, captured = await harness.run("hvac_vane", "заслонка в положение 2",
+                                         {"value": "положение 2"}, room="Кабинет")
+    assert not captured
+    assert result.metadata.get("clarification_reason") == "ambiguous_device"
+    assert sorted(result.metadata["candidates"]) == ["cabinet_hvac_door", "cabinet_hvac_window"]
+    assert "Кондиционер у окна" in result.text and "Кондиционер у двери" in result.text
+    assert "ролл" not in result.text
+
+
+async def test_vane_house_wide_clarify_is_room_led_for_same_named_acs(harness):
+    """No room at all → every louver-capable AC is a candidate; the candidates carry their room
+    so the BUG-39 labelling can tell same-named ACs apart by room instead of device id."""
+    result, captured = await harness.run("hvac_widevane", "направь заслонку вправо",
+                                         {"value": "вправо"})
+    assert not captured
+    assert result.metadata.get("clarification_reason") == "ambiguous_device"
+    assert set(result.metadata["candidates"]) == {"bedroom_hvac", "cabinet_hvac_window",
+                                                  "cabinet_hvac_door"}
+    assert "_hvac" not in result.text, "device ids must never be spoken"
+
+
+async def test_vane_in_a_room_without_louvers_says_so(harness):
+    """The legacy split in the children's room has no vane — honest miss, nothing sent."""
+    result, captured = await harness.run("hvac_vane", "заслонка на авто",
+                                         {"value": "авто"}, room="Детская")
+    assert not captured
+    assert not result.success and result.error == "no vane-set device"
+
+
+async def test_jalousie_still_routes_to_the_cover_group_beside_louvered_acs(harness):
+    """The cabinet now holds louver-capable ACs AND the «жалюзи» rollers: «поверни жалюзи» keeps
+    the depth-doctrine room-group cover routing — the louver intents own «заслонка», not «жалюзи»."""
+    result, captured = await harness.run("cover_open", "поверни жалюзи",
+                                         {"group_noun": "cover"}, room="Кабинет")
+    assert captured == [{"kind": "room-group", "room_id": "cabinet",
+                         "group": "cover", "action": "open", "scope": "auto"}]
+    assert result.success
+
+
+async def test_zaslonka_matches_no_cover_or_curtain_surface(harness):
+    """The resolver stem rule, pinned: «заслонка» (and its cases) scores below the fuzzy floor
+    against EVERY cover/curtain surface in the house, so a louver utterance can never resolve to a
+    roller or curtain; «шторка» — the rejected candidate — stem-matches «шторы» at 90, which is
+    exactly why it was ruled out (board PROD-18 q4)."""
+    from locveil_voice.core.entity_resolver import _MORPH_FUZZ_THRESHOLD, _norm, _surface_score
+    catalog = harness.catalog_service.catalog()
+    assert catalog is not None
+    cover_devices = [d for d in catalog.devices if d.capability("cover") is not None]
+    assert cover_devices, "the house slice must carry cover devices for this to mean anything"
+    for word in ("заслонка", "заслонку", "заслонки", "заслонке"):
+        for device in cover_devices:
+            score = _surface_score(_norm(word), device.surfaces("ru"))
+            assert score < _MORPH_FUZZ_THRESHOLD, f"{word!r} would match {device.id} ({score})"
+    curtains = next(d for d in cover_devices if "шторы" in d.surfaces("ru"))
+    assert _surface_score(_norm("шторка"), curtains.surfaces("ru")) >= _MORPH_FUZZ_THRESHOLD
+    # and the last-resort utterance scan (QUAL-35 F94) spots no device in a louver sentence
+    context = UnifiedConversationContext(session_id="s", room_name="Гостиная", language="ru")
+    for text in ("направь заслонку влево", "заслонка в положение 3", "качай заслонку"):
+        assert await harness.resolver.device_resolver.scan_utterance(text, context) is None, text

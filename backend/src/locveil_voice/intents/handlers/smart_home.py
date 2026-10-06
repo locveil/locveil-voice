@@ -381,9 +381,16 @@ class SmartHomeIntentHandler(IntentHandler):
     # and catalog-driven — new dialect first, old as fallback — so the handler is correct against
     # EITHER live catalog and the bridge/voice redeploy order cannot matter.
     _SETPOINT_BINDINGS = (("temperature", "set", "value"), ("climate", "set_setpoint", "temp"))
+    # QUAL-82 (board PROD-18 round 1): the louvers ride the same table. `vane` is the vertical /
+    # positional axis (auto, swing, pos_1..5), `widevane` the horizontal / directional one (swing,
+    # far_left..far_right, split) — both DRV-28-only, there was never a voice consumer of the old
+    # `climate.set_vane`, so no legacy fallback is invented. The spoken noun («заслонка») and the
+    # verb patterns live in the donation; the catalog carries only the value labels.
     _CHOICE_BINDINGS = {
         "mode": (("mode", "set", "value"), ("climate", "set_mode", "mode")),
         "fan": (("fan", "set", "value"), ("climate", "set_fan", "fan")),
+        "vane": (("vane", "set", "value"),),
+        "widevane": (("widevane", "set", "value"),),
     }
 
     @staticmethod
@@ -1195,19 +1202,21 @@ class SmartHomeIntentHandler(IntentHandler):
     # --- Slice 2a: HVAC mode/fan (VWB-24 typed values) ---------------------------------------------
 
     async def _hvac_choice(self, intent: Intent, context: UnifiedConversationContext, *,
-                           kind: str, ok_key: str) -> IntentResult:
+                           kind: str, ok_key: str, slot_key: str = "hvac_value") -> IntentResult:
         """«кондиционер на охлаждение» — match the spoken value against the device's OWN
         typed triplets (VWB-24: canonical + ru labels), device picked binding-aware. `kind` is
-        "mode" or "fan"; per DRV-28 the ACs carry `mode.set{value}` / `fan.set{value}` (the old
-        `climate.set_mode/set_fan` addressing is kept as a per-device fallback), and the floors'
-        plain `climate` never carried either — they must not clarify into this."""
+        "mode", "fan", "vane" or "widevane"; per DRV-28 the ACs carry `<kind>.set{value}` (the
+        old `climate.set_mode/set_fan` addressing is kept as a per-device fallback), and the
+        floors' plain `climate` never carried any of them — they must not clarify into this.
+        The louvers (QUAL-82) share one spoken noun across two intents, so a value both axes
+        carry («качание» = `swing`) is disambiguated by the INTENT, never by the word."""
         language = self._lang(context)
         catalog = self._catalog()
         if catalog is None:
             return self._no_catalog_result(language)
         spoken = self.get_param(intent, "value", None)
         if not spoken:
-            return await self._ask_slot(intent, context, "hvac_value")
+            return await self._ask_slot(intent, context, slot_key)
         room_id, room_error = self._requested_room(intent, context, catalog)
         if room_error is not None:
             return room_error
@@ -1218,9 +1227,11 @@ class SmartHomeIntentHandler(IntentHandler):
             return IntentResult(text=self._get_template("err_nothing_capable", language),
                                 should_speak=True, success=False, error=f"no {kind}-set device")
         if len(capable) > 1:
+            # the room travels with each candidate so same-named ACs are told apart by room
+            # (BUG-39's room-led question), not by device id
             return self._ambiguous_result(
                 intent, context,
-                [{"device_id": d.id, "name": self._device_name(d, language)}
+                [{"device_id": d.id, "room": d.room, "name": self._device_name(d, language)}
                  for d, _ in capable],
                 "target")
         device, (cap_name, action_name, param_name) = capable[0]
@@ -1258,3 +1269,15 @@ class SmartHomeIntentHandler(IntentHandler):
     async def _handle_hvac_fan(self, intent, context):
         return await self._hvac_choice(intent, context, kind="fan",
                                        ok_key="confirm_hvac_fan")
+
+    # --- QUAL-82: the AC louvers («заслонка») -------------------------------------------------------
+
+    async def _handle_hvac_vane(self, intent, context):
+        """«заслонка в положение три», «заслонка на авто», «качай заслонку» → vane.set{value}."""
+        return await self._hvac_choice(intent, context, kind="vane",
+                                       ok_key="confirm_hvac_vane", slot_key="hvac_vane")
+
+    async def _handle_hvac_widevane(self, intent, context):
+        """«направь заслонку влево», «заслонка в центр», «заслонка вправо» → widevane.set{value}."""
+        return await self._hvac_choice(intent, context, kind="widevane",
+                                       ok_key="confirm_hvac_widevane", slot_key="hvac_widevane")

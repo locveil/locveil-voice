@@ -93,3 +93,8 @@ slot_alarm_state: "включить или выключить"
 confirm_hvac_mode: "Кондиционер — режим {value}"
 confirm_hvac_fan: "Вентилятор — {value}"
 slot_hvac_value: "какой режим поставить"
+# QUAL-82: the AC louvers — «заслонка» (vertical / positional) and the horizontal axis
+confirm_hvac_vane: "Заслонка — {value}"
+confirm_hvac_widevane: "Заслонка по горизонтали — {value}"
+slot_hvac_vane: "в какое положение поставить заслонку"
+slot_hvac_widevane: "куда направить заслонку"
