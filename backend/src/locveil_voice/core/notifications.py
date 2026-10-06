@@ -302,6 +302,44 @@ class NotificationService:
         )
         return await self.send_notification(notification)
 
+    async def send_action_outcome(
+        self,
+        session_id: Optional[str],
+        domain: str,
+        action_name: str,
+        message: str,
+        source: Optional[str] = None,
+        physical_id: Optional[str] = None,
+        room_name: Optional[str] = None,
+        language: Optional[str] = None,
+        redeliver: bool = True,
+    ) -> bool:
+        """Announce the outcome a running durable action rendered ITSELF (ARCH-69 — the
+        scenario job follower: «Включила «Кино»» / «…, но не ответили: процессор»).
+
+        `message` is final, in the request language. Like `send_acknowledgement`, this has
+        NO preference gate: the user asked for something, and the answer is never below a
+        threshold (the 30 s `long_running_threshold` of
+        `send_action_completion_notification` would swallow a warm switch). Routed by the
+        request's identity exactly like a deferred completion, with `redeliver` so an offline
+        satellite hears it at its next registration (ARCH-28 D-6)."""
+        notification = NotificationMessage(
+            type=NotificationType.ACTION_COMPLETION,
+            priority=NotificationPriority.NORMAL,
+            title="Action Outcome",
+            message=message,
+            details={"domain": domain, "action_name": action_name},
+            delivery_methods=[DeliveryMethod.TTS, DeliveryMethod.LOG],
+            session_id=session_id,
+            domain=domain,
+            source=source,
+            physical_id=physical_id,
+            room_name=room_name,
+            language=language,
+            redeliver=redeliver,
+        )
+        return await self.send_notification(notification)
+
     async def send_action_failure_notification(
         self,
         session_id: str,

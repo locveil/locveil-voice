@@ -9,6 +9,102 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
 ---
 
 ### Architecture & Refactor (ARCH)
+- [x] **ARCH-69** [MQTT][UX][DURABLE] `[release]` — **DONE 2026-10-06 (board PROD-18 round 2, decisions
+      9–10; gated on BUILD-59, which re-pinned `catalog-v1.12.0`) — the durable scenario job + the
+      bridge SSE adapter, implemented per `docs/design/scenario_jobs_voice.md` §2–§7.** **Port +
+      adapter:** `ScenarioJobEventsPort` (`intents/ports.py`: `events(room)` → `JobEvent`s with a
+      synthetic STREAM_OPEN per (re)connect, `get_job`, `get_active_scenario`) over the pure
+      `intents/scenario_jobs.py` (`JobEvent`/`JobRecord`/`JobLookupMiss`, W = ×1.25 + 2 s, H = W +
+      30 s, the ceiling buckets, `remaining_seconds`); `outputs/bridge_events.py` `BridgeEventsClient`
+      — ONE persistent `/events/scenarios` subscription for the process lifetime (started by
+      `setup_bridge_output`, attached to `BridgeClient` so it stops with it, injected via
+      `IntentHandlerManager.set_scenario_job_events_port`), `sock_read=5 s` IS the dead-stream rule,
+      a 30-line hand-written SSE reader (no dependency), backoff 1-2-4-8-16-30 s ±25 % forever
+      (first loss WARNING, retries INFO), STREAM_OPEN to every subscriber on every connect,
+      per-room bounded queues (overflow → oldest dropped + a re-sync cue), the two GETs through
+      `BridgeClient._request_json` (404 `job_unknown` → `unknown`; transport → `unreachable`;
+      `/scenario/state?room=` 404 → `"none"`); both module docstrings say "one of the two modules
+      that know the bridge". **The 202 rides `DeliveryResult`** (`accepted` / `job_id` /
+      `max_duration_ms`); `DeviceCommand.wait` (`compare=False`, sent ONLY when `False`, absent
+      from `to_dict` — no fixture moved); `_to_delivery_result` branches: 202 → accepted, never
+      `delivered`, `state` = the room AT acceptance; 409 `job_in_progress` → `job_id`; a 200 on
+      `wait:false` = today's sync mapping. **The handler** (`_scenario`): `wait=False` for scenario
+      commands ONLY when the port is wired (device-level commands never carry `wait` — owner
+      rider), no mid-turn ack for a job request — the turn's reply IS the acceptance: ru
+      «Запускаю сценарий, около минуты» / «Выключаю сценарий, около полминуты» (buckets: ≤5 s
+      none · ≤20 «, секунд N» (digits, N up to a multiple of 5 — the text processor speaks
+      numbers) · ≤45 «, около полминуты» · ≤90 «, около минуты» · else «, пару минут»; en
+      likewise), `metadata.acknowledgement` + `metadata.scenario_job`; flag off = `text=""`,
+      `should_speak=False`, only the end is spoken; the room index `_jobs` (bridge room →
+      `RunningJob`) answers a second command or «stop» locally — «Ещё переключаю на «{label}»,
+      остановить можно будет секунд через {N}» / «Ещё выключаю сценарий, секунд через {N} можно
+      будет продолжить» (N = remaining ceiling, up to a multiple of 5, floor 5) — and a `409` from
+      another client's job is ADOPTED via one `get_job` (label from the catalog's value labels)
+      and followed; a 409 whose job vanished → the refusal with N from the catalog, no follower.
+      **The durable record:** `execute_fire_and_forget_with_context(_follow_scenario_job,
+      action_name="scenario_job:{bridge room}", durable=True, redeliver_on_reconnect=True,
+      on_missed="rearm", timeout=H + 5 s)` with JSON re-arm params `job_id / bridge_room / kind /
+      target / label / max_duration_ms / accepted_at / origin_id / origin_session /
+      origin_source / origin_room / origin_language` (named apart from the launch's keyword-only
+      identity params — the first cut collided on `room_id`); `rearm_durable_action` relaunches
+      with `resume=True` → the follower's FIRST act is the GET (`404` → `GET /scenario/state` →
+      «Сценарий «{label}» включён, мост перезапускался» / «Мост перезапускался, сценарий «{label}»
+      не включился» (stop variants «Сценарий выключен…» / «…не выключился»); bridge silent →
+      «Мост не отвечает — не знаю, включился ли сценарий «{label}»»); a resume > 1 h after
+      acceptance is silent. **The follower** (`_run_follower`, the §5 table): TERMINAL for the job
+      → «Включила «{label}»» / «Выключила сценарий», or `confirm_partial` «…, но не ответили:
+      {catalog names, deduplicated}»; PHASE/STEP = liveness; STREAM_OPEN or a foreign job's
+      terminal → GET (running → keep; terminal → speak; unknown → state; unreachable → keep); W →
+      GET; H → one last GET (running → «Сценарий «{label}» всё ещё переключается — проверьте»;
+      unreachable → `job_lost`). The next event is awaited through ONE future kept across
+      watchdog ticks (`asyncio.wait`, never `wait_for(stream.__anext__())` — a timed-out
+      `wait_for` cancels INTO the async generator and ends the subscription; found by the W/H
+      test). **Substrate (3 additive changes):** `on_missed="rearm"` on the F&F launch → persisted
+      in `DurableActionRecord.metadata`, `reconcile_durable_actions` hands such a record to its
+      handler regardless of the deadline (timer records keep today's gate — tested);
+      `NotificationService.send_action_outcome` (ACTION_COMPLETION, TTS+LOG, `redeliver`, NO
+      preference gate — the 30 s `long_running_threshold` would swallow a warm switch);
+      `IntentHandler.mark_announced` + `_on_action_done` skips the generic completion/failure
+      notice for an announced record. **Templates** ru + en (18 keys: `ack_scenario_job`,
+      `ack_scenario_off_job`, the four `ceiling_*`, `busy_scenario[_off]`, the six
+      `job_bridge_restarted_*` / `job_lost[_off]` / `job_stalled[_off]`, `scenario_generic_label`).
+      **Config: no new keys**, config-ui untouched, no ui-openapi cut. **Tests (+49,
+      `test_scenario_jobs.py`, the nine groups):** (1) `wait` on the wire only when `False`, 202 /
+      409 / 200-on-wait:false / foreign `job_id` ignored; (2) the SSE reader (housekeeping
+      dropped, split frames, trailing frame), event + record parsing (failures, the restore
+      notification dropped, shutdown → `none`), the backoff sequence with bounded jitter,
+      fan-out by room + STREAM_OPEN per connect, a late subscriber's cue, overflow re-sync, the
+      reconnect loop on a dead stream (backoff reset after a frame), both GETs' mappings; the
+      bucket/timer helpers; (3) launch → `wait:false`, sizing kept (71.375 s), the persisted
+      record + params + `on_missed`, six acceptance buckets, flag off silent, device-level
+      commands carry no `wait`, the sync 200 → ARCH-67's confirmation; (4) every state-machine
+      row: terminal succeeded (delivery identity + redeliver, record deleted, index cleared, no
+      GET), terminal failed with catalog names deduplicated, foreign terminal/steps ignored,
+      STREAM_OPEN → running then terminal, bridge restart × {target active, idle, silent} +
+      after a stop, unreachable keeps following, W then H → stalled, H unreachable → lost, W GET
+      finds the terminal; (5) the 409 both ways (local refusal with N from the record + no
+      second request; adoption of another client's job and its terminal spoken; a vanished job
+      refused without a follower); (6) «stop» mid-job refused, after the terminal a new job with
+      `none`'s ceiling, a running stop's own phrase; (7) restart: re-arm → GET → spoken, record
+      past its deadline still re-armed via `on_missed`, stale resume silent, timer records keep
+      the deadline gate, a record without a job refused; (8) the outcome reaches the origin
+      channel through the output manager past a refusing 30 s gate, is queued for an offline
+      satellite, and no generic completion follows an announced record. `test_bridge_output.py`
+      setup tests gain the events client (started, attached, injected, stopped with the output).
+      **Verified:** suite 2116 passed / 7 skipped (from the repo root as CI runs it), pyright 0
+      errors, import contracts 11 kept, no TYPE_CHECKING guards, build analyzer + config
+      validator + donation validator green; **cross-suite `make device-auto TIER=1` 53/53** against
+      the commons mock bridge (it ignores `wait` → the 200 sync mapping; its missing
+      `/events/scenarios` exercised the real reconnect backoff in the SUT log: 404 → ~1, ~2, ~4 s);
+      contract-guard 0 failures; `repin --check --fail-on any` exit 0. **The WB7 sitting is
+      pending** (owner; the bridge's §10 checklist voice lines: acknowledges at once / confirms
+      at the end (flag off: only the end); second command mid-switch → "still working" + a bridge
+      409; «stop» mid-switch refused, after the end a new job; voice restart mid-switch →
+      re-subscribes and confirms; bridge restart mid-switch → the state-based report + `GET
+      /scenario/jobs/<id>` → 404). Owner's ruling (intake): cut first, sitting after, a measured
+      breach → `catalog-v1.12.1`.
+      docs: guides/smart-home (the "Scenarios are followed, not waited for" paragraph — acceptance, completion, mid-job, restarts on either side), guides/howto-new-intent (the second durable handler; `send_action_outcome` + `mark_announced`; `on_missed="rearm"`)
+      contracts: catalog v1.12 "Jobs" surface FIRST CONSUMED (`wait:false` → 202, `job_in_progress` + `job_id`, `GET /scenario/jobs/{id}`, `/scenario/state?room=`, the `/events/scenarios` job events)
 ### Code Quality & Review (QUAL)
 - [x] **QUAL-29** [DFLOW] (P1) — **Donation format split (Q6; precedes declarative device-resolution). DONE (backend) —
       config-ui editor rebuild carved to UI-5 (user-approved Invariant #4 deferral 2026-06-03).** Split

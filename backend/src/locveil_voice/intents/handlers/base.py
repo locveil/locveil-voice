@@ -122,6 +122,7 @@ class IntentHandler(EntryPointMetadata, ABC):
         completion_message: Optional[str] = None,
         durable: bool = False,
         redeliver_on_reconnect: bool = False,
+        on_missed: Optional[str] = None,
         **kwargs
     ) -> Dict[str, Any]:
         """
@@ -158,6 +159,7 @@ class IntentHandler(EntryPointMetadata, ABC):
             completion_message=completion_message,
             durable=durable,
             redeliver_on_reconnect=redeliver_on_reconnect,
+            on_missed=on_missed,
             **kwargs
         )
         # ARCH-19 (D-5): trace EVERY fire-and-forget launch uniformly at this choke point — covers
@@ -686,10 +688,16 @@ class IntentHandler(EntryPointMetadata, ABC):
         completion_message: Optional[str] = None,
         durable: bool = False,
         redeliver_on_reconnect: bool = False,
+        on_missed: Optional[str] = None,
         **kwargs
     ) -> Dict[str, Any]:
         """
         Launch ``action_func`` as a background task and register it in the runtime action store.
+
+        ``on_missed="rearm"`` (ARCH-69): a durable record found PAST its deadline at startup is
+        still handed to :meth:`rearm_durable_action` (the handler decides what the late promise
+        means — e.g. read the scenario job's record and speak the truth) instead of being
+        announced with the generic missed-deadline texts. Absent = today's timer behaviour.
 
         The identity params (``physical_id``/``owner_session_id``/``room_id``) are **keyword-only**,
         so they can never collide with the action coroutine's own kwargs — ``**kwargs`` flows
@@ -761,7 +769,8 @@ class IntentHandler(EntryPointMetadata, ABC):
                     redeliver=redeliver_on_reconnect,
                     rearm={"method": getattr(action_func, "__name__", ""),
                            "params": rearm_params},
-                    metadata={"language": language, "completion_message": completion_message},
+                    metadata={"language": language, "completion_message": completion_message,
+                              **({"on_missed": on_missed} if on_missed else {})},
                 ))
 
             if self._metrics_collector:
@@ -854,10 +863,23 @@ class IntentHandler(EntryPointMetadata, ABC):
         # so announcing "failed: cancelled" for it would be a lie.
         if record.durable and teardown_cancel:
             return
+        # ARCH-69: an action that rendered and announced its own outcome (the scenario job
+        # follower — the text is not known at launch) marks the record; no generic notice.
+        if (record.metadata or {}).get("announced"):
+            return
         if self._notification_service and record.session_id:
             t = asyncio.create_task(self._notify_action_result(record, success, error))
             self._completion_tasks.add(t)
             t.add_done_callback(self._completion_tasks.discard)
+
+    def mark_announced(self, physical_id: str, action_name: str) -> None:
+        """ARCH-69: record that the running action spoke its own outcome, so the completion
+        chokepoint sends no generic completion/failure notice for it."""
+        record = get_client_registry().get_action(physical_id, action_name)
+        if record is not None:
+            if record.metadata is None:
+                record.metadata = {}
+            record.metadata["announced"] = True
 
     async def _notify_action_result(self, record: 'ActionRecord', success: bool, error: Optional[str]) -> None:
         """Send the completion/failure notification, routed by the action's owner."""

@@ -96,7 +96,7 @@ Living findings behind the tasks (`read-at-start-record-at-completion`). `[x]` =
 | `../locveil-commons/docs/design/productization.md` `[x]` (AGREED 2026-07-08, joint session, both repos; MIGRATED to the commons 2026-07-11 per D-2 — local file is a pointer; name executed as **Locveil**) | BUILD-20 — the productization umbrella (written as "Domovoy"): product name (D-1), ONE commons repo = eval-commons renamed `locveil-commons` with three ownership regimes (D-2/D-3), PROD-board cross-repo idea discipline + board-as-outbox (D-4/D-5), `locveil-satellite` third product repo + ESP32 estate relocation (D-6/D-7), rule-of-two extractions loader+logging (D-8), two-apps-shared-kit config UI (D-9), ledgers kept over trackers (D-10), semver components + calver suite manifests + contract tagging/scripted re-pin (D-11), normative ops spec + CLAUDE.md invariant blocks/drift guard + landing page + report-policy spec (D-12), drift inventory (§2), commons seed backlog (§3) | BUILD-20 ✓ → BUILD-21/22/23/24, ARCH-42/43, BUILD-18 (narrowed); bridge intake VWB-29, CORE-7, OPS-14/15/16 |
 | `docs/design/core_py_loader_extraction.md` `[x]` (AGREED 2026-07-16, interactive owner session, 2 rounds) | ARCH-42 — extract the entry-point discovery engine to commons `packages/core-py` (module `entry_point_loader`, class-only — consumers own their singleton): faithful surface + `base_class=` validation (bridge's DevicePort check natively), single-EP `get_provider_class`, names-without-import `list_registered`; consumption = vendored module at `core-py-vN` tags with STRICT pin (contracts/pins/core-py + byte-identity test — first vendored RUNTIME code); voice migration = full 20-file sweep to a new `utils/entry_points.py` singleton; §5 = the bridge CORE-7 adoption contract; metadata quartet/namespaces/aux stay put | ARCH-42 ✓ → ARCH-58; commons skeleton via PROD-8; bridge CORE-7 |
 | `docs/design/ws_machine_core.md` `[x]` (AGREED 2026-10-05 — satellite-side review: approve-with-changes, folded in; IMPLEMENTED same day, §11; HK-13 decision 9 / PROD-28) | ARCH-60 — the WS protocol's hand-written machine core, subordinate to `websocket-api.md`: one `frames.golden.json` (20 frame definitions with key lists + JSON types; valid / invalid / unknown-type cases, closed violation vocabulary, c2s invalid cases carry the server's proven `expect`), nine one-scenario JSONL transcripts (`kind`/`conn`/`channel`/`direction`, binary runs as markers, `repeat` lines, order normative per connection AND direction, rules T-1..T-8), `ws-protocol.schema.json` (2020-12, open `additionalProperties`); owner test = a server-side frame tap over six WS suites (real frames conform strictly, every frame + transcript witnessed with real values, handshake cases replayed, schema ≡ fixtures, document ≡ core); receiver obligations per verdict (valid MUST accept · unknown MUST ignore in every state · invalid MAY reject, never fault); three-level versioning sharpened (a corrected case is a minor; names never renamed inside a major; `core_format`); document findings F-1..F-10 + code findings C-1..C-4; review record §10; execution split §9 | ARCH-60 ✓ → BUG-46 ✓, TEST-23 ✓, ARCH-62 ✓, ARCH-63 ✓, ARCH-64 ✓, ARCH-61 ✓ (cut `ws-protocol-v1.1.0`); ARCH-65 (the CLAUDE.md amendment) |
-| `docs/design/scenario_jobs_voice.md` `[x]` (DESIGN 2026-10-06; board PROD-18 round 2, decisions 9–10; written against the bridge's `scenario_jobs.md` §5/§6/§8/§10) | ARCH-68 — the voice side of tier 3: `ScenarioJobEventsPort` + `BridgeEventsClient` (one persistent `/events/scenarios` stream, 5 s dead-stream, 1-2-4-8-16-30 s backoff, STREAM_OPEN on every connect), the `202` riding `DeliveryResult` (`accepted`/`job_id`/`max_duration_ms`; `start_job()` set aside), `wait: false` on scenario commands only, the one-per-room durable record (`scenario_job:{room}`, re-arm → GET, `404` → `GET /scenario/state`, `on_missed: rearm`), the speech tables (acceptance with the ceiling bucket, terminal + `failures[]`, mid-job refusals + adoption via the `409`'s `job_id`, bridge-restart texts), the follower state machine (W = ×1.25 + 2 s, H = W + 30 s), no new config, tests 1–9 + the WB7 voice lines, sequencing cut → re-pin → implementation → sitting | ARCH-68 ✓ → BUILD-59, ARCH-69 |
+| `docs/design/scenario_jobs_voice.md` `[x]` (DESIGN 2026-10-06; board PROD-18 round 2, decisions 9–10; written against the bridge's `scenario_jobs.md` §5/§6/§8/§10) | ARCH-68 — the voice side of tier 3: `ScenarioJobEventsPort` + `BridgeEventsClient` (one persistent `/events/scenarios` stream, 5 s dead-stream, 1-2-4-8-16-30 s backoff, STREAM_OPEN on every connect), the `202` riding `DeliveryResult` (`accepted`/`job_id`/`max_duration_ms`; `start_job()` set aside), `wait: false` on scenario commands only, the one-per-room durable record (`scenario_job:{room}`, re-arm → GET, `404` → `GET /scenario/state`, `on_missed: rearm`), the speech tables (acceptance with the ceiling bucket, terminal + `failures[]`, mid-job refusals + adoption via the `409`'s `job_id`, bridge-restart texts), the follower state machine (W = ×1.25 + 2 s, H = W + 30 s), no new config, tests 1–9 + the WB7 voice lines, sequencing cut → re-pin → implementation → sitting; IMPLEMENTED 2026-10-06 (ARCH-69), the WB7 sitting pending | ARCH-68 ✓ → BUILD-59 ✓, ARCH-69 ✓ (sitting pending) |
 | `config-ui/docs/donation_editor_ux.md` | human-friendly donations editor design | UI-1/2/3 |
 | `docs/review/test7_triage.md` (2026-06-15) | TEST-7 Phase-B worklist — 82-failure triage (delete/rewrite/fix) + risk-ranked coverage tiers + fix-code suspects | TEST-7 ✓ |
 | `docs/review/api_result_contract_review.md` `[x]` (2026-06-27) | API execution-result response-contract consistency — 5 findings (reply field name, 3-way intent split, divergent metadata under one model, confidence placement, live `None` internal misread); root cause = no shared serializer | QUAL-54 ✓, QUAL-55 |
@@ -308,60 +308,6 @@ See `docs/review/phase1_architecture_map.md` §5.
       component has wired the context manager (every profile: `monitoring = true`), so a
       timer shorter than 30 s may never ring. The scenario-job design (ARCH-68 §4) routes
       its terminal speech around that gate on purpose; the timer's exposure is this task's.
-- [ ] **ARCH-69** [MQTT][UX][DURABLE] `[release]` — **The durable scenario job + the bridge SSE adapter
-      (PROD-18 tier 3, voice side) — implementation of `docs/design/scenario_jobs_voice.md`**
-      (ARCH-68 design, 2026-10-06; board PROD-18 round 2, decisions 9–10; **gated on BUILD-59**
-      so the pinned openapi carries the job schemas the conformance test and the handler are
-      written against). Scope = the design's §2–§7, in order: (a) `intents/scenario_jobs.py`
-      (pure boundary types) + `ScenarioJobEventsPort` in `intents/ports.py`; (b)
-      `outputs/bridge_events.py` — `BridgeEventsClient`: one persistent `/events/scenarios`
-      stream (`sock_read=5 s` = the dead-stream rule), hand-written SSE reader, backoff
-      1-2-4-8-16-30 s ±25 %, STREAM_OPEN on every connect, per-room bounded queues, the two GETs
-      through `BridgeClient._request_json`; wired in `setup_bridge_output` beside `BridgeClient`
-      and injected through `set_device_command_services(…, events_port=…)`; both module
-      docstrings = "one of the two modules that know the bridge"; (c) `DeliveryResult` gains
-      `accepted` / `job_id` / `max_duration_ms`, `DeviceCommand` gains `wait` (sent only when
-      `False`; `to_dict` unchanged — no fixture moves), `_to_delivery_result` branches on status
-      (202 / 409 `job_in_progress` / 200-on-`wait:false` = today's sync mapping); (d) `_scenario`
-      sets `wait=False` for scenario commands ONLY, checks the room index (local «ещё переключаю»
-      answer, N from the record), launches `_follow_scenario_job` durable + redeliver with
-      `action_name = scenario_job:{bridge room}` and `metadata.on_missed = "rearm"`, adopts a
-      `409`'s `error.job_id` via one GET; the turn's reply = the acceptance with the ceiling bucket
-      (flag off = silent); (e) the follower's state machine (§5: W = ×1.25 + 2 s, H = W + 30 s;
-      done / failed / unknown / stalled / lost) and `rearm_durable_action` (resume → GET; `404` →
-      `GET /scenario/state?room=` → the actual state; > 1 h = silent); (f) substrate:
-      `reconcile_durable_actions` honours `on_missed: rearm` regardless of the deadline (timer
-      records unchanged), `NotificationService.send_action_outcome` (TTS+LOG, `redeliver`, no
-      preference gate), `_notify_action_result` skips an announced record; (g) templates ru + en:
-      `ack_scenario_job`, `ack_scenario_off_job`, `busy_scenario`, `busy_scenario_off`,
-      `job_bridge_restarted_ok` / `_failed`, `job_lost`, `job_stalled` (texts verbatim in the
-      design §4; `confirm_partial` reused for failures with catalog device names); (h) tests 1–9
-      of §7 (fake events port, the SSE reader, the 409 both ways, the restart paths incl.
-      `on_missed`, routing + redelivery), import contracts still 11 kept; (i) docs: the
-      guides/smart-home paragraph on scenario jobs (what is said at acceptance, at the end,
-      mid-job, after a restart on either side) + howto-new-intent's durable-actions section gains
-      the second durable handler as an example. No new config keys (§6) — no ui-openapi cut. Then
-      the WB7 sitting (§7 — the five voice lines of the bridge's §10 checklist + the measured
-      lines, journaled here; the table lands in the bridge's SCN-19 entry). **Reconcile at
-      intake:** the bridge's `scenario_jobs.md` §11 orders voice's implementation and the sitting
-      BEFORE the cut; this ledger orders the cut first (BUILD-59 gate) — the owner picks; if the
-      cut has not landed, this task may run against the design's quoted shapes with the
-      conformance assertions deferred to BUILD-59. ARCH-67's synchronous scenario path stays in
-      place for a bridge that answers `200` to `wait: false` (the commons mock bridge, a pre-1.12
-      bridge).
-      **Reconciled at intake (2026-10-06, after BUILD-59):** the sequencing question is settled by
-      the owner — **cut first, the sitting after; a measured breach of a published ceiling
-      becomes a `catalog-v1.12.1` follow-up**, it no longer blocks anything. The bridge landed
-      the API exactly per `scenario_jobs.md` (68b8b8f) with four shape notes folded in here: the
-      `202` body is the full `CanonicalActionResponse` envelope (`executed_on: null`,
-      `skipped_reason: null` present — ignored keys); a step's `target` is whatever the planner
-      plans (a boolean `false` for the Auralic's power-off, not a string — voice never reads it);
-      REST 409/404 bodies are `{detail: {...}}`-wrapped (the adapter unwraps `detail` for
-      `job_unknown` exactly as `_to_delivery_result` does for BUG-40); the job id looks like
-      `j-living_room-20261006T162958Z-c2a1` (opaque, never parsed). The commons mock bridge
-      ignores `wait` → the `200`-on-`wait:false` sync mapping keeps the cross-suite green
-      (`make device-auto TIER=1` is part of this task's verification).
-
 ### Code Quality & Review (QUAL)
 
 #### Cross-cutting systemic remediation — principles (the Gate 2 lens)

@@ -18,9 +18,10 @@ surfacing as a latent `AttributeError`.
 
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, AsyncIterator, Dict, Optional, Tuple
 
 from .device_catalog import DeviceCatalog
+from .scenario_jobs import JobEvent, JobLookup
 
 
 class ComponentControlPort(ABC):
@@ -159,6 +160,37 @@ class DeviceCommandDeliveryPort(ABC):
 
     @abstractmethod
     async def deliver_device_command(self, command: Any, context: Any) -> Any: ...
+
+
+class ScenarioJobEventsPort(ABC):
+    """Driven port for the bridge's scenario-job events (ARCH-69; the tier-3 job API,
+    `docs/design/scenario_jobs_voice.md` §2.1).
+
+    The smart-home handler's durable job follower depends on this to follow one room's job
+    to its terminal event and, whenever the stream cannot be trusted, to read the record.
+    The adapter (`outputs/bridge_events.py`) owns the transport: one persistent SSE
+    subscription, reconnect + backoff, the dead-stream rule; the domain owns the state
+    machine and what is said.
+    """
+
+    @abstractmethod
+    def events(self, room_id: str) -> AsyncIterator[JobEvent]:
+        """The room's job events as they arrive, plus a synthetic STREAM_OPEN on EVERY
+        (re)connect of the underlying stream — the follower's cue to GET the record (no
+        replay on reconnect). Never ends on its own; the consumer stops iterating."""
+        ...
+
+    @abstractmethod
+    async def get_job(self, job_id: str) -> JobLookup:
+        """`GET /scenario/jobs/{id}` → the record, or a miss (`unknown` after a bridge
+        restart, `unreachable` when the bridge did not answer)."""
+        ...
+
+    @abstractmethod
+    async def get_active_scenario(self, room_id: str) -> Optional[str]:
+        """`GET /scenario/state?room=` → the active scenario id, "none" when the room is
+        idle, None when the bridge did not answer."""
+        ...
 
 
 class ComponentControlRegistryPort(ABC):

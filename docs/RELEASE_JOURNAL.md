@@ -21,6 +21,25 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-10-06 — ARCH-69: the job is followed, and the answer comes home.** The design of
+  the afternoon became code: a scenario command now leaves with `wait: false`, the bridge's
+  ticket and ceiling come back on the same delivery result every command rides, and a
+  durable action named after the room — the name is the lock — follows the bridge's event
+  stream to the one terminal event and speaks the outcome to the device that asked. The
+  stream is one subscription for the life of the process, its five silent seconds are the
+  socket's own read timeout, and a dead stream reconnects on the agreed backoff; the mock
+  bridge, which has no such channel, obligingly demonstrated it in the eval log while the
+  cross-suite stayed green on the synchronous mapping. Two things the tests taught: a
+  timed-out `wait_for` on an async generator's next item cancels into the generator and
+  ends the subscription — the follower now holds one pending future across its watchdog
+  ticks — and a resumed follower must make its own first GET rather than wait for a cue the
+  port may never send. The substrate grew three small, additive seams: a record may ask to be
+  re-armed even when late, an action may announce its own outcome past the completion
+  threshold, and the generic notice stays quiet when it has. What the user hears is tabled
+  in the guide: the ceiling at acceptance, the fact at the end, the honest "still switching"
+  to a second command, and the room's real state when the bridge forgot the job. The WB7
+  sitting is the owner's next step. contracts: catalog v1.12 Jobs surface first consumed.
+  docs: guides/smart-home, guides/howto-new-intent.
 - **2026-10-06 — BUILD-59: the second re-pin of the day.** The bridge cut the job API as
   `catalog-v1.12.0` with the golden untouched — the hash the crossover fixtures bind to did
   not move, so this re-pin was the quiet kind: one command, both copies, the openapi and the

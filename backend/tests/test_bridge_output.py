@@ -22,6 +22,7 @@ from locveil_voice.intents.device_commands import (
 )
 from locveil_voice.intents.models import IntentResult
 from locveil_voice.outputs.manager import OutputManager
+from locveil_voice.outputs.bridge_events import BridgeEventsClient
 from locveil_voice.outputs.bridge import (
     BRIDGE_UNREACHABLE,
     BridgeClient,
@@ -250,11 +251,25 @@ async def test_fetch_catalog_parses_and_raises_on_http_error():
 
 # --- composition wiring (setup_bridge_output) ----------------------------------------------------
 
+class _HandlerManager:
+    """ARCH-69: records the scenario-job events port the composition injects."""
+
+    def __init__(self):
+        self.events_port = None
+
+    def set_scenario_job_events_port(self, port):
+        self.events_port = port
+
+
 def _core(enabled: bool):
     config = CoreConfig()
     config.outputs.bridge.enabled = enabled
+    handler_manager = _HandlerManager()
+    components = {"intent_system": SimpleNamespace(handler_manager=handler_manager)}
     return SimpleNamespace(config=config, output_manager=OutputManager(),
-                           catalog_service=CatalogService())
+                           catalog_service=CatalogService(),
+                           component_manager=SimpleNamespace(get_component=components.get),
+                           handler_manager=handler_manager)
 
 
 async def test_setup_disabled_registers_nothing():
@@ -278,6 +293,12 @@ async def test_setup_enabled_registers_designates_and_pulls(monkeypatch):
     assert len(targets) == 1 and targets[0].get_output_type() == "bridge"
     # the startup pull landed through the wired fetcher
     assert core.catalog_service.catalog().version == "91909b54bfb4b593"
+    # ARCH-69: the SSE half is started, attached to the output and injected into the handlers
+    events = core.handler_manager.events_port
+    assert isinstance(events, BridgeEventsClient) and events._task is not None
+    assert targets[0]._events is events
+    await targets[0].stop()
+    assert events._task is None
 
 
 async def test_setup_survives_bridge_down_at_startup(monkeypatch):

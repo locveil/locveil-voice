@@ -52,6 +52,13 @@ class DeliveryResult:
     # Rich request/response fields — populated only by the bridge actuation channel (D-6, ARCH-8)
     echoed_value: Any = None
     error_code: Optional[str] = None
+    # ARCH-69 (scenario jobs, contract v1.12): a `202` = the bridge ACCEPTED a job it will run
+    # after answering — `accepted=True`, never `delivered` (nothing may be spoken as done from
+    # it); `job_id` is set on the 202 AND on a `409 job_in_progress` (the job already running
+    # in the room, which the handler may adopt); `max_duration_ms` is the 202's ceiling.
+    accepted: bool = False
+    job_id: Optional[str] = None
+    max_duration_ms: Optional[int] = None
 
     @classmethod
     def ok(cls, output_name: str, modality: OutputModality, **extra: Any) -> "DeliveryResult":

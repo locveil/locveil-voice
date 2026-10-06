@@ -1,6 +1,8 @@
 """BridgeClient — the locveil-bridge REST adapter (ARCH-8 PR-2).
 
-The ONLY module that knows the bridge exists (`mqtt_integration.md` §4). Lives with the other
+One of the TWO modules that know the bridge exists (`mqtt_integration.md` §4): this one speaks
+its REST surface, `bridge_events.py` (ARCH-69) its scenario-job SSE channel; nothing else
+speaks to it. Lives with the other
 output adapters (all OutputPorts in one home — user decision 2026-07-05, superseding §13.1's
 `locveil_voice.providers.outputs` entry-point group); unlike its channel-sink neighbours it is
 config-gated (`[outputs.bridge]`), composition-registered on every profile, and
@@ -148,14 +150,22 @@ class BridgeClient(OutputPort):
         # timeout sized from the catalog (ARCH-67) overrides it per request.
         self._timeout = aiohttp.ClientTimeout(total=timeout_seconds)
         self._session: Optional[aiohttp.ClientSession] = None
+        # ARCH-69: the SSE half of the pair (`bridge_events.py`), attached by the composition so
+        # it stops with this output (the OutputManager stops outputs; the events client is not one)
+        self._events: Optional[Any] = None
 
     # --- lifecycle -------------------------------------------------------------------------------
+
+    def attach_events(self, events: Any) -> None:
+        self._events = events
 
     async def start(self) -> None:
         if self._session is None or self._session.closed:
             self._session = aiohttp.ClientSession(timeout=self._timeout)
 
     async def stop(self) -> None:
+        if self._events is not None:
+            await self._events.stop()
         if self._session is not None and not self._session.closed:
             await self._session.close()
         self._session = None
@@ -222,6 +232,20 @@ class BridgeClient(OutputPort):
         success = bool(payload.get("success"))
         error = payload.get("error") or {}
         error_code = error.get("code")
+        if status == 202:
+            # ARCH-69 (contract v1.12 "Jobs"): the bridge ACCEPTED a scenario job it runs after
+            # answering — `success: true` here means accepted, never done; the outcome is only
+            # ever said by the job's terminal event or `GET /scenario/jobs/{id}`. The `state`
+            # carries the room's scenario AT ACCEPTANCE plus the job's id and ceiling.
+            raw_state = payload.get("state")
+            state: Dict[str, Any] = raw_state if isinstance(raw_state, dict) else {}
+            ceiling = state.get("max_duration_ms")
+            return DeliveryResult(
+                output_name=OUTPUT_TYPE, modality=OutputModality.DEVICE_COMMAND,
+                delivered=False, accepted=True, echoed_value=state,
+                job_id=state.get("job_id"),
+                max_duration_ms=int(ceiling) if ceiling is not None else None,
+                detail=error.get("message"))
         if not success and error_code is None:
             # a non-2xx without the structured error body — still spoken as a failure
             error_code = "internal_error"
@@ -232,9 +256,13 @@ class BridgeClient(OutputPort):
         if error.get("field") or error.get("reason"):
             # param_invalid carries field+reason — the clarify path consumes them (§5b)
             detail = f"{detail or ''} [field={error.get('field')}, reason={error.get('reason')}]".strip()
+        # ARCH-69: a `409 job_in_progress` names the job already running in the room — the
+        # handler may adopt and follow it instead of blaming the bridge.
+        job_id = error.get("job_id") if error_code == "job_in_progress" else None
         return DeliveryResult(
             output_name=OUTPUT_TYPE, modality=OutputModality.DEVICE_COMMAND,
-            delivered=success, detail=detail, echoed_value=echoed, error_code=error_code)
+            delivered=success, detail=detail, echoed_value=echoed, error_code=error_code,
+            job_id=job_id if isinstance(job_id, str) else None)
 
     # --- catalog source (the CatalogService fetcher, §5a) -----------------------------------------
 

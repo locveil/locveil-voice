@@ -208,7 +208,15 @@ apology (up to an hour) or as expired after that. Two obligations come with the 
   non-serializable launch fails immediately, on purpose);
 - **override `rearm_durable_action(record)`**: recompute what remains and relaunch through the same launch
   call, reusing `record.action_name`. `TimerIntentHandler.rearm_durable_action` is the reference
-  implementation.
+  implementation; the smart-home handler's scenario-job follower is the second one — an action that
+  does not sleep but *watches* something (a job on the bridge) and reports when it ends.
+
+An action whose outcome is not known at launch — the scenario follower again — can speak for itself:
+render the final phrase when it is known, announce it through the notification service's
+`send_action_outcome`, then call `mark_announced(...)` so the generic "action completed" notice is
+not spoken on top. Such an action usually also wants to be asked *even when its deadline passed* while
+Irene was down (a job that ended an hour ago still has a truthful answer on the bridge): launch it with
+`on_missed="rearm"` and decide inside `rearm_durable_action` whether it is still worth speaking.
 
 Set `redeliver_on_reconnect=True` when a missed announcement loses real value (a timer's ring: yes; "playback
 started": no) — the completion is then kept for up to an hour and spoken when the room's device reconnects.

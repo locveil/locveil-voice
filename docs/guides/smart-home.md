@@ -48,6 +48,25 @@ also given exactly as much patience as the catalog says that device needs, so a 
 scenario start is waited out instead of timing out. If the early acknowledgement gets
 tiresome, one setting turns it off (below); the patience stays.
 
+**Scenarios are followed, not waited for.** A scenario switch is a whole chain of devices and
+can take most of a minute, so Irene does not hold the request open: the bridge accepts it as a
+*job* and she follows it. What you hear at acceptance is the acknowledgement with the ceiling
+the bridge publishes for that scenario — «Запускаю сценарий, около минуты», «Выключаю
+сценарий, около полминуты» (with acknowledgements turned off, nothing yet). When the chain
+ends she reports the fact: «Включила «Кино с Apple TV»», or, if a device did not follow,
+«Включила «Кино с Apple TV», но не ответили: процессор» — the devices named are the ones the
+bridge could not confirm, the scenario is still switched for the rest. Only one job runs per
+room: a second scenario command meanwhile, or «выключи» before the switch has finished, is
+refused honestly rather than queued — «Ещё переключаю на «Кино», остановить можно будет
+секунд через двадцать» — and after the switch has ended, «выключи» simply starts the next
+job. The report comes back to the device that asked, like a timer's ring, even if Irene was
+restarted in between (she picks the job up again) or the satellite was briefly offline. If
+the *bridge* restarted mid-switch it no longer knows the job; Irene then says what the room
+is actually doing — «Сценарий «Кино» включён, мост перезапускался» or «Мост перезапускался,
+сценарий «Кино» не включился» — and if the bridge cannot be reached at all, «Мост не
+отвечает — не знаю, включился ли сценарий «Кино»». Nothing to configure: this is on whenever
+the bridge is.
+
 Sensor questions are read live from the bridge: «какая температура в душевой?»,
 «какая влажность?» — dedicated sensors are preferred, and on climate units Irene reads
 the measured room temperature, not the thermostat setting.

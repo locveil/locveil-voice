@@ -24,8 +24,10 @@ Dependencies (injected, QUAL-24): `DeviceCatalogPort` (the world) +
 `DeviceCommandDeliveryPort` (awaited delivery). No HTTP, no bridge knowledge here.
 """
 
+import asyncio
 import dataclasses
 import re
+import time
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 from ..models import Intent, IntentResult
@@ -40,7 +42,20 @@ from ..device_commands import (
     published_wait_ms,
     size_request_timeout,
 )
-from ..ports import DeviceCatalogPort, DeviceCommandDeliveryPort
+from ..ports import DeviceCatalogPort, DeviceCommandDeliveryPort, ScenarioJobEventsPort
+from ..scenario_jobs import (
+    STALE_RESUME_S,
+    JobEvent,
+    JobEventKind,
+    JobFailure,
+    JobLookup,
+    JobLookupMiss,
+    JobRecord,
+    ceiling_bucket,
+    hard_cap_seconds,
+    remaining_seconds,
+    watchdog_seconds,
+)
 from .base import IntentHandler
 from ...core.client_registry import resolve_physical_id
 from ...core.donations import MissingRequiredParameter
@@ -76,6 +91,24 @@ ACKNOWLEDGEMENT_METADATA_KEY = "acknowledgement"
 # ARCH-67: `set*` on these speaks «ставлю» (a value), on anything else «переключаю» (a choice)
 _VALUE_CAPABILITIES = frozenset({"temperature", "climate", "brightness", "cover", "volume"})
 
+# ARCH-69: the final result's metadata key carrying the accepted job (id, room, ceiling)
+SCENARIO_JOB_METADATA_KEY = "scenario_job"
+# the one-per-room durable action name — the bridge's room id is the lock key (design §3)
+SCENARIO_JOB_ACTION_PREFIX = "scenario_job:"
+
+
+@dataclasses.dataclass
+class RunningJob:
+    """The handler's in-memory index entry for a room's running job (design §3): what the
+    durable record persists, kept beside it so "voice owns the room's record" is one lookup."""
+    job_id: str
+    room_id: str
+    kind: str                    # "switch" | "stop"
+    target: str                  # scenario id, or "none"
+    label: str                   # spoken name, request language (resolved at launch)
+    max_duration_ms: int
+    accepted_at: float
+
 # capability each method actuates, in preference order when a device carries several
 _METHOD_CAPABILITY = {
     "power": ("power", "climate", "fan", "playback"),
@@ -96,6 +129,10 @@ class SmartHomeIntentHandler(IntentHandler):
         self.command_port: Optional[DeviceCommandDeliveryPort] = None
         # ARCH-67 (PROD-18 round 2): the ONE flag — `[outputs.bridge] acknowledge_slow_actions`
         self.acknowledge_slow_actions: bool = True
+        # ARCH-69: the scenario-job events port (None = the synchronous ARCH-67 path) + the
+        # per-room index of jobs voice follows (bridge room id → RunningJob)
+        self.events_port: Optional[ScenarioJobEventsPort] = None
+        self._jobs: Dict[str, RunningJob] = {}
 
     def set_device_command_services(self, catalog_port: DeviceCatalogPort,
                                     command_port: DeviceCommandDeliveryPort,
@@ -105,6 +142,11 @@ class SmartHomeIntentHandler(IntentHandler):
         self.catalog_port = catalog_port
         self.command_port = command_port
         self.acknowledge_slow_actions = acknowledge_slow_actions
+
+    def set_scenario_job_events_port(self, events_port: Optional[ScenarioJobEventsPort]) -> None:
+        """Application injection (ARCH-69): the bridge's scenario-job event source. With it
+        wired, scenario commands go out as jobs (`wait: false`) and are followed durably."""
+        self.events_port = events_port
 
     async def can_handle(self, intent: Intent) -> bool:
         return intent.domain == "smart_home"
@@ -260,7 +302,10 @@ class SmartHomeIntentHandler(IntentHandler):
         bound_ms = published_wait_ms(catalog, command) if catalog is not None else None
         if bound_ms is not None:
             command = dataclasses.replace(command, timeout_seconds=size_request_timeout(bound_ms))
-            if self.acknowledge_slow_actions and is_slow_action(bound_ms):
+            # ARCH-69: a job request (`wait: false`) is acknowledged by the turn's own reply
+            # once the 202 lands (with the ceiling) — not mid-turn
+            if (self.acknowledge_slow_actions and is_slow_action(bound_ms)
+                    and getattr(command, "wait", None) is not False):
                 await self._acknowledge(command, context)
         return await self.command_port.deliver_device_command(command, context)
 
@@ -774,11 +819,26 @@ class SmartHomeIntentHandler(IntentHandler):
             return IntentResult(text=self._get_template("err_nothing_capable", language),
                                 should_speak=True, success=False, error="no scenario device")
         device = scenario_devices[0]
+        # ARCH-69: the bridge's room is the job's unit of concurrency — the index key
+        bridge_room = device.room or room_id or ""
+        as_job = self.events_port is not None
+
+        if as_job:
+            running = self._jobs.get(bridge_room)
+            if running is not None:
+                # voice owns the room's running record → refused locally, no request (§4.4)
+                return self._busy_result(running, language)
 
         if not start:
             command = DeviceCommand(device_id=device.id, capability="scenario",
-                                    action="off", params=None)
+                                    action="off", params=None, wait=False if as_job else None)
             delivery = await self._deliver(command, context)
+            if as_job:
+                return await self._scenario_job_result(
+                    delivery, context, device=device, bridge_room=bridge_room, kind="stop",
+                    target="none", label=self._get_template("scenario_generic_label", language),
+                    command=command, intent=intent,
+                    ok_text=self._get_template("confirm_scenario_off", language))
             return await self._speak_outcome(delivery, self._get_template("confirm_scenario_off", language),
                                        language, catalog, clarify_intent=intent, context=context)
 
@@ -801,7 +861,7 @@ class SmartHomeIntentHandler(IntentHandler):
                     hint.lower().replace("ё", "е").replace("э", "е"), text_norm)))
             if score > best_score:
                 best_label, best_canonical, best_score = label, value.canonical, score
-        if best_canonical is None or best_score < 85:
+        if best_canonical is None or best_label is None or best_score < 85:
             options = ", ".join((v.labels.get(language) or v.canonical) for v in values[:5])
             context.set_pending_clarification(intent.name, "scenario", intent.raw_text)
             return IntentResult(text=self._get_template("clarify_scenario", language, options=options),
@@ -810,11 +870,338 @@ class SmartHomeIntentHandler(IntentHandler):
                                           "clarification_reason": "unknown_scenario"})
 
         command = DeviceCommand(device_id=device.id, capability="scenario",
-                                action="set", params={"value": best_canonical})
+                                action="set", params={"value": best_canonical},
+                                wait=False if as_job else None)
         delivery = await self._deliver(command, context)
         ok_text = self._get_template("confirm_scenario", language, label=best_label)
+        if as_job:
+            return await self._scenario_job_result(
+                delivery, context, device=device, bridge_room=bridge_room, kind="switch",
+                target=best_canonical, label=best_label, command=command, intent=intent,
+                ok_text=ok_text)
         return await self._speak_outcome(delivery, ok_text, language, catalog,
                                    clarify_intent=intent, context=context)
+
+    # --- scenario jobs (ARCH-69; design docs/design/scenario_jobs_voice.md §3–§5) ---------------
+
+    def _scenario_label(self, device: CatalogDevice, target: str, language: str) -> str:
+        """The spoken name of a scenario id from the catalog's value labels (nouns live in
+        the catalog); the generic word for a stop or an id the catalog does not list."""
+        if target == "none":
+            return self._get_template("scenario_generic_label", language)
+        capability = device.capability("scenario")
+        action = capability.action("set") if capability else None
+        spec = action.param("value") if action else None
+        for value in (spec.values or ()) if spec else ():
+            if value.canonical == target:
+                return value.labels.get(language) or value.labels.get("ru") or value.canonical
+        return self._get_template("scenario_generic_label", language)
+
+    def _busy_result(self, running: RunningJob, language: str) -> IntentResult:
+        """§4.4: the room's job is still running — the honest refusal with the remaining ceiling."""
+        n = remaining_seconds(running.accepted_at, running.max_duration_ms, time.time())
+        key = "busy_scenario_off" if running.kind == "stop" else "busy_scenario"
+        return IntentResult(text=self._get_template(key, language, label=running.label, n=n),
+                            should_speak=True, success=False,
+                            metadata={SCENARIO_JOB_METADATA_KEY: {
+                                "job_id": running.job_id, "room_id": running.room_id,
+                                "busy": True}})
+
+    def _acceptance_text(self, kind: str, max_duration_ms: Optional[int], language: str) -> str:
+        """§4.1: ARCH-67's acknowledgement + the ceiling bucket from `max_duration_ms`."""
+        bucket = ceiling_bucket(max_duration_ms)
+        ceiling = ""
+        if bucket == "seconds":
+            n = -(-int(max_duration_ms or 0) // 5000) * 5          # ceil to a multiple of 5 s
+            ceiling = self._get_template("ceiling_seconds", language, n=n)
+        elif bucket is not None:
+            ceiling = self._get_template(f"ceiling_{bucket}", language)
+        key = "ack_scenario_off_job" if kind == "stop" else "ack_scenario_job"
+        return self._get_template(key, language, ceiling=ceiling)
+
+    async def _scenario_job_result(self, delivery: Optional[Any],
+                                   context: UnifiedConversationContext, *,
+                                   device: CatalogDevice, bridge_room: str, kind: str,
+                                   target: str, label: str, command: DeviceCommand,
+                                   intent: Intent, ok_text: str) -> IntentResult:
+        """What the turn says after a `wait: false` scenario request (§2.3 / §4.1 / §4.4):
+        a `202` → launch the follower, reply with the acceptance; a `409 job_in_progress` →
+        adopt the running job, reply «ещё переключаю»; a `200` → the bridge ran the chain
+        synchronously (a pre-1.12 bridge, the mock bridge) → ARCH-67's confirmation; anything
+        else → the ordinary failure speech."""
+        language = self._lang(context)
+        catalog = self._catalog()
+        if delivery is None:
+            return await self._speak_outcome(None, ok_text, language, catalog)
+
+        if getattr(delivery, "accepted", False) and delivery.job_id:
+            ceiling = delivery.max_duration_ms
+            if ceiling is None and catalog is not None:
+                ceiling = published_wait_ms(catalog, command)
+            running = RunningJob(job_id=delivery.job_id, room_id=bridge_room, kind=kind,
+                                 target=target, label=label,
+                                 max_duration_ms=int(ceiling or 0), accepted_at=time.time())
+            await self._launch_follower(running, context)
+            meta: Dict[str, Any] = {
+                SCENARIO_JOB_METADATA_KEY: {"job_id": running.job_id, "room_id": bridge_room,
+                                            "max_duration_ms": running.max_duration_ms}}
+            if not self.acknowledge_slow_actions:
+                # flag off = silent acceptance; the terminal event is the only speech (§4.1)
+                return IntentResult(text="", should_speak=False, metadata=meta)
+            text = self._acceptance_text(kind, running.max_duration_ms, language)
+            meta[ACKNOWLEDGEMENT_METADATA_KEY] = text
+            return IntentResult(text=text, should_speak=True, metadata=meta)
+
+        if delivery.error_code == "job_in_progress" and delivery.job_id:
+            # §4.4: another client's job runs in the room — adopt it via one GET and refuse
+            adopted = await self._adopt_job(delivery.job_id, bridge_room, device, context)
+            if adopted is not None:
+                return self._busy_result(adopted, language)
+            ceiling_ms = published_wait_ms(catalog, command) if catalog is not None else None
+            fallback = RunningJob(job_id=delivery.job_id, room_id=bridge_room, kind=kind,
+                                  target=target, label=label,
+                                  max_duration_ms=int(ceiling_ms or 0), accepted_at=time.time())
+            return self._busy_result(fallback, language)
+
+        # a 200 (synchronous outcome) or any error → exactly ARCH-67's speech
+        return await self._speak_outcome(delivery, ok_text, language, catalog,
+                                         clarify_intent=intent, context=context)
+
+    async def _adopt_job(self, job_id: str, bridge_room: str, device: CatalogDevice,
+                         context: UnifiedConversationContext) -> Optional[RunningJob]:
+        """Read another client's running job and follow it as the room's record (§4.4)."""
+        if self.events_port is None:
+            return None
+        lookup = await self.events_port.get_job(job_id)
+        if not isinstance(lookup, JobRecord) or lookup.terminal:
+            return None
+        language = self._lang(context)
+        kind = "stop" if lookup.kind == "stop" or lookup.target == "none" else "switch"
+        running = RunningJob(job_id=lookup.job_id, room_id=bridge_room, kind=kind,
+                             target=lookup.target,
+                             label=self._scenario_label(device, lookup.target, language),
+                             max_duration_ms=int(lookup.max_duration_ms or 0),
+                             accepted_at=time.time())
+        await self._launch_follower(running, context)
+        return running
+
+    async def _launch_follower(self, running: RunningJob,
+                               context: UnifiedConversationContext) -> None:
+        """The durable launch (§3): one record per bridge room, the requesting device's
+        identity captured for the outcome's delivery, re-armed on restart even when late."""
+        self._jobs[running.room_id] = running
+        physical_id = resolve_physical_id(context.client_id, context.room_name, context.session_id)
+        await self.execute_fire_and_forget_with_context(
+            self._follow_scenario_job,
+            action_name=SCENARIO_JOB_ACTION_PREFIX + running.room_id,
+            domain="smart_home", context=context,
+            timeout=hard_cap_seconds(running.max_duration_ms) + 5.0,
+            durable=True, redeliver_on_reconnect=True, on_missed="rearm",
+            # the coroutine's own kwargs (persisted re-arm params) — named apart from the
+            # launch's keyword-only identity params, which flow through `**kwargs` untouched
+            job_id=running.job_id, bridge_room=running.room_id, kind=running.kind,
+            target=running.target, label=running.label,
+            max_duration_ms=running.max_duration_ms, accepted_at=running.accepted_at,
+            origin_id=physical_id, origin_session=context.session_id,
+            origin_source=getattr(context, "request_source", None),
+            origin_room=context.client_id or context.room_name,
+            origin_language=self._lang(context), resume=False)
+
+    async def rearm_durable_action(self, record) -> bool:
+        """ARCH-28 D-3 / design §3: after a voice restart, follow the persisted job again —
+        the follower's first act on resume is `GET /scenario/jobs/{id}`; a record older than
+        an hour is dropped silently inside the follower."""
+        params = dict((record.rearm or {}).get("params") or {})
+        if not params.get("job_id") or not params.get("bridge_room"):
+            return False
+        params["resume"] = True
+        running = RunningJob(job_id=str(params["job_id"]), room_id=str(params["bridge_room"]),
+                             kind=str(params.get("kind", "switch")),
+                             target=str(params.get("target", "none")),
+                             label=str(params.get("label", "")),
+                             max_duration_ms=int(params.get("max_duration_ms") or 0),
+                             accepted_at=float(params.get("accepted_at") or record.started_at))
+        self._jobs[running.room_id] = running
+        metadata = record.metadata or {}
+        await self.execute_fire_and_forget_action(
+            self._follow_scenario_job,
+            action_name=record.action_name, domain=record.domain,
+            physical_id=record.physical_id, owner_session_id=record.session_id,
+            room_id=record.room_id, source=record.source,
+            timeout=hard_cap_seconds(running.max_duration_ms) + 5.0,
+            language=metadata.get("language"), durable=True,
+            redeliver_on_reconnect=record.redeliver, on_missed="rearm", **params)
+        self.logger.info(f"Re-armed scenario job {running.job_id} ({running.room_id}) after restart")
+        return True
+
+    async def _follow_scenario_job(self, *, job_id: str, bridge_room: str, kind: str,
+                                   target: str, label: str, max_duration_ms: int,
+                                   accepted_at: float, origin_id: str,
+                                   origin_session: Optional[str], origin_source: Optional[str],
+                                   origin_room: Optional[str], origin_language: Optional[str],
+                                   resume: bool = False) -> bool:
+        """The follower — the action-store task (§5). Reads the room's events until the job's
+        terminal event, with W (the watchdog) and H (the hard cap) from acceptance; every
+        reconnect and every watchdog fires a GET; the bridge forgetting the job (404) is
+        answered from the room's actual state. Renders and announces the outcome itself."""
+        port = self.events_port
+        room_id = bridge_room
+        lang = origin_language or "ru"
+        try:
+            if port is None:
+                self.logger.warning(f"scenario job {job_id}: no events port — cannot follow")
+                return False
+            now = time.time()
+            if resume and now - accepted_at > STALE_RESUME_S:
+                self.logger.info(f"scenario job {job_id}: resumed {int(now - accepted_at)} s after "
+                                 "acceptance — stale, dropped silently")
+                return True
+            w_at = accepted_at + watchdog_seconds(max_duration_ms)
+            h_at = accepted_at + hard_cap_seconds(max_duration_ms)
+            outcome = await self._run_follower(port, job_id=job_id, room_id=room_id, kind=kind,
+                                               target=target, label=label, lang=lang,
+                                               w_at=w_at, h_at=h_at, resume=resume)
+            await self._announce_outcome(outcome, action_name=SCENARIO_JOB_ACTION_PREFIX + room_id,
+                                         session_id=origin_session, source=origin_source,
+                                         physical_id=origin_id, voice_room=origin_room, lang=lang)
+            self.mark_announced(origin_id, SCENARIO_JOB_ACTION_PREFIX + room_id)
+            return True
+        finally:
+            if self._jobs.get(room_id) is not None and self._jobs[room_id].job_id == job_id:
+                self._jobs.pop(room_id, None)
+
+    async def _run_follower(self, port: ScenarioJobEventsPort, *, job_id: str, room_id: str,
+                            kind: str, target: str, label: str, lang: str,
+                            w_at: float, h_at: float, resume: bool = False) -> str:
+        """The state machine proper (§5 table); returns the outcome text."""
+        watchdog_done = False
+        stream = port.events(room_id)
+        if resume:
+            # after a voice restart the first act is the GET (§3) — events seen before the
+            # restart are gone and the stream never replays
+            text = await self._outcome_from_lookup(await port.get_job(job_id), port,
+                                                   kind=kind, target=target, label=label,
+                                                   room_id=room_id, lang=lang, final=False)
+            if text is not None:
+                await self._close_stream(stream)
+                return text
+        # the next event is awaited through ONE future kept across watchdog ticks — a timed-out
+        # `wait_for(stream.__anext__())` would cancel into the generator and end the subscription
+        pending: Optional[asyncio.Future] = None
+        try:
+            while True:
+                now = time.time()
+                if now >= h_at:
+                    text = await self._outcome_from_lookup(await port.get_job(job_id), port,
+                                                           kind=kind, target=target, label=label,
+                                                           room_id=room_id, lang=lang, final=True)
+                    return text or self._get_template(
+                        "job_stalled_off" if kind == "stop" else "job_stalled", lang, label=label)
+                if now >= w_at and not watchdog_done:
+                    watchdog_done = True
+                    text = await self._outcome_from_lookup(await port.get_job(job_id), port,
+                                                           kind=kind, target=target, label=label,
+                                                           room_id=room_id, lang=lang, final=False)
+                    if text is not None:
+                        return text
+                    continue
+                budget = max(0.05, (h_at if watchdog_done else w_at) - now)
+                if pending is None:
+                    pending = asyncio.ensure_future(stream.__anext__())
+                done, _ = await asyncio.wait({pending}, timeout=budget)
+                if not done:
+                    continue
+                try:
+                    event: JobEvent = pending.result()
+                except StopAsyncIteration:
+                    # the port ended the stream — treat as a reconnect cue, then re-subscribe
+                    stream = port.events(room_id)
+                    event = JobEvent(kind=JobEventKind.STREAM_OPEN)
+                finally:
+                    pending = None
+                if event.kind is JobEventKind.TERMINAL and event.job_id == job_id:
+                    return self._terminal_text(event.job_state, event.failures, kind=kind,
+                                               label=label, lang=lang)
+                if event.kind is JobEventKind.STREAM_OPEN or (
+                        event.kind is JobEventKind.TERMINAL and event.job_id != job_id):
+                    # no replay on reconnect → the record is the truth; a terminal of ANOTHER
+                    # job in this room while ours runs = the bridge forgot ours
+                    text = await self._outcome_from_lookup(await port.get_job(job_id), port,
+                                                           kind=kind, target=target, label=label,
+                                                           room_id=room_id, lang=lang, final=False)
+                    if text is not None:
+                        return text
+                # PHASE / STEP for our job: liveness only, nothing said (§8 a)
+        finally:
+            if pending is not None and not pending.done():
+                pending.cancel()
+            await self._close_stream(stream)
+
+    @staticmethod
+    async def _close_stream(stream: Any) -> None:
+        aclose = getattr(stream, "aclose", None)
+        if aclose is not None:
+            try:
+                await aclose()
+            except Exception:
+                pass
+
+    async def _outcome_from_lookup(self, lookup: JobLookup, port: ScenarioJobEventsPort, *,
+                                   kind: str, target: str, label: str, room_id: str,
+                                   lang: str, final: bool) -> Optional[str]:
+        """§5: what a `GET /scenario/jobs/{id}` answer means — a text to speak, or None to
+        keep following (`final` = the hard cap passed: nothing is left to wait for)."""
+        off = kind == "stop"
+        if isinstance(lookup, JobRecord):
+            if lookup.terminal:
+                return self._terminal_text(lookup.state, lookup.failures, kind=kind,
+                                           label=label, lang=lang)
+            return (self._get_template("job_stalled_off" if off else "job_stalled", lang,
+                                       label=label) if final else None)
+        if lookup.reason == "unknown":
+            # the bridge restarted and forgot the job: speak the room's ACTUAL state (§4.3)
+            active = await port.get_active_scenario(room_id)
+            if active is None:
+                return self._get_template("job_lost_off" if off else "job_lost", lang, label=label)
+            reached = (active == "none") if off else (active == target)
+            key = (("job_bridge_restarted_off_ok" if off else "job_bridge_restarted_ok") if reached
+                   else ("job_bridge_restarted_off_failed" if off else "job_bridge_restarted_failed"))
+            return self._get_template(key, lang, label=label)
+        # unreachable: keep reconnecting until the hard cap, then it is lost
+        return (self._get_template("job_lost_off" if off else "job_lost", lang, label=label)
+                if final else None)
+
+    def _terminal_text(self, job_state: Optional[str], failures: Tuple[JobFailure, ...], *,
+                       kind: str, label: str, lang: str) -> str:
+        """§4.2: the factual confirmation, with the failing devices' catalog names appended."""
+        ok_text = (self._get_template("confirm_scenario_off", lang) if kind == "stop"
+                   else self._get_template("confirm_scenario", lang, label=label))
+        if job_state == "succeeded" or not failures:
+            return ok_text
+        catalog = self._catalog()
+        names: List[str] = []
+        for failure in failures:
+            device = catalog.device(failure.device) if catalog is not None else None
+            name = self._device_name(device, lang) if device else failure.device
+            if name not in names:
+                names.append(name)
+        return self._get_template("confirm_partial", lang, ok=ok_text, failed=", ".join(names))
+
+    async def _announce_outcome(self, text: str, *, action_name: str, session_id: Optional[str],
+                                source: Optional[str], physical_id: str,
+                                voice_room: Optional[str], lang: str) -> None:
+        """§4.5: the outcome travels the route a timer ring takes, with redelivery."""
+        service = self._notification_service
+        if service is None:
+            self.logger.warning(f"scenario job outcome not spoken (no notification service): {text}")
+            return
+        try:
+            await service.send_action_outcome(
+                session_id=session_id, domain="smart_home", action_name=action_name,
+                message=text, source=source, physical_id=physical_id, room_name=voice_room,
+                language=lang, redeliver=True)
+        except Exception as e:  # the outcome must never crash the follower
+            self.logger.error(f"scenario job outcome not spoken: {e}")
 
     # --- the read flow (ARCH-8 PR-5, §5c) --------------------------------------------------------
 

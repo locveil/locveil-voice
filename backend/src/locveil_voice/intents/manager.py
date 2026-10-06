@@ -146,6 +146,14 @@ class IntentHandlerManager:
                                                     acknowledge_slow_actions)
                 logger.debug(f"Set device-command services on handler: {handler_name}")
 
+    def set_scenario_job_events_port(self, events_port: Any) -> None:
+        """Inject the scenario-job events port (ARCH-69) into the handlers that follow bridge
+        jobs — wired by the composition once the bridge output exists, after initialization."""
+        for handler_name, handler in self._handler_instances.items():
+            if hasattr(handler, 'set_scenario_job_events_port'):
+                handler.set_scenario_job_events_port(events_port)
+                logger.debug(f"Set scenario-job events port on handler: {handler_name}")
+
     def set_context_manager(self, context_manager: Any) -> None:
         """Set the context manager on all registered handlers and orchestrator for fire-and-forget action tracking."""
         # Set on all handlers

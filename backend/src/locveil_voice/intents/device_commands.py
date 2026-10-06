@@ -75,12 +75,19 @@ class DeviceCommand:
     published bound (`size_request_timeout`); None = nothing published, the delivery
     layer applies its configured fallback. Not part of the command's identity
     (`compare=False`): fixtures and captures compare WHAT is sent, not how long we wait.
+
+    `wait` (ARCH-69, contract v1.12 "Jobs"): `False` asks the bridge NOT to hold the request
+    open — on a scenario manager's `scenario` capability it answers `202` with a job to
+    follow. Sent on the wire ONLY when `False` (absent = the bridge's default `true`, the
+    behaviour every other command keeps — device-level actions stay synchronous by decision);
+    not part of the identity either, and absent from the fixture shape.
     """
     device_id: str
     capability: str
     action: str
     params: Optional[Dict[str, Any]] = None
     timeout_seconds: Optional[float] = field(default=None, compare=False)
+    wait: Optional[bool] = field(default=None, compare=False)
 
     def to_dict(self) -> Dict[str, Any]:
         """The capture/fixture shape (`locveil-commons/contracts/pins/crossover-fixtures/crossover_fixtures.json`)."""
@@ -90,8 +97,11 @@ class DeviceCommand:
 
     def request_body(self) -> Dict[str, Any]:
         """The wire body of the device endpoint (`CanonicalActionRequest`)."""
-        return {"capability": self.capability, "action": self.action,
-                "params": self.params}
+        body: Dict[str, Any] = {"capability": self.capability, "action": self.action,
+                                "params": self.params}
+        if self.wait is False:
+            body["wait"] = False
+        return body
 
 
 @dataclass(frozen=True)

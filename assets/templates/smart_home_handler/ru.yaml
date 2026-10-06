@@ -113,3 +113,29 @@ ack_switch: "Переключаю"
 ack_scenario: "Запускаю сценарий"
 ack_scenario_off: "Выключаю сценарий"
 ack_generic: "Секунду"
+
+# --- scenario jobs (ARCH-69, PROD-18 tier 3; design docs/design/scenario_jobs_voice.md §4) ---
+# A scenario switch is followed as a job: the turn's reply is the acknowledgement WITH the
+# catalog's ceiling (claims nothing); the outcome is spoken when the bridge's terminal event
+# arrives, through the same route a timer ring takes. {ceiling} is one of the suffixes below
+# (or empty for a short job); {n} is seconds, digits (the text processor speaks them).
+ack_scenario_job: "Запускаю сценарий{ceiling}"
+ack_scenario_off_job: "Выключаю сценарий{ceiling}"
+ceiling_seconds: ", секунд {n}"
+ceiling_half_minute: ", около полминуты"
+ceiling_minute: ", около минуты"
+ceiling_minutes: ", пару минут"
+# a second command (or «stop») while the room's job runs — refused honestly, never queued
+busy_scenario: "Ещё переключаю на «{label}», остановить можно будет секунд через {n}"
+busy_scenario_off: "Ещё выключаю сценарий, секунд через {n} можно будет продолжить"
+# a job the bridge forgot (it restarted): the room's ACTUAL state is spoken, never a bare failure
+job_bridge_restarted_ok: "Сценарий «{label}» включён, мост перезапускался"
+job_bridge_restarted_off_ok: "Сценарий выключен, мост перезапускался"
+job_bridge_restarted_failed: "Мост перезапускался, сценарий «{label}» не включился"
+job_bridge_restarted_off_failed: "Мост перезапускался, сценарий не выключился"
+job_lost: "Мост не отвечает — не знаю, включился ли сценарий «{label}»"
+job_lost_off: "Мост не отвечает — не знаю, выключился ли сценарий"
+job_stalled: "Сценарий «{label}» всё ещё переключается — проверьте"
+job_stalled_off: "Сценарий всё ещё выключается — проверьте"
+# the adopted job of another client, whose name voice does not hold
+scenario_generic_label: "сценарий"

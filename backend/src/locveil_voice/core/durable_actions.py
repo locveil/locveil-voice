@@ -221,7 +221,8 @@ async def reconcile_durable_actions(store: DurableActionStorePort,
                                     notification_service: Optional[Any]) -> Dict[str, int]:
     """Re-derive the schedule from persisted intent (reconcile-by-diff, no log replay).
 
-    For each record: future deadline → the owning handler's ``rearm_durable_action`` relaunches
+    For each record: future deadline (or ``metadata.on_missed == "rearm"``, ARCH-69 — then
+    regardless of the deadline) → the owning handler's ``rearm_durable_action`` relaunches
     it (reusing the persisted ``action_name``); missed by ≤ grace → fire now with an apology;
     older / unknown handler / re-arm failure → expiry announcement. A consumed record (fired
     late / expired) is DELETED; a successful re-arm already REPLACED it — the relaunch persists
@@ -235,7 +236,12 @@ async def reconcile_durable_actions(store: DurableActionStorePort,
         try:
             handler = handlers_by_class.get(record.handler)
             deadline = record.deadline if record.deadline is not None else now
-            if deadline > now:
+            # ARCH-69: a record that asks to be re-armed even when late (the scenario job
+            # follower — only the handler can tell what a late promise means: it reads the
+            # job's record and speaks the truth, or stays silent when stale) skips the
+            # deadline gate; the handler's refusal still lands in "expired".
+            rearm_late = (record.metadata or {}).get("on_missed") == "rearm"
+            if deadline > now or rearm_late:
                 # Future promise: re-arm via its handler; a missing/refusing handler means the
                 # promise is LOST — announce it as expired rather than fire it early or drop it.
                 if handler is not None and await handler.rearm_durable_action(record):

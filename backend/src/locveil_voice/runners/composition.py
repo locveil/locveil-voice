@@ -25,6 +25,7 @@ from ..core.event_bus import EventBus
 from ..inputs.manager import InputManager
 from ..outputs.manager import OutputManager
 from ..outputs.bridge import BridgeClient
+from ..outputs.bridge_events import BridgeEventsClient
 
 logger = logging.getLogger(__name__)
 
@@ -95,6 +96,20 @@ async def setup_bridge_output(core: AsyncVACore) -> None:
     core.catalog_service.set_state_reader(bridge.get_device_state)
     core.catalog_service.set_options_reader(bridge.get_device_options)
     logger.info(f"✅ Bridge output registered + designated for DEVICE_COMMAND ({bridge_cfg.base_url})")
+
+    # ARCH-69: the SSE half of the bridge pair — one persistent /events/scenarios subscription
+    # for the process lifetime (subscribe-before-launch by construction), injected into the
+    # smart-home handler as the ScenarioJobEventsPort; stops with the bridge output.
+    events = BridgeEventsClient(base_url=bridge_cfg.base_url, request_json=bridge._request_json)
+    bridge.attach_events(events)
+    await events.start()
+    intent_component = core.component_manager.get_component("intent_system")
+    handler_manager = getattr(intent_component, "handler_manager", None)
+    if handler_manager is not None:
+        handler_manager.set_scenario_job_events_port(events)
+        logger.info("✅ Bridge scenario-job events subscribed + injected (durable scenario jobs on)")
+    else:
+        logger.warning("intent system unavailable — scenario jobs stay on the synchronous path")
 
     snapshot = await core.catalog_service.refresh()
     if snapshot is None:
