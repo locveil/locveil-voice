@@ -21,6 +21,17 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-10-06 — BUILD-59: the second re-pin of the day.** The bridge cut the job API as
+  `catalog-v1.12.0` with the golden untouched — the hash the crossover fixtures bind to did
+  not move, so this re-pin was the quiet kind: one command, both copies, the openapi and the
+  guide gaining the jobs surface, the commons eval suite green before the pin commit went
+  out. The conformance test now asserts the exact shapes the follower will be written
+  against — the `202` behind `wait: false`, the two job paths and their 404, the terminal
+  events' `job_id`/`job_state`/`failures`, the `job_in_progress` code with its `job_id` — so
+  a reshape fails here on push before it fails in a living room. Owner's ruling on the
+  sequencing question recorded for ARCH-69: cut first, sitting after, a measured breach
+  becomes a 1.12.1 follow-up. contracts: catalog re-pinned v1.11.0 → v1.12.0 (both copies).
+  docs: none.
 - **2026-10-06 — ARCH-68: a promise that outlives the turn.** The morning's acknowledgement
   bought honesty for a slow switch but not durability — the turn still held the request open
   for most of a minute, and a restart on either side took the answer with it. The bridge's

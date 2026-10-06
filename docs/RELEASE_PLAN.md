@@ -503,20 +503,6 @@ size-matched to the Russian stack; language is a per-config/deployment choice (a
       board** (D-4/D-5), seeded when BUILD-21 lands, not decided unilaterally here. Scope for that design: which
       repo owns the unified compose, health-gated `depends_on` vs. tolerant clients, whether the units collapse
       into one, and how `update.sh` stays per-repo when the compose is not. Related: BUILD-18 (ops conformance).
-- [ ] **BUILD-59** `[release]` [CONTRACTS][MQTT] — **Catalog re-pinned at `catalog-v1.12.0` (both copies) —
-      the PROD-18 tier-3 cut consumed** (board PROD-18 round 2, decision 9: "→ `catalog-v1.12.0` →
-      the second voice re-pin"; filed 2026-10-06 by ARCH-68; **gated on the bridge's SCN-19 cut**).
-      `python3 scripts/repin.py catalog` moves the local push-time pin AND
-      `../locveil-commons/contracts/pins/catalog/` at one tag. The cut is additive (MINOR): the
-      golden is byte-identical (no job data in it — the crossover fixtures' `catalog_version` does
-      NOT move), the openapi gains `ScenarioJob` / `ScenarioJobAccepted` / `ScenarioJobsResponse`,
-      the event payloads (`ScenarioJobStartedEvent`, `ScenarioPhaseEvent`, `ScenarioStepEvent`,
-      `ScenarioSwitchedEvent`, `ScenarioShutdownEvent`), `CanonicalErrorCode.job_in_progress`,
-      `CanonicalError.job_id`, the two `/scenario/jobs` operations; the guide gains "Jobs (since
-      contract v1.12)". The conformance test asserts the openapi carries the job schemas + the new
-      error code (what ARCH-69 is written against); registry row + pin README name the new section.
-      Touch-the-family: nothing under the pin or its conformance test may be touched while the pin
-      trails — this task runs FIRST, then ARCH-69.
 ### Models & Assets (ASSET)
 
 - [ ] **ASSET-6** `[deferred]` [ASSET][CONTRACTS][SATELLITE] — **The multi-model wake-pack v1.x cut**

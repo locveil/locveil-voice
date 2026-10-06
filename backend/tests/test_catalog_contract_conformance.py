@@ -125,6 +125,60 @@ def test_by_value_select_entries_carry_labels():
                         f"{d['id']}.{cap['name']}.{action['name']}({param['name']}): {value['canonical']}"
 
 
+# ------------------------------------------------------------------ contract v1.12 ("Jobs")
+# BUILD-59: the scenario-job surface the durable job follower (ARCH-69,
+# docs/design/scenario_jobs_voice.md) is written against. The golden is byte-identical to
+# v1.11.0 (no job data in it); the surface is openapi + guide only.
+
+GUIDE = (PIN_DIR / "catalog-contract.md").read_text(encoding="utf-8")
+
+
+def test_schema_honours_wait_false_on_the_scenario_capability():
+    """`CanonicalActionRequest.wait` documents the 202-with-a-job behaviour (v1.12)."""
+    wait = OPENAPI["components"]["schemas"]["CanonicalActionRequest"]["properties"]["wait"]
+    assert "202" in wait["description"] and "v1.12" in wait["description"]
+
+
+def test_schema_declares_the_job_operations_and_shapes():
+    """The two `/scenario/jobs` operations + the record / accepted / event schemas exist."""
+    assert "/scenario/jobs/{job_id}" in OPENAPI["paths"]
+    assert "/scenario/jobs" in OPENAPI["paths"]
+    get_job = OPENAPI["paths"]["/scenario/jobs/{job_id}"]["get"]["responses"]
+    assert get_job["200"]["content"]["application/json"]["schema"]["$ref"].endswith("/ScenarioJob")
+    assert "404" in get_job, "GET /scenario/jobs/{id} must document the 404 job_unknown answer"
+    schemas = OPENAPI["components"]["schemas"]
+    for name in ("ScenarioJob", "ScenarioJobAccepted", "ScenarioJobStartedEvent",
+                 "ScenarioPhaseEvent", "ScenarioStepEvent", "ScenarioSwitchedEvent",
+                 "ScenarioShutdownEvent"):
+        assert name in schemas, f"v1.12 schema {name} missing from the pinned openapi"
+    # the terminal events carry what the follower speaks from
+    for name in ("ScenarioSwitchedEvent", "ScenarioShutdownEvent"):
+        props = schemas[name]["properties"]
+        for field in ("job_id", "job_state", "failures", "duration_ms"):
+            assert field in props, f"{name}.{field} missing"
+    assert set(schemas["ScenarioJob"]["properties"]) >= {
+        "job_id", "room_id", "kind", "target", "state", "max_duration_ms", "failures",
+        "result_scenario", "duration_ms"}
+    assert set(schemas["ScenarioJobAccepted"]["properties"]) >= {"job_id", "room_id", "kind",
+                                                                 "target", "max_duration_ms"}
+
+
+def test_schema_declares_job_in_progress_with_a_job_id():
+    """`CanonicalErrorCode` gains `job_in_progress`; `CanonicalError` carries the running
+    `job_id` the handler adopts (design §4.4)."""
+    schemas = OPENAPI["components"]["schemas"]
+    assert "job_in_progress" in schemas["CanonicalErrorCode"]["enum"]
+    assert "job_id" in schemas["CanonicalError"]["properties"]
+
+
+def test_guide_holds_the_jobs_section():
+    """The owner's normative guide carries the v1.12 "Jobs" section the follower relies on."""
+    assert "## Jobs (since contract v1.12)" in GUIDE
+    for phrase in ("One job per room", "job_in_progress", "GET /scenario/jobs/{job_id}",
+                   "job_unknown", "scenario_job_started"):
+        assert phrase in GUIDE, f"Jobs section lacks {phrase!r}"
+
+
 # ------------------------------------------------------------------ emit side (outbound)
 
 def test_device_command_body_is_a_canonical_action_request():

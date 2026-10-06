@@ -1520,6 +1520,33 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       contracts: crossover-fixtures moved (fixture task — co-owned pin; still no strict PIN.json, see above)
 ### Internationalization (I18N)
 ### Build & CI (BUILD)
+- [x] **BUILD-59** `[release]` [CONTRACTS][MQTT] — **DONE 2026-10-06 — catalog re-pinned `catalog-v1.11.0` →
+      `catalog-v1.12.0`, both copies (commons @54ff45b) — the PROD-18 tier-3 cut consumed** (board
+      PROD-18 round 2, decision 9; filed by ARCH-68; the bridge cut it at 68b8b8f / SCN-19). One
+      `python3 scripts/repin.py catalog` run moved the local push-time pin AND
+      `../locveil-commons/contracts/pins/catalog/` at the tag. As promised by the bridge: the golden
+      is byte-identical (sha `47307b7e…` unchanged, `catalog_version` still `4deb84ae88da6caa`, so
+      the crossover fixtures do NOT move and the commons eval suite stayed 90/90 before the pin
+      commit); the openapi + the guide carry the job surface — `wait`'s description names the
+      `202` (since v1.12), `/scenario/jobs` + `/scenario/jobs/{job_id}` (200 `ScenarioJob`, 404
+      `ScenarioJobUnknownResponse`), `ScenarioJob` / `ScenarioJobAccepted` / `ScenarioJobStep` +
+      the five event payloads (`ScenarioJobStartedEvent`, `ScenarioPhaseEvent`,
+      `ScenarioStepEvent`, `ScenarioSwitchedEvent`, `ScenarioShutdownEvent` — the terminal pair
+      carries `job_id` / `job_state` / `failures` / `duration_ms`), `CanonicalErrorCode.
+      job_in_progress`, `CanonicalError.job_id`, the guide's "Jobs (since contract v1.12)".
+      Observed vs the design's expectation: `ScenarioJobsResponse` is not a named schema (the
+      list operation inlines its body) — nothing voice uses. The conformance test
+      (`test_catalog_contract_conformance.py`, +4) asserts exactly the surface ARCH-69 is written
+      against: the `wait` description, the two job paths + the 404, the record / accepted /
+      event schemas with the fields the follower speaks from, `job_in_progress` + `job_id`, the
+      guide section's phrases. Pin README + registry row name the "Jobs" section. The commons
+      commit touches ONLY `contracts/pins/catalog/**` (its `process/contract-graph.md` reports
+      STALE after the move — the graph regen is the commons' own follow-up, as at 610ab09).
+      **Verified:** suite 2067 passed / 7 skipped (from the repo root, as CI runs it), pyright 0
+      errors, import contracts 11 kept; contract-guard 0 failures; `repin --check --fail-on any`
+      exit 0 — both catalog copies at 1.12.0.
+      docs: none — a pin move; the user-facing scenario-job prose lands with ARCH-69 (guides/smart-home)
+      contracts: catalog re-pinned v1.11.0 → v1.12.0 (both copies); nothing of the new surface consumed yet (ARCH-69 is the first consumer)
 ### Models & Assets (ASSET)
 ### Documentation (DOC)
 - [x] **DOC-5b** (P2) — DONE 2026-06-08: regenerated `guides/DONATION_FILE_SPECIFICATION.md` for the v1.1
