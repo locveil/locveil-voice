@@ -349,6 +349,18 @@ See `docs/review/phase1_architecture_map.md` §5.
       conformance assertions deferred to BUILD-59. ARCH-67's synchronous scenario path stays in
       place for a bridge that answers `200` to `wait: false` (the commons mock bridge, a pre-1.12
       bridge).
+      **Reconciled at intake (2026-10-06, after BUILD-59):** the sequencing question is settled by
+      the owner — **cut first, the sitting after; a measured breach of a published ceiling
+      becomes a `catalog-v1.12.1` follow-up**, it no longer blocks anything. The bridge landed
+      the API exactly per `scenario_jobs.md` (68b8b8f) with four shape notes folded in here: the
+      `202` body is the full `CanonicalActionResponse` envelope (`executed_on: null`,
+      `skipped_reason: null` present — ignored keys); a step's `target` is whatever the planner
+      plans (a boolean `false` for the Auralic's power-off, not a string — voice never reads it);
+      REST 409/404 bodies are `{detail: {...}}`-wrapped (the adapter unwraps `detail` for
+      `job_unknown` exactly as `_to_delivery_result` does for BUG-40); the job id looks like
+      `j-living_room-20261006T162958Z-c2a1` (opaque, never parsed). The commons mock bridge
+      ignores `wait` → the `200`-on-`wait:false` sync mapping keeps the cross-suite green
+      (`make device-auto TIER=1` is part of this task's verification).
 
 ### Code Quality & Review (QUAL)
 
