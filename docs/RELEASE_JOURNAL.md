@@ -21,6 +21,27 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-10-06 — ARCH-68: a promise that outlives the turn.** The morning's acknowledgement
+  bought honesty for a slow switch but not durability — the turn still held the request open
+  for most of a minute, and a restart on either side took the answer with it. The bridge's
+  job design hands over a ticket instead of an answer, and this design says what voice does
+  with one: send the scenario command alone with `wait: false` (every device-level action
+  stays synchronous by the owner's rider), read the ticket and the ceiling off the `202`
+  through the same delivery chokepoint every command already uses, and launch a durable
+  action named after the room — the name is the lock — that follows the bridge's event
+  stream to the one terminal event and speaks the outcome back to the device that asked, the
+  way a timer rings. One stream, kept open for the adapter's lifetime, so there is nothing to
+  subscribe to inside a turn; five silent seconds mean a dead stream, a reconnect means one
+  GET, a bridge that forgot the job is asked what the room is doing now rather than blamed.
+  What is said is tabled: «Запускаю сценарий, около минуты» at acceptance (silence with the
+  flag off), the factual confirmation or «…, но не ответили: процессор» at the end, «ещё
+  переключаю, остановить можно будет секунд через двадцать» to a second command. Two things
+  in the substrate turned out to need a nudge — the reconciler only asks a handler about a
+  deadline still ahead, and the completion notice has a thirty-second threshold that would
+  swallow a warm switch; the design routes around both, and the timer's own exposure to the
+  second is now a line under ARCH-59. The implementation and the re-pin are filed behind the
+  bridge's cut; one sequencing question (the bridge wants the sitting before the cut) is
+  left for the owner at intake. contracts: none. docs: none.
 - **2026-10-06 — DOC-15: whose words are whose.** The louver work in the morning had already
   lived the rule — the word «заслонка» went into a donation, not into a request to the bridge —
   and now the how-to says it for the next contributor: the catalog brings the nouns and the rules

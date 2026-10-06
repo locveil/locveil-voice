@@ -307,6 +307,57 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       any` exit 0. Flow: cut commit → tag on it → pushed together.
       docs: guides/smart-home (the acknowledge-then-confirm paragraph; the `[outputs.bridge]` snippet gains the flag and the fallback wording)
       contracts: ui-openapi-v1.2.0 cut (minor — `BridgeOutputConfig.acknowledge_slow_actions`, the re-described `timeout_seconds`; repo-internal, no re-pin); the catalog v1.11 Timing fields FIRST CONSUMED
+- [x] **ARCH-68** [MQTT][UX][DESIGN] `[release]` — **DONE 2026-10-06 (design task; board PROD-18 round 2,
+      decisions 9–10) — `docs/design/scenario_jobs_voice.md`, the voice side of tier 3, written
+      against the bridge's `scenario_jobs.md` §5/§6/§8/§10 (shapes quoted verbatim).** Decisions:
+      **(1) port + adapter** — `ScenarioJobEventsPort` (`events(room)` yielding domain `JobEvent`s
+      incl. a synthetic STREAM_OPEN on every (re)connect, `get_job`, `get_active_scenario`) beside
+      the delivery port, boundary types in a pure `intents/scenario_jobs.py`; `BridgeEventsClient`
+      (`outputs/bridge_events.py`) holds ONE persistent `/events/scenarios` subscription for its
+      lifetime (subscribe-before-launch by construction), `sock_read=5 s` IS the dead-stream rule,
+      backoff 1-2-4-8-16-30 s ±25 % forever, hand-written 30-line SSE reader (no dependency),
+      per-room bounded queues, the GETs through `BridgeClient._request_json`; the "only module
+      that knows the bridge" docstring becomes the pair. **The `202` rides `DeliveryResult`**
+      (`accepted`, `job_id`, `max_duration_ms`) through the one chokepoint — a `start_job()` was
+      set aside as a second copy of `deliver()`; `_to_delivery_result` branches on status (202 =
+      accepted, never `delivered`; 409 `job_in_progress` → `job_id`; a 200 on `wait: false` = the
+      sync outcome as today, so the path is safe against the mock bridge and a pre-1.12 bridge);
+      `wait: false` is set in `_scenario` only — device-level commands never carry `wait` (owner
+      rider). **(2) the record** — `action_name = scenario_job:{bridge room}` (the name IS the
+      one-per-room lock key, re-arm reuses it), persisted by the substrate under
+      `<assets_root>/state/` with `job_id / room_id / kind / target / label / max_duration_ms /
+      accepted_at`, the requesting device's identity captured by the launch; voice restart →
+      re-arm → `GET /scenario/jobs/{id}`; bridge restart (`404`) → `GET /scenario/state?room=`
+      → the actual state spoken; resume older than 1 h = silent. Substrate change needed:
+      `metadata.on_missed = "rearm"` makes the reconciler ask the handler regardless of the
+      deadline (today: future deadlines only, timer-specific missed texts). **(3) speech** — the
+      turn's reply IS the acceptance: «Запускаю сценарий, около минуты» / «Выключаю сценарий,
+      около полминуты» (ceiling buckets from `max_duration_ms`: ≤5 s none · ≤20 «секунд N» ·
+      ≤45 «около полминуты» · ≤90 «около минуты» · else «пару минут»); flag off = silent
+      acceptance, only the end; terminal «Включила «{label}»» / `confirm_partial` «…, но не
+      ответили: процессор» (catalog names); `404`-after-restart → «Сценарий «{label}» включён,
+      мост перезапускался» / «Мост перезапускался, сценарий «{label}» не включился»; `job_lost`
+      «Мост не отвечает — не знаю, включился ли сценарий «{label}»»; `job_stalled` «…всё ещё
+      переключается — проверьте»; mid-job second command and «stop» → «Ещё переключаю на
+      «{label}», остановить можно будет секунд через {N}» (N = remaining ceiling, answered
+      locally when voice owns the record, else the `409` is mapped the same way and the job is
+      ADOPTED via one GET); after the terminal «stop» = a new job. The terminal travels through
+      a new `send_action_outcome` (TTS+LOG, `redeliver`, no preference gate — the 30 s
+      completion threshold would swallow a warm switch) addressed by the request's identity, and
+      the generic done-callback completion is suppressed for an announced record. **(4) state
+      machine** accepted → following → done / failed / unknown / stalled / lost with W = ×1.25
+      + 2 s and H = W + 30 s, every transition's text tabled. **(5) config: no new keys**, no
+      ui-openapi cut. **(6) tests** 1–9 (fake events port, the 409 both ways, the restart
+      paths incl. `on_missed`) + the five voice lines of the bridge's §10 checklist. **(7)**
+      BUILD-59 (re-pin `catalog-v1.12.0`, both copies) + ARCH-69 (implementation) filed
+      `[release]`, sequenced cut → re-pin → implementation → sitting; **open point** recorded:
+      the bridge's §11 orders the sitting BEFORE the cut ("measured > published blocks the
+      cut") — ARCH-69 reconciles at intake. **(8)** ARCH-67's sized synchronous path keeps
+      working through the cut and the re-pin (`wait` absent is unchanged at v1.12) and stays the
+      path for every device-level action. Intake side-find (the 30 s threshold gate) recorded
+      against ARCH-59. No code.
+      docs: none — design document only (`docs/design/`, not a manifest root); the user-facing paragraph lands with ARCH-69 (guides/smart-home)
+      contracts: none — designed against the bridge's `catalog-v1.12.0` surface, not yet cut; first consumption is BUILD-59 (pin) + ARCH-69 (use)
 ### Code Quality & Review (QUAL)
 - [x] **QUAL-19** [ESP32] (P2, last pre-release) — **DONE 2026-06-09** (interactive review session + upstream study).
       **★ ARCH-22 (2026-06-14):** the **device-side** of the micro stack is now designed in `docs/design/esp32_satellite.md`
