@@ -479,22 +479,6 @@ size-matched to the Russian stack; language is a per-config/deployment choice (a
       board** (D-4/D-5), seeded when BUILD-21 lands, not decided unilaterally here. Scope for that design: which
       repo owns the unified compose, health-gated `depends_on` vs. tolerant clients, whether the units collapse
       into one, and how `update.sh` stays per-repo when the compose is not. Related: BUILD-18 (ops conformance).
-- [ ] **BUILD-58** `[release]` [CONTRACTS][MQTT] — **Catalog re-pinned at `catalog-v1.11.0` (both copies) —
-      the PROD-18 round-1 cut consumed** (board PROD-18 execution order: "voice re-pin" — the
-      bridge's VWB-46 `re-pin owed: voice, commons`; filed 2026-10-06, the staleness TEST-24
-      recorded). `python3 scripts/repin.py catalog` moves the local push-time pin AND
-      `../locveil-commons/contracts/pins/catalog/` at one tag. The contract is additive (MINOR):
-      `confirm_timeout_ms` on a capability, `max_duration_ms` on a value label, `labels` on the
-      by-value `set(value)` entries (the 9 IR-input gaps closed), the HVAC `vane`/`widevane` labels
-      renamed «заслонка»/«заслонка по горизонтали», the guide gains "Localization" + "Timing".
-      Voice reads the two timing fields into the domain model (`CatalogCapability.confirm_timeout_ms`,
-      `ValueLabel.max_duration_ms`, field value tables) — nothing published is dropped silently —
-      and the conformance test asserts the parser reads them. The crossover fixtures bind to the
-      golden's content hash: `catalog_version` restamped `5622ba7a1a78102a` → `4deb84ae88da6caa`
-      in the co-owned pin (commons commit touches ONLY `contracts/pins/catalog/**` + the fixtures
-      file), commons eval suite green. Registry row + pin README name the new sections. Touch-the-
-      family: nothing under the pin or its conformance test may be touched while the pin trails —
-      this task runs FIRST in the PROD-18 voice batch (then ARCH-67, DOC-15).
 ### Models & Assets (ASSET)
 
 - [ ] **ASSET-6** `[deferred]` [ASSET][CONTRACTS][SATELLITE] — **The multi-model wake-pack v1.x cut**

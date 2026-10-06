@@ -21,6 +21,18 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-10-06 — BUILD-58: the catalog starts telling us how long to wait.** The re-pin that
+  TEST-24 saw coming, run the one way the rule allows: one command, both copies, one tag. What
+  arrived is mostly words — the louver label the board chose, nine input values that finally have
+  names — and two numbers per action that change what voice can promise: how long the bridge
+  itself will wait for a device, and how long a scenario can take from cold. The parser now reads
+  both, including the one place that was never parsed at all (an enum field's value table, where
+  the "switch everything off" ceiling lives), and the conformance test will fail the day a future
+  golden publishes a number the model silently drops. The fixtures bind to the golden's content
+  hash, so they were restamped in the same breath and the cross-suite re-run against the new
+  bytes: 53 of 53, nothing in the producer path cared about the renamed label. Nothing consumes
+  the numbers yet; that is the next task's whole point. contracts: catalog re-pinned v1.10.0 →
+  v1.11.0 (both copies); crossover-fixtures restamped. docs: none.
 - **2026-10-06 — TEST-24: the louvers reach the shared fixtures.** The one task where voice
   writes into the commons tree on purpose: the crossover pin is co-owned ground, and a fixture
   task is how it moves. Five fixtures (F82–F86) went in beside F80/F81, the commons guard

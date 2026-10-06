@@ -16,7 +16,7 @@ framework's mock bridge and the release-cadence cross-suite run against it.
 |---|---|---|
 | `catalog.golden.json` | bridge (byte-identical) | The golden catalog instance |
 | `openapi.json` | bridge (byte-identical) | The API schema of record |
-| `catalog-contract.md` | bridge (byte-identical) | The owner's normative guide — param semantics and the versioning rule; read it before relying on a field |
+| `catalog-contract.md` | bridge (byte-identical) | The owner's normative guide — param semantics, the versioning rule and (since contract v1.11) the "Localization" rule the resolver's vocabulary relies on and the "Timing" fields (`confirm_timeout_ms` per capability, `max_duration_ms` per scenario value) that size voice's bridge requests; read it before relying on a field |
 | `STAMP.json` | bridge (byte-identical) | The bridge's version stamp |
 | `PIN.json` | **voice-stamped** | The pin record (tag, owner commit, sha256s) |
 

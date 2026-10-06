@@ -56,8 +56,23 @@ BRIDGE_UNREACHABLE = "bridge_unreachable"
 
 # --- catalog parsing (bridge JSON → domain model, coded against the pinned contract) -------------
 
+def _parse_ms(raw: Dict[str, Any], key: str) -> Optional[int]:
+    """A published millisecond bound (contract v1.11 "Timing"): absent or null → None."""
+    value = raw.get(key)
+    return int(value) if value is not None else None
+
+
+def _parse_values(raw: Optional[list]) -> Optional[Tuple[ValueLabel, ...]]:
+    """A `{wire, canonical, labels[, max_duration_ms]}` value table (fields and params alike)."""
+    if not raw:
+        return None
+    return tuple(ValueLabel(wire=v["wire"], canonical=v["canonical"],
+                            labels=v.get("labels") or {},
+                            max_duration_ms=_parse_ms(v, "max_duration_ms"))
+                 for v in raw)
+
+
 def _parse_param(raw: Dict[str, Any]) -> CatalogParamSpec:
-    values = raw.get("values")
     return CatalogParamSpec(
         name=raw["name"],
         type=raw.get("type", "string"),
@@ -66,9 +81,7 @@ def _parse_param(raw: Dict[str, Any]) -> CatalogParamSpec:
         min=raw.get("min"),
         max=raw.get("max"),
         unit=raw.get("unit"),
-        values=tuple(ValueLabel(wire=v["wire"], canonical=v["canonical"],
-                                labels=v.get("labels") or {})
-                     for v in values) if values else None,
+        values=_parse_values(raw.get("values")),
         options_from=raw.get("options_from"),
     )
 
@@ -86,7 +99,9 @@ def _parse_capability(raw: Dict[str, Any]) -> CatalogCapability:
             type=f.get("type", "float"),
             unit=f.get("unit"),
             labels=f.get("labels") or {},
+            values=_parse_values(f.get("values")),
         ) for f in (raw.get("fields") or ())),
+        confirm_timeout_ms=_parse_ms(raw, "confirm_timeout_ms"),
     )
 
 

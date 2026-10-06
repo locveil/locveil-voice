@@ -27,10 +27,15 @@ class ValueLabel:
 
     `labels` are the spoken surfaces (QUAL-29 model), `canonical` is the token
     Irene sends in params; `wire` is informational (authoritative on the bus).
+    `max_duration_ms` (contract v1.11 "Timing", scenario values only) is the
+    bridge's published ceiling for activating that scenario from any state of
+    its room — on the `none` field entry, for deactivating the room; absent on
+    every other value table.
     """
     wire: str
     canonical: str
     labels: Dict[str, str] = field(default_factory=dict)
+    max_duration_ms: Optional[int] = None
 
 
 @dataclass(frozen=True)
@@ -72,16 +77,32 @@ class CatalogFieldSpec:
     type: str = "float"
     unit: Optional[str] = None
     labels: Dict[str, str] = field(default_factory=dict)
+    # an enum field's value table (the scenario manager's `scenario` field carries the
+    # per-scenario ceilings here, incl. the `none` entry = deactivation)
+    values: Optional[Tuple[ValueLabel, ...]] = None
+
+    def value(self, canonical: str) -> Optional[ValueLabel]:
+        for v in self.values or ():
+            if v.canonical == canonical:
+                return v
+        return None
 
 
 @dataclass(frozen=True)
 class CatalogCapability:
     """A device capability: its actions (write) and/or fields (read), plus the
-    semantic `group` the room-form addressing targets (VWB-23)."""
+    semantic `group` the room-form addressing targets (VWB-23).
+
+    `confirm_timeout_ms` (contract v1.11 "Timing"): the longest the bridge itself
+    waits for the device to confirm an action on this capability before it
+    reports failure; absent = the default 500 ms echo window. A consumer sizes
+    its request timeout above it, never below.
+    """
     name: str
     group: Optional[str] = None
     actions: Tuple[CatalogActionSpec, ...] = ()
     fields: Tuple[CatalogFieldSpec, ...] = ()
+    confirm_timeout_ms: Optional[int] = None
 
     def action(self, name: str) -> Optional[CatalogActionSpec]:
         for a in self.actions:

@@ -2404,6 +2404,40 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       contract-guard strict 0 failures / 0 warnings; `repin --check --fail-on any` exit 0.
       docs: none — no manifest node describes how the plugin's contract types resolve; the non-root `config-ui/README.md` gained the paragraph
       contracts: none — no surface moved (the workbench pin stays @ v1.3.0, byte-identical; how it is consumed changed)
+- [x] **BUILD-58** `[release]` [CONTRACTS][MQTT] — **DONE 2026-10-06 (board PROD-18 execution order:
+      "voice re-pin"; the bridge's VWB-46 `re-pin owed: voice, commons` discharged) — catalog re-pinned
+      `catalog-v1.10.0` → `catalog-v1.11.0`, both copies, the round-1 cut consumed.** One
+      `python3 scripts/repin.py catalog` moved the local push-time pin AND
+      `../locveil-commons/contracts/pins/catalog/` at the one tag (owner commit `e3efa8b`, bridge
+      commit `8b43558`, content hash `5622ba7a1a78102a` → `4deb84ae88da6caa`). The contract delta
+      is additive (MINOR): `confirm_timeout_ms` on `CatalogCapability` (27 capabilities carry it —
+      HVAC 15 000, TV power 8 000, Apple TV power 5 000, streamer power 25 000, inputs 3 000),
+      `max_duration_ms` on `CatalogValueLabel` (the living-room scenario `set(value)` table and the
+      `scenario` field incl. `none` = 29 000; 29 500 … 61 500), `labels` on the nine by-value IR
+      `set(value)` entries (`mf_amplifier.input` × 7, `upscaler.input` × 2), the HVAC `vane` /
+      `widevane` labels «заслонка» / «заслонка по горизонтали», and the guide's new "Localization"
+      + "Timing" sections. **Voice reads both timing fields** — `CatalogCapability.confirm_timeout_ms`,
+      `ValueLabel.max_duration_ms`, and `CatalogFieldSpec.values` (an enum field's value table was
+      never parsed; the `scenario` field's `none` entry is where the deactivation ceiling lives) —
+      so nothing published is dropped silently; consumption (sizing + the acknowledgement) is
+      ARCH-67. `test_catalog_contract_conformance.py` gains three tests: the schema declares the
+      two optional fields, the parser round-trips every capability's `confirm_timeout_ms` and
+      every value's `max_duration_ms` (params AND fields), and every `set(value)` entry carries
+      `ru`+`en` labels (the Localization rule as voice relies on it). **Commons:** the co-owned
+      crossover fixtures bind to the golden's content hash → `catalog_version` restamped to
+      `4deb84ae88da6caa` (bindings untouched); commons commit `e2beeeb` touches ONLY
+      `contracts/pins/catalog/**` + `crossover_fixtures.json`, pushed; commons eval suite
+      `uv run --extra record --extra dev pytest tests/` **90 passed**. Voice `eval/device.tests.yaml`
+      regenerated (header hash only), and the REAL cross-suite — `make device-auto TIER=1`, mock
+      bridge serving the NEW golden + the SUT on the derived config — **53/53 green**: the louver
+      label rename and the nine new labels break no producer path. Registry row + pin README name
+      the two new guide sections. **Verified:** suite 2029 passed / 7 skipped (+3), pyright 0
+      errors, import contracts 11 kept; contract-guard strict 0 failures / 0 warnings; `repin
+      --check --fail-on any` exit 0 (every pin and tool current). Side find, recorded only: the
+      commons `contract-graph.py --check` reports its generated `process/contract-graph.md` view
+      stale after the pin move — a commons view outside this task's one-folder write permission.
+      docs: none — the pin and the parser gained fields no manifest node describes; the user-facing consequences (request sizing, the acknowledgement, the louver words) land with ARCH-67 and DOC-15
+      contracts: catalog re-pinned v1.10.0 → v1.11.0 (both copies); crossover-fixtures catalog_version restamped
 ### Models & Assets (ASSET)
 ### Documentation (DOC)
 - [x] **DOC-5b** (P2) — DONE 2026-06-08: regenerated `guides/DONATION_FILE_SPECIFICATION.md` for the v1.1
