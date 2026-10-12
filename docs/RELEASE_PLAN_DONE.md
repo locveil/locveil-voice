@@ -1643,6 +1643,43 @@ rationale/chronology lives in [`RELEASE_JOURNAL.md`](./RELEASE_JOURNAL.md).
       exit 0 — both catalog copies at 1.12.0.
       docs: none — a pin move; the user-facing scenario-job prose lands with ARCH-69 (guides/smart-home)
       contracts: catalog re-pinned v1.11.0 → v1.12.0 (both copies); nothing of the new surface consumed yet (ARCH-69 is the first consumer)
+- [x] **BUILD-60** `[release]` [CONTRACTS][MQTT] — **DONE 2026-10-12 — the crossover fixtures are a
+      voice-OWNED contract: family `crossover-fixtures`, first cut `crossover-fixtures-v1.0.0`** (board
+      **PROD-29**, owner decision 2026-10-12 "Agree with Option 1" on the question PROD-18's close left
+      open — the last pin in the estate without a strict `PIN.json`, because it never had an owner).
+      **The owned surface** `contracts/crossover-fixtures/`: `crossover_fixtures.json` = the commons
+      `contracts/pins/crossover-fixtures/` file byte-for-byte (`cmp` clean; sha256 `5b5adbe6…`; 61
+      fixtures F01–F102, 53 tier 1 / 8 tier 2, four `expect` kinds); `STAMP.json` (`artifacts` = exactly
+      the one file; `guard` = the owner test; extras `catalog_tag: catalog-v1.12.0` +
+      `catalog_version: 4deb84ae88da6caa` — the catalog the fixtures bind to, made explicit as a
+      pin-of-a-pin); `README.md` (what the document is, the binding rule, the three levels — minor =
+      fixtures added / retired / re-bound, patch = notes only, major = a shape change of the `expect`
+      kinds — and the consumers); registry row under Owned + the trailing note re-truthed; the
+      `cross-repo-source-of-truth` bullet in `CLAUDE.md` gains the owned family. **Voice reads its OWN
+      file:** `eval/Makefile` `FIXTURES_JSON` → `../contracts/crossover-fixtures/crossover_fixtures.json`,
+      `eval/device.promptfooconfig.yaml`, `eval/README.md`, the `test_smart_home_handler.py` and
+      `intents/device_commands.py` pointers; `make device-tests` regenerated `eval/device.tests.yaml` —
+      549 case lines byte-identical, the one moved line is the generator's own `# Regenerate:` header
+      naming its argv path. **The owner guard** `backend/tests/test_crossover_fixtures_contract.py` (13
+      tests, named in the STAMP's `guard`): STAMP core + `tag == crossover-fixtures-v<version>`; the
+      document's `catalog_version` == the STAMP's == the catalog pin's STAMP + PIN.json == the pinned
+      golden's `version`; `catalog_tag` == the pin's tag; `artifacts` is exactly the one file and `guard`
+      is this test; the owned folder holds only README + STAMP + the artifact; the document shape (the
+      four kinds, tiers 1/2, unique ids) and all kinds covered; every fixture binds to the pinned golden —
+      context rooms, actuate device/capability/action + params (required / canonical enum / range),
+      room-group room + allow-listed group + an action some member offers, read fields (incl. `any_of`),
+      clarify candidates (≥2, all carry the capability, one room). **Accepted cost (owner):** a catalog
+      re-pin here that moves the golden's hash fails that guard until the fixtures are re-bound → a
+      fixtures MINOR + a commons re-pin follow (one extra hop); a hash-preserving re-pin (the v1.12.0
+      case) moves nothing. **Not here:** the commons pin (strict `PIN.json` via repin, generator +
+      assertions on the pinned copy, the `PIN-PENDING` warning ends) = commons **IMPL-28**; the bridge
+      pins at **VWB-16** (first consumption). **Verified:** suite 2129 passed / 7 skipped (from the repo
+      root, as CI runs it; +13), pyright 0 errors, import contracts 11 kept; contract-guard 0 failures
+      (the one pre-tag `TAG-MISSING` warning under `--relax-tags`, satisfied by the tag on the cut
+      commit); `repin --check --fail-on any` exit 0; `make device-auto TIER=1` 53/53 against the commons
+      mock bridge (it serves the catalog pin — unaffected).
+      docs: eval/readme
+      contracts: crossover-fixtures-v1.0.0 cut (new owned family — first tag); re-pin owed: commons (first pin, IMPL-28); bridge pins at VWB-16
 ### Models & Assets (ASSET)
 ### Documentation (DOC)
 - [x] **DOC-5b** (P2) — DONE 2026-06-08: regenerated `guides/DONATION_FILE_SPECIFICATION.md` for the v1.1

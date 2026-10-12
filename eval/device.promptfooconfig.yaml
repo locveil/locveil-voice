@@ -1,9 +1,10 @@
 # Producer contract tests: utterance → the canonical DeviceCommand Irene emits (TEST-18 Slice B,
 # docs/design/mqtt_integration.md §14.3). PURE YAML — execution logic + the mock bridge live in
-# ../../locveil-commons/eval; the test CASES are GENERATED from the pinned crossover fixtures (the single
-# source of truth both repos share):
+# ../../locveil-commons/eval; the test CASES are GENERATED from the crossover fixtures this repo OWNS
+# (../contracts/crossover-fixtures/ — the `crossover-fixtures` contract family; the single source of
+# truth both product repos assert against, commons and the bridge pin it):
 #
-#   make device-tests          # regenerate device.tests.yaml from ../../locveil-commons/contracts/pins/crossover-fixtures/
+#   make device-tests          # regenerate device.tests.yaml from ../contracts/crossover-fixtures/
 #   make device TARGET=local   # run against a local SUT wired to the mock bridge
 #   make device-auto           # one command: mock bridge + SUT up, suite, teardown
 #

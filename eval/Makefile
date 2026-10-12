@@ -83,12 +83,14 @@ cli:                          ## CLI contract tests (argparse console scripts) �
 	$(PROMPTFOO) eval -c cli.promptfooconfig.yaml
 
 # TEST-18 Slice B — producer contract tests: utterance → captured canonical DeviceCommand,
-# asserted against the PINNED crossover fixtures (../../locveil-commons/contracts/pins/). The SUT must
-# point [outputs.bridge] at the mock bridge; `device-auto` wires everything for one local run.
-FIXTURES_JSON := ../../locveil-commons/contracts/pins/crossover-fixtures/crossover_fixtures.json
+# asserted against the crossover fixtures this repo OWNS (BUILD-60 / board PROD-29: family
+# `crossover-fixtures`, ../contracts/crossover-fixtures/ — commons and the bridge pin it; never read
+# a sibling's copy). The SUT must point [outputs.bridge] at the mock bridge; `device-auto` wires
+# everything for one local run.
+FIXTURES_JSON := ../contracts/crossover-fixtures/crossover_fixtures.json
 MOCK_BRIDGE_PORT ?= 8010
 
-device-tests:                 ## regenerate device.tests.yaml from the pinned crossover fixtures
+device-tests:                 ## regenerate device.tests.yaml from the owned crossover fixtures
 	$(PROMPTFOO_PYTHON) -m eval_commons.fixtures_to_tests $(FIXTURES_JSON) > device.tests.yaml
 
 # BUILD-24 / BUILD-51 — scripted re-pin of consumed contracts (vendored repin v2; the pin

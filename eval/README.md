@@ -43,7 +43,7 @@ config runs the English set) unless overridden, e.g. `EVAL_LANG=en` for a remote
 | `ws.promptfooconfig.yaml` (system) | ASR + intent | Irene on the target | no | yes (WAV) | ✅ ru live + en live (WER ✓ + intent ✓; `make ws CONFIG=embedded-armv7-en` = 4/4, Moonshine ASR) |
 | `ws.promptfooconfig.yaml` (ux) | DeepSeek judge | Irene on the target | `DEEPSEEK_API_KEY` | yes (WAV) | ✅ ru live; en live (rubrics validated; fixtures recorded) |
 | `trace.promptfooconfig.yaml` | offline golden replay | nothing (models present) | no | traces (JSON) | ✅ ru + en golden green (`make replay CONFIG=embedded-armv7-en`) |
-| `device.promptfooconfig.yaml` | utterance → canonical DeviceCommand (producer contract) | Irene + the mock bridge (`make device-auto` wires both) | tier 2 only | no (cases GENERATED from the pinned crossover fixtures) | ✅ tier 1 (default gate): 53/53; tier 2 (`TIER=2 NLU=llm`): 5/8 — red = the deferred relative-adjustment trio («поярче»/«потеплее») |
+| `device.promptfooconfig.yaml` | utterance → canonical DeviceCommand (producer contract) | Irene + the mock bridge (`make device-auto` wires both) | tier 2 only | no (cases GENERATED from the owned crossover fixtures) | ✅ tier 1 (default gate): 53/53; tier 2 (`TIER=2 NLU=llm`): 5/8 — red = the deferred relative-adjustment trio («поярче»/«потеплее») |
 
 ## Setup (uv)
 
@@ -84,10 +84,14 @@ make repin CONTRACT=catalog                      # re-pin a consumed contract fr
 make repin-check                                 # release-time staleness gate: red when a pin trails its owner by a minor or major version
 ```
 
-The device suite asserts against **pinned** contract copies (the bridge catalog + the
-crossover fixtures, held in `../../locveil-commons/contracts/pins/`; the catalog also has
-a local push-time copy at `../contracts/pins/catalog/` — one `make repin` updates both at
-the same tag). `make repin` / `make repin-check` (backed by the vendored
+The device suite asserts against two contract artifacts: the crossover fixtures this repo
+**owns** (`../contracts/crossover-fixtures/crossover_fixtures.json` — the single source of
+truth for `{utterance → expected canonical command}`; `make device-tests` generates the cases
+from it, and the sibling repos pin it from here) and the **pinned** bridge catalog (the local
+push-time copy at `../contracts/pins/catalog/` plus the commons copy the mock bridge serves,
+held in `../../locveil-commons/contracts/pins/catalog/` — one `make repin` updates both at
+the same tag; the fixtures bind to that catalog's content hash, so a catalog re-pin that
+changes the golden is followed by a fixtures cut). `make repin` / `make repin-check` (backed by the vendored
 `../scripts/repin.py`; families declared in `../.repin.toml`) are how those pins move: a
 re-pin is a deliberate act followed by the conformance tests. Staleness runs on a
 severity ladder — the pre-commit hook warns (offline-safe, never blocks a commit); a push

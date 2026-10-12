@@ -15,6 +15,7 @@ re-pin from the owner when it moves.
 | [`wake-pack`](wake-pack/README.md) | sidecar stamp over the unmodified ASSET-5 HF pack (third-party manifest, never forked); in-code catalog is the release list | `wake-pack/STAMP.json` + tag `wake-pack-v1.0.1`; `artifacts` empty + `guard` (the STAMP is the whole pinned set; catalog coherence asserted in `backend/tests/test_ws_protocol_version.py`) |
 | [`ui-openapi`](ui-openapi/README.md) | repo-internal GENERATED contract — artifact stays `config-ui/openapi.json` (generator `scripts/dump_openapi.py`, consumer `npm run gen:api-types`) | `ui-openapi/STAMP.json` + tag `ui-openapi-v1.2.0`; `artifacts` empty + `guard` → the drift test `backend/tests/test_openapi_drift.py` |
 | [`trace-format`](trace-format/README.md) | artifact stays `docs/guides/tracing.md` → "The trace file format (reference)" (`trace-format-doc-canonical`); `trace-format/` holds the STAMP + pointer README; the major is written as `trace_version` in every saved trace | `trace-format/STAMP.json` + tag `trace-format-v1.0.1`; the guide is enumerated whole (byte-locked); the written value is the major only (agreement checked by `backend/tests/test_trace_format_version.py`) |
+| [`crossover-fixtures`](crossover-fixtures/README.md) | the `{utterance → expected canonical command}` fixtures both product repos' cross-suites assert against — the artifact IS `crossover-fixtures/crossover_fixtures.json` (owned here since board PROD-29; the commons `contracts/pins/crossover-fixtures/` is a pin of this family, the bridge pins at VWB-16) | `crossover-fixtures/STAMP.json` + tag `crossover-fixtures-v1.0.0`; the one file is enumerated (byte-locked); the STAMP's `catalog_tag`/`catalog_version` record the catalog the fixtures bind to and must equal this repo's catalog pin — asserted, with every fixture's binding to the pinned golden, by `backend/tests/test_crossover_fixtures_contract.py` |
 
 ## Consumed (pins)
 
@@ -27,10 +28,10 @@ re-pin from the owner when it moves.
 | [`workbench`](pins/workbench/README.md) | locveil-commons (tag `workbench-v1.3.0`) | the Workbench plugin contract config-ui builds against — `contract.ts` + the manifest-fragment and runtime-config schemas; the pinned `contract.ts` is the file config-ui type-checks against (tsconfig `paths`, no live `locveil-workbench` package); conformance: `backend/tests/test_workbench_pin_conformance.py` (the manifest fragment this repo's build emits validates against the pinned schema, tested at its source; the type mapping and the absence of the dependency are held in place) |
 | [`core-py`](pins/core-py/README.md) | locveil-commons (pinned tag: see `pins/core-py/PIN.json`) | the shared entry-point discovery engine — the estate's FIRST vendored RUNTIME code (ARCH-58, strict): the importable copy `utils/entry_point_loader.py` must stay byte-identical to the pin; conformance: `backend/tests/test_core_py_pin_identity.py` |
 
-_The shared crossover instruments stay in `../locveil-commons/contracts/pins/`:
-`crossover-fixtures/` (co-owned, both product repos' cross-suites assert against it) and
-the commons `catalog/` copy the eval framework's mock bridge serves (voice stamps both
-catalog PIN.jsons via `scripts/repin.py` — the two copies move together or not at all)._
+_The commons `contracts/pins/catalog/` copy is the shared crossover instrument the eval
+framework's mock bridge serves (voice stamps both catalog PIN.jsons via `scripts/repin.py` —
+the two copies move together or not at all). The crossover FIXTURES are owned above since
+`crossover-fixtures-v1.0.0`; the commons copy of them is a pin of this repo's family._
 
 Guards: layer 1 is the vendored `scripts/contract_guard.py` (commons
 `packages/contract-guard/`, pinned at tag **`contract-guard-v4.0.0`** — never edit the

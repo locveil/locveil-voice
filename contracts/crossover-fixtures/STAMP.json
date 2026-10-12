@@ -1,0 +1,14 @@
+{
+  "contract": "crossover-fixtures",
+  "version": "1.0.0",
+  "tag": "crossover-fixtures-v1.0.0",
+  "date": "2026-10-12",
+  "owner_repo": "locveil-voice",
+  "artifacts": [
+    "contracts/crossover-fixtures/crossover_fixtures.json"
+  ],
+  "guard": "backend/tests/test_crossover_fixtures_contract.py",
+  "catalog_tag": "catalog-v1.12.0",
+  "catalog_version": "4deb84ae88da6caa",
+  "note": "Major 1 is the crossover fixture document as authored and proven since TEST-18 (2026-07-05): {utterance -> expected canonical command} with four expect kinds (actuate, room-group, read, clarify), two tiers, and ONE document-level catalog_version binding. v1.0.0 (2026-10-12, board PROD-29 / BUILD-60) is the first cut: the file is byte-identical to the commons copy it replaces as the source (61 fixtures, F01-F102; the TEST-24 louvers F82-F86 included); voice OWNS the family from here, commons and the bridge pin it. The fixtures bind to the bridge catalog by CONTENT HASH: catalog_version here equals the `version` of the golden pinned at catalog_tag in this repo (contracts/pins/catalog/), and every device, capability, action, param, room, group and field a fixture names exists in that golden — asserted by the guard on every push. Three-level versions (process/contracts.md §3): MAJOR = a shape change of the expect kinds (a kind added, removed, or its fields reshaped — consumers' assertion code breaks); MINOR = fixtures added, retired, or re-bound to a new catalog hash (the surface the consumers replay changed); PATCH = notes, descriptions, tier prose — bytes moved, no fixture's utterance or expect did. Accepted cost (owner, 2026-10-12): after a catalog re-pin here, a fixtures minor + a commons re-pin follow."
+}

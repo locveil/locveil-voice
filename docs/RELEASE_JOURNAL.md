@@ -21,6 +21,23 @@ newest entries near the top of each dated section.
 
 ## Action journal
 
+- **2026-10-12 — BUILD-60: the fixtures find their owner.** For three months the crossover
+  fixtures sat in the commons as "co-owned" ground — voice wrote every line of them, the
+  bridge was to replay them, and nobody stamped them, so the one pin in the estate without a
+  strict `PIN.json` was the one both products' cross-suites hang on. The owner's answer to
+  the question PROD-18 left open was the natural one: the author owns. The file came across
+  byte-for-byte and gained what an owned surface has — a STAMP that enumerates it, a tag,
+  a registry row, a README that says what a minor, a patch and a major mean here — plus the
+  one thing this family has that no other does: it binds to ANOTHER contract's content
+  hash, so the STAMP records the catalog tag and hash it was authored against, and the
+  owner guard holds the whole chain (document → STAMP → catalog pin → golden) on every
+  push. The eval Makefile, the promptfoo config and the unit tests now read the owned file;
+  the generated cases came out identical save the generator's own header naming its new
+  source. The cost the owner accepted is visible in the guard's failure text: a catalog
+  re-pin that moves the golden fails here until the fixtures are re-bound, and the commons
+  re-pins after. Commons takes the pin at IMPL-28; the bridge pins when VWB-16 lands.
+  contracts: crossover-fixtures-v1.0.0 cut (first tag of a new owned family); re-pin owed:
+  commons. docs: eval/readme.
 - **2026-10-06 — ARCH-69: the job is followed, and the answer comes home.** The design of
   the afternoon became code: a scenario command now leaves with `wait: false`, the bridge's
   ticket and ceiling come back on the same delivery result every command rides, and a

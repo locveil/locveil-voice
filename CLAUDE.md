@@ -55,6 +55,14 @@ but these rules apply to any task). **Single source of truth** (relocated here f
     pin** in `../locveil-commons/contracts/pins/catalog/` (TEST-17; the eval framework's mock bridge + the
     release-cadence cross-suite). Both are one-way *inward* syncs from the bridge's tagged artifacts — never
     hand-edit a copy, treat it as source, or write into the bridge repo.
+  - **The crossover FIXTURES (`{utterance → expected canonical command}`) are owned by THIS repo** (board
+    PROD-29, 2026-10-12): family `crossover-fixtures`, artifact `contracts/crossover-fixtures/crossover_fixtures.json`,
+    tag `crossover-fixtures-vX.Y.Z` (minor = fixtures added or re-bound, patch = notes only, major = a shape
+    change of the `expect` kinds). Every voice reader (`eval/Makefile`, `make device-tests`, the handler
+    tests) reads the OWNED file; commons (`contracts/pins/crossover-fixtures/`) and the bridge (at VWB-16)
+    PIN it — never write the fixtures into a sibling. The STAMP binds the set to the catalog pin's tag +
+    content hash (`backend/tests/test_crossover_fixtures_contract.py`); a catalog re-pin that moves the
+    golden is followed by a fixtures minor + a commons re-pin (the accepted one-extra-hop cost).
   - **The problem-report wire protocol is owned by `../locveil-commons`** (HK-3/PROD-6): the machine core
     `contracts/report-protocol/report-protocol.json` (moved from `process/report-protocol/` at the PROD-16
     restructure), tagged `report-protocol-vN`; normative prose `process/problem-reports.md`. This repo **pins**

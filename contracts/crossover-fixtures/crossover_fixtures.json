@@ -1,0 +1,1141 @@
+{
+  "description": "Crossover fixtures for the Irene<->bridge canonical-command contract: {utterance -> expected canonical command}. Producer half: Irene's TEST-18 suite asserts the captured command equals `expect`. Consumer half: the bridge's VWB-16 replays `expect` against its native layer. Authored by wb-mqtt-voice (TEST-18 Slice A); bound to the pinned catalog below — re-author bindings on re-pin if the guard test fails.",
+  "catalog_version": "4deb84ae88da6caa",
+  "expect_kinds": {
+    "actuate": "device-form command: POST /devices/{device_id}/canonical {capability, action, params}",
+    "room-group": "room-form command (VWB-23): POST /rooms/{room_id}/canonical {group, action, scope}; scope auto = bare noun, all = the plural/«весь» signal",
+    "read": "state read (ARCH-8 PR-5): GET /devices/{device_id}/state -> capability.field; `any_of` lists equally-correct targets",
+    "clarify": "no command emitted: Irene asks a clarification naming the candidate devices; `capability` (string or list) = every candidate carries at least one of these, proving the ambiguity is genuine (a list since DRV-28: the same user goal can bind different capabilities per device — set-temperature is climate.set_setpoint on a floor, temperature.set on an AC)"
+  },
+  "tiers": {
+    "1": "green-able with the current baseline: T1 donations + transliteration-tolerant matching (QUAL-35 Slice 1: «ютуб»↔YouTube, «эппл ти ви»↔Apple TV) + compound numerals (BUG-23/24 fixed the corrupting stages)",
+    "2": "the QUAL-35 Slice 3 residue (2026-07-06): F90-F93/F95 are colloquial-lexicon fixtures GREEN only with the QUAL-50 LLM NLU tier in the cascade (enabled in RU deployment configs; run `make device-auto TIER=2 NLU=llm`) — deliberately NOT added to the T1 donations (the smart-home guide documents that recipe instead); F100-F102 are relative adjustments «поярче»/«потеплее» whose read-modify-write build is DEFERRED past first release. F94/F96/F97/F98 graduated to tier 1 (utterance scan / donation pattern fixes)"
+  },
+  "excluded_by_design": [
+    "anaphora («сделай его поярче») — no last-addressed-device memory exists in conversation context; new context machinery, later release",
+    "multi-command sentences («яркость 30 и температуру 22») and negation («весь свет кроме торшера») — the pipeline is one-Intent-per-utterance end to end; breaking that is its own design task, later release",
+    "source→destination roles («со спальни на кухню») — no capability in the catalog moves anything between rooms; not actionable",
+    "free-text spans («напомни выключить плиту») — timer/reminder domain, no bridge command; out of this suite's scope",
+    "Cyrillic-spoken Latin names («ютуб», «эппл ти ви») — transliteration-tolerant matching is QUAL-35 T2; F41/F53 encode it and stay red until then",
+    "light-subset pair nouns («ночники»/«тумбочки»/«полки») — dropped from v1; return as fixtures when the bridge adds compound devices for the pairs (needs a re-pin)",
+    "power-group fan-out («выключи все розетки» as a room-group) — the bridge allow-lists fan-out to light+cover only; plugs/oven are reachable by NAME (see F04/F03), never by «свет»",
+    "priority rules for same-room ambiguity — v1 clarifies (F20/F21); priorities are a later-release enhancement"
+  ],
+  "fixtures": [
+    {
+      "id": "F01",
+      "tier": 1,
+      "utterance": {
+        "ru": "включи телек"
+      },
+      "context": {
+        "room": "children_room"
+      },
+      "expect": {
+        "kind": "actuate",
+        "device_id": "children_room_tv",
+        "capability": "power",
+        "action": "on",
+        "params": null
+      }
+    },
+    {
+      "id": "F02",
+      "tier": 1,
+      "utterance": {
+        "ru": "выключи эппл"
+      },
+      "context": {
+        "room": "living_room"
+      },
+      "expect": {
+        "kind": "actuate",
+        "device_id": "appletv_living",
+        "capability": "power",
+        "action": "off",
+        "params": null
+      },
+      "note": "alias «эппл» matches both Apple TVs; the context room disambiguates"
+    },
+    {
+      "id": "F03",
+      "tier": 1,
+      "utterance": {
+        "ru": "включи печь"
+      },
+      "context": {
+        "room": "kitchen"
+      },
+      "expect": {
+        "kind": "actuate",
+        "device_id": "oven_power",
+        "capability": "power",
+        "action": "on",
+        "params": null
+      },
+      "note": "group power (not light): reachable by name, deliberately unreachable by «свет»"
+    },
+    {
+      "id": "F04",
+      "tier": 1,
+      "utterance": {
+        "ru": "выключи розетки"
+      },
+      "context": {},
+      "expect": {
+        "kind": "actuate",
+        "device_id": "all_plugs",
+        "capability": "power",
+        "action": "off",
+        "params": null
+      },
+      "note": "aggregates are bridge devices — one device-form command, no Irene-side fan-out"
+    },
+    {
+      "id": "F05",
+      "tier": 1,
+      "utterance": {
+        "ru": "поставь на радиаторах двадцать два градуса"
+      },
+      "context": {
+        "room": "bedroom"
+      },
+      "expect": {
+        "kind": "actuate",
+        "device_id": "bedroom_heating",
+        "capability": "climate",
+        "action": "set_setpoint",
+        "params": {
+          "temp": 22
+        }
+      }
+    },
+    {
+      "id": "F06",
+      "tier": 1,
+      "utterance": {
+        "ru": "тёплый пол на двадцать пять градусов"
+      },
+      "context": {
+        "room": "bathroom"
+      },
+      "expect": {
+        "kind": "actuate",
+        "device_id": "bathroom_floor",
+        "capability": "climate",
+        "action": "set_setpoint",
+        "params": {
+          "temp": 25
+        }
+      }
+    },
+    {
+      "id": "F07",
+      "tier": 1,
+      "utterance": {
+        "ru": "сделай яркость тридцать процентов"
+      },
+      "context": {
+        "room": "children_room"
+      },
+      "expect": {
+        "kind": "actuate",
+        "device_id": "children_room_spots",
+        "capability": "brightness",
+        "action": "set",
+        "params": {
+          "level": 30
+        }
+      }
+    },
+    {
+      "id": "F08",
+      "tier": 1,
+      "utterance": {
+        "ru": "закрой тюль слева"
+      },
+      "context": {
+        "room": "living_room"
+      },
+      "expect": {
+        "kind": "actuate",
+        "device_id": "living_room_tulle_left",
+        "capability": "cover",
+        "action": "close",
+        "params": null
+      },
+      "note": "depth doctrine: a NAMED device stays device-form even though the room has a cover group"
+    },
+    {
+      "id": "F10",
+      "tier": 1,
+      "utterance": {
+        "ru": "включи свет в детской"
+      },
+      "context": {},
+      "expect": {
+        "kind": "room-group",
+        "room_id": "children_room",
+        "group": "light",
+        "action": "on",
+        "scope": "auto"
+      }
+    },
+    {
+      "id": "F11",
+      "tier": 1,
+      "utterance": {
+        "ru": "выключи свет"
+      },
+      "context": {
+        "room": "bedroom"
+      },
+      "expect": {
+        "kind": "room-group",
+        "room_id": "bedroom",
+        "group": "light",
+        "action": "off",
+        "scope": "auto"
+      }
+    },
+    {
+      "id": "F12",
+      "tier": 1,
+      "utterance": {
+        "ru": "выключи весь свет в спальне"
+      },
+      "context": {},
+      "expect": {
+        "kind": "room-group",
+        "room_id": "bedroom",
+        "group": "light",
+        "action": "off",
+        "scope": "all"
+      },
+      "note": "«весь» -> scope all (force fan-out past the room default)"
+    },
+    {
+      "id": "F13",
+      "tier": 1,
+      "utterance": {
+        "ru": "включи свет в зале"
+      },
+      "context": {},
+      "expect": {
+        "kind": "room-group",
+        "room_id": "living_room",
+        "group": "light",
+        "action": "on",
+        "scope": "auto"
+      },
+      "note": "room alias «зал» -> living_room"
+    },
+    {
+      "id": "F14",
+      "tier": 1,
+      "utterance": {
+        "ru": "выключи весь свет в квартире"
+      },
+      "context": {},
+      "expect": {
+        "kind": "room-group",
+        "room_id": "global",
+        "group": "light",
+        "action": "off",
+        "scope": "all"
+      },
+      "note": "room alias «квартира» -> global; its only light member is the all_lights master"
+    },
+    {
+      "id": "F15",
+      "tier": 1,
+      "utterance": {
+        "ru": "закрой шторы"
+      },
+      "context": {
+        "room": "living_room"
+      },
+      "expect": {
+        "kind": "room-group",
+        "room_id": "living_room",
+        "group": "cover",
+        "action": "close",
+        "scope": "auto"
+      },
+      "note": "cover noun -> room form; no cover default in the room -> the bridge fans out"
+    },
+    {
+      "id": "F16",
+      "tier": 1,
+      "utterance": {
+        "ru": "подними жалюзи"
+      },
+      "context": {
+        "room": "cabinet"
+      },
+      "expect": {
+        "kind": "room-group",
+        "room_id": "cabinet",
+        "group": "cover",
+        "action": "open",
+        "scope": "auto"
+      }
+    },
+    {
+      "id": "F17",
+      "tier": 1,
+      "utterance": {
+        "ru": "включи свет в гардеробе"
+      },
+      "context": {},
+      "expect": {
+        "kind": "room-group",
+        "room_id": "wardrobe",
+        "group": "light",
+        "action": "on",
+        "scope": "auto"
+      },
+      "note": "catalog acc1e18b: wardrobe_spots carries the ru alias «свет» (bridge open-questions resolution) — the depth doctrine must still win: bare «свет» stays a room-group command (group check precedes device resolution), the bridge's group_default picks the spots"
+    },
+    {
+      "id": "F20",
+      "tier": 1,
+      "utterance": {
+        "ru": "поставь на паузу"
+      },
+      "context": {
+        "room": "children_room"
+      },
+      "expect": {
+        "kind": "clarify",
+        "capability": "playback",
+        "candidates": [
+          "children_room_tv",
+          "appletv_children"
+        ]
+      }
+    },
+    {
+      "id": "F21",
+      "tier": 1,
+      "utterance": {
+        "ru": "поставь двадцать два градуса"
+      },
+      "context": {
+        "room": "bedroom"
+      },
+      "expect": {
+        "kind": "clarify",
+        "candidates": [
+          "bedroom_heating",
+          "bedroom_hvac"
+        ],
+        "capability": [
+          "climate",
+          "temperature"
+        ]
+      },
+      "note": "v1 policy: clarify; priority rules (e.g. seasonal heating-vs-cooling defaults) are a later release"
+    },
+    {
+      "id": "F30",
+      "tier": 1,
+      "utterance": {
+        "ru": "какая температура в душевой"
+      },
+      "context": {},
+      "expect": {
+        "kind": "read",
+        "device_id": "shower_sauna_sensors",
+        "capability": "sensor",
+        "field": "temperature"
+      }
+    },
+    {
+      "id": "F31",
+      "tier": 1,
+      "utterance": {
+        "ru": "какая влажность в душевой"
+      },
+      "context": {},
+      "expect": {
+        "kind": "read",
+        "device_id": "shower_sauna_sensors",
+        "capability": "sensor",
+        "field": "humidity"
+      }
+    },
+    {
+      "id": "F32",
+      "tier": 1,
+      "utterance": {
+        "ru": "какая температура в спальне"
+      },
+      "context": {},
+      "expect": {
+        "kind": "read",
+        "any_of": [
+          {
+            "device_id": "bedroom_hvac",
+            "capability": "temperature",
+            "field": "room_temperature"
+          },
+          {
+            "device_id": "bedroom_heating",
+            "capability": "climate",
+            "field": "room_temperature"
+          }
+        ]
+      },
+      "note": "both climate devices report the same physical room temperature — either source is correct"
+    },
+    {
+      "id": "F40",
+      "tier": 1,
+      "utterance": {
+        "ru": "включи кино с видеокассеты"
+      },
+      "context": {
+        "room": "living_room"
+      },
+      "expect": {
+        "kind": "actuate",
+        "device_id": "scenario_manager_living_room",
+        "capability": "scenario",
+        "action": "set",
+        "params": {
+          "value": "movie_vhs"
+        }
+      },
+      "note": "enum CHOICE resolved via the ru label «Кино с видеокассеты» -> wire movie_vhs"
+    },
+    {
+      "id": "F41",
+      "tier": 1,
+      "utterance": {
+        "ru": "включи кино с эппл ти ви"
+      },
+      "context": {
+        "room": "living_room"
+      },
+      "expect": {
+        "kind": "actuate",
+        "device_id": "scenario_manager_living_room",
+        "capability": "scenario",
+        "action": "set",
+        "params": {
+          "value": "movie_appletv"
+        }
+      },
+      "note": "transliteration-tolerant matching: «эппл ти ви» vs label «Кино с Apple TV»"
+    },
+    {
+      "id": "F42",
+      "tier": 1,
+      "utterance": {
+        "ru": "выключи кино"
+      },
+      "context": {
+        "room": "living_room"
+      },
+      "expect": {
+        "kind": "actuate",
+        "device_id": "scenario_manager_living_room",
+        "capability": "scenario",
+        "action": "off",
+        "params": null
+      }
+    },
+    {
+      "id": "F50",
+      "tier": 1,
+      "utterance": {
+        "ru": "переключи усилитель на cd"
+      },
+      "context": {
+        "room": "living_room"
+      },
+      "expect": {
+        "kind": "actuate",
+        "device_id": "mf_amplifier",
+        "capability": "input",
+        "action": "set",
+        "params": {
+          "value": "cd"
+        }
+      },
+      "note": "VWB-19 by_value select: static values triplets, validated at resolve time, zero round-trips"
+    },
+    {
+      "id": "F51",
+      "tier": 1,
+      "utterance": {
+        "ru": "переключи телек на hdmi1"
+      },
+      "context": {
+        "room": "children_room"
+      },
+      "expect": {
+        "kind": "actuate",
+        "device_id": "children_room_tv",
+        "capability": "input",
+        "action": "set",
+        "params": {
+          "value": "hdmi1"
+        }
+      },
+      "note": "VWB-19 parametric select: options_from=inputs, enumerated at resolution time (ARCH-26 lazy fetch)"
+    },
+    {
+      "id": "F52",
+      "tier": 1,
+      "utterance": {
+        "ru": "запусти youtube на телеке"
+      },
+      "context": {
+        "room": "children_room"
+      },
+      "expect": {
+        "kind": "actuate",
+        "device_id": "children_room_tv",
+        "capability": "apps",
+        "action": "launch",
+        "params": {
+          "app": "YouTube"
+        }
+      },
+      "note": "options_from=apps: runtime enumeration; case-insensitive match to the device-reported name"
+    },
+    {
+      "id": "F53",
+      "tier": 1,
+      "utterance": {
+        "ru": "запусти ютуб на телеке"
+      },
+      "context": {
+        "room": "children_room"
+      },
+      "expect": {
+        "kind": "actuate",
+        "device_id": "children_room_tv",
+        "capability": "apps",
+        "action": "launch",
+        "params": {
+          "app": "YouTube"
+        }
+      },
+      "note": "transliteration: «ютуб» → \"YouTube\" — QUAL-35 T2; red until then"
+    },
+    {
+      "id": "F60",
+      "tier": 1,
+      "utterance": {
+        "ru": "сделай телек громче"
+      },
+      "context": {
+        "room": "children_room"
+      },
+      "expect": {
+        "kind": "actuate",
+        "device_id": "children_room_tv",
+        "capability": "volume",
+        "action": "up",
+        "params": null
+      }
+    },
+    {
+      "id": "F61",
+      "tier": 1,
+      "utterance": {
+        "ru": "громкость на телеке 30"
+      },
+      "context": {
+        "room": "children_room"
+      },
+      "expect": {
+        "kind": "actuate",
+        "device_id": "children_room_tv",
+        "capability": "volume",
+        "action": "set",
+        "params": {
+          "level": 30
+        }
+      }
+    },
+    {
+      "id": "F62",
+      "tier": 1,
+      "utterance": {
+        "ru": "выключи звук на телеке"
+      },
+      "context": {
+        "room": "children_room"
+      },
+      "expect": {
+        "kind": "actuate",
+        "device_id": "children_room_tv",
+        "capability": "volume",
+        "action": "mute_toggle",
+        "params": null
+      },
+      "note": "routing risk: «выключи» is also the power_off phrase — QUAL-64 material if red"
+    },
+    {
+      "id": "F63",
+      "tier": 1,
+      "utterance": {
+        "ru": "продолжи на эппл"
+      },
+      "context": {
+        "room": "children_room"
+      },
+      "expect": {
+        "kind": "actuate",
+        "device_id": "appletv_children",
+        "capability": "playback",
+        "action": "play",
+        "params": null
+      }
+    },
+    {
+      "id": "F64",
+      "tier": 1,
+      "utterance": {
+        "ru": "включи обогрев"
+      },
+      "context": {
+        "room": "bedroom"
+      },
+      "expect": {
+        "kind": "actuate",
+        "device_id": "bedroom_heating",
+        "capability": "climate",
+        "action": "on",
+        "params": null
+      },
+      "note": "power-verb fallback to climate (Slice 2)"
+    },
+    {
+      "id": "F65",
+      "tier": 1,
+      "utterance": {
+        "ru": "включи вытяжку"
+      },
+      "context": {
+        "room": "kitchen"
+      },
+      "expect": {
+        "kind": "actuate",
+        "device_id": "kitchen_hood",
+        "capability": "fan",
+        "action": "set",
+        "params": {
+          "level": 2
+        }
+      },
+      "note": "power-verb fallback to fan: on → speed 2 (user decision)"
+    },
+    {
+      "id": "F66",
+      "tier": 1,
+      "utterance": {
+        "ru": "шторы наполовину"
+      },
+      "context": {
+        "room": "living_room"
+      },
+      "expect": {
+        "kind": "room-group",
+        "room_id": "living_room",
+        "group": "cover",
+        "action": "set_position",
+        "scope": "auto"
+      },
+      "note": "«наполовину» → pct 50; room form carries params{pct} (not asserted — capture omits params)"
+    },
+    {
+      "id": "F67",
+      "tier": 1,
+      "utterance": {
+        "ru": "перемотай вперёд на телеке"
+      },
+      "context": {
+        "room": "children_room"
+      },
+      "expect": {
+        "kind": "actuate",
+        "device_id": "children_room_tv",
+        "capability": "playback",
+        "action": "ff",
+        "params": null
+      }
+    },
+    {
+      "id": "F70",
+      "tier": 1,
+      "utterance": {
+        "ru": "переключи субтитры на медиаплеере"
+      },
+      "context": {
+        "room": "living_room"
+      },
+      "expect": {
+        "kind": "actuate",
+        "device_id": "video",
+        "capability": "tracks",
+        "action": "subtitles",
+        "params": null
+      },
+      "note": "QUAL-64 regression: «переключи субтитры» must beat input_select's bare «переключи» (specificity-weighted scoring)"
+    },
+    {
+      "id": "F71",
+      "tier": 1,
+      "utterance": {
+        "ru": "мы уходим"
+      },
+      "context": {},
+      "expect": {
+        "kind": "actuate",
+        "device_id": "home_mode",
+        "capability": "presence",
+        "action": "away",
+        "params": null
+      }
+    },
+    {
+      "id": "F72",
+      "tier": 1,
+      "utterance": {
+        "ru": "режим уборки"
+      },
+      "context": {},
+      "expect": {
+        "kind": "actuate",
+        "device_id": "cleaning_mode",
+        "capability": "cleaning",
+        "action": "start",
+        "params": null
+      }
+    },
+    {
+      "id": "F73",
+      "tier": 1,
+      "utterance": {
+        "ru": "уборка на 30 минут"
+      },
+      "context": {},
+      "expect": {
+        "kind": "actuate",
+        "device_id": "cleaning_mode",
+        "capability": "cleaning",
+        "action": "set_delay",
+        "params": {
+          "minutes": 30
+        }
+      }
+    },
+    {
+      "id": "F74",
+      "tier": 1,
+      "utterance": {
+        "ru": "включи сигнализацию воды"
+      },
+      "context": {},
+      "expect": {
+        "kind": "actuate",
+        "device_id": "water_supply",
+        "capability": "alarm",
+        "action": "on",
+        "params": null
+      },
+      "note": "water alarm ONLY (user decision) — heating_control's alarm and all valves are fenced"
+    },
+    {
+      "id": "F75",
+      "tier": 1,
+      "utterance": {
+        "ru": "широкий экран на апскейлере"
+      },
+      "context": {
+        "room": "living_room"
+      },
+      "expect": {
+        "kind": "actuate",
+        "device_id": "upscaler",
+        "capability": "screen",
+        "action": "aspect_16_9",
+        "params": null
+      }
+    },
+    {
+      "id": "F80",
+      "tier": 1,
+      "utterance": {
+        "ru": "кондиционер на охлаждение"
+      },
+      "context": {
+        "room": "bedroom"
+      },
+      "expect": {
+        "kind": "actuate",
+        "device_id": "bedroom_hvac",
+        "capability": "mode",
+        "action": "set",
+        "params": {
+          "value": "cool"
+        }
+      },
+      "note": "VWB-24 typed triplets: ru label «охлаждение» → canonical cool; action-aware device pick (only the HVAC has set_mode)"
+    },
+    {
+      "id": "F81",
+      "tier": 1,
+      "utterance": {
+        "ru": "вентилятор на скорость 2"
+      },
+      "context": {
+        "room": "bedroom"
+      },
+      "expect": {
+        "kind": "actuate",
+        "device_id": "bedroom_hvac",
+        "capability": "fan",
+        "action": "set",
+        "params": {
+          "value": "speed_2"
+        }
+      }
+    },
+    {
+      "id": "F82",
+      "tier": 1,
+      "utterance": {
+        "ru": "заслонка в положение три"
+      },
+      "context": {
+        "room": "bedroom"
+      },
+      "expect": {
+        "kind": "actuate",
+        "device_id": "bedroom_hvac",
+        "capability": "vane",
+        "action": "set",
+        "params": {
+          "value": "pos_3"
+        }
+      },
+      "note": "QUAL-82 (board PROD-18 round 1): the louver noun is «заслонка»; vertical/positional axis. Number words are normalized before extraction, so «положение три» meets the ru label «положение 3» → canonical pos_3"
+    },
+    {
+      "id": "F83",
+      "tier": 1,
+      "utterance": {
+        "ru": "заслонка на авто"
+      },
+      "context": {
+        "room": "bedroom"
+      },
+      "expect": {
+        "kind": "actuate",
+        "device_id": "bedroom_hvac",
+        "capability": "vane",
+        "action": "set",
+        "params": {
+          "value": "auto"
+        }
+      },
+      "note": "QUAL-82: vane auto — label «авто» → canonical auto; noun-led «заслонка на …» shape"
+    },
+    {
+      "id": "F84",
+      "tier": 1,
+      "utterance": {
+        "ru": "качай заслонку"
+      },
+      "context": {
+        "room": "bedroom"
+      },
+      "expect": {
+        "kind": "actuate",
+        "device_id": "bedroom_hvac",
+        "capability": "vane",
+        "action": "set",
+        "params": {
+          "value": "swing"
+        }
+      },
+      "note": "QUAL-82: verb-led shape; `swing` exists on BOTH louver axes under the same label «качание» — the INTENT (hvac_vane) picks the capability, never the word; «качай заслонку по горизонтали» is the widevane twin"
+    },
+    {
+      "id": "F85",
+      "tier": 1,
+      "utterance": {
+        "ru": "направь заслонку влево"
+      },
+      "context": {
+        "room": "bedroom"
+      },
+      "expect": {
+        "kind": "actuate",
+        "device_id": "bedroom_hvac",
+        "capability": "widevane",
+        "action": "set",
+        "params": {
+          "value": "left"
+        }
+      },
+      "note": "QUAL-82: horizontal/directional axis (hvac_widevane), verb-led «направь …»; label «влево» → canonical left"
+    },
+    {
+      "id": "F86",
+      "tier": 1,
+      "utterance": {
+        "ru": "заслонка в центр"
+      },
+      "context": {
+        "room": "bedroom"
+      },
+      "expect": {
+        "kind": "actuate",
+        "device_id": "bedroom_hvac",
+        "capability": "widevane",
+        "action": "set",
+        "params": {
+          "value": "center"
+        }
+      },
+      "note": "QUAL-82: «в центр» is a VALUE, not a room — the donation's room pattern excludes the direction words; label «центр» → canonical center"
+    },
+    {
+      "id": "F90",
+      "tier": 2,
+      "utterance": {
+        "ru": "вруби телек"
+      },
+      "context": {
+        "room": "children_room"
+      },
+      "expect": {
+        "kind": "actuate",
+        "device_id": "children_room_tv",
+        "capability": "power",
+        "action": "on",
+        "params": null
+      },
+      "note": "Slice 3 / colloquial lexicon: «вруби» is not in the donation verb set — T1 probe returns no intent"
+    },
+    {
+      "id": "F91",
+      "tier": 2,
+      "utterance": {
+        "ru": "вырубай телек"
+      },
+      "context": {
+        "room": "children_room"
+      },
+      "expect": {
+        "kind": "actuate",
+        "device_id": "children_room_tv",
+        "capability": "power",
+        "action": "off",
+        "params": null
+      },
+      "note": "Slice 3 / colloquial lexicon: «вырубай» (imperfective imperative) — T1 probe returns no intent"
+    },
+    {
+      "id": "F92",
+      "tier": 2,
+      "utterance": {
+        "ru": "выруби свет"
+      },
+      "context": {
+        "room": "bedroom"
+      },
+      "expect": {
+        "kind": "room-group",
+        "room_id": "bedroom",
+        "group": "light",
+        "action": "off",
+        "scope": "auto"
+      },
+      "note": "Slice 3 / SAFETY exhibit: T1 fuzzy-routes «выруби» to power_ON (inverted polarity) at conf 0.63"
+    },
+    {
+      "id": "F93",
+      "tier": 2,
+      "utterance": {
+        "ru": "глуши магнитофон"
+      },
+      "context": {
+        "room": "living_room"
+      },
+      "expect": {
+        "kind": "actuate",
+        "device_id": "reel_to_reel",
+        "capability": "playback",
+        "action": "stop",
+        "params": null
+      },
+      "note": "Slice 3 / colloquial lexicon: «глуши» — T1 fuzzy-routes to audio.play (wrong domain AND inverted action)"
+    },
+    {
+      "id": "F94",
+      "tier": 1,
+      "utterance": {
+        "ru": "на кухне вытяжку включи"
+      },
+      "context": {
+        "room": "kitchen"
+      },
+      "expect": {
+        "kind": "actuate",
+        "device_id": "kitchen_hood",
+        "capability": "fan",
+        "action": "set",
+        "params": {
+          "level": 2
+        }
+      },
+      "note": "Slice 3: was red (accusative «вытяжку» + verb-final defeated the post-verb capture) — FIXED by the resolver utterance scan (stem-grade catalog spotting); tier 1 since 2026-07-06"
+    },
+    {
+      "id": "F95",
+      "tier": 2,
+      "utterance": {
+        "ru": "прикрой шторы"
+      },
+      "context": {
+        "room": "bedroom"
+      },
+      "expect": {
+        "kind": "room-group",
+        "room_id": "bedroom",
+        "group": "cover",
+        "action": "close",
+        "scope": "auto"
+      },
+      "note": "Slice 3 / colloquial verb: «прикрой» lands on cover_position below threshold (0.67), wanted the plain close"
+    },
+    {
+      "id": "F96",
+      "tier": 1,
+      "utterance": {
+        "ru": "поставь в спальне кондиционер на двадцать два градуса"
+      },
+      "context": {
+        "room": "bedroom"
+      },
+      "expect": {
+        "kind": "actuate",
+        "device_id": "bedroom_hvac",
+        "capability": "temperature",
+        "action": "set",
+        "params": {
+          "value": 22
+        }
+      },
+      "note": "Slice 3: was red (greedy «кондиционер на» routed to hvac_mode at conf 1.00) — FIXED by mode-worded hvac phrases; «градуса» wins setpoint again; tier 1 since 2026-07-06"
+    },
+    {
+      "id": "F97",
+      "tier": 1,
+      "utterance": {
+        "ru": "сделай на телеке звук на пятнадцать"
+      },
+      "context": {
+        "room": "children_room"
+      },
+      "expect": {
+        "kind": "actuate",
+        "device_id": "children_room_tv",
+        "capability": "volume",
+        "action": "set",
+        "params": {
+          "level": 15
+        }
+      },
+      "note": "Slice 3: was a threshold coin-flip (fuzzy «сделай тише» actuated volume up/down) — FIXED by the «звук на» volume_set pattern (mute keeps «выключи звук на» for specificity); tier 1 since 2026-07-06"
+    },
+    {
+      "id": "F98",
+      "tier": 1,
+      "utterance": {
+        "ru": "процентов на тридцать поставь яркость спотов"
+      },
+      "context": {
+        "room": "kitchen"
+      },
+      "expect": {
+        "kind": "actuate",
+        "device_id": "kitchen_spots",
+        "capability": "brightness",
+        "action": "set",
+        "params": {
+          "level": 30
+        }
+      },
+      "note": "Slice 3 / inverted param position: GREEN at 2026-07-06 baseline (extraction handles «процентов на тридцать» before the verb) — retiered to 1 as regression coverage"
+    },
+    {
+      "id": "F100",
+      "tier": 2,
+      "utterance": {
+        "ru": "сделай споты поярче"
+      },
+      "context": {
+        "room": "bedroom"
+      },
+      "expect": {
+        "kind": "actuate",
+        "device_id": "bedroom_spots",
+        "capability": "brightness",
+        "action": "set",
+        "params": {
+          "level": 70
+        }
+      },
+      "note": "Slice 3 / relative adjustment (BUILD DEFERRED past first release): read state level=60 (mock static) → +10 step → set 70"
+    },
+    {
+      "id": "F101",
+      "tier": 2,
+      "utterance": {
+        "ru": "притуши споты"
+      },
+      "context": {
+        "room": "kitchen"
+      },
+      "expect": {
+        "kind": "actuate",
+        "device_id": "kitchen_spots",
+        "capability": "brightness",
+        "action": "set",
+        "params": {
+          "level": 50
+        }
+      },
+      "note": "Slice 3 / relative adjustment (BUILD DEFERRED past first release): read state level=60 (mock static) → −10 step → set 50"
+    },
+    {
+      "id": "F102",
+      "tier": 2,
+      "utterance": {
+        "ru": "сделай потеплее"
+      },
+      "context": {
+        "room": "kitchen"
+      },
+      "expect": {
+        "kind": "actuate",
+        "device_id": "kitchen_floor",
+        "capability": "climate",
+        "action": "set_setpoint",
+        "params": {
+          "temp": 23
+        }
+      },
+      "note": "Slice 3 / relative adjustment (BUILD DEFERRED past first release): read state setpoint=22.0 (mock static) → +1 °C → 23; kitchen has exactly one climate device"
+    }
+  ]
+}
