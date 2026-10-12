@@ -461,6 +461,37 @@ size-matched to the Russian stack; language is a per-config/deployment choice (a
       board** (D-4/D-5), seeded when BUILD-21 lands, not decided unilaterally here. Scope for that design: which
       repo owns the unified compose, health-gated `depends_on` vs. tolerant clients, whether the units collapse
       into one, and how `update.sh` stays per-repo when the compose is not. Related: BUILD-18 (ops conformance).
+- [ ] **BUILD-60** `[release]` [CONTRACTS][MQTT] — **The crossover fixtures become a voice-OWNED contract:
+      family `crossover-fixtures`, first cut `crossover-fixtures-v1.0.0`** (board **PROD-29**, owner decision
+      2026-10-12 — "Agree with Option 1" on the question PROD-18's close left open; filed 2026-10-12). The
+      `{utterance → expected canonical command}` fixtures were the last pin in the estate without a strict
+      `PIN.json`, because they never had an owner ("co-owned", voice-authored, living in
+      `../locveil-commons/contracts/pins/crossover-fixtures/`). **Decision:** voice owns them. **Scope:**
+      (1) the owned surface `contracts/crossover-fixtures/` — `crossover_fixtures.json` (the commons file
+      byte-for-byte: sha256 `5b5adbe6…`, 61 fixtures, 53 tier 1 / 8 tier 2, bound to catalog content hash
+      `4deb84ae88da6caa`), `README.md` (what it is; the three levels — minor = fixtures added or re-bound,
+      patch = notes only, major = a shape change of the `expect` kinds; the catalog binding rule; how commons
+      and the bridge consume), `STAMP.json` (`artifacts` = exactly the one file; extras `catalog_tag` +
+      `catalog_version` = the pinned catalog this cut binds to; `guard` = the owner test); registry row under
+      Owned; tag `crossover-fixtures-v1.0.0` on the cut commit. (2) Voice reads its OWN file from now on:
+      `eval/Makefile` `FIXTURES_JSON`, `eval/device.promptfooconfig.yaml`, `eval/README.md`, the
+      `test_smart_home_handler.py` / `intents/device_commands.py` pointers; `make device-tests` regenerates
+      `eval/device.tests.yaml` (same cases — the generator stamps the source path into its header comment, so
+      that one line moves and nothing else). (3) The owner guard `backend/tests/test_crossover_fixtures_contract.py`:
+      the file parses; its `catalog_version` binding equals the STAMP's `catalog_version` AND the catalog pin's
+      (`contracts/pins/catalog/STAMP.json` + `PIN.json` — the pin-of-a-pin made explicit) AND the golden's
+      `version`; the STAMP's `catalog_tag` is the pin's tag; every fixture's device / capability / action /
+      params / room / group / field exists in the pinned golden (the commons layer-2 rules, now run by the
+      owner on every push); the STAMP enumerates exactly the one file. **Accepted cost (owner):** after a
+      catalog re-pin here, a fixtures minor (re-bound `catalog_version`) + a commons re-pin follow — one extra
+      hop. **Not here:** the commons pin (`PIN.json` from this STAMP via repin, generator + assertions on the
+      pinned copy, the `PIN-PENDING` warning ends) is commons **IMPL-28**; the bridge pins at **VWB-16** (first
+      consumption, no `.repin.toml` declaration before). **Reconciled at intake (2026-10-12):** the commons
+      file and its binding are as the board says (`catalog_version` is ONE top-level field of the document, not
+      per fixture — the guard asserts the document's binding); the catalog pin here is `catalog-v1.12.0` with
+      the same hash (BUILD-59); the voice-side pointers to the commons path are the six listed above plus
+      `contracts/README.md`'s trailing note and the `cross-repo-source-of-truth` bullet in `CLAUDE.md`, both
+      re-truthed in the cut; the `eval/README.md` sentence naming the fixtures' home moves → `docs: eval/readme`.
 ### Models & Assets (ASSET)
 
 - [ ] **ASSET-6** `[deferred]` [ASSET][CONTRACTS][SATELLITE] — **The multi-model wake-pack v1.x cut**
